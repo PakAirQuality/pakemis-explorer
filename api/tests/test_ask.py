@@ -317,8 +317,12 @@ def test_system_prompt_names_no_version_and_carries_dims(ask_client):
     runtime = ask_client.app.state.ask
     version = ask_client.app.state.service.release.version
     assert version not in runtime.system
-    for needle in ("{{result_k_cell_n}}", "set_map_view", "FY2023-24", "Punjab", "agriculture", "ar6_adm2_ne"):
+    for needle in ("{{result_k_cell_n}}", "set_map_view", "FY2023-24", "Punjab", "agriculture", "ar6_adm2_ne",
+                   "WHAT PAKEMIS IS", "PakEmis is an open dataset of Pakistan's greenhouse-gas emissions"):
         assert needle in runtime.system
+    # the project paragraph carries no digit: "what is this project about?" needs no tool and prints no figure
+    what = runtime.system.split("WHAT PAKEMIS IS")[1].split("RULES (binding)")[0]
+    assert not re.search(r"\d", what)
 
 
 # --- caps, memory, status ----------------------------------------------------------------------
