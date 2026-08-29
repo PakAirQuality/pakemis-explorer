@@ -1,0 +1,24 @@
+# api + web. The API mounts the fetched release read-only and the query core from the emissions
+# checkout (PAKEMIS_QUERY_PATH); neither is copied into an image. No database, no auth, no agent.
+services:
+  api:
+    build: ./api
+    environment:
+      PAKEMIS_QUERY_PATH: /opt/pakemis_query_src
+      PAKEMIS_RELEASES_ROOT: /app/data/releases
+      PAKEMIS_RECEIPT_STORE: /app/data/receipts.json
+    volumes:
+      - ./data/releases:/app/data/releases:ro
+      - ./RELEASES.md:/app/RELEASES.md:ro
+      - ./data/verify_release.py:/app/data/verify_release.py:ro
+      - ${PAKEMIS_QUERY_SRC:-/Users/rehanahmad/Desktop/emissions/src}:/opt/pakemis_query_src:ro
+      - receipts:/app/data
+    ports: ["8000:8000"]
+  web:
+    build: ./web
+    environment:
+      NEXT_PUBLIC_PAKEMIS_API: http://localhost:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
+volumes:
+  receipts:
