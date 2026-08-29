@@ -251,7 +251,7 @@ dataclasses (`api/pakemis_api/models_gen.py`); a test asserts they mirror the da
 The web computes nothing, so the number a screen prints at reading precision is minted by the
 API: every envelope cell (and a compare cell's nested `left`/`right`, and the `quantiles` of an
 uncertainty cell as `quantiles_short`) carries `display_short` beside the contract's `display`
-and `exact`, plus `unit_words` (the unit as words, `Mt CO2e AR5` → `million tonnes CO₂e (AR5)`).
+and `exact`, plus `unit_words` (the unit as words, `Mt CO2e AR5` → `million tonnes CO₂e`) and `unit_short` (`Mt CO₂e`); neither carries the GWP basis token, which `/release.labels.gwp` names once (`IPCC 2013 (AR5)`, with its tooltip quoting the release's own factors).
 `display_short` is `exact` quantised to two decimal places with `Decimal` and `ROUND_HALF_EVEN`,
 in plain notation with trailing zeros kept (`452.35`, `63.37`, `9.01`, `0.39`, `0.30`,
 `248.75`), for every numeric cell whatever its unit; a zero prints as `0.00`; a non-zero value

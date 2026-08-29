@@ -124,13 +124,58 @@ def period_labels(row):
     return {"label": label, "short": period_short(row["label"]), "basis_note": BASIS_NOTES.get(basis, "")}
 
 
+# the two queryable kinds worded for a reader; every other kind keeps its display_name humanised
+KIND_LABELS = {"reference": "Reference estimate", "survey": "Survey-based estimate"}
+# the IPCC assessment reports a GWP basis id can name: publication year and ordinal (a fact about
+# the IPCC, not about the release; the factors themselves are read from the release)
+ASSESSMENT_REPORTS = {"AR4": ("2007", "Fourth"), "AR5": ("2013", "Fifth"), "AR6": ("2021", "Sixth")}
+# the species a GWP tooltip quotes, in this order, with the wording a reader sees
+GWP_SPECIES = (("CH4", "CH\u2084"), ("CH4_fossil", "fossil CH\u2084"), ("N2O", "N\u2082O"))
+BASIS_LABELS = {"fiscal": "July\u2013June years", "calendar": "January\u2013December years"}
+
+
 def configuration_label(row, baseline_letter):
-    """display_name humanised, with the configuration's letter: the baseline letter for the
-    reference row, else the single-letter prefix of the id ('S_2023_24' -> 'S') when there is one."""
+    """The label a reader sees ('Reference estimate' for the reference kind, 'Survey-based
+    estimate' for the survey kind, else display_name humanised) and the configuration's letter:
+    the baseline letter for the reference row, else the single-letter prefix of the id
+    ('S_2023_24' -> 'S') when there is one. The letter stays an id for URLs and receipts."""
     prefix = row["configuration_id"].split("_", 1)[0]
     letter = baseline_letter if row["kind"] == "reference" else (prefix if len(prefix) == 1 else "")
-    base = humanise(row["display_name"])
-    return "%s (%s)" % (base, letter) if letter else base, letter
+    return KIND_LABELS.get(row["kind"], humanise(row["display_name"])), letter
+
+
+def _factor_text(x):
+    """28.0 -> '28', 29.8 -> '29.8'."""
+    try:
+        f = float(x)
+    except (TypeError, ValueError):
+        return str(x)
+    return str(int(f)) if f == int(f) else ("%g" % f)
+
+
+def gwp_labels(gwp_bases, default_basis):
+    """One entry per basis in the release's gwp_bases.factors: label 'IPCC 2013 (AR5)', short
+    'AR5', compact 'IPCC AR5', a tooltip sentence quoting the release's own factors (a species
+    absent from the factors is left out of the sentence), and is_default from the defaults."""
+    out = {}
+    for basis in sorted((gwp_bases or {}).get("factors") or {}):
+        factors = gwp_bases["factors"][basis] or {}
+        year, ordinal = ASSESSMENT_REPORTS.get(basis, ("", ""))
+        label = "IPCC %s (%s)" % (year, basis) if year else "IPCC %s" % basis
+        report = "the IPCC %s Assessment Report's" % ordinal if ordinal else "the IPCC %s" % basis
+        quoted = ", ".join("%s \u00d7 %s" % (word, _factor_text(factors[key])) for key, word in GWP_SPECIES if key in factors)
+        tooltip = "CO\u2082-equivalent using %s 100-year warming potentials" % report + (" (%s)" % quoted if quoted else "")
+        out[basis] = {"label": label, "short": basis, "compact": "IPCC %s" % basis, "tooltip": tooltip, "is_default": basis == default_basis}
+    return out
+
+
+def lulucf_labels(lulucf):
+    """'excludes land use and forestry' (short) for the excluded status, 'land use and forestry
+    <status>' otherwise; the compact form for a pill; the release's note as the tooltip."""
+    status = (lulucf or {}).get("status", "")
+    short = "excludes land use and forestry" if status == "excluded" else ("land use and forestry %s" % status if status else "")
+    compact = "land use %s" % status if status else ""
+    return {"short": short, "compact": compact, "status": status, "notation_key": (lulucf or {}).get("notation_key", ""), "tooltip": (lulucf or {}).get("note", "")}
 
 
 class Service:
@@ -273,6 +318,7 @@ class Service:
             by_period.setdefault(r["period_id"], []).append(r["month"])
         dims["dim_month"]["by_period"] = {k: sorted(v) for k, v in sorted(by_period.items())}
         defaults = self.release.defaults
+        labels = self.labels()
         return {
             "api_version": API_VERSION,
             "release": rel,
@@ -284,13 +330,17 @@ class Service:
             "context_bar": {"release": self.release.release_id, "basis": defaults["basis"],
                             "configuration_id": defaults["configuration_id"], "gwp_basis": defaults["gwp_basis"],
                             "geography_id": defaults["geography_id"], "reporting_period": self.manifest.get("reporting_period"),
-                            "lulucf": rel["lulucf"]},
+                            "lulucf": rel["lulucf"],
+                            # the same three ids worded for a reader (labels.* holds every value)
+                            "basis_label": BASIS_LABELS.get(defaults["basis"], defaults["basis"]),
+                            "configuration_label": labels["configurations"].get(defaults["configuration_id"], {}).get("label", defaults["configuration_id"]),
+                            "gwp_label": labels["gwp"].get(defaults["gwp_basis"], {}).get("label", defaults["gwp_basis"])},
             "dims": dims,
             # the contract's rounding, plus the presentation rule this service applies on top (display_short)
             "rounding": dict(c["rounding"], presentation=dict(PRESENTATION_ROUNDING)),
             "query_contract": c["query_contract"],
             "known_limitations": c["known_limitations"],
-            "labels": self.labels(),
+            "labels": labels,
             "agent": dict(self.agent_status) if self.agent_status else {"enabled": False, "model": "", "provider": None, "reason": "not mounted"},
             "digests": {"semantic_release_json": self.verification["semantic_release_sha256"],
                         "release_manifest_json": self.verification["release_manifest_sha256"],
@@ -312,7 +362,7 @@ class Service:
         for r in self.release.dim("dim_configuration"):
             label, letter = configuration_label(r, baseline)
             configurations[r["configuration_id"]] = {
-                "label": label, "letter": letter, "kind": r["kind"], "display_name": r["display_name"],
+                "label": label, "letter": letter, "kind": r["kind"], "display_name": r["display_name"], "tooltip": r["note"],
                 "queryable": r["queryable"] == "yes", "axis": r["axis"], "module": r["module"], "note": r["note"]}
         periods = {}
         for r in self.release.dim("dim_period"):
@@ -334,6 +384,8 @@ class Service:
             "configurations": configurations,
             "periods": periods,
             "months": months,
+            "gwp": gwp_labels(c["release"].get("gwp_bases"), self.release.defaults.get("gwp_basis")),
+            "lulucf": lulucf_labels(c["release"].get("lulucf")),
             "views": dict(VIEW_MEANINGS),
             "limitations": {l["id"]: worded(l["message"]) for l in c["known_limitations"]},
             "gases": {g: g.translate(SUBSCRIPT_DIGITS) for g in sorted(self.release.dim_values("dim_gas", "gas"))},

@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from pakemis_api.ask.render import BareNumberError, render_multi
-from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate, is_count, short_display, unit_words
+from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate, is_count, short_display, unit_short, unit_words
 from test_ask import FakeModel, ask, only, stop, text, tool_use
 from test_goldens import GOLDENS, post_golden
 
@@ -74,13 +74,28 @@ def test_bounded_cells():
 
 
 def test_unit_words_matches_the_web():
-    assert unit_words("Mt CO2e AR5") == "million tonnes CO₂e (AR5)"
+    """The unit as words carries no GWP basis token: the basis is named once, by labels.gwp."""
+    assert unit_words("Mt CO2e AR5") == "million tonnes CO₂e"
     assert unit_words("Gg") == "thousand tonnes"
-    assert unit_words("Gg CO2e AR6") == "thousand tonnes CO₂e (AR6)"
+    assert unit_words("Gg CO2e AR6") == "thousand tonnes CO₂e"
     assert unit_words("kt") == "thousand tonnes"
     assert unit_words("t CH4") == "tonnes CH₄"
+    for words in (unit_words("Mt CO2e AR5"), unit_words("Gg CO2e AR6")):
+        assert "AR" not in words and "(" not in words
     for passthrough in ("percent", "", "notation_key", "evidence", "method"):
         assert unit_words(passthrough) == passthrough
+
+
+def test_unit_short_is_the_unit_a_reader_sees():
+    """unit_short keeps the magnitude symbol, subscripts the species and drops the basis token."""
+    assert unit_short("Mt CO2e AR5") == "Mt CO₂e"
+    assert unit_short("Mt CO2e AR6") == "Mt CO₂e"
+    assert unit_short("Gg CO2e AR5") == "Gg CO₂e"
+    assert unit_short("Gg") == "Gg"
+    assert unit_short("t CH4") == "t CH₄"
+    for passthrough in ("rows", "count", "", "percent", "kg CO2e"):
+        assert unit_short(passthrough) == passthrough
+    assert unit_short(None) is None
 
 
 def test_decorate_reaches_nested_cells_and_quantiles():
@@ -95,10 +110,10 @@ def test_decorate_reaches_nested_cells_and_quantiles():
     out = decorate(env, in_place=False)
     assert json.dumps(env, sort_keys=True) == before                  # a copy on request
     v = out["values"]
-    assert v[0]["display_short"] == "452.35" and v[0]["unit_words"] == "million tonnes CO₂e (AR5)"
+    assert v[0]["display_short"] == "452.35" and v[0]["unit_words"] == "million tonnes CO₂e" and v[0]["unit_short"] == "Mt CO₂e"
     assert v[0]["display"] == "452.34662" and v[0]["exact"] == "452.34662"
     assert v[1]["display_short"] == "-3.12" and v[1]["left"]["display_short"] == "10.50" and v[1]["right"]["display_short"] == "10.17"
-    assert v[1]["left"]["unit_words"] == "million tonnes CO₂e (AR5)"
+    assert v[1]["left"]["unit_words"] == "million tonnes CO₂e" and v[1]["left"]["unit_short"] == "Mt CO₂e"
     assert v[2]["quantiles_short"] == {"P2.5": "420.12", "P97.5": "470.99"} and v[2]["quantiles"] == {"P2.5": "420.1234", "P97.5": "470.9876"}
     assert v[3]["display_short"] == "[12.26, 12.28]" and v[3]["display"] == "[12.2565, 12.2769]"
     assert out["receipt"] == "abc" and out["result_sha256"] == "d"
@@ -108,9 +123,10 @@ def test_decorate_reaches_nested_cells_and_quantiles():
 # --- through the API ---------------------------------------------------------------------------
 
 def _check_cell(cell):
-    assert "display_short" in cell and "unit_words" in cell, cell
+    assert "display_short" in cell and "unit_words" in cell and "unit_short" in cell, cell
     assert cell["display_short"] == short_display(cell.get("exact"), cell.get("unit"), cell.get("exact_high"), cell.get("display"))
     assert cell["unit_words"] == unit_words(cell.get("unit"))
+    assert cell["unit_short"] == unit_short(cell.get("unit"))
     if cell.get("exact") not in ("", None) and not is_count(cell.get("unit")):
         num = r"(-?\d+\.\d\d|<0\.01|>-0\.01)"
         assert re.match(r"^%s$|^\[%s, %s\]$" % (num, num, num), cell["display_short"]), cell["display_short"]
@@ -158,7 +174,7 @@ def test_national_total_short_is_two_decimals(client):
     env = client.post("/api/v1/emissions/query/emissions", json={"periods": ["FY2023-24"]}).json()
     cell = env["values"][0]
     assert re.match(r"^\d+\.\d\d$", cell["display_short"]) and cell["display_short"] == "452.35"
-    assert cell["unit_words"] == "million tonnes CO₂e (AR5)"
+    assert cell["unit_words"] == "million tonnes CO₂e" and cell["unit_short"] == "Mt CO₂e"
 
 
 # --- the Ask loop ------------------------------------------------------------------------------

@@ -47,9 +47,9 @@ def test_labels_cover_every_id(release):
         entry = labels["configurations"][c["configuration_id"]]
         assert entry["label"] and entry["kind"] and "note" in entry
     assert labels["configurations"]["REF_2023_24"]["letter"] == "L"
-    assert labels["configurations"]["REF_2023_24"]["label"].endswith("(L)")
+    assert labels["configurations"]["REF_2023_24"]["label"] == "Reference estimate"
     assert labels["configurations"]["S_2023_24"]["letter"] == "S"
-    assert labels["configurations"]["S_2023_24"]["label"].endswith("(S)")
+    assert labels["configurations"]["S_2023_24"]["label"] == "Survey-based estimate"
     for p in dims["dim_period"]["values"]:
         entry = labels["periods"][p["period_id"]]
         assert entry["start"] and entry["end"] and entry["basis"] == p["basis"]
@@ -145,3 +145,68 @@ def test_limitation_labels_name_periods_by_their_short_label(release):
     assert "FY2023-24" in raw["config_S_residential_only"]
     assert "2023–24" in labels["limitations"]["config_S_residential_only"] and "FY" not in labels["limitations"]["config_S_residential_only"]
     assert labels["limitations"]["config_S_residential_only"] == raw["config_S_residential_only"].replace("FY2023-24", "2023–24")
+
+
+# --- the reader's labels: no raw id (AR5, L, NE, LULUCF) reaches a screen -----------------------
+
+def test_configuration_labels_are_worded_by_kind(release):
+    """The two queryable kinds are worded for a reader, with the note as the tooltip and the
+    letter kept as the id it is; a structural alternative keeps its display_name humanised."""
+    labels = release["labels"]["configurations"]
+    rows = {r["configuration_id"]: r for r in release["dims"]["dim_configuration"]["queryable"]}
+    ref, survey = labels["REF_2023_24"], labels["S_2023_24"]
+    assert (ref["kind"], ref["label"], ref["letter"]) == ("reference", "Reference estimate", "L")
+    assert (survey["kind"], survey["label"], survey["letter"]) == ("survey", "Survey-based estimate", "S")
+    assert ref["tooltip"] == rows["REF_2023_24"]["note"] and survey["tooltip"] == rows["S_2023_24"]["note"]
+    for cid, entry in labels.items():
+        assert "(" not in entry["label"], (cid, entry["label"])
+        assert entry["tooltip"] == entry["note"]
+        if entry["kind"] not in ("reference", "survey"):
+            assert entry["label"] == entry["display_name"].replace("_", " ").capitalize()
+
+
+def test_gwp_labels_quote_the_release_factors(release):
+    """labels.gwp has one entry per basis in gwp_bases.factors; the tooltip quotes the release's
+    own factors (never typed in the service) and is_default follows defaults.gwp_basis."""
+    from pakemis_api.app import gwp_labels
+    gwp = release["labels"]["gwp"]
+    bases = release["release"]["gwp_bases"]
+    assert set(gwp) == set(bases["factors"])
+    assert gwp["AR5"]["label"] == "IPCC 2013 (AR5)" and gwp["AR5"]["short"] == "AR5" and gwp["AR5"]["compact"] == "IPCC AR5"
+    assert gwp["AR6"]["label"] == "IPCC 2021 (AR6)" and gwp["AR6"]["short"] == "AR6"
+    assert gwp["AR5"]["tooltip"].startswith("CO₂-equivalent using the IPCC Fifth Assessment Report's 100-year warming potentials (")
+    assert gwp["AR6"]["tooltip"].startswith("CO₂-equivalent using the IPCC Sixth Assessment Report's 100-year warming potentials (")
+    for basis, entry in gwp.items():
+        f = bases["factors"][basis]
+        ch4 = f["CH4"]
+        n2o = f["N2O"]
+        assert ("CH₄ × %d" % ch4 if ch4 == int(ch4) else "CH₄ × %g" % ch4) in entry["tooltip"]
+        assert ("N₂O × %d" % n2o if n2o == int(n2o) else "N₂O × %g" % n2o) in entry["tooltip"]
+        assert entry["is_default"] is (basis == release["defaults"]["gwp_basis"])
+    assert sum(1 for e in gwp.values() if e["is_default"]) == 1
+    # a factor absent from the release is left out of the sentence, never invented
+    partial = gwp_labels({"factors": {"AR5": {"N2O": 265.0}}}, "AR5")
+    assert partial["AR5"]["tooltip"].endswith("(N₂O × 265)") and "CH₄" not in partial["AR5"]["tooltip"]
+    assert gwp_labels({"factors": {"AR9": {}}}, "AR5")["AR9"] == {"label": "IPCC AR9", "short": "AR9", "compact": "IPCC AR9", "tooltip": "CO₂-equivalent using the IPCC AR9 100-year warming potentials", "is_default": False}
+    assert gwp_labels(None, "AR5") == {}
+
+
+def test_lulucf_label_is_worded(release):
+    lu = release["labels"]["lulucf"]
+    rel = release["release"]["lulucf"]
+    assert lu["status"] == rel["status"] == "excluded" and lu["notation_key"] == rel["notation_key"]
+    assert lu["short"] == "excludes land use and forestry" and lu["compact"] == "land use excluded"
+    assert lu["tooltip"] == rel["note"] and lu["tooltip"]
+    from pakemis_api.app import lulucf_labels
+    assert lulucf_labels({"status": "partial", "notation_key": "", "note": "n"}) == {"short": "land use and forestry partial", "compact": "land use partial", "status": "partial", "notation_key": "", "tooltip": "n"}
+    assert lulucf_labels(None)["short"] == ""
+
+
+def test_context_bar_carries_the_worded_labels(release):
+    cb = release["context_bar"]
+    labels = release["labels"]
+    assert cb["basis"] == "fiscal" and cb["basis_label"] == "July–June years"
+    assert cb["configuration_label"] == labels["configurations"][cb["configuration_id"]]["label"] == "Reference estimate"
+    assert cb["gwp_label"] == labels["gwp"][cb["gwp_basis"]]["label"] == "IPCC 2013 (AR5)"
+    # the ids stay beside the labels: the URL, the request and the receipt still speak them
+    assert cb["configuration_id"] == "REF_2023_24" and cb["gwp_basis"] == "AR5"

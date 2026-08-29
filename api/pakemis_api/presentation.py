@@ -4,8 +4,10 @@ The web computes nothing, so the number a screen prints at reading precision is 
 beside the contract's `display` and the `exact` decimal, never in place of them.  `display_short`
 is the cell's `exact` at two decimal places (Decimal, ROUND_HALF_EVEN, the contract's own
 rounding mode) for every numeric cell whatever its unit; `/release` publishes the rule as
-`rounding.presentation` with a sentence a person can read.  `unit_words` is the unit as words, the same mapping the web's
-`unitWords` uses, so a caption and a sentence agree.
+`rounding.presentation` with a sentence a person can read.  `unit_words` is the unit as words and
+`unit_short` the unit as a reader sees it beside a number ("Mt CO₂e"), the same mappings the web's
+`unitWords` / `unitShort` use, so a caption and a sentence agree; neither carries the GWP basis
+token, which the release's labels name once.
 
 The decoration runs after the query core has minted `result_sha256` and the receipt, so neither
 moves: a decorated envelope replays to the same receipt, and the CSV download (a data product,
@@ -45,24 +47,35 @@ PRESENTATION_ROUNDING = {
     "trailing_zeros": "kept (452.35, 63.37, 9.01, 0.39, 0.30, 248.75)",
 }
 
-# the web's unitWords: a four-entry magnitude map, digits subscripted in the species, a GWP basis
-# token in parentheses; any unit outside that shape passes through
+# the web's unitWords / unitShort: a four-entry magnitude map, digits subscripted in the species,
+# the GWP basis token DROPPED (the basis is named once, by the release's labels.gwp, never inside
+# a unit a reader sees); any unit outside that shape passes through
 MAGNITUDE_WORDS = {"Mt": "million tonnes", "Gg": "thousand tonnes", "kt": "thousand tonnes", "t": "tonnes"}
 SUBSCRIPT_DIGITS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 
+def is_gwp_token(t):
+    return len(t) == 3 and t.startswith("AR") and t[2].isdigit()
+
+
+def _species(tokens):
+    return [t.translate(SUBSCRIPT_DIGITS) for t in tokens if not is_gwp_token(t)]
+
+
 def unit_words(unit):
-    """'Mt CO2e AR5' -> 'million tonnes CO₂e (AR5)'; 'Gg' -> 'thousand tonnes'; else the unit."""
+    """'Mt CO2e AR5' -> 'million tonnes CO₂e'; 'Gg' -> 'thousand tonnes'; else the unit."""
     tokens = str(unit or "").split()
     if not tokens or tokens[0] not in MAGNITUDE_WORDS:
         return unit
-    out = [MAGNITUDE_WORDS[tokens[0]]]
-    for t in tokens[1:]:
-        if len(t) == 3 and t.startswith("AR") and t[2].isdigit():
-            out.append("(%s)" % t)
-        else:
-            out.append(t.translate(SUBSCRIPT_DIGITS))
-    return " ".join(out)
+    return " ".join([MAGNITUDE_WORDS[tokens[0]]] + _species(tokens[1:]))
+
+
+def unit_short(unit):
+    """'Mt CO2e AR5' -> 'Mt CO₂e'; 'Gg' -> 'Gg'; 't CH4' -> 't CH₄'; else the unit."""
+    tokens = str(unit or "").split()
+    if not tokens or tokens[0] not in MAGNITUDE_WORDS:
+        return unit
+    return " ".join([tokens[0]] + _species(tokens[1:]))
 
 
 # --- the rule ---------------------------------------------------------------------------------
@@ -111,13 +124,14 @@ def short_display(exact, unit, exact_high=None, display=""):
 # --- the envelope -----------------------------------------------------------------------------
 
 def decorate_cell(cell):
-    """Adds display_short and unit_words to one cell, in place; nested left/right cells and the
+    """Adds display_short, unit_words and unit_short to one cell, in place; nested left/right cells and the
     quantiles get the same treatment (quantiles_short beside quantiles)."""
     if not isinstance(cell, dict):
         return cell
     unit = cell.get("unit", "")
     cell["display_short"] = short_display(cell.get("exact"), unit, cell.get("exact_high"), cell.get("display", ""))
     cell["unit_words"] = unit_words(unit)
+    cell["unit_short"] = unit_short(unit)
     for side in ("left", "right"):
         if isinstance(cell.get(side), dict):
             decorate_cell(cell[side])
@@ -128,7 +142,7 @@ def decorate_cell(cell):
 
 
 def decorate(envelope, in_place=True):
-    """Every cell of `values` gains display_short and unit_words. The envelope's receipt and
+    """Every cell of `values` gains display_short, unit_words and unit_short. The envelope's receipt and
     result_sha256 were minted by the core before this runs and are not touched; pass
     in_place=False to keep the caller's envelope as the core returned it."""
     env = envelope if in_place else copy.deepcopy(envelope)
