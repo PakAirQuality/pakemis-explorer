@@ -82,3 +82,31 @@ make verify && make api                      # :8000
 make tiles && make raster                    # once per release
 cd web && npm run build && npm run start     # :3000  (NEXT_PUBLIC_BASEMAP_STYLE or the Mapbox token in web/.env.local)
 ```
+
+## Verification pass of 2026-08-30 (visible rendering, by the maintainer's session)
+
+The map never rendered in any earlier automation session and the cause was NOT the hidden
+window: MapLibre GL 6 locates its worker with `new URL("./maplibre-gl-worker.mjs",
+import.meta.url)`, which Next's bundler rewrites to a chunk URL where no such file exists, so
+the worker never started and no source ever loaded (no error is raised). Fixed by vendoring
+the worker into `web/public/vendor/` (`scripts/vendor-maplibre-worker.mjs`, run on install,
+dev and build) and `setWorkerUrl`. Two smaller defects fixed on the same pass: the map
+container had zero height (`maplibre-gl.css` is imported after Tailwind and its
+`position: relative` beat `absolute`), and `rasterFile` looked up TILES.json frames without
+their `raster/` prefix. `?hidden=render` is a development aid that swaps requestAnimationFrame
+for a timer and reports the document visible, so automation windows can screenshot the map.
+
+Seen rendered and checked against the API (screenshots in `web/docs/screenshots/`):
+ADM1 choropleth with the legend's five real displays and the Punjab hover `228.7168 Mt CO2e
+AR5` (03); ADM2 for power hatched as bounded intervals (04); AR6 at ADM2 refused by name in
+the legend slot, national AR6 KPI intact (05b); FY2020-21 refused (`GrainUnavailable ·
+grid_not_tabular`), rail tagged national only, national KPIs for that year (06); the CH4
+January raster over Punjab (05) and a grid-cell click reading `0.35006860 Gg` through
+`get_grid_cell` with its receipt (05c); the Lahore district card with the interval headline
+`[12.2565, 12.2769]`, limitation chips, lineage and receipts (09); the Ask dock on
+`claude-sonnet-5` (agent enabled once `ANTHROPIC_API_KEY` is exported to the API's shell).
+
+The one live model turn attempted returned HTTP 401 "API key is invalid" from the provider
+for the key exported in the maintainer's shell; the dock rendered it as a `model_error` card
+(12). A valid key is needed for the two live checks (a cited answer that moves the map; a
+refusal for AR6 by district); the same paths are covered by the FakeModel tests.
