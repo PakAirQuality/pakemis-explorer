@@ -1,6 +1,45 @@
 {
  "components": {
   "schemas": {
+   "AskBody": {
+    "properties": {
+     "client_history": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Client History",
+      "type": "array"
+     },
+     "conversation_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conversation Id"
+     },
+     "message": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+     },
+     "ui_state": {
+      "additionalProperties": true,
+      "title": "Ui State",
+      "type": "object"
+     }
+    },
+    "required": [
+     "message"
+    ],
+    "title": "AskBody",
+    "type": "object"
+   },
    "CompareRequest": {
     "description": "CompareRequest(left: pakemis_query.models.QueryEmissions, right: pakemis_query.models.QueryEmissions, mode: str = 'absolute')",
     "properties": {
@@ -309,6 +348,45 @@
  },
  "openapi": "3.1.0",
  "paths": {
+  "/v1/ask": {
+   "post": {
+    "operationId": "ask_v1_ask_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AskBody"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Ask",
+    "tags": [
+     "ask"
+    ]
+   }
+  },
   "/v1/download/{receipt}.csv": {
    "get": {
     "operationId": "download_csv_v1_download__receipt__csv_get",
