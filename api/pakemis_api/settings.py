@@ -7,6 +7,13 @@ PAKEMIS_RELEASES_ROOT   data/releases (default) - the directory fetch_release.py
 PAKEMIS_RELEASE_VERSION the version to serve (default: the `pinned:` line of RELEASES.md).
 PAKEMIS_RECEIPT_STORE   a JSON file mapping receipt -> canonical request (default data/receipts.json);
                         receipts are replayed from the request, never served from a stored result.
+PAKEMIS_ASK_PROVIDER    auto (default) | anthropic | gemini. auto picks gemini when PAKEMIS_ASK_MODEL
+                        starts with "gemini" or when GEMINI_API_KEY (or GOOGLE_API_KEY) is set and
+                        ANTHROPIC_API_KEY is not; otherwise anthropic.
+PAKEMIS_ASK_MODEL       the model id; empty -> the provider's default (claude-sonnet-5 for anthropic,
+                        gemini-3.1-pro-preview for gemini, which falls back to gemini-2.5-pro then
+                        gemini-2.5-flash when the key cannot use it).
+The keys themselves are read by the provider SDKs from the environment; nothing here reads them.
 """
 import os
 import re
@@ -17,6 +24,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DEFAULT_QUERY_PATH = "/Users/rehanahmad/Desktop/emissions/src"
 DEFAULT_ASK_MODEL = "claude-sonnet-5"
+DEFAULT_ASK_MODELS = {"anthropic": DEFAULT_ASK_MODEL, "gemini": "gemini-3.1-pro-preview"}
+GEMINI_FALLBACKS = ("gemini-2.5-pro", "gemini-2.5-flash")
+ASK_PROVIDERS = ("auto", "anthropic", "gemini")
+KEY_VARS = {"anthropic": ("ANTHROPIC_API_KEY",), "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
+
+
+def _key_present(provider):
+    return any(os.environ.get(v) for v in KEY_VARS[provider])
 
 
 def pinned_version(releases_md):
@@ -35,7 +50,8 @@ class Settings:
     version: str
     receipt_store: str
     releases_md: str
-    ask_model: str = DEFAULT_ASK_MODEL            # ask: PAKEMIS_ASK_MODEL; caps are read by ask/limits.py
+    ask_model: str = ""                           # ask: PAKEMIS_ASK_MODEL; empty -> the provider's default; caps are read by ask/limits.py
+    ask_provider: str = "auto"                    # ask: PAKEMIS_ASK_PROVIDER
 
     @classmethod
     def from_env(cls, **override):
@@ -47,13 +63,41 @@ class Settings:
             version=version,
             receipt_store=override.get("receipt_store") or os.environ.get("PAKEMIS_RECEIPT_STORE", os.path.join(ROOT, "data", "receipts.json")),
             releases_md=releases_md,
-            ask_model=override.get("ask_model") or os.environ.get("PAKEMIS_ASK_MODEL", DEFAULT_ASK_MODEL),
+            ask_model=override.get("ask_model") or os.environ.get("PAKEMIS_ASK_MODEL", ""),
+            ask_provider=override.get("ask_provider") or os.environ.get("PAKEMIS_ASK_PROVIDER", "auto"),
         )
 
     @property
+    def resolved_ask_provider(self):
+        """anthropic | gemini: the explicit setting, else the model id's prefix, else which key is set."""
+        provider = (self.ask_provider or "auto").lower()
+        if provider not in ASK_PROVIDERS:
+            raise RuntimeError("PAKEMIS_ASK_PROVIDER must be one of %s, not %r" % (", ".join(ASK_PROVIDERS), self.ask_provider))
+        if provider != "auto":
+            return provider
+        if self.ask_model.startswith("gemini"):
+            return "gemini"
+        if _key_present("gemini") and not _key_present("anthropic"):
+            return "gemini"
+        return "anthropic"
+
+    @property
+    def resolved_ask_model(self):
+        return self.ask_model or DEFAULT_ASK_MODELS[self.resolved_ask_provider]
+
+    @property
     def ask_enabled(self):
-        """The agent runs only when the API's environment carries the key; the value is never read here."""
-        return bool(os.environ.get("ANTHROPIC_API_KEY"))
+        """The agent runs only when the API's environment carries the chosen provider's key; the value is never read here."""
+        return _key_present(self.resolved_ask_provider)
+
+    @property
+    def ask_disabled_reason(self):
+        """Names the missing variable(s); never a value."""
+        if self.ask_enabled:
+            return None
+        if (self.ask_provider or "auto").lower() == "auto" and not self.ask_model:
+            return "neither ANTHROPIC_API_KEY nor GEMINI_API_KEY is set in the API's environment"
+        return "%s is not set in the API's environment" % " or ".join(KEY_VARS[self.resolved_ask_provider])
 
     @property
     def release_dir(self):

@@ -10,7 +10,9 @@ Events (name: data), in the order a turn emits them:
     answer        {text, receipts, citations, elapsed_s}   text carries <cite k cell receipt> tags
     error         {code, message}                          bare_numbers | placeholder_error | turn_limit | budget_exhausted | model_error | model_refusal | agent_disabled
     done          {conversation_id, usage, cost_estimate_usd}
-No model client (no ANTHROPIC_API_KEY and nothing injected) -> HTTP 503 {"error": "agent_disabled"}.
+No model client (no provider key and nothing injected) -> HTTP 503 {"error": "agent_disabled"}.
+The provider (anthropic | gemini) and model come from settings; `service.agent_status` reports
+{enabled, model, provider, reason} with `model` the one actually answering (Gemini's chain may move).
 """
 import json
 import logging
@@ -58,22 +60,41 @@ class AskRuntime:
         return Turn(self.service, self.model, self.tools, self.system, self.dims, conv, body.message, body.ui_state, self.limits, self.budget)
 
 
+def build_model(settings, on_model_change=None):
+    """The provider's client for settings (no key is read here; the SDK reads it on the first call)."""
+    limits = Limits.from_env()
+    provider = settings.resolved_ask_provider
+    model_id = settings.resolved_ask_model
+    if provider == "gemini":
+        from pakemis_api.ask.gemini import GeminiModel
+        return GeminiModel(model_id, max_output_tokens=limits.max_output_tokens, on_model_change=on_model_change)
+    return AnthropicModel(model_id, max_tokens=limits.max_output_tokens, effort=limits.effort)
+
+
 def install_ask(app, service, settings, model_client=None):
     """Build the runtime on app.state.ask and record the agent status on the service."""
     model = model_client
     reason = None
+    provider = "injected" if model is not None else None
+
+    def on_model_change(model_id):                  # Gemini's fallback chain moved: the status follows
+        if service.agent_status:
+            service.agent_status["model"] = model_id
+
     if model is None:
         if getattr(settings, "ask_enabled", False):
-            limits = Limits.from_env()
-            model = AnthropicModel(settings.ask_model, max_tokens=limits.max_output_tokens, effort=limits.effort)
+            model = build_model(settings, on_model_change)
+            provider = getattr(model, "provider", settings.resolved_ask_provider)
         else:
-            reason = "ANTHROPIC_API_KEY is not set in the API's environment"
+            reason = getattr(settings, "ask_disabled_reason", None) or "no provider key is set in the API's environment"
+            provider = getattr(settings, "resolved_ask_provider", None)
     app.state.ask = AskRuntime(service, model) if model is not None else None
     service.agent_status = {"enabled": model is not None,
                             "model": getattr(model, "model_id", None) if model is not None else None,
+                            "provider": provider,
                             "reason": reason}
     if model is not None:
-        log.info("Ask PakEmis enabled on %s with %d tools", service.agent_status["model"], len(app.state.ask.tools))
+        log.info("Ask PakEmis enabled on %s (%s) with %d tools", service.agent_status["model"], provider, len(app.state.ask.tools))
     else:
         log.info("Ask PakEmis disabled: %s", reason)
     return app.state.ask

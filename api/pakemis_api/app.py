@@ -226,7 +226,7 @@ class Service:
             "query_contract": c["query_contract"],
             "known_limitations": c["known_limitations"],
             "labels": self.labels(),
-            "agent": dict(self.agent_status) if self.agent_status else {"enabled": False, "model": "", "reason": "not mounted"},
+            "agent": dict(self.agent_status) if self.agent_status else {"enabled": False, "model": "", "provider": None, "reason": "not mounted"},
             "digests": {"semantic_release_json": self.verification["semantic_release_sha256"],
                         "release_manifest_json": self.verification["release_manifest_sha256"],
                         "tables": {name: t["sha256_csv"] for name, t in self.release.tables.items()},

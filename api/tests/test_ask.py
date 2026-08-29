@@ -349,17 +349,18 @@ def test_conversation_memory_and_client_history(ask_client, fake):
 
 def test_agent_status_and_release_flag(ask_client):
     status = ask_client.app.state.service.agent_status
-    assert status == {"enabled": True, "model": "fake-model", "reason": None}
+    assert status == {"enabled": True, "model": "fake-model", "provider": "injected", "reason": None}
 
 
 def test_503_when_disabled(settings, monkeypatch):
     from pakemis_api.app import create_app
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    for var in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
     with TestClient(create_app(settings)) as c:
         r = c.post("/v1/ask", json={"message": "hi", "ui_state": {}})
         assert r.status_code == 503 and r.json()["error"] == "agent_disabled"
         assert c.app.state.service.agent_status["enabled"] is False and c.app.state.service.agent_status["model"] is None
-        assert "KEY" not in json.dumps(c.app.state.service.agent_status).replace("ANTHROPIC_API_KEY", "")
+        assert "KEY" not in json.dumps(c.app.state.service.agent_status).replace("ANTHROPIC_API_KEY", "").replace("GEMINI_API_KEY", "")
 
 
 def test_anthropic_model_builds_without_a_key(monkeypatch):

@@ -8,5 +8,6 @@ numpy>=1.26
 Pillow>=10
 httpx>=0.27
 anthropic>=0.93
+google-genai>=1.67
 sse-starlette>=3.3
 pytest>=7.4

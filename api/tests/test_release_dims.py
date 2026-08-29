@@ -68,14 +68,14 @@ def test_labels_cover_every_id(release):
 
 
 def test_agent_block_reports_the_ask_module(release):
-    """The ask module is mounted; without ANTHROPIC_API_KEY in the API's environment it
-    reports itself disabled with the configured model and a reason that names the
-    variable (never its value)."""
+    """The ask module is mounted; without a provider key in the API's environment it
+    reports itself disabled with a reason that names the missing variable(s) (never a value)."""
     agent = release["agent"]
-    assert set(agent) == {"enabled", "model", "reason"}
+    assert set(agent) == {"enabled", "model", "provider", "reason"}
     assert agent["enabled"] is False
-    assert agent["model"] in (None, "", "claude-sonnet-5")   # no model is built without the key
-    assert "ANTHROPIC_API_KEY" in agent["reason"]
+    assert agent["model"] in (None, "")                       # no model is built without the key
+    assert agent["provider"] in ("anthropic", "gemini")
+    assert "ANTHROPIC_API_KEY" in agent["reason"] or "GEMINI_API_KEY" in agent["reason"]
     assert len(agent["reason"]) < 200
 
 
@@ -84,8 +84,8 @@ def test_agent_status_hook(client):
     service = client.app.state.service
     before = service.agent_status
     try:
-        service.agent_status = {"enabled": True, "model": "test-model", "reason": ""}
-        assert client.get("/v1/release").json()["agent"] == {"enabled": True, "model": "test-model", "reason": ""}
+        service.agent_status = {"enabled": True, "model": "test-model", "provider": "test", "reason": ""}
+        assert client.get("/v1/release").json()["agent"] == {"enabled": True, "model": "test-model", "provider": "test", "reason": ""}
     finally:
         service.agent_status = before
     assert client.get("/v1/release").json()["agent"]["enabled"] is False

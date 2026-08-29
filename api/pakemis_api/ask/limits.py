@@ -25,6 +25,9 @@ PRICE_PER_MTOK = {
     "claude-opus-4-6": (5.0, 25.0),
     "claude-sonnet-4-6": (3.0, 15.0),
     "claude-haiku-4-5": (1.0, 5.0),
+    "gemini-2.5-flash": (0.30, 2.50),
+    "gemini-2.5-pro": (1.25, 10.0),
+    # gemini-3.1-pro-preview: no published price at the time of writing -> cost_estimate_usd None
 }
 CACHE_READ_FACTOR = 0.1
 CACHE_WRITE_FACTOR = 1.25
