@@ -16,6 +16,7 @@ from dataclasses import dataclass
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DEFAULT_QUERY_PATH = "/Users/rehanahmad/Desktop/emissions/src"
+DEFAULT_ASK_MODEL = "claude-sonnet-5"
 
 
 def pinned_version(releases_md):
@@ -34,6 +35,7 @@ class Settings:
     version: str
     receipt_store: str
     releases_md: str
+    ask_model: str = DEFAULT_ASK_MODEL            # ask: PAKEMIS_ASK_MODEL; caps are read by ask/limits.py
 
     @classmethod
     def from_env(cls, **override):
@@ -45,7 +47,13 @@ class Settings:
             version=version,
             receipt_store=override.get("receipt_store") or os.environ.get("PAKEMIS_RECEIPT_STORE", os.path.join(ROOT, "data", "receipts.json")),
             releases_md=releases_md,
+            ask_model=override.get("ask_model") or os.environ.get("PAKEMIS_ASK_MODEL", DEFAULT_ASK_MODEL),
         )
+
+    @property
+    def ask_enabled(self):
+        """The agent runs only when the API's environment carries the key; the value is never read here."""
+        return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
     @property
     def release_dir(self):

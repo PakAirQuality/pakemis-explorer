@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
 from pakemis_api import models_gen as G
+from pakemis_api.ask.router import install_ask, router as ask_router
 from pakemis_api.receipts import ReceiptStore
 from pakemis_api.settings import Settings, import_query_core
 
@@ -189,13 +190,14 @@ def refusal(exc):
     return JSONResponse(status_code=422, content=body)
 
 
-def create_app(settings=None):
+def create_app(settings=None, model_client=None):
     settings = settings or Settings.from_env()
 
     @asynccontextmanager
     async def lifespan(app):
         app.state.service = Service(settings)
         log.info("serving %s from %s", app.state.service.release.release_id, settings.release_dir)
+        install_ask(app, app.state.service, settings, model_client)   # ask: sets service.agent_status
         yield
 
     app = FastAPI(title="PakEmis Explorer API", version=API_VERSION, lifespan=lifespan,
@@ -206,6 +208,8 @@ def create_app(settings=None):
     @app.exception_handler(E.QueryError)
     async def _query_error(request: Request, exc: E.QueryError):
         return refusal(exc)
+
+    app.include_router(ask_router)                                    # ask: POST /v1/ask (SSE)
 
     def svc() -> Service:
         return app.state.service
