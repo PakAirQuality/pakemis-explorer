@@ -116,7 +116,9 @@ def _compact_context(context):
     return out
 
 
-_CELL_SKIP = {"exact", "value", "display", "display_short", "unit", "unit_words", "unit_short", "quantiles_short", "result_row_ids", "formula", "group"}
+_CELL_SKIP = {"exact", "value", "display", "display_short", "unit", "unit_words", "unit_short", "quantiles_short",
+              "share_pct_short", "interval_short",       # derived figures no placeholder can print
+              "result_row_ids", "formula", "group"}
 _NUMERIC = re.compile(r"^[-+]?(\d+[.,]?\d*|\.\d+)([eE][-+]?\d+)?$")
 _ID_KEYS = ("month", "period_id")           # digit-shaped identifiers the model may name
 

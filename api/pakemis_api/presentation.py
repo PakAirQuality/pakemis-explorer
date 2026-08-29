@@ -9,11 +9,18 @@ rounding mode) for every numeric cell whatever its unit; `/release` publishes th
 `unitWords` / `unitShort` use, so a caption and a sentence agree; neither carries the GWP basis
 token, which the release's labels name once.
 
+Two derived presentation fields sit beside it, declared under `rounding.presentation.derived`:
+`share_pct_short` (a cell's share of the sum of the cells, one decimal, only when a query_emissions
+envelope grouped by exactly one key partitions a total; the envelope names the partition in
+`partition`) and `interval_short` (the P2.5–P97.5 interval of an uncertainty cell as one string,
+from `quantiles_short`, with `scenario_label` naming the draw scenario in words).
+
 The decoration runs after the query core has minted `result_sha256` and the receipt, so neither
 moves: a decorated envelope replays to the same receipt, and the CSV download (a data product,
 not a screen) is served undecorated.
 """
 import copy
+import json
 from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN
 
 COUNT_UNITS = ("rows", "count")
@@ -21,6 +28,61 @@ DECIMALS = 2
 Q = Decimal("0.01")
 BELOW = "<0.01"          # a non-zero value that would print as 0.00
 ABOVE = ">-0.01"         # its negative twin (-0.00 is never printed)
+
+SHARE_DECIMALS = 1
+SHARE_Q = Decimal("0.1")
+SHARE_BELOW = "<0.1"     # a non-zero share that would print as 0.0
+SHARE_ABOVE = ">-0.1"
+SHARE_FIELD = "share_pct_short"
+INTERVAL_FIELD = "interval_short"
+EN_DASH = "\u2013"
+
+# the draw scenarios of fact_uncertainty_series in words (an unknown scenario prints as itself)
+SCENARIO_LABELS = {
+    "time_correlated": "time-correlated draws",
+    "time_independent": "time-independent draws",
+    "parameter_typed": "parameter-typed draws",
+    "cross_sector": "factors shared across modules",
+    "within_sector": "factors shared within a module",
+}
+
+PARTITION_RULE = (
+    "share_pct_short is 100 x exact / the sum of exact over these cells, rounded half to even to one decimal "
+    "place with the trailing zero kept (49.4, 7.0); a zero prints as 0.0; a non-zero share that would print as "
+    "0.0 prints as <0.1 (>-0.1 when negative). It is added only to a query_emissions envelope whose request "
+    "groups by exactly one key and whose cells are all exact (a numeric exact, no bounded interval, no "
+    "left/right, one unit) and sum to a non-zero total, so the shares are a partition of that sum; it is not "
+    "added when the request groups by no key or by two or more, to a compare, timeseries, uncertainty or "
+    "completeness envelope, or to a download."
+)
+
+DERIVED = {
+    SHARE_FIELD: {
+        "field": SHARE_FIELD,
+        "derived_from": "exact",
+        "mode": "ROUND_HALF_EVEN",
+        "decimals": SHARE_DECIMALS,
+        "unit": "percent",
+        "applies_to": "query_emissions cells when the request groups by exactly one key and every cell is exact; "
+                      "the envelope carries partition {of, n, share_field, rule}",
+        "zero": "0.0",
+        "below_precision": "%s (%s when negative)" % (SHARE_BELOW, SHARE_ABOVE),
+        "sentence": PARTITION_RULE,
+    },
+    INTERVAL_FIELD: {
+        "field": INTERVAL_FIELD,
+        "derived_from": "quantiles_short",
+        "decimals": DECIMALS,
+        "applies_to": "uncertainty cells that carry quantiles P2.5 and P97.5 (get_uncertainty scope series and "
+                      "national); scenario_label names the cell's scenario in words beside it",
+        "sentence": (
+            "interval_short is the cell's quantiles_short P2.5 and P97.5 joined by an en dash (400.27%s514.28), "
+            "each end the two-decimal rendering of the quantile; scenario_label is the draw scenario in words "
+            "(time_correlated -> time-correlated draws), or the scenario id itself when it has no words." % EN_DASH
+        ),
+        "scenario_labels": dict(SCENARIO_LABELS),
+    },
+}
 
 PRESENTATION_ROUNDING = {
     "id": "PRESENTATION_ROUNDING",
@@ -45,6 +107,7 @@ PRESENTATION_ROUNDING = {
         "quantiles": {"field": "quantiles_short", "decimals": DECIMALS},
     },
     "trailing_zeros": "kept (452.35, 63.37, 9.01, 0.39, 0.30, 248.75)",
+    "derived": DERIVED,
 }
 
 # the web's unitWords / unitShort: a four-entry magnitude map, digits subscripted in the species,
@@ -121,6 +184,80 @@ def short_display(exact, unit, exact_high=None, display=""):
     return lo_text if lo_text == hi_text else "[%s, %s]" % (lo_text, hi_text)
 
 
+def share_short(part, total):
+    """One share at one decimal, half to even: 100 x part / total; the sub-precision forms for a
+    non-zero share that would print as 0.0."""
+    if part == 0:
+        return "0.0"
+    q = (part * 100 / total).quantize(SHARE_Q, rounding=ROUND_HALF_EVEN)
+    if q == 0:
+        return SHARE_BELOW if part * total > 0 else SHARE_ABOVE
+    return format(q, "f")
+
+
+def interval_short(quantiles_short):
+    """'400.27' and '514.28' -> '400.27\u2013514.28'; None when either end is missing."""
+    if not isinstance(quantiles_short, dict):
+        return None
+    low, high = quantiles_short.get("P2.5"), quantiles_short.get("P97.5")
+    if low in ("", None) or high in ("", None):
+        return None
+    return "%s%s%s" % (low, EN_DASH, high)
+
+
+def scenario_label(scenario):
+    return SCENARIO_LABELS.get(scenario, scenario)
+
+
+def _group_keys(env):
+    """The request's group_by, read from the envelope's canonical request; None when the
+    envelope is not a query_emissions answer."""
+    if env.get("request_type") != "query_emissions":
+        return None
+    try:
+        req = json.loads(env.get("request") or "")
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(req, dict) or req.get("_type", "QueryEmissions") != "QueryEmissions":
+        return None
+    keys = req.get("group_by") or ()
+    return list(keys) if isinstance(keys, (list, tuple)) else None
+
+
+def partition_cells(env):
+    """The cells of `env` when they partition a total under PARTITION_RULE, else None: a
+    query_emissions request grouped by exactly one key, every cell numeric and exact (no bounded
+    interval, no left/right), one unit across the cells, a non-zero sum."""
+    keys = _group_keys(env)
+    if keys is None or len(keys) != 1:
+        return None
+    cells = env.get("values") or []
+    if not cells or not all(isinstance(c, dict) for c in cells):
+        return None
+    units = {c.get("unit") for c in cells}
+    if len(units) != 1 or is_count(next(iter(units))):
+        return None
+    for c in cells:
+        if c.get("exact_high") not in ("", None) or "left" in c or "right" in c or _decimal(c.get("exact")) is None:
+            return None
+    if sum(Decimal(str(c["exact"])) for c in cells) == 0:
+        return None
+    return cells
+
+
+def decorate_partition(env):
+    """Adds share_pct_short to every cell and `partition` to the envelope when the cells partition
+    a total; leaves the envelope alone otherwise."""
+    cells = partition_cells(env)
+    if cells is None:
+        return env
+    total = sum(Decimal(str(c["exact"])) for c in cells)
+    for c in cells:
+        c[SHARE_FIELD] = share_short(Decimal(str(c["exact"])), total)
+    env["partition"] = {"of": "the sum of these cells", "n": len(cells), "share_field": SHARE_FIELD, "rule": PARTITION_RULE}
+    return env
+
+
 # --- the envelope -----------------------------------------------------------------------------
 
 def decorate_cell(cell):
@@ -138,14 +275,22 @@ def decorate_cell(cell):
     q = cell.get("quantiles")
     if isinstance(q, dict):
         cell["quantiles_short"] = {k: short_display(v, unit, None, str(v)) for k, v in q.items()}
+        interval = interval_short(cell["quantiles_short"])
+        if interval is not None:
+            cell[INTERVAL_FIELD] = interval
+        if isinstance(cell.get("scenario"), str):
+            cell["scenario_label"] = scenario_label(cell["scenario"])
     return cell
 
 
 def decorate(envelope, in_place=True):
-    """Every cell of `values` gains display_short, unit_words and unit_short. The envelope's receipt and
-    result_sha256 were minted by the core before this runs and are not touched; pass
-    in_place=False to keep the caller's envelope as the core returned it."""
+    """Every cell of `values` gains display_short, unit_words and unit_short (an uncertainty cell
+    interval_short and scenario_label too); a one-key partition gains share_pct_short per cell and
+    `partition` on the envelope. The envelope's receipt and result_sha256 were minted by the core
+    before this runs and are not touched; pass in_place=False to keep the caller's envelope as the
+    core returned it."""
     env = envelope if in_place else copy.deepcopy(envelope)
     for cell in env.get("values") or ():
         decorate_cell(cell)
+    decorate_partition(env)
     return env

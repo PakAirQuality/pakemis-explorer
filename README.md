@@ -267,6 +267,26 @@ and carries no presentation column. In Ask PakEmis the compact tool result and t
 renders it (the form the prompt asks for in prose); `{{result_k_cell_n}}` keeps rendering
 `display`, and the bare-number gate is unchanged.
 
+Two derived presentation fields sit beside `display_short`, declared under
+`/release.rounding.presentation.derived` with a sentence each. `share_pct_short` is a cell's
+share of the sum of the cells (`100 × exact / Σ exact`, `Decimal`, `ROUND_HALF_EVEN`, one decimal
+with the trailing zero kept: `49.4`, `7.0`; a zero prints `0.0`; a non-zero share that would print
+`0.0` prints `<0.1`, `>-0.1` when negative). It is added only to a `query_emissions` envelope whose
+request groups by exactly one key and whose cells are all exact (a numeric `exact`, no bounded
+interval, no `left`/`right`, one unit) with a non-zero sum, so the shares are a partition of that
+sum; the envelope then carries `partition: {of: "the sum of these cells", n, share_field:
+"share_pct_short", rule}`. No share is added when the request groups by no key or by two or more,
+to a compare, timeseries, uncertainty or completeness envelope, or to a download. An uncertainty
+cell with `quantiles` (`get_uncertainty` scope `series` or `national`) carries `interval_short`,
+its `quantiles_short` P2.5 and P97.5 joined by an en dash (`400.27–514.28`), and `scenario_label`,
+the draw scenario in words (`time_correlated` → `time-correlated draws`, `time_independent` →
+`time-independent draws`, `parameter_typed` → `parameter-typed draws`, `cross_sector` →
+`factors shared across modules`, `within_sector` → `factors shared within a module`; an unknown
+scenario prints as itself). The three FY2023-24 `annual_level` scenarios bound the same total
+differently (parameter-typed `400.27–514.28`, time-correlated `406.52–507.61`, time-independent
+`406.19–506.31`), so a screen that prints one interval names its scenario. Neither derived figure
+reaches the Ask model's compact tool result (no placeholder prints it).
+
 ## Ask PakEmis: the contract
 
 `POST /api/v1/emissions/ask` takes `{conversation_id?, message, ui_state, client_history?}` and streams:
