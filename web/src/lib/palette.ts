@@ -46,6 +46,6 @@ export function rampColor(value: number, min: number, max: number): string {
 /** The stops of a MapLibre `interpolate` expression for one envelope's own min and max `value`. */
 export function rampStops(min: number, max: number): (number | string)[] {
   const out: (number | string)[] = [];
-  RAMP.forEach((c, i) => out.push(min + ((max - min) * i) / (RAMP.length - 1), c));
+  RAMP.forEach((c, i) => out.push(i === RAMP.length - 1 ? max : i === 0 ? min : min + ((max - min) * i) / (RAMP.length - 1), c));
   return out;
 }
