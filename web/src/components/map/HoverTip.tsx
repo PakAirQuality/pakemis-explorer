@@ -6,6 +6,7 @@
  * lib/geography.ts, not from here); for polygons without a cell, why (census units sharing
  * one shape are listed).
  */
+import { shown } from "@/lib/envelope";
 import type { Cell } from "@/lib/envelope";
 import { joinNames, type Residual } from "@/lib/geography";
 import { adm2RowsForShape } from "@/lib/labels";
@@ -43,7 +44,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
         <div className="mt-1 text-warn">Refused for this scope: see the legend.</div>
       ) : cell ? (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-          <span className="num text-md font-semibold text-ink" data-testid="hover-display">{cell.display}</span>
+          <span className="num text-md font-semibold text-ink" data-testid="hover-display" title={`${cell.display} (contract precision)`}>{shown(cell)}</span>
           <span className="text-muted">{cell.unit}</span>
           {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           {isBounded(cell) && <div className="w-full text-muted">{String((cell as Record<string, unknown>).interpretation ?? "")}</div>}

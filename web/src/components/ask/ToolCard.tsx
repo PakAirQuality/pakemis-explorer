@@ -90,7 +90,7 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
                             {g && attrs ? <span className="mono ml-1 text-micro normal-case tracking-normal">{attrs}</span> : null}
                           </td>
                           <td className="num whitespace-nowrap py-0.5 text-right align-top">
-                            <span className="font-semibold text-ink">{c.display ?? ""}</span> <span className="text-muted">{c.unit ?? ""}</span>
+                            <span className="font-semibold text-ink" title={c.display ? `${c.display} (contract precision)` : undefined}>{c.display_short ?? c.display ?? ""}</span> <span className="text-muted">{c.unit ?? ""}</span>
                             {isBounded(c) && <span className="ml-1"><IntervalBadge cell={c} title={c.interpretation ?? c.exactness} /></span>}
                           </td>
                         </tr>

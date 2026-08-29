@@ -11,7 +11,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { detailBodies, type DetailBodies } from "@/lib/requests";
 import { useEmissions, useGridCell, useLineage } from "@/lib/queries";
 import { adm2RowsForShape, configLetter, envelopeUnitLine, gasLabel, monthLabel, periodShort, sectorLabel } from "@/lib/labels";
-import type { Envelope } from "@/lib/envelope";
+import { type Envelope, shown } from "@/lib/envelope";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
@@ -64,7 +64,7 @@ function Header({ kicker, title, sub }: { kicker: string; title: ReactNode; sub?
   );
 }
 
-/** The headline: the total's display verbatim with its unit, an interval badge and the cell's interpretation when bounded. */
+/** The headline: the total as shown (display_short, else display) with its unit, the contract display and exact in the title, an interval badge and the cell's interpretation when bounded. */
 function Headline({ q, what }: { q: { data?: Envelope; error?: unknown; isLoading: boolean }; what: string }) {
   const cell = q.data?.values[0];
   if (q.error) return <div className="my-2"><RefusalCard error={q.error} compact /></div>;
@@ -73,7 +73,7 @@ function Headline({ q, what }: { q: { data?: Envelope; error?: unknown; isLoadin
   return (
     <div className="my-2" data-testid="headline">
       <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display">{cell.display}</span>
+        <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
         <span className="text-sm text-muted">{cell.unit}</span>
         {bounded && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
       </div>
@@ -117,7 +117,7 @@ function GasChips({ q }: { q: { data?: Envelope; error?: unknown; isLoading: boo
       <div className="flex flex-wrap gap-1.5" data-testid="gas-chips">
         {q.data.values.map((c, i) => (
           <span key={i} className="pill border border-line bg-white px-2 py-0.5 text-xs">
-            <span className="text-muted">{gasLabel(labels, c.group?.gas ?? "")}</span> <span className="num font-semibold">{c.display}</span>
+            <span className="text-muted">{gasLabel(labels, c.group?.gas ?? "")}</span> <span className="num font-semibold">{shown(c)}</span>
           </span>
         ))}
       </div>
@@ -251,7 +251,7 @@ function CellCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "cell" }> 
       ) : cell ? (
         <div className="my-2" data-testid="headline">
           <div className="flex items-baseline gap-2">
-            <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display">{cell.display}</span>
+            <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
             <span className="text-sm text-muted">{cell.unit}</span>
           </div>
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">

@@ -6,7 +6,7 @@
  * bounded cells. Nothing is summed, rounded or converted here.
  */
 import { useEffect, useRef } from "react";
-import { cellLabel, type Cell, type Envelope } from "@/lib/envelope";
+import { cellLabel, type Cell, type Envelope, shown } from "@/lib/envelope";
 import { sectorColor, ACCENT } from "@/lib/palette";
 import { groupValueLabel, type Dims } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
@@ -46,7 +46,7 @@ export function BarChart({ env, horizontal = false, height = 220, labels, dims, 
         if (labels && dims && keys.length) return keys.map((k) => groupValueLabel(labels, dims, k, g[k])).join(" · ");
         return cellLabel(v);
       });
-      const displays = env.values.map((v) => v.display);
+      const displays = env.values.map((v) => shown(v));
       const unit = env.values[0]?.unit ?? "";
       const data = env.values.map((v, i) => {
         const value = typeof v.value === "number" ? v.value : 0;

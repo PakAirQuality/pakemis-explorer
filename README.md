@@ -7,9 +7,12 @@ PakEmis, a tool-calling agent whose every number is a server-inserted envelope v
 **One numerical truth layer.** The map, the cards, the downloads, the API and the agent are
 different views of the same verified release. The rule this repository enforces at every layer:
 
-- Every number shown anywhere is a `display` string from an API envelope that carries a
-  receipt. The web app computes nothing: no sums, no rounding, no percentages, no unit changes.
-  A cell's `value` may only size a bar or shade a polygon.
+- Every number shown anywhere is a string from an API envelope that carries a receipt: by
+  default the cell's `display_short` (the server's two-decimal rendering of `exact`, described
+  by `/release.rounding.presentation`), with the contract's `display` and the `exact` decimal
+  one step away (Result details, the table's "full precision" toggle, a headline's title). The
+  web app computes nothing: no sums, no rounding, no percentages, no unit changes. A cell's
+  `value` may only size a bar or shade a polygon.
 - The API adds no number either. It returns `pakemis_query`'s Envelope unchanged (values with
   `exact` beside `display`, the context bar, the calculation SQL, provenance digests, unallocated
   mass, limitations hit, citation, `result_sha256`, receipt).

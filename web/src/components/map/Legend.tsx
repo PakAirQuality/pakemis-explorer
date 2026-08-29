@@ -16,6 +16,7 @@ import { rampColor, RAMP, NO_CELL } from "@/lib/palette";
 import { gridCellBody } from "@/lib/requests";
 import type { ExplorerState } from "@/lib/urlState";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
+import { shown } from "@/lib/envelope";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import type { CellIndex } from "./paint";
 import type { RasterInfo } from "./tiles";
@@ -47,7 +48,7 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
             {legendRanks(env.values).map((c, i) => (
               <li key={i} className="flex items-center gap-2">
                 <span className="inline-block h-3 w-5 rounded-sm border border-ink/10" style={{ background: rampColor(c.value as number, index.min, index.max) }} />
-                <span className="num text-ink" data-testid="legend-label">{c.display}</span>
+                <span className="num text-ink" data-testid="legend-label" title={`${c.display} (contract precision)`}>{shown(c)}</span>
               </li>
             ))}
             {index.anyBounded && (
@@ -109,7 +110,7 @@ function AnchorRow({ label, q }: { label: string; q: { data?: Envelope; error?: 
       <div className="text-muted">{label}</div>
       {cell ? (
         <div className="flex items-baseline justify-between gap-2">
-          <span className="num text-ink" data-testid="raster-anchor">{cell.display} {cell.unit}</span>
+          <span className="num text-ink" data-testid="raster-anchor" title={`${cell.display} (contract precision)`}>{shown(cell)} {cell.unit}</span>
           <span className="mono text-muted" title={q.data!.receipt}>{q.data!.receipt.slice(0, 8)}</span>
         </div>
       ) : q.error ? (

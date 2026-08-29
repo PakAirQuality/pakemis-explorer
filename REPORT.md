@@ -320,3 +320,81 @@ process runs as `pakemis`.
 do not exist yet (`cloudbuild.yaml` is written, not run); `docker-compose.yml`'s web service still
 names the old variable `NEXT_PUBLIC_PAKEMIS_API` (port updated to 8080); the `/v1` alias and the
 `web/public/tiles` copy are both due for removal after one release.
+
+## The introduction as a data product, Result details, and two-decimal presentation (2026-08-30)
+
+**The four screens.** `WelcomeModal` follows the user's brief verbatim: *Pakistan
+greenhouse-gas emissions, 2015–16 to 2023–24* (the range from the release's fiscal periods), the
+facts line "9 fiscal years · monthly estimates · district-level data · documented sources" (the
+count is the number of fiscal period rows) and the national series as a figure titled "Pakistan
+greenhouse-gas emissions" with the unit line "Million tonnes CO₂e (AR5), excluding land use"
+(the cell's `unit_words`, else `unitWords`, plus `context.lulucf`); *Explore emissions across
+place, time and sector* with the four dimensions as a definition list and "Emissions by sector,
+2023–24"; *Query the dataset* with the example question and a live transport envelope
+(`transportSeriesBody`: `get_timeseries`, `sectors: ["transport"]`, annual, reference
+configuration) drawn as "Transport emissions by year", a skeleton while it loads and the API's
+refusal by name if it refuses; *Open data, methods and code* with the definition list, the
+versioning line, "View methodology" (`/about#methods`, the anchor on the methods section, which
+keeps the version string in its header) and "Open Explorer". Header `PAKEMIS · 1 of 4 · ×`,
+four 6 px dots and no progress fill; Skip / Back (pages 2–4) / Next; the title at 28 px. No
+eyebrows, chips, captions, receipt lines, version footnote, map-levels note or Ask button; the
+only "?" on any screen is the example question. `TrendChart` gained `subtitle` and
+`showReceipt` so the panels keep their built subtitle and source line. Every screen was
+measured in the headless render at 1440×779: the screen area's `scrollHeight` equals its
+`clientHeight` on all four (the modal is 597–673 px tall), so nothing scrolls.
+
+**Result details.** The receipt hash left the collapsed footer: `ReceiptFooter` is one quiet
+"Result details ›" button (title "Sources · filters · calculation · API request") opening the
+drawer with **Sources** (the old Evidence), **Filters** (the envelope's context through the
+labels: period short, configuration label with its id, GWP basis, geography, spatial view,
+basis, defaults applied), **Calculation**, **API request**, **Download**, **Cite**; the foot
+carries "Result ID <full receipt>" with Copy and "Reproduce this result →" (`/data?receipt=`).
+Frames pass their labels through so `/data` (outside the Explorer context) names ids too; the
+Ask dock's tool cards use the same footer (receipt-only mode still replays on open); `/data`'s
+replay box says Result ID. One finding from checking the curl line against the live API:
+posting the canonical request verbatim returns a *different* Result ID (0e5b0195… for the
+drawer's 93aa968b…), because the fields the contract filled by default (`basis`,
+`geography_level`, `spatial_view`, listed in `defaults_applied`) arrive explicit, no default is
+applied, and the request canonicalises differently. `apiCallOf` therefore posts `replayBody`
+(the canonical JSON minus `defaults_applied` and the keys it names, at every level: a
+timeseries' `query`, a compare's `left`/`right`), which the API confirmed reproduces the same
+receipt for a query (93aa968b…) and a timeseries (39d71a7c…); the tab says which fields were
+left out and why.
+
+**Two-decimal presentation.** The API now mints `display_short` (the exact decimal rounded
+half to even to two places, `<0.01` for a non-zero value that would print 0.00, intervals
+end by end) and `unit_words` on every cell, described by `/release.rounding.presentation`.
+The web reads them and derives nothing: `shown(cell)` = `display_short ?? display`
+(`lib/envelope.ts`) is what every default rendering prints — the national KPI and gas chips,
+the sector bars, the legend ranks and raster anchors, the hover tip, the trend figure's labels
+and tooltip, the detail card's headline and chips, the evidence panel's stream total, the
+EnvelopeTable's Value column, the tool cards (`display_short` on the `tool_result` cells; a
+cite's text is shown as the server rendered it), and the introduction's three figures. The
+contract's `display` and the `exact` decimal stay one step away: in the title of every
+headline, in the table's "full precision" toggle (the column switches to `display`, the Exact
+and Rows columns appear), and in Result details' Calculation tab, which lists every cell as
+Shown / Published value (contract precision) / Exact. Live, against the restarted API: the KPI
+reads 452.35 (title "452.34662 Mt CO2e AR5 (contract precision) · exact 452.346624380…"), the
+gas chips 248.75 / 42.14 / 161.46, the legend 2.00 · 30.85 · 56.06 · 134.73 · 228.72, the
+Punjab hover 228.72, Lahore's district headline "[12.26, 12.28]" (title "[12.2565, 12.2769]"),
+the grid cell 1.16 Gg (title "1.16181505 Gg"), the district legend "[2.18, 2.19]" … "[33.91,
+33.92]", and the body text of the shell carries no decimal of three or more places; the
+KPI's Result details shows 452.35 · 452.34662 · 452.346624380000000000 side by side
+(screenshots 21 and 20b).
+
+**Tests and checks.** `WelcomeModal.test` rewritten (the four titles verbatim, no "?"
+eyebrows, no receipt / Result ID / release id / "Ask" / "FY" on any screen, Back absent on page
+1, Next on 1–3 and Open Explorer on 4 beside View methodology, only envelope strings as
+decimals, the transport refusal card, the mobile scroll); `ReceiptFooter.test` (no hex
+collapsed, six tabs, the Result ID and replay link, the Filters rows, the API request tab's
+JSON and curl with nothing key-like, `apiCallOf`'s routes and `replayBody`, the receipt-only
+replay); `presentation.test` (`shown`, the table's default and full-precision modes, the
+Calculation tab's precision table, `unit_words` preferred); the decimal audits in DetailCard,
+WelcomeModal, TrendChart and ask accept a rendered decimal that equals a cell's
+`display_short` or its `display`, and the fixtures carry two-decimal shorts. 85 tests green,
+`next build` green, ESLint clean (two pre-existing warnings). Screenshots 16, 16b, 16c refreshed
+and 16d, 20, 20b, 21 added from the headless render.
+
+Not done: the Ask dock's tool card was not exercised against a live Gemini turn (its
+`display_short` path is covered by `ask.test`); `next build` again left the running dev server
+answering 500 until restarted (as recorded above).

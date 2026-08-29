@@ -4,7 +4,8 @@
  * unallocated mass, limitations hit, uncertainty, completeness), Filters (the request's context
  * as the API returned it: periods, configuration, GWP basis, geography, view, basis, defaults
  * applied), Calculation (SQL in mono, formula, result_sha256), API request (the canonical
- * request JSON and a curl line against the prefixed API base), Download, Cite. The foot carries
+ * request JSON and a curl line against the prefixed API base), Download, Cite; Calculation also
+ * lists every cell as shown, at the contract's precision and exact. The foot carries
  * the Result ID (the receipt, in full, with a copy button) and the replay link. Everything shown
  * is a field of the envelope as received; the labels, when given, only name ids.
  */
@@ -12,7 +13,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Copy, X } from "lucide-react";
 import { absoluteApiBase, api, receiptHref } from "@/lib/api";
-import type { Envelope } from "@/lib/envelope";
+import { cellLabel, shown, type Envelope } from "@/lib/envelope";
 import { apiCallOf, curlLine } from "@/lib/requests";
 import { releaseLabels, type Labels } from "@/lib/release";
 import { configLabel, geographyName, periodShort, viewLabel } from "@/lib/labels";
@@ -167,6 +168,28 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
               ))}
               <p className="text-xs">formula of cell 0 <span className="mono">{env.values[0]?.formula ?? ""}</span></p>
               <p className="text-xs">values {env.values.length} · result_sha256 <span className="mono break-all">{env.result_sha256}</span></p>
+              {env.values.length > 0 && (
+                <section>
+                  <h4 className="micro mb-1">Values at every precision</h4>
+                  <p className="mb-1 text-xs text-muted">Shown is the release&apos;s reading-precision rendering (display_short); the published value is the contract&apos;s display; exact is the decimal it was rounded from.</p>
+                  <table className="w-full text-xs" data-testid="precision-table">
+                    <thead>
+                      <tr className="text-left text-muted"><th className="py-1 pr-2 font-semibold">Cell</th><th className="py-1 pr-2 text-right font-semibold">Shown</th><th className="py-1 pr-2 text-right font-semibold">Published value (contract precision)</th><th className="py-1 font-semibold">Exact</th></tr>
+                    </thead>
+                    <tbody>
+                      {env.values.slice(0, 50).map((v, i) => (
+                        <tr key={i} className="border-t border-line align-top">
+                          <td className="py-1 pr-2 text-muted">{cellLabel(v, `cell ${i}`)}</td>
+                          <td className="num py-1 pr-2 text-right">{shown(v)}</td>
+                          <td className="num py-1 pr-2 text-right" data-testid="published-value">{v.display}</td>
+                          <td className="mono break-all py-1" data-testid="exact-value">{v.exact}{v.exact_high && v.exact_high !== v.exact ? ` .. ${v.exact_high}` : ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {env.values.length > 50 && <p className="mt-1 text-xs text-muted">first 50 of {env.values.length} cells; the CSV carries every one</p>}
+                </section>
+              )}
             </div>
           )}
           {tab === "request" && (

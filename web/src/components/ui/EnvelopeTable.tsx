@@ -1,11 +1,13 @@
 "use client";
 /**
  * An envelope's values as a table: humanised group columns (the id as secondary text),
- * right-aligned tabular displays, an interval badge on bounded cells, the exact strings on
- * request, sticky header. Nothing is computed; every string is a field as received.
+ * right-aligned tabular values as shown (display_short, else display), an interval badge on
+ * bounded cells, and a "full precision" toggle that switches the column to the contract's
+ * `display` and adds the `exact` strings and row counts; sticky header. Nothing is computed;
+ * every string is a field as received.
  */
 import { useState } from "react";
-import { cellLabel, type Envelope, type Cell } from "@/lib/envelope";
+import { cellLabel, shown, type Envelope, type Cell } from "@/lib/envelope";
 import { columnLabel, groupValueLabel, type Dims } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import { IntervalBadge, isBounded } from "./IntervalBadge";
@@ -29,8 +31,8 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
   return (
     <div className="envelope-table text-xs" data-testid="envelope-table">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <label className="flex items-center gap-1 text-micro normal-case tracking-normal">
-          <input type="checkbox" checked={exact} onChange={(e) => setExact(e.target.checked)} /> exact decimals
+        <label className="flex items-center gap-1 text-micro normal-case tracking-normal" title="The contract's display and the exact decimal beside every value">
+          <input type="checkbox" checked={exact} onChange={(e) => setExact(e.target.checked)} data-testid="full-precision" /> full precision
         </label>
         {maxRows && env.values.length > maxRows && (
           <button className="text-micro normal-case tracking-normal text-accent" onClick={() => setAll((a) => !a)}>
@@ -72,7 +74,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
                   {extra.map((k) => <td key={k} className={`${cellPad} break-words`}>{groupValueLabel(labels, dims, k, fmt((v as Record<string, unknown>)[k]))}</td>)}
                   {hasDisplay && (
                     <td className={`${cellPad} num whitespace-nowrap text-right`}>
-                      <span className={isBounded(v) ? "mr-1" : ""}>{v.display}</span>
+                      <span className={isBounded(v) ? "mr-1" : ""} data-testid="table-value">{exact ? v.display : shown(v)}</span>
                       {isBounded(v) && <IntervalBadge cell={v} title={String((v as Record<string, unknown>).interpretation ?? "")} />}
                     </td>
                   )}

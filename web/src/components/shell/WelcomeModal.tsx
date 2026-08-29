@@ -106,14 +106,14 @@ export function factsLine(fiscalYears: number): string {
 }
 
 /**
- * A figure's unit line from the envelope's first cell: "Million tonnes CO₂e (AR5)" (unitWords,
- * capitalised), with ", excluding land use" appended for a whole-scope figure whose context says
+ * A figure's unit line from the envelope's first cell: "Million tonnes CO₂e (AR5)" (the cell's
+ * unit_words, else unitWords; capitalised), with ", excluding land use" appended for a whole-scope figure whose context says
  * LULUCF is excluded (any other status is named as it is). "" while there is no envelope.
  */
 export function figureUnitLine(env: Envelope | null | undefined, withLulucf = false): string {
-  const unit = env?.values[0]?.unit;
-  if (!env || !unit) return "";
-  const words = unitWords(unit).replace(/^\w/, (c) => c.toUpperCase());
+  const first = env?.values[0];
+  if (!env || !first?.unit) return "";
+  const words = (first.unit_words || unitWords(first.unit)).replace(/^\w/, (c) => c.toUpperCase());
   if (!withLulucf) return words;
   const status = env.context.lulucf.status;
   const lulucf = status === "excluded" ? "excluding land use" : status ? `land use ${status}` : "";

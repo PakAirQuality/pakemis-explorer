@@ -18,9 +18,9 @@ import { THIN_AXIS_BELOW_PX, TrendChart, trendSubtitle } from "./TrendChart";
 
 const SHORT: Record<string, string> = { "FY2015-16": "2015–16", "FY2019-20": "2019–20", "FY2023-24": "2023–24" };
 const CELLS = [
-  { display: "372.397", value: 372.39677601, group: { period_id: "FY2015-16" } },
-  { display: "404.204", value: 404.2041, group: { period_id: "FY2019-20" } },
-  { display: "452.347", value: 452.34662, group: { period_id: "FY2023-24" } },
+  { display: "372.397", display_short: "372.40", value: 372.39677601, group: { period_id: "FY2015-16" } },
+  { display: "404.204", display_short: "404.20", value: 404.2041, group: { period_id: "FY2019-20" } },
+  { display: "452.347", display_short: "452.35", value: 452.34662, group: { period_id: "FY2023-24" } },
 ];
 
 function series(): Envelope {
@@ -67,7 +67,8 @@ describe("TrendChart", () => {
     expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("million tonnes CO₂e (AR5) · all sectors, land use excluded · years run July–June");
     const texts = svgTexts(chart);
     for (const id of Object.keys(SHORT)) expect(texts).toContain(SHORT[id]);
-    for (const c of CELLS) expect(texts).toContain(c.display);
+    for (const c of CELLS) expect(texts).toContain(c.display_short); // the shown string, never the contract display
+    for (const c of CELLS) expect(texts).not.toContain(c.display);
     expect(screen.getByTestId("receipt-footer")).toHaveTextContent("Result details");
     expect(screen.getByTestId("receipt-footer")).toHaveAttribute("data-receipt", env.receipt);
     expect(chart.textContent).not.toContain("FY");
@@ -83,11 +84,11 @@ describe("TrendChart", () => {
   it("prints no number it computed: every decimal in the SVG is an envelope display, and there is no y-axis text", async () => {
     const { chart } = await mount(); // the reference is the last year: the ends are labelled, the middle point is not
     const texts = svgTexts(chart);
-    const displays = new Set(CELLS.map((c) => c.display));
+    const displays = new Set(CELLS.flatMap((c) => [c.display_short, c.display]));
     const years = new Set(Object.values(SHORT));
     for (const t of texts) expect(displays.has(t) || years.has(t)).toBe(true);
     const decimals = texts.join(" ").match(/\d+\.\d+/g) ?? [];
-    expect(decimals).toEqual([CELLS[0].display, CELLS[2].display]);
+    expect(decimals).toEqual([CELLS[0].display_short, CELLS[2].display_short]);
     for (const d of decimals) expect(displays.has(d)).toBe(true);
     // a y-axis would add round tick values (0, 100, 200 ...): none is present
     expect(texts.filter((t) => /^\d+$/.test(t))).toEqual([]);
@@ -103,8 +104,18 @@ describe("TrendChart", () => {
     const { chart: el } = await mount();
     const chart = echarts.getInstanceByDom(el)!;
     const formatter = (chart.getOption() as unknown as { tooltip: { formatter: (p: { dataIndex: number }) => string }[] }).tooltip[0].formatter;
-    expect(formatter({ dataIndex: 1 })).toBe("2019–20 · 404.204 million tonnes CO₂e (AR5)");
-    expect(formatter({ dataIndex: 2 })).toBe("2023–24 · 452.347 million tonnes CO₂e (AR5)");
+    expect(formatter({ dataIndex: 1 })).toBe("2019–20 · 404.20 million tonnes CO₂e (AR5)");
+    expect(formatter({ dataIndex: 2 })).toBe("2023–24 · 452.35 million tonnes CO₂e (AR5)");
+  });
+  it("a cell without display_short is labelled with its display; a cell with unit_words speaks the server's words", async () => {
+    const echarts = await import("echarts");
+    const env = envelope([{ display: "372.397", value: 372.397, unit_words: "million tonnes CO₂e (AR5), served", group: { period_id: "FY2015-16" } }, { display: "452.347", value: 452.347, group: { period_id: "FY2023-24" } }], { request_type: "get_timeseries" }) as unknown as Envelope;
+    const { chart: el } = await mount({ env });
+    const texts = svgTexts(el);
+    expect(texts).toContain("372.397");
+    expect(texts).toContain("452.347");
+    const formatter = (echarts.getInstanceByDom(el)!.getOption() as unknown as { tooltip: { formatter: (p: { dataIndex: number }) => string }[] }).tooltip[0].formatter;
+    expect(formatter({ dataIndex: 0 })).toBe("2015–16 · 372.397 million tonnes CO₂e (AR5), served");
   });
   it("under the thin-axis width only the first, the reference and the last year are labelled", async () => {
     width = THIN_AXIS_BELOW_PX - 100;

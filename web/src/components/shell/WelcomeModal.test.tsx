@@ -8,7 +8,8 @@ import "@testing-library/jest-dom/vitest";
  * pages 1–3 and Open Explorer on page 4, beside "View methodology" (/about#methods); the only
  * decimals on any screen are envelope displays; the transport example is a live envelope with
  * a refusal card when the API refuses. The two charts are mocked (TrendChart.test.tsx renders
- * the real one); the mocks print the title, the unit line and the displays they were given.
+ * the real one); the mocks print the title, the unit line and the shown strings they were
+ * given (display_short, else display), which is what the real ones draw.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,21 +23,22 @@ import { AVOID_PHRASES, avoidPhrasesIn } from "@/__tests__/vocabulary";
 import { EXPLORE_TERMS, INTRO_KEY, OPEN_TERMS, QUERY_CLOSING, SCREENS, VERSIONED_LINE, WelcomeModal, exampleQuestion, factsLine, figureUnitLine, openIntro, screenTitle } from "./WelcomeModal";
 
 vi.mock("@/components/ui/TrendChart", () => ({
-  TrendChart: ({ env, title, subtitle, showReceipt }: { env: { values: { display: string }[] } | null | undefined; title?: string; subtitle?: string; showReceipt?: boolean }) =>
+  TrendChart: ({ env, title, subtitle, showReceipt }: { env: { values: { display: string; display_short?: string }[] } | null | undefined; title?: string; subtitle?: string; showReceipt?: boolean }) =>
     env ? (
       <div data-testid="trend-chart" data-receipt-shown={String(showReceipt !== false)}>
-        <span data-testid="trend-title">{title}</span> <span data-testid="trend-subtitle">{subtitle}</span> {env.values.map((v) => v.display).join(" ")}
+        <span data-testid="trend-title">{title}</span> <span data-testid="trend-subtitle">{subtitle}</span> {env.values.map((v) => v.display_short ?? v.display).join(" ")}
       </div>
     ) : (
       <div data-testid="trend-skeleton" />
     ),
 }));
-vi.mock("@/components/ui/BarChart", () => ({ BarChart: ({ env }: { env: { values: { display: string }[] } }) => <div data-testid="bar-chart">{env.values.map((v) => v.display).join(" ")}</div> }));
+vi.mock("@/components/ui/BarChart", () => ({ BarChart: ({ env }: { env: { values: { display: string; display_short?: string }[] } }) => <div data-testid="bar-chart">{env.values.map((v) => v.display_short ?? v.display).join(" ")}</div> }));
 
 const NATIONAL = "452.34662";
-const SERIES = ["372.397", "452.347"];
+const SERIES = ["372.397", "452.347"]; // no display_short: the displays stand
 const TRANSPORT = ["43.358", "41.926"];
-const SECTORS = [{ display: "196.789", group: { sector_id: "agriculture" } }, { display: "58.123", group: { sector_id: "power" } }];
+const TRANSPORT_SHORT = ["43.36", "41.93"]; // the server's two-decimal renderings
+const SECTORS = [{ display: "196.789", display_short: "196.79", group: { sector_id: "agriculture" } }, { display: "58.123", display_short: "58.12", group: { sector_id: "power" } }];
 const TITLES = ["Pakistan greenhouse-gas emissions, 2020–21 to 2023–24", "Explore emissions across place, time and sector", "Query the dataset", "Open data, methods and code"];
 
 const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
@@ -81,7 +83,7 @@ function stubApi(transport: "ok" | "refuse" = "ok") {
       if (String(url).includes("/timeseries")) {
         if (body?.query?.sectors?.[0] === "transport") {
           if (transport === "refuse") return { ok: false, status: 422, statusText: "Unprocessable", json: async () => ({ error: "refused", error_class: "NotEstimated", message: "transport is not carried for this basis", limitation_id: "transport_ne", detail: {} }) } as Response;
-          return ok(envelope([{ display: TRANSPORT[0], group: { period_id: "FY2020-21" } }, { display: TRANSPORT[1], group: { period_id: "FY2023-24" } }], { request_type: "get_timeseries", request: JSON.stringify({ _type: "TimeseriesRequest", query: { sectors: ["transport"] } }) }));
+          return ok(envelope([{ display: TRANSPORT[0], display_short: TRANSPORT_SHORT[0], group: { period_id: "FY2020-21" } }, { display: TRANSPORT[1], display_short: TRANSPORT_SHORT[1], group: { period_id: "FY2023-24" } }], { request_type: "get_timeseries", request: JSON.stringify({ _type: "TimeseriesRequest", query: { sectors: ["transport"] } }) }));
         }
         return ok(envelope([{ display: SERIES[0], group: { period_id: "FY2020-21" } }, { display: SERIES[1], group: { period_id: "FY2023-24" } }], { request_type: "get_timeseries" }));
       }
@@ -140,9 +142,10 @@ describe("WelcomeModal", () => {
     await screen.findByTestId("bar-chart");
     expect(screen.getByTestId("intro-sectors-unit")).toHaveTextContent("Million tonnes CO₂e (AR5)");
     expect(screen.getByTestId("intro-sectors-unit")).not.toHaveTextContent("land use");
-    expect(screen.getByTestId("bar-chart")).toHaveTextContent(SECTORS[0].display);
+    expect(screen.getByTestId("bar-chart")).toHaveTextContent(SECTORS[0].display_short);
+    expect(screen.getByTestId("bar-chart")).not.toHaveTextContent(SECTORS[0].display);
     expect(screen.queryByTestId("trend-chart")).toBeNull(); // the trend figure stays on screen 1
-    expect(decimals(modal).sort()).toEqual(SECTORS.map((c) => c.display).sort());
+    expect(decimals(modal).sort()).toEqual(SECTORS.map((c) => c.display_short).sort());
     expect(modal.textContent).not.toContain("?");
     fireEvent.click(screen.getByTestId("intro-next"));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(TITLES[2]);
@@ -156,7 +159,7 @@ describe("WelcomeModal", () => {
     expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e (AR5)");
     expect(transport).toHaveAttribute("data-receipt-shown", "false");
     expect(screen.getByTestId("intro-query-closing")).toHaveTextContent(QUERY_CLOSING);
-    expect(decimals(modal).sort()).toEqual([...TRANSPORT].sort());
+    expect(decimals(modal).sort()).toEqual([...TRANSPORT_SHORT].sort());
     // the one question mark on any screen is the example question itself
     expect((modal.textContent ?? "").match(/\?/g)?.length).toBe(1);
     expect(micros(modal).some((m) => m.includes("?"))).toBe(false);

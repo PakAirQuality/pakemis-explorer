@@ -22,6 +22,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ 
 
 const RECEIPT = "8328128a5bd1eca6b1a29ad79cf6d910";
 const DISPLAY = "123.3050";
+const SHORT = "123.31";
 const UNIT = "Mt CO2e AR5";
 const CID = "c0ffee00deadbeef";
 
@@ -35,7 +36,7 @@ const EVENTS: [string, unknown][] = [
   [
     "tool_result",
     {
-      cells: [{ display: DISPLAY, group: { province: "Punjab" }, i: 0, unit: UNIT }],
+      cells: [{ display: DISPLAY, display_short: SHORT, group: { province: "Punjab" }, i: 0, unit: UNIT }],
       context: { basis: "fiscal", configuration_id: "REF_2023_24", defaults_applied: ["basis", "configuration_id", "gwp_basis", "spatial_view"], geography_ids: ["Punjab"], geography_level: "adm1", gwp_basis: "AR5", periods: ["FY2023-24"], spatial_view: "all" },
       id: "toolu_01",
       k: 1,
@@ -174,7 +175,8 @@ describe("AskDock", () => {
     expect(cards[0]).toHaveTextContent("Query emissions");
     expect(within(cards[0]).getByText("Agriculture")).toBeTruthy();
     const cell = within(cards[0]).getByTestId("result-cell");
-    expect(cell).toHaveTextContent(`${DISPLAY} ${UNIT}`);
+    expect(cell).toHaveTextContent(`${SHORT} ${UNIT}`); // the card shows display_short; the display is its title
+    expect(cell.textContent).not.toContain(DISPLAY);
     expect(cell).toHaveTextContent("Punjab");
     expect(within(cards[0]).getByText("LULUCF is excluded")).toBeTruthy();
     expect(within(cards[0]).getByTestId("receipt-footer")).toHaveTextContent("Result details");
@@ -214,7 +216,7 @@ describe("AskDock", () => {
     const tokens: string[] = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
     expect(tokens.length).toBeGreaterThan(0);
-    for (const t of tokens) expect([DISPLAY, "0.0031", "4.213"]).toContain(t);
+    for (const t of tokens) expect([DISPLAY, SHORT, "0.0031", "4.213"]).toContain(t);
   });
 
   it("restores a conversation from the c parameter and sends it as client_history", async () => {

@@ -13,7 +13,7 @@ import type { ExplorerState } from "@/lib/urlState";
 import { DetailCard } from "./DetailCard";
 import { RELEASE, envelope, mockFetch } from "@/__tests__/fixtures";
 
-vi.mock("@/components/ui/BarChart", () => ({ BarChart: ({ env }: { env: { values: { display: string }[] } }) => <div data-testid="bar-chart">{env.values.map((v) => v.display).join(" ")}</div> }));
+vi.mock("@/components/ui/BarChart", () => ({ BarChart: ({ env }: { env: { values: { display: string; display_short?: string }[] } }) => <div data-testid="bar-chart">{env.values.map((v) => v.display_short ?? v.display).join(" ")}</div> }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const DISPLAYS = {
@@ -25,6 +25,8 @@ const DISPLAYS = {
   lineage: ["0.6421", "0.7643"],
   cell: "1.16181505",
 };
+/** The server's two-decimal renderings, where the mocked cells carry one (the rest fall back to display). */
+const SHORTS = { provinceTotal: "228.72", districtTotal: "[12.26, 12.28]", module0: "123.31", cell: "1.16" };
 const EXACTS = { unallocProvince: "4.837161474822386761", unallocModuleGas: "4.827234056166698500", cellExact: "1.1618150472640991" };
 const COORDS = { lat: "24.925000000000004", lon: "67.075" };
 
@@ -49,14 +51,14 @@ beforeEach(() => {
         );
       }
       if (url.includes("/spatial/grid")) {
-        return envelope([{ display: DISPLAYS.cell, unit: "Gg", extra: { lat: 24.925000000000004, lon: 67.075, row: 242, col: 124, month: "202401", exact: EXACTS.cellExact, formula: "cell value read from the cube" } }], { request_type: "get_grid_cell", limitations_hit: [{ id: "grid_not_tabular", message: "grid cells stay in the cube" }] });
+        return envelope([{ display: DISPLAYS.cell, display_short: SHORTS.cell, unit: "Gg", extra: { lat: 24.925000000000004, lon: 67.075, row: 242, col: 124, month: "202401", exact: EXACTS.cellExact, formula: "cell value read from the cube" } }], { request_type: "get_grid_cell", limitations_hit: [{ id: "grid_not_tabular", message: "grid cells stay in the cube" }] });
       }
       const g = body?.group_by ?? [];
-      if (g.includes("module")) return envelope([{ display: DISPLAYS.modules[0], group: { module: "agriculture" } }, { display: DISPLAYS.modules[1], group: { module: "power" } }, { display: DISPLAYS.modules[2], group: { module: "residential" }, exactness: "bounded_mixed_ch4_origin;exact", exact_high: "0.5866" }]);
+      if (g.includes("module")) return envelope([{ display: DISPLAYS.modules[0], display_short: SHORTS.module0, group: { module: "agriculture" } }, { display: DISPLAYS.modules[1], group: { module: "power" } }, { display: DISPLAYS.modules[2], group: { module: "residential" }, exactness: "bounded_mixed_ch4_origin;exact", exact_high: "0.5866" }]);
       if (g.includes("gas")) return envelope([{ display: DISPLAYS.gases[0], group: { gas: "CH4" } }, { display: DISPLAYS.gases[1], group: { gas: "CO2" } }]);
       if (g.includes("month")) return envelope([{ display: DISPLAYS.months[0], group: { month: "202307" } }, { display: DISPLAYS.months[1], group: { month: "202308" } }]);
-      if (body?.geography_level === "adm2") return envelope([{ display: DISPLAYS.districtTotal, group: { shape_id: "60131773B12131197496886" }, exactness: "exact;bounded_mixed_ch4_origin", exact_high: "12.2769", extra: { interpretation: "an interval: the module mixes fossil and biogenic CH4" } }]);
-      return envelope([{ display: DISPLAYS.provinceTotal, group: { province: "Punjab" } }], { unallocated: { level: "adm1", by_province: [{ province: "Punjab", exact: EXACTS.unallocProvince, n_rows: 285 }], note: "mass retained at ADM1" } });
+      if (body?.geography_level === "adm2") return envelope([{ display: DISPLAYS.districtTotal, display_short: SHORTS.districtTotal, group: { shape_id: "60131773B12131197496886" }, exactness: "exact;bounded_mixed_ch4_origin", exact_high: "12.2769", extra: { interpretation: "an interval: the module mixes fossil and biogenic CH4" } }]);
+      return envelope([{ display: DISPLAYS.provinceTotal, display_short: SHORTS.provinceTotal, group: { province: "Punjab" } }], { unallocated: { level: "adm1", by_province: [{ province: "Punjab", exact: EXACTS.unallocProvince, n_rows: 285 }], note: "mass retained at ADM1" } });
     }),
   );
 });
@@ -71,8 +73,9 @@ function mount(state: ExplorerState) {
   );
 }
 
-/** Every decimal token on screen must be one of the strings received in an envelope. */
+/** Every decimal token on screen must be one of the strings received in an envelope: a cell's display_short or its display (or an exact / coordinate). */
 function assertOnlyEnvelopeNumbers(allowed: string[]) {
+  allowed = [...allowed, ...Object.values(SHORTS)];
   // per text node: textContent would glue neighbouring nodes ("202307" + "21.2696") into one token
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const tokens: string[] = [];
@@ -84,7 +87,10 @@ function assertOnlyEnvelopeNumbers(allowed: string[]) {
 describe("DetailCard", () => {
   it("province: total, sector bars, gas chips, months, lineage unallocated line - all envelope strings", async () => {
     mount({ ...base, geo: "Punjab" });
-    expect(await screen.findByTestId("headline-display")).toHaveTextContent(DISPLAYS.provinceTotal);
+    const headline = await screen.findByTestId("headline-display");
+    expect(headline).toHaveTextContent(SHORTS.provinceTotal); // the server's two-decimal rendering by default
+    expect(headline.textContent).not.toContain(DISPLAYS.provinceTotal);
+    expect(headline).toHaveAttribute("title", expect.stringContaining(DISPLAYS.provinceTotal)); // the contract precision one hover away
     await screen.findByTestId("unallocated-line");
     await screen.findByTestId("unallocated-table");
     await waitFor(() => expect(screen.getAllByTestId("bar-chart").length).toBe(2));
@@ -93,7 +99,7 @@ describe("DetailCard", () => {
   });
   it("district: interval headline verbatim with the badge, shared-shape rows, lineage table", async () => {
     mount({ ...base, level: "adm2", geo: "60131773B12131197496886" });
-    expect(await screen.findByTestId("headline-display")).toHaveTextContent("[12.2565, 12.2769]");
+    expect(await screen.findByTestId("headline-display")).toHaveTextContent("[12.26, 12.28]");
     expect(screen.getByTestId("headline")).toHaveTextContent("interval");
     expect(screen.getByTestId("shape-rows")).toHaveTextContent("Lahore District");
     expect(screen.getByTestId("shape-rows")).toHaveTextContent("Lahore City");
@@ -103,7 +109,7 @@ describe("DetailCard", () => {
   });
   it("grid cell: the cube's display in Gg with lat/lon/row/col as received", async () => {
     mount({ ...base, level: "grid", gas: "CH4", month: "202401", cell: "24.925,67.075", raster: true });
-    expect(await screen.findByTestId("headline-display")).toHaveTextContent(DISPLAYS.cell);
+    expect(await screen.findByTestId("headline-display")).toHaveTextContent(SHORTS.cell);
     expect(screen.getByTestId("headline")).toHaveTextContent("Gg");
     assertOnlyEnvelopeNumbers([DISPLAYS.cell, EXACTS.cellExact, COORDS.lat, COORDS.lon]);
   });

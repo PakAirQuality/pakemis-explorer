@@ -26,7 +26,7 @@ beforeEach(() => {
       if (body?.configuration_id === "S_2023_24") return envelope([{ display: "447.21383" }]);
       if (url.includes("/timeseries")) return envelope([{ display: "372.397", group: { period_id: "FY2015-16" } }, { display: "452.347", group: { period_id: "FY2023-24" } }]);
       if (url.includes("/compare")) return envelope([{ display: "-5.133", group: { sector_id: "residential" } }]);
-      return envelope([{ display: "452.34662" }]);
+      return envelope([{ display: "452.34662", display_short: "452.35" }]);
     }),
   );
 });
@@ -44,7 +44,8 @@ describe("PakEmis Explorer", () => {
   it("renders the shell with the national KPI from an envelope and the receipt as a footer", async () => {
     mount(<Page />);
     expect(await screen.findByTestId("explorer")).toBeTruthy();
-    expect(await screen.findByTestId("national-kpi")).toHaveTextContent("452.34662");
+    expect(await screen.findByTestId("national-kpi")).toHaveTextContent("452.35"); // the server's two-decimal rendering; the contract display in the title
+    expect(screen.getByTestId("national-kpi")).toHaveAttribute("title", expect.stringContaining("452.34662"));
     expect((await screen.findAllByTestId("receipt-footer")).length).toBeGreaterThan(0);
     expect(screen.getByTestId("map-stub")).toBeTruthy();
   });

@@ -3,14 +3,14 @@
  * A framed figure of a timeseries envelope (the explainer's visual): an in-figure title, a
  * subtitle that says what is drawn (the unit as words, the sector scope with the LULUCF
  * status, the year basis), an x-axis carrying every period's short label, the first and last
- * points (and the reference year, in amber) labelled with their `display` strings, a hover
- * tooltip of the cell's display and unit, a faint baseline at zero, and the envelope's
+ * points (and the reference year, in amber) labelled with the cells' shown strings
+ * (`display_short`, else `display`), a hover tooltip of the same and the unit, a faint baseline at zero, and the envelope's
  * ReceiptFooter as the source line (`showReceipt`; a caller may also write the `subtitle`). The `value` of each cell sizes the shape and nothing
  * else: there is no y-axis, no tick numbers, no gridlines (ECharts would invent the values).
  * Nothing is summed, rounded or converted here. A skeleton stands in while the envelope loads.
  */
 import { useEffect, useRef } from "react";
-import type { Envelope } from "@/lib/envelope";
+import { shown, type Envelope } from "@/lib/envelope";
 import { unitWords } from "@/lib/labels";
 import { ACCENT, AMBER } from "@/lib/palette";
 import { ReceiptFooter } from "./ReceiptFooter";
@@ -68,7 +68,7 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
     const cells = env.values.filter((c) => typeof c.value === "number");
     const ids = cells.map((c) => c.group?.period_id ?? "");
     const short = (id: string) => (periodLabel ? periodLabel(id) : id);
-    const unit = cells[0]?.unit ? unitWords(cells[0].unit) : "";
+    const unit = cells[0]?.unit_words || (cells[0]?.unit ? unitWords(cells[0].unit) : "");
     const last = cells.length - 1;
     const isRef = (i: number) => !!referencePeriod && ids[i] === referencePeriod;
     const labelled = (i: number) => i === 0 || i === last || isRef(i);
@@ -97,7 +97,7 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
           confine: true,
           textStyle: { fontSize: 12, fontFamily: FONT },
           // the cell's own display and unit, never the axis value
-          formatter: (p: { dataIndex: number }) => `${short(ids[p.dataIndex])} · ${cells[p.dataIndex].display} ${unit}`.trim(),
+          formatter: (p: { dataIndex: number }) => `${short(ids[p.dataIndex])} · ${shown(cells[p.dataIndex])} ${unit}`.trim(),
         },
         series: [
           {
@@ -112,7 +112,7 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
               itemStyle: { color: isRef(i) ? AMBER : ACCENT, opacity: labelled(i) ? 1 : 0, borderColor: "#fff", borderWidth: 1.5 },
               // the end labels hang inward from their point so neither is clipped at the edge; the reference point's sits above it
               label: labelled(i)
-                ? { show: true, position: "top", align: i === 0 ? "left" : i === last ? "right" : "center", offset: [i === 0 ? -4 : i === last ? 4 : 0, -2], formatter: () => c.display, color: isRef(i) ? "#92400e" : "#5c6b7a", fontSize: 11, fontFamily: FONT }
+                ? { show: true, position: "top", align: i === 0 ? "left" : i === last ? "right" : "center", offset: [i === 0 ? -4 : i === last ? 4 : 0, -2], formatter: () => shown(c), color: isRef(i) ? "#92400e" : "#5c6b7a", fontSize: 11, fontFamily: FONT }
                 : { show: false },
             })),
           },

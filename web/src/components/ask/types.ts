@@ -8,6 +8,8 @@ export type ToolCallEvent = { k: number; id: string; name: string; input: Record
 export type ToolResultCell = {
   i: number;
   display: string | null;
+  /** The server's reading-precision rendering, beside `display` (presentation.py). */
+  display_short?: string | null;
   unit: string | null;
   group?: Record<string, string | null>;
   exactness?: string;

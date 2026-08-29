@@ -72,7 +72,7 @@ export const RELEASE = {
   placeholders: { auth: "none" },
 };
 
-export type MockCell = { display: string; group?: Record<string, string>; exactness?: string; exact_high?: string; unit?: string; extra?: Record<string, unknown>; value?: number };
+export type MockCell = { display: string; display_short?: string; unit_words?: string; group?: Record<string, string>; exactness?: string; exact_high?: string; unit?: string; extra?: Record<string, unknown>; value?: number };
 
 let counter = 0;
 export function envelope(cells: MockCell[], overrides: Record<string, unknown> = {}) {
@@ -90,6 +90,8 @@ export function envelope(cells: MockCell[], overrides: Record<string, unknown> =
       result_row_ids: [`r${i}`],
       formula: "SUM",
       group: c.group ?? {},
+      ...(c.display_short ? { display_short: c.display_short } : {}),
+      ...(c.unit_words ? { unit_words: c.unit_words } : {}),
       ...(c.exactness ? { exactness: c.exactness } : {}),
       ...(c.exact_high ? { exact_high: c.exact_high } : {}),
       ...(c.extra ?? {}),

@@ -94,10 +94,11 @@ export function unitWords(unit: string): string {
   }
   return out.join(" ");
 }
-/** The unit line of a frame: the envelope's first cell's unit as words, "" while there is no envelope. */
-export function envelopeUnitLine(env: { values: { unit: string }[] } | null | undefined): string {
-  const unit = env?.values[0]?.unit;
-  return unit ? unitWords(unit) : "";
+/** The unit line of a frame: the envelope's first cell's `unit_words` (the server's), else its unit through unitWords; "" while there is no envelope. */
+export function envelopeUnitLine(env: { values: { unit: string; unit_words?: string }[] } | null | undefined): string {
+  const first = env?.values[0];
+  if (!first) return "";
+  return first.unit_words || (first.unit ? unitWords(first.unit) : "");
 }
 export function monthLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "Annual";

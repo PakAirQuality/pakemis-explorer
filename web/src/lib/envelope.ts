@@ -17,6 +17,10 @@ export const CellSchema = z
     n_rows: z.number().optional(),
     exact_high: z.string().optional(),
     exactness: z.string().optional(),
+    /** The server's reading-precision rendering (release.rounding.presentation), beside `display`, never in its place. */
+    display_short: z.string().optional(),
+    /** The unit as words, per cell ("million tonnes CO₂e (AR5)"). */
+    unit_words: z.string().optional(),
   })
   .passthrough();
 
@@ -56,6 +60,17 @@ export const EnvelopeSchema = z
 
 export type Cell = z.infer<typeof CellSchema>;
 export type Envelope = z.infer<typeof EnvelopeSchema>;
+
+/**
+ * The value a reader sees by default: the server's `display_short` (the release's
+ * rounding.presentation rule, derived from `exact` with ROUND_HALF_EVEN) when the cell carries
+ * one, else the contract's `display`. The browser rounds nothing: both strings arrive in the
+ * envelope, and `display` and `exact` stay visible in Result details and the table's
+ * full-precision mode.
+ */
+export function shown(cell: { display: string | null; display_short?: string | null }): string {
+  return cell.display_short ?? cell.display ?? "";
+}
 
 export const RefusalSchema = z.object({
   error: z.string(),
