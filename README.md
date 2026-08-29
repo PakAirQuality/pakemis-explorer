@@ -69,16 +69,20 @@ layers. The 3D button (`view3d=1`) applies the ops dashboard's recipe: `mapbox-d
 (exaggeration 1.5 tapering to 1.0), fog, pitch 30, bearing -10, with the choropleth draped. Spatial products exist for FY2023-24 only: other years drive national numbers and
 show the typed refusal in the legend's place.
 
-First visit: a four-panel explainer (`WelcomeModal`: what this is, what "emissions data"
-means here, how to read the map, Ask PakEmis) opens over the screen until it is dismissed
-(`localStorage['pakemis.intro.dismissed']`), and re-opens from the "?" on the rail's brand
-square or from `/about`, which carries the same four sections in full prose plus the
-territories' sector coverage, the licences and a vocabulary note. Every sentence of both is the
-project's own wording, every release fact (period, LULUCF, GWP bases, configuration and
-limitation texts, the contract's functions, the agent's status) is read from `/v1/release`,
-and the one number the explainer prints is the national total's `display` with its receipt;
-tests assert every decimal is an envelope display and that no phrase from the manuscript's
-"avoid" list appears.
+First visit: a four-screen explainer (`WelcomeModal`, a product hero rather than
+documentation: what is this, what can I explore, why should I trust it, what makes this open)
+opens over the screen until it is dismissed (`localStorage['pakemis.intro.dismissed']`), and
+re-opens from the "?" on the rail's brand square or from `/about`, which carries the
+methodology prose (what "emissions data" means here, how to read the map, the territories'
+sector coverage, the licences, a vocabulary note). The explainer's visual is the national
+timeseries envelope drawn as an area chart (values size the shape; only the first and last
+points are labelled, with their `display` strings); the one number in its copy, from the third
+screen on, is the national total's `display` printed whole with the integer part large and the
+fraction lighter (typography, never rounding), with a "View source" that opens the envelope's
+evidence drawer; the facts row is words ("Nine fiscal years", counted from the dims). Tests
+assert screen 1 carries no version, receipt, GWP or configuration string, that every decimal
+on any screen is an envelope display, and that no phrase from the manuscript's "avoid" list
+appears.
 
 The territories at province level: the release's ADM1 table has one row without a polygon
 (`has_polygon: no`, named `Other`) while the boundary file draws Gilgit-Baltistan, Azad
@@ -136,7 +140,10 @@ reason. Caps: `PAKEMIS_ASK_MAX_TURNS` (8), `PAKEMIS_ASK_MAX_TOOL_CALLS` (12),
 `PAKEMIS_ASK_EFFORT` (medium).
 
 Python needs `fastapi uvicorn pydantic>=2 duckdb pyarrow netCDF4 numpy Pillow httpx pytest
-anthropic>=0.93 sse-starlette>=3.3` (`api/requirements.txt`).
+anthropic>=0.93 google-genai>=1.67 sse-starlette>=3.3` (`api/requirements.txt`). `make api`
+sources `api/.env` (gitignored) into the API's environment before starting uvicorn, so a
+`GEMINI_API_KEY=` line there is the other way to enable the agent; the file is never printed
+or committed.
 
 ## Talking to the agent
 
@@ -251,6 +258,7 @@ Licences: code MIT; data and text CC-BY-4.0; OSM-derived tables ODbL (see the re
 
 Screenshots of the screen at 1440 px and 390 px are under `web/docs/screenshots/`
 (`13-ask-disabled.jpg` is the dock without the key; `14-globe.jpg` the globe with its
-atmosphere, `15-3d-terrain.jpg` the 3D view; `16-welcome.jpg` the first-visit explainer;
+atmosphere, `15-3d-terrain.jpg` the 3D view; `16-welcome.jpg` the first-visit explainer's
+first screen and `16b-welcome-3.jpg` its third, with the number and "View source";
 `17-other-territories.jpg` the hover on Gilgit-Baltistan showing the shared `Other` cell and
 `17b-other-card.jpg` its detail card; `18-about.jpg` the `/about` page).

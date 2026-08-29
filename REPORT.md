@@ -216,3 +216,38 @@ captive gas (Islamabad's part of the SNGPL franchise) and a large one for domest
 (Islamabad International plus Gilgit, Skardu, Muzaffarabad and Rawalakot); power, fugitives and
 cement are zero there. `/about` follows the file's notes.
 
+### The explainer redesigned as a product hero (same day)
+
+The user reviewed the first explainer and asked for a substantially different treatment: make
+people care before explaining anything. `WelcomeModal` is now four screens on a warm off-white
+surface (`#faf8f4`, `max-w-3xl`, `p-10`, an "01 / 04" counter with a thin progress bar, arrow
+keys and Escape, one scroll under 768 px): "A public record of Pakistan's emissions." with the
+dek and a facts row ("Nine fiscal years · Monthly detail · District-level data ·
+Source-traceable"; the count is a word derived from `dims.dim_period`, so no digit) and the
+primary "Explore the project →"; "From the national picture to individual districts."; "Every
+number has a paper trail." with the example line "Pakistan emitted 452.34662 Mt CO₂e in
+FY2023-24 — Explore where those emissions came from →" and "View source →" opening the
+national envelope's evidence drawer; "Check it. Reuse it. Improve it." with "Start exploring →",
+"Ask a question" (`ask=1`) and the About link. The release version, the date range, the
+configuration label, the receipt hash and the replay explanation left the modal (screen 4's
+footnote names the release; `/about` keeps the rest). The visual on screens 1 and 2 is
+`TrendChart` (`components/ui/TrendChart.tsx`): an ECharts area over the `get_timeseries`
+envelope (`seriesBody`, annual, reference configuration, reported GWP), first and last points
+labelled with their `display` strings, the reference year in amber, a skeleton while loading.
+
+Two rules bound the number: the user wrote "452.3", but the client may not round, so the
+display string is printed whole and split typographically (`452` large, `.34662` lighter, one
+string in the DOM, `splitDisplay`); the unit is "Mt CO₂e" only as typography over the
+envelope's "Mt CO2e …" unit (`unitText`), any other unit verbatim. `WelcomeModal.test.tsx`
+asserts screen 1 contains neither the version, "receipt", "AR5", "Inventory reference" nor the
+number, that the number appears from screen 3 on and equals the mocked display, that "View
+source" opens the drawer, and the avoid-list check on every screen. Also in this commit:
+`empty_answer` joined the dock's error-title vocabulary, and the README's Run block gained
+`google-genai` and the `api/.env` sourcing note the API agent could not edit.
+
+A note on the browser walk: `next build` while `next dev` was serving the same `.next` left the
+dev server serving an unstyled "Loading release…" shell; restarting the dev server fixed it.
+Mapbox ignored the automation tool's synthetic clicks in the hidden window (Punjab as well as
+Gilgit-Baltistan), while `mousedown`/`mouseup`/`click` dispatched on the canvas selected both
+(`geo=Other` with the three members outlined); hover worked either way.
+

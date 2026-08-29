@@ -1,25 +1,27 @@
 "use client";
 /**
- * The first-visit explainer: four panels with a stepper (one scroll under 768 px) over the
- * screen, shown until localStorage remembers a dismissal (the AskEntry pattern: read on mount
- * so the server render never flashes it) and re-openable through `openIntro()` (the "?" on the
- * rail's brand square) or from /about. Every sentence is the project's own wording; the one
- * number it prints is the national total's `display` from the context envelope with its
- * receipt, and every release fact (period, LULUCF, GWP bases, limitations, functions, agent
- * status) is read from /v1/release, never retyped.
+ * The first-visit explainer, a four-screen product hero over the map (one scroll under 768 px):
+ * what this is, what can be explored, why it can be trusted, what makes it open. It is shown
+ * until localStorage remembers a dismissal (the AskEntry pattern: read on mount so the server
+ * render never flashes it) and re-openable through `openIntro()` (the "?" on the rail's brand
+ * square) or from /about, which carries the methodology prose this modal deliberately leaves
+ * out. Numbers: the visual is the national timeseries envelope (values size the shape, the
+ * first and last points are labelled with their `display` strings); the one number in the
+ * copy, from the third screen on, is the national total's `display` printed as the API returned
+ * it (the integer part large, the fraction lighter: typography, never rounding) with a "View
+ * source" that opens the envelope's evidence drawer. The facts row is words, not digits.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { contextBodies } from "@/lib/requests";
-import { useEmissions } from "@/lib/queries";
-import { releaseFacts } from "@/lib/release";
-import { configLabel, gasLabel, limitationText } from "@/lib/labels";
-import { joinNames, residualUnit } from "@/lib/geography";
-import { useBboxes } from "@/components/map/tiles";
-import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
-import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
+import { contextBodies, seriesBody } from "@/lib/requests";
+import { useEmissions, useTimeseries } from "@/lib/queries";
+import { periodShort } from "@/lib/labels";
+import type { Envelope } from "@/lib/envelope";
+import type { ExplorerState } from "@/lib/urlState";
+import { TrendChart } from "@/components/ui/TrendChart";
+import { EnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
 
 export const INTRO_KEY = "pakemis.intro.dismissed";
 const INTRO_EVENT = "pakemis:intro";
@@ -46,22 +48,49 @@ function readDismissed(): boolean {
   }
 }
 
-/** The opening paragraph of the release's short summary (paper_national/short_summary.txt), verbatim. */
+/** The opening paragraph of the release's short summary (paper_national/short_summary.txt), verbatim; /about quotes it. */
 export const SHORT_SUMMARY =
   "PakEmis is an open dataset of Pakistan's greenhouse-gas emissions, rebuilt from public documents rather than taken from a single official report. It covers nine fiscal years, every sector except land use and forestry, and gives each emission by month and by district as well as by year. Every number is graded by the strength of the evidence behind it, and every one can be traced back to the document and the code that produced it, so others can check, reuse and improve it.";
 
-/** The Ask dock's own empty-state sentences (AskDock.tsx), quoted here so the explainer and the dock never drift. */
+/** The Ask dock's own empty-state sentences (AskDock.tsx), quoted by /about so the two never drift. */
 export const ASK_SENTENCES = [
   "Ask about a place, a sector, a year or a method. The agent can only call the release's typed functions; every number it says is a placeholder the server fills from an envelope with a receipt, and a scope the release cannot answer is refused by name.",
   "Tool calls, results and refusals are shown as they happen. Click a cited number to see the call it came from.",
 ] as const;
 
-const STEPS = ["What this is", "What the data means", "How to read the map", "Ask PakEmis"] as const;
+/** The four screens' copy. */
+export const SCREENS = [
+  { eyebrow: "What is this?", headline: "A public record of Pakistan's emissions.", dek: "PakEmis turns scattered government documents into a consistent, explorable greenhouse-gas dataset — across nine fiscal years, sectors, months and districts." },
+  { eyebrow: "What can I explore?", headline: "From the national picture to individual districts.", dek: "Compare sectors, follow changes through time, inspect monthly estimates and move across Pakistan geographically." },
+  { eyebrow: "Why should I trust it?", headline: "Every number has a paper trail.", dek: "PakEmis is built from public records. Each estimate carries its source, methodology and evidence quality, so you can see where it came from rather than taking the dataset on trust." },
+  { eyebrow: "What makes this open?", headline: "Check it. Reuse it. Improve it.", dek: "The dataset, methodology and code are public. PakEmis is designed to be reproducible, not just downloadable." },
+] as const;
+
+const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+/** A small count as a word ("nine"), so the facts row carries no digit; larger counts fall back to the digits. */
+export function countWord(n: number): string {
+  return WORDS[n] ?? String(n);
+}
+function capitalise(s: string): string {
+  return s.replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/** The pieces of a display string for the typographic split: integer part and the rest, unchanged. */
+export function splitDisplay(display: string): { int: string; rest: string } {
+  const m = /^(-?\d+)(.*)$/.exec(display);
+  return m ? { int: m[1], rest: m[2] } : { int: display, rest: "" };
+}
+
+/** "Mt CO₂e" for the release's "Mt CO2e …" units (typography only); any other unit verbatim. */
+export function unitText(unit: string): string {
+  return /^Mt CO2e\b/.test(unit) ? "Mt CO₂e" : unit;
+}
 
 export function WelcomeModal() {
   const { isMobile } = useExplorer();
   const [open, setOpen] = useState(false); // hidden until the client has read localStorage
   const [step, setStep] = useState(0);
+  const [drawer, setDrawer] = useState<Envelope | null>(null);
   useEffect(() => {
     setOpen(!readDismissed());
     const reopen = () => {
@@ -77,236 +106,222 @@ export function WelcomeModal() {
     } catch {
       /* private mode: the explainer simply returns next time */
     }
+    setDrawer(null);
     setOpen(false);
   };
   useEffect(() => {
-    if (!open) return;
+    if (!open || drawer) return; // the drawer owns Escape while it is open
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") dismiss();
+      else if (e.key === "ArrowRight") setStep((s) => Math.min(SCREENS.length - 1, s + 1));
+      else if (e.key === "ArrowLeft") setStep((s) => Math.max(0, s - 1));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, drawer]);
   if (!open) return null;
-  const panels = [<WhatThisIs key="a" />, <WhatDataMeans key="b" />, <HowToRead key="c" />, <AskPanel key="d" onDismiss={dismiss} />];
+  const last = SCREENS.length - 1;
+  const next = () => setStep((s) => Math.min(last, s + 1));
+  const screens = [
+    <ScreenWhat key="1" />,
+    <ScreenExplore key="2" />,
+    <ScreenTrust key="3" onExplore={dismiss} onSource={setDrawer} />,
+    <ScreenOpen key="4" onDismiss={dismiss} />,
+  ];
+  const counter = (i: number) => `${String(i + 1).padStart(2, "0")} / ${String(SCREENS.length).padStart(2, "0")}`;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/40 p-0 backdrop-blur-sm md:p-6" role="dialog" aria-modal="true" aria-labelledby="intro-title" data-testid="welcome-modal" onMouseDown={(e) => e.target === e.currentTarget && dismiss()}>
-      <div className={`card flex w-full flex-col overflow-hidden ${isMobile ? "h-dvh max-w-none rounded-none" : "max-h-[90dvh] max-w-2xl"}`}>
-        <div className="flex items-center justify-between border-b border-line px-5 py-3">
-          <div>
-            <div className="micro">PakEmis Explorer</div>
-            <h1 id="intro-title" className="text-md font-semibold text-ink">{isMobile ? "A first visit" : STEPS[step]}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isMobile && (
-              <ol className="flex items-center gap-1" aria-label="Steps">
-                {STEPS.map((s, i) => (
-                  <li key={s}>
-                    <button type="button" onClick={() => setStep(i)} aria-label={s} aria-current={i === step ? "step" : undefined} className={`h-2 w-2 rounded-full ${i === step ? "bg-accent" : "bg-line hover:bg-muted"}`} />
-                  </li>
-                ))}
-              </ol>
-            )}
-            <button type="button" onClick={dismiss} aria-label="Close the introduction" className="pill flex h-7 w-7 items-center justify-center text-muted hover:bg-canvas hover:text-ink" data-testid="intro-close">
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4 text-sm">
-          {isMobile ? (
-            <div className="space-y-6">
-              {panels.map((p, i) => (
-                <section key={STEPS[i]}>
-                  <h2 className="mb-2 text-md font-semibold text-ink">{STEPS[i]}</h2>
-                  {p}
+      <div className={`relative flex w-full flex-col overflow-hidden text-ink shadow-card ${isMobile ? "h-dvh max-w-none" : "max-h-[92dvh] max-w-3xl rounded-2xl"}`} style={{ background: "#faf8f4" }}>
+        <button type="button" onClick={dismiss} aria-label="Close the introduction" className="pill absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center text-muted hover:bg-ink/5 hover:text-ink" data-testid="intro-close">
+          <X size={16} />
+        </button>
+        {isMobile ? (
+          <div className="flex-1 overflow-y-auto px-6 py-8">
+            <div className="micro">PakEmis</div>
+            <div className="mt-8 space-y-14">
+              {screens.map((s, i) => (
+                <section key={SCREENS[i].headline} data-testid={`intro-screen-${i + 1}`}>
+                  <div className="mono mb-3 text-micro normal-case tracking-normal text-muted">{counter(i)}</div>
+                  {s}
                 </section>
               ))}
             </div>
-          ) : (
-            panels[step]
-          )}
-        </div>
-        <div className="flex items-center justify-between border-t border-line px-5 py-2.5 text-xs">
-          <button type="button" onClick={dismiss} className="text-muted hover:text-ink">Skip</button>
-          {!isMobile && (
-            <div className="flex items-center gap-2">
-              <button type="button" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))} className="pill flex items-center gap-1 border border-line px-2.5 py-1 text-ink hover:bg-canvas disabled:opacity-30" aria-label="Previous step">
-                <ChevronLeft size={14} /> Back
-              </button>
-              {step < STEPS.length - 1 ? (
-                <button type="button" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} className="pill flex items-center gap-1 bg-ink px-3 py-1 text-white hover:bg-ink/90" data-testid="intro-next">
-                  Next <ChevronRight size={14} />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between px-10 pt-8">
+              <div className="micro">PakEmis</div>
+              <div className="mono mr-10 text-micro normal-case tracking-normal text-muted" data-testid="intro-counter">{counter(step)}</div>
+            </div>
+            <div className="mx-10 mt-3 h-px bg-ink/10">
+              <div className="h-px bg-accent transition-[width] duration-300" style={{ width: `${((step + 1) / SCREENS.length) * 100}%` }} />
+            </div>
+            <div className="flex-1 overflow-y-auto px-10 pb-6 pt-8" data-testid={`intro-screen-${step + 1}`}>
+              {screens[step]}
+            </div>
+            <div className="flex items-center justify-between px-10 pb-8">
+              <div className="flex items-center gap-4 text-xs text-muted">
+                <button type="button" onClick={dismiss} className="hover:text-ink">Skip</button>
+                {step > 0 && (
+                  <button type="button" onClick={() => setStep((s) => Math.max(0, s - 1))} className="hover:text-ink" aria-label="Previous screen">
+                    Back
+                  </button>
+                )}
+              </div>
+              {step < last ? (
+                <button type="button" onClick={next} className="pill flex items-center gap-2 bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-pill hover:bg-accent/90" data-testid="intro-next">
+                  {step === 0 ? "Explore the project" : "Next"} <ArrowRight size={16} />
                 </button>
               ) : (
-                <button type="button" onClick={dismiss} className="pill bg-ink px-3 py-1 text-white hover:bg-ink/90" data-testid="intro-done">
-                  Explore the map
+                <button type="button" onClick={dismiss} className="pill flex items-center gap-2 bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-pill hover:bg-accent/90" data-testid="intro-done">
+                  Start exploring <ArrowRight size={16} />
                 </button>
               )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
+      {drawer && <EnvelopeDrawer env={drawer} tab="evidence" onClose={() => setDrawer(null)} />}
     </div>
   );
 }
 
-function P({ children }: { children: ReactNode }) {
-  return <p className="mt-2 leading-relaxed text-ink first:mt-0">{children}</p>;
-}
-function Note({ children }: { children: ReactNode }) {
-  return <p className="mt-1 text-xs leading-relaxed text-muted">{children}</p>;
+function Headline({ eyebrow, children, dek }: { eyebrow: string; children: ReactNode; dek: string }) {
+  return (
+    <div>
+      <div className="micro">{eyebrow}</div>
+      <h1 id="intro-title" className="mt-3 text-[36px] font-semibold leading-[1.05] tracking-tight text-ink">{children}</h1>
+      <p className="mt-4 max-w-prose text-md leading-relaxed text-muted">{dek}</p>
+    </div>
+  );
 }
 
-/** Panel 1: the short summary, the release line, and the one number (the national total's display with its receipt). */
-export function WhatThisIs() {
-  const { state, release, labels } = useExplorer();
-  const facts = releaseFacts(release);
+/** The national annual series under the reference configuration and the reported GWP basis, unfiltered. */
+function useNationalSeries() {
+  const { defaults } = useExplorer();
+  const body = useMemo(() => seriesBody({ config: defaults.configuration_id, gwp: defaults.gwp_basis, sector: null, gas: null } as ExplorerState), [defaults.configuration_id, defaults.gwp_basis]);
+  return useTimeseries(body);
+}
+
+function Trend() {
+  const { labels, dims } = useExplorer();
+  const series = useNationalSeries();
+  const reference = dims.periods.find((p) => String(p.is_reference).toLowerCase() === "true")?.period_id ?? dims.fiscalPeriods[dims.fiscalPeriods.length - 1];
+  const label = useMemo(() => (id: string) => periodShort(labels, id), [labels]);
+  return (
+    <div className="mt-8" data-testid="intro-trend">
+      <TrendChart env={series.data} referencePeriod={reference} periodLabel={label} height={150} />
+      <div className="mt-1 text-micro normal-case tracking-normal text-muted">The national total across the fiscal years; the reference year in amber.</div>
+    </div>
+  );
+}
+
+function ScreenWhat() {
+  const { dims } = useExplorer();
+  const years = capitalise(countWord(dims.fiscalPeriods.length));
+  const facts = [`${years} fiscal years`, "Monthly detail", "District-level data", "Source-traceable"];
+  return (
+    <div>
+      <Headline eyebrow={SCREENS[0].eyebrow} dek={SCREENS[0].dek}>{SCREENS[0].headline}</Headline>
+      <ul className="mt-6 flex flex-wrap gap-x-3 gap-y-1 text-sm text-ink" data-testid="intro-facts">
+        {facts.map((f, i) => (
+          <li key={f} className="flex items-center gap-3">
+            {i > 0 && <span className="text-muted/60" aria-hidden="true">·</span>}
+            {f}
+          </li>
+        ))}
+      </ul>
+      <Trend />
+    </div>
+  );
+}
+
+function ScreenExplore() {
+  return (
+    <div>
+      <Headline eyebrow={SCREENS[1].eyebrow} dek={SCREENS[1].dek}>{SCREENS[1].headline}</Headline>
+      <ul className="mt-6 grid grid-cols-1 gap-x-8 gap-y-2 text-sm text-ink sm:grid-cols-2" data-testid="intro-explore-list">
+        <li><span className="font-semibold">Provinces, districts, grid</span> <span className="text-muted">— three map levels, one release.</span></li>
+        <li><span className="font-semibold">Sectors and gases</span> <span className="text-muted">— filter, compare, rank.</span></li>
+        <li><span className="font-semibold">Years and months</span> <span className="text-muted">— the rail at the bottom of the map.</span></li>
+        <li><span className="font-semibold">Ask PakEmis</span> <span className="text-muted">— a question, answered from the same data.</span></li>
+      </ul>
+      <Trend />
+    </div>
+  );
+}
+
+function ScreenTrust({ onExplore, onSource }: { onExplore: () => void; onSource: (env: Envelope) => void }) {
+  const { state, release } = useExplorer();
   const national = useEmissions(contextBodies(state, null).national);
   const kpi = national.data?.values[0];
-  const rp = facts.reportingPeriod;
+  const period = release.context_bar.reporting_period?.label ?? "";
   return (
     <div>
-      <P>{SHORT_SUMMARY}</P>
-      <Note>
-        This is <span className="mono">{release.release_id}</span>
-        {rp ? <>, reporting period {rp.label} ({rp.start} to {rp.end})</> : null}.
-      </Note>
-      <div className="mt-3 rounded-card border border-line bg-canvas p-3">
-        <div className="micro">Pakistan · national total, as the release states it</div>
+      <Headline eyebrow={SCREENS[2].eyebrow} dek={SCREENS[2].dek}>{SCREENS[2].headline}</Headline>
+      <div className="mt-8 border-l-2 border-accent/60 pl-5" data-testid="intro-example">
         {kpi ? (
-          <div className="mt-1">
-            <div className="flex items-baseline gap-1.5">
-              <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="intro-kpi">{kpi.display}</span>
-              <span className="text-xs text-muted">{kpi.unit}</span>
+          <>
+            <p className="text-md leading-relaxed text-ink">
+              Pakistan emitted{" "}
+              <span className="num whitespace-nowrap" data-testid="intro-kpi" title={`${kpi.display} ${kpi.unit}`}>
+                <span className="text-[30px] font-semibold leading-none tracking-tight">{splitDisplay(kpi.display).int}</span>
+                <span className="text-md text-muted">{splitDisplay(kpi.display).rest}</span>
+              </span>{" "}
+              {unitText(kpi.unit)}{period ? <> in {period}</> : null}.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+              <button type="button" onClick={onExplore} className="flex items-center gap-1 font-semibold text-accent hover:underline" data-testid="intro-explore-from">
+                Explore where those emissions came from <ArrowRight size={14} />
+              </button>
+              <button type="button" onClick={() => national.data && onSource(national.data)} className="flex items-center gap-1 text-muted hover:text-ink hover:underline" data-testid="intro-source">
+                View source <ArrowRight size={14} />
+              </button>
             </div>
-            <div className="text-xs text-muted">{configLabel(labels, state.config)} · {state.gwp}</div>
-            <ReceiptFooter env={national.data!} className="mt-1" />
-          </div>
+          </>
         ) : national.error ? (
-          <div className="mt-2"><RefusalCard error={national.error} compact /></div>
+          <p className="text-sm text-muted">The national total could not be read from the API right now; the map and panels show the refusal by name.</p>
         ) : (
-          <div className="mt-2"><Loading what="the national total" /></div>
+          <div className="animate-pulse space-y-2" aria-hidden="true">
+            <div className="h-7 w-2/3 rounded bg-ink/5" />
+            <div className="h-4 w-1/3 rounded bg-ink/5" />
+          </div>
         )}
-        <Note>The only number in this introduction. Like every number in the Explorer, it is printed as the API returned it, with the receipt that replays it.</Note>
       </div>
     </div>
   );
 }
 
-/** Panel 2: what an "emission" is here; the release's own statements on period, gases, LULUCF, configurations and notation keys. */
-export function WhatDataMeans() {
-  const { release, labels, dims } = useExplorer();
-  const facts = releaseFacts(release);
-  const gases = dims.gases.map((g) => gasLabel(labels, g));
+function ScreenOpen({ onDismiss }: { onDismiss: () => void }) {
+  const { release, setState } = useExplorer();
   return (
     <div>
-      <P>An estimate, not a measurement. Each sector&apos;s emissions are reconstructed from public documents as activity data multiplied by emission factors, category by category under the IPCC classification. Nothing here was read from an instrument.</P>
-      <P>Years are fiscal, July to June{facts.reportingPeriod?.note ? <>: {facts.reportingPeriod.note}</> : null}.</P>
-      <P>
-        The gases are {joinNames(gases)}, reported together as CO₂-equivalent{facts.gwp.reported ? <> on {facts.gwp.reported}</> : null}
-        {facts.gwp.secondary ? <>, with {facts.gwp.secondary} carried as a secondary basis</> : null}.
-      </P>
-      {facts.lulucf.status && (
-        <P>
-          Land use, land-use change and forestry are {facts.lulucf.status} ({facts.lulucf.notation_key}){facts.lulucf.note ? <>: {facts.lulucf.note}</> : null}.
-        </P>
-      )}
-      <P>Two configurations can be queried:</P>
-      <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-ink">
-        {dims.configurations.map((id) => (
-          <li key={id}>
-            <span className="font-semibold">{configLabel(labels, id)}</span>
-            {labels.configurations[id]?.note ? <span className="text-muted"> — {labels.configurations[id].note}</span> : null}
-          </li>
-        ))}
+      <Headline eyebrow={SCREENS[3].eyebrow} dek={SCREENS[3].dek}>{SCREENS[3].headline}</Headline>
+      <ul className="mt-6 grid grid-cols-1 gap-x-8 gap-y-2 text-sm text-ink sm:grid-cols-2">
+        <li><span className="font-semibold">Open data</span> <span className="text-muted">— every table downloadable, with its licence.</span></li>
+        <li><span className="font-semibold">Open method</span> <span className="text-muted">— sources, factors and evidence grades on record.</span></li>
+        <li><span className="font-semibold">Open code</span> <span className="text-muted">— the build that produced every number.</span></li>
+        <li><span className="font-semibold">Replayable</span> <span className="text-muted">— each answer can be reproduced from its receipt.</span></li>
       </ul>
-      {labels.limitations.config_S_residential_only && <Note>{limitationText(labels, "config_S_residential_only")}</Note>}
-      <P>Where nothing is estimated, the cell says so with a notation key rather than a value: NE (not estimated), NO (not occurring) or IE (included elsewhere). A blank is not a zero.</P>
-      <P>Every number is graded by the evidence behind it, traceable to the document and the code that produced it, and carries a receipt that replays the exact query.</P>
-    </div>
-  );
-}
-
-/** Panel 3: levels, the year rail, hatch, dotted outline, unallocated mass, the raster, refusals — limitation texts from the release. */
-export function HowToRead() {
-  const { labels, dims } = useExplorer();
-  const bboxes = useBboxes();
-  const residual = residualUnit(dims, bboxes.data);
-  const lim = (id: string) => (labels.limitations[id] ? limitationText(labels, id) : null);
-  return (
-    <div>
-      <P>Provinces, districts and a grid. The map paints one envelope per view: a polygon&apos;s colour follows its cell&apos;s value, the hover shows that cell&apos;s display string verbatim, and the legend&apos;s labels are real cells. A click opens the detail card.</P>
-      <P>The rail at the bottom steps through the fiscal years and, within a year, the months. Spatial products exist for the reference year only: other years are tagged &ldquo;national only&rdquo;, the map shows outlines with the API&apos;s refusal in the legend&apos;s place, and the panels keep their national numbers.</P>
-      <div className="mt-3 space-y-2 text-xs">
-        <Row swatch={<span className="hatch-swatch inline-block h-3 w-5 shrink-0 rounded-sm border border-ink/20 bg-accent-soft" />}>
-          <b>Hatch</b> = a bounded interval. The cell prints &ldquo;[low, high]&rdquo; and is never collapsed to a midpoint.{lim("adm2_co2e_bounded_power_residential") ? <span className="text-muted"> {lim("adm2_co2e_bounded_power_residential")}.</span> : null}
-        </Row>
-        <Row swatch={<span className="inline-block h-3 w-5 shrink-0 rounded-sm border-2 border-dotted border-ink/80 bg-accent-soft" />}>
-          <b>Dotted outline</b> = polygons sharing one cell.{residual ? <> {joinNames(residual.members)} are one unit in the release, named &ldquo;{residual.name}&rdquo;; the map paints its single cell on each of them and says so on hover.</> : null}
-          {lim("no_polygon_units") ? <span className="text-muted"> {lim("no_polygon_units")}.</span> : null}
-        </Row>
-        <Row swatch={<span className="inline-block h-3 w-5 shrink-0 rounded-sm border border-line bg-canvas" />}>
-          <b>Unallocated</b> mass is named, not lost: what the allocation cannot place in a district stays at the province as a row of its own, shown on the detail card.
-        </Row>
-        <Row swatch={<span className="inline-block h-3 w-5 shrink-0 rounded-sm" style={{ background: "linear-gradient(90deg, #e6eff5, #2a6f97)" }} />}>
-          <b>The grid raster</b> is shading only.{lim("grid_not_tabular") ? <span className="text-muted"> {lim("grid_not_tabular")}.</span> : null} A click reads one cell through the API.
-        </Row>
-      </div>
-      <P>Refusals are answers. A scope the release cannot serve is refused by name, and the refusal is shown where the number would have been, for example:</P>
-      <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-muted">
-        {(["ar6_adm2_ne", "calendar_basis_ne"] as const).filter((id) => labels.limitations[id]).map((id) => (
-          <li key={id}>
-            <span className="mono text-ink">{id}</span> — {limitationText(labels, id)}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function Row({ swatch, children }: { swatch: ReactNode; children: ReactNode }) {
-  return (
-    <div className="flex items-start gap-2">
-      <span className="mt-0.5">{swatch}</span>
-      <span className="text-ink">{children}</span>
-    </div>
-  );
-}
-
-/** Panel 4: the dock's sentences, the contract's functions, the agent's status, and where to go next. */
-export function AskPanel({ onDismiss }: { onDismiss: () => void }) {
-  const { release, agent, setState } = useExplorer();
-  const fns = (release.query_contract.functions as string[] | undefined) ?? [];
-  return (
-    <div>
-      <P>{ASK_SENTENCES[0]}</P>
-      <P>{ASK_SENTENCES[1]}</P>
-      {fns.length > 0 && (
-        <>
-          <Note>The typed functions it can call:</Note>
-          <ul className="mono mt-1 grid grid-cols-1 gap-0.5 text-xs text-ink sm:grid-cols-2">
-            {fns.map((f) => <li key={f}>{f}</li>)}
-          </ul>
-        </>
-      )}
-      <p className="mt-2 text-xs leading-relaxed text-muted" data-testid="intro-agent">
-        Status: {agent.enabled ? <>enabled{agent.model ? <> · model <span className="mono">{agent.model}</span></> : null}</> : <>not enabled — <span className="mono">{agent.reason}</span></>}.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={onDismiss} className="pill bg-ink px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink/90">Explore the map</button>
+      <div className="mt-8 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => {
             onDismiss();
             setState({ ask: true });
           }}
-          className="pill bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90"
+          className="pill border border-ink/15 px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/5"
           data-testid="intro-ask"
         >
           Ask a question
         </button>
-        <Link href="/about" onClick={onDismiss} className="pill border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:bg-canvas">Read more</Link>
+        <Link href="/about" onClick={onDismiss} className="text-sm text-muted hover:text-ink hover:underline" data-testid="intro-about">
+          Read about the method, the data and the licences →
+        </Link>
       </div>
+      <p className="mt-8 text-micro normal-case tracking-normal text-muted" data-testid="intro-footnote">
+        {release.release_id}. Every number in the Explorer is printed as the API returned it, with a receipt that replays the query; the About page has the details.
+      </p>
     </div>
   );
 }

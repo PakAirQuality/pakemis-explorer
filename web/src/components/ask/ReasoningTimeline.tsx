@@ -25,6 +25,7 @@ export const ERROR_TITLES: Record<string, string> = {
   agent_disabled: "Ask PakEmis is not enabled",
   rate_limited: "Too many questions from this address",
   stream_ended: "The stream ended before an answer",
+  empty_answer: "No answer: the model returned no answer text after its tool calls",
   network_error: "Could not reach the API",
 };
 
