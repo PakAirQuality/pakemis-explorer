@@ -1,68 +1,107 @@
 "use client";
-/** Overview: the national total under L and S, on AR5 and AR6, each from its own envelope. */
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { ChartFrame } from "@/components/ChartFrame";
-import { BarChart } from "@/components/BarChart";
-import { Status } from "@/components/Status";
-import { useRelease } from "@/components/ContextBar";
+/**
+ * The one screen: [IconRail 48] [SlidingPanel 0|370] [Map flex-1] [Right column 300|420].
+ * Floating over the map: ScopeChips (top-left), layer toggle (top-right), TimeRail
+ * (bottom-centre), brand + Legend (bottom-left), context pill (bottom-right); the DetailCard
+ * slides in over the map's right edge. Everything reads one URL state (lib/urlState.ts).
+ */
+import { Suspense, useMemo } from "react";
+import { API_BASE } from "@/lib/api";
+import { useContractOptions } from "@/lib/contract";
+import { releaseAgent, releaseDefaults, releaseDims, releaseLabels, useRelease } from "@/lib/release";
+import { useExplorerState, type StateDefaults } from "@/lib/urlState";
+import type { ReleaseInfo } from "@/lib/envelope";
+import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
+import { IconRail } from "@/components/shell/IconRail";
+import { SlidingPanel } from "@/components/shell/SlidingPanel";
+import { DisabledCard } from "@/components/shell/DisabledCard";
+import { useMediaQuery } from "@/components/shell/useMediaQuery";
+import { ExplorerMap } from "@/components/map/ExplorerMap";
+import { DetailCard } from "@/components/detail/DetailCard";
+import { ContextPanel } from "@/components/panels/ContextPanel";
+import { ExplorePanel } from "@/components/panels/ExplorePanel";
+import { InventoryPanel } from "@/components/panels/InventoryPanel";
+import { ComparePanel } from "@/components/panels/ComparePanel";
+import { EvidencePanel } from "@/components/panels/EvidencePanel";
 
-const PERIOD = "FY2023-24";
-const TOTALS = [
-  { key: "L_AR5", label: "Configuration L (ledger), AR5", body: { periods: [PERIOD], configuration_id: "REF_2023_24", gwp_basis: "AR5" } },
-  { key: "S_AR5", label: "Configuration S (survey), AR5", body: { periods: [PERIOD], configuration_id: "S_2023_24", gwp_basis: "AR5" } },
-  { key: "L_AR6", label: "Configuration L (ledger), AR6", body: { periods: [PERIOD], configuration_id: "REF_2023_24", gwp_basis: "AR6" } },
-  { key: "S_AR6", label: "Configuration S (survey), AR6", body: { periods: [PERIOD], configuration_id: "S_2023_24", gwp_basis: "AR6" } },
-];
-
-function Total({ label, body }: { label: string; body: { periods: string[]; configuration_id: string; gwp_basis: string } }) {
-  const q = useQuery({ queryKey: ["total", body], queryFn: () => api.queryEmissions(body) });
+export default function Page() {
   return (
-    <div>
-      <div className="label">{label}</div>
-      {q.data ? (
-        <>
-          <div className="value" data-testid={`total-${body.configuration_id}-${body.gwp_basis}`}>{q.data.values[0].display}</div>
-          <div className="small">{q.data.values[0].unit} · receipt <span className="mono">{q.data.receipt}</span></div>
-        </>
-      ) : (
-        <Status isLoading={q.isLoading} error={q.error} what={label} />
-      )}
-    </div>
+    <Suspense fallback={null}>
+      <Explorer />
+    </Suspense>
   );
 }
 
-export default function Overview() {
+function Explorer() {
   const release = useRelease();
-  const sectors = useQuery({
-    queryKey: ["sectors", PERIOD],
-    queryFn: () => api.queryEmissions({ periods: [PERIOD], group_by: ["sector_id"], order_by: "value desc" }),
-  });
-  return (
-    <>
-      <h1>Pakistan&apos;s national inventory, {PERIOD}</h1>
-      <p className="small">
-        {release.data ? `${release.data.release_id} · commit ${release.data.commit ?? "?"} · semantic contract ${release.data.digests.semantic_release_json.slice(0, 16)}…` : ""} Configurations L and S are co-equal readings of unresolved dung evidence, not an estimate and a sensitivity. LULUCF is excluded from every total.
-      </p>
-      <div className="card kpi">
-        {TOTALS.map((t) => (
-          <Total key={t.key} label={t.label} body={t.body} />
-        ))}
+  const contract = useContractOptions();
+  if (release.error)
+    return (
+      <div className="flex h-dvh items-center justify-center p-6">
+        <div className="card max-w-md p-5 text-sm" data-testid="api-unreachable">
+          <div className="micro">PakEmis Explorer</div>
+          <h1 className="mt-1 text-md font-semibold">API unreachable</h1>
+          <p className="mt-2 text-muted">{String(release.error)} at <span className="mono">{API_BASE}</span>. Nothing numerical is shown without an envelope.</p>
+        </div>
       </div>
-      {sectors.data ? (
-        <ChartFrame title="Sectors, configuration L, AR5" env={sectors.data}>
-          <BarChart env={sectors.data} horizontal height={380} />
-        </ChartFrame>
-      ) : (
-        <Status isLoading={sectors.isLoading} error={sectors.error} what="the sector breakdown" />
-      )}
-      <h2>How to read this site</h2>
-      <ul className="small">
-        <li>One numerical truth layer: the paper, these charts, the downloads, the API and the future agent are views of one verified release.</li>
-        <li>Every value is a <code>display</code> string the API rounded by the contract&apos;s rule (half to even on the exact decimal). Tick &quot;show exact&quot; in any table to see the decimal the engine summed.</li>
-        <li>Every frame carries a receipt: <code>GET /v1/receipt/&lt;receipt&gt;</code> replays the request; it never serves a stored number.</li>
-        <li>What the release cannot answer it refuses by name (calendar basis outside agriculture, AR6 at ADM2, configuration S outside FY2023-24).</li>
-      </ul>
-    </>
+    );
+  if (!release.data) return <div className="flex h-dvh items-center justify-center text-xs text-muted">Loading release…</div>;
+  return <Loaded release={release.data} contract={contract.data} />;
+}
+
+const PANEL_TITLES = { explore: "Explore", inventory: "Inventory", compare: "Compare", evidence: "Evidence & methods" } as const;
+
+function Loaded({ release, contract }: { release: ReleaseInfo; contract: ReturnType<typeof useContractOptions>["data"] }) {
+  const dims = useMemo(() => releaseDims(release), [release]);
+  const labels = useMemo(() => releaseLabels(release), [release]);
+  const agent = releaseAgent(release);
+  const d = releaseDefaults(release);
+  const defaults = useMemo<StateDefaults>(
+    () => ({
+      period_id: d?.period_id ?? "",
+      configuration_id: d?.configuration_id ?? "",
+      gwp_basis: d?.gwp_basis ?? "",
+      spatial_view: d?.spatial_view ?? "",
+      grid_gas: contract?.gridGas || dims.gases[0] || "",
+    }),
+    [d?.period_id, d?.configuration_id, d?.gwp_basis, d?.spatial_view, contract?.gridGas, dims.gases],
+  );
+  const { state, setState } = useExplorerState(defaults);
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const ctx: ExplorerContextValue = { state, setState, release, labels, dims, defaults, contract, agent, isMobile };
+  const fns = (release.query_contract.functions as string[] | undefined) ?? [];
+  const rule = (release.query_contract.placeholder_rule as string | undefined) ?? "";
+  const panel =
+    state.panel === "explore" ? <ExplorePanel /> : state.panel === "inventory" ? <InventoryPanel /> : state.panel === "compare" ? <ComparePanel /> : state.panel === "evidence" ? <EvidencePanel /> : null;
+  const rail = <IconRail active={state.panel} onChange={(p) => setState({ panel: p })} ask={state.ask} onAsk={() => setState({ ask: !state.ask })} horizontal={isMobile} />;
+  return (
+    <ExplorerContext.Provider value={ctx}>
+      <div className={`flex h-dvh w-screen overflow-hidden ${isMobile ? "flex-col" : "flex-row"}`} data-testid="explorer">
+        {!isMobile && rail}
+        <SlidingPanel open={!!state.panel} title={state.panel ? PANEL_TITLES[state.panel] : ""} onClose={() => setState({ panel: null })} mobile={isMobile}>
+          {panel}
+        </SlidingPanel>
+        <main className="relative min-w-0 flex-1">
+          <ExplorerMap />
+          <DetailCard />
+        </main>
+        {!isMobile && (
+          <aside className="relative z-40 h-full shrink-0 overflow-y-auto border-l border-line bg-white transition-[width] duration-250" style={{ width: state.ask ? 420 : 300 }} data-testid="right-column">
+            {state.ask ? (
+              <DisabledCard reason={agent.reason} model={agent.model} functions={fns} rule={rule} />
+            ) : (
+              <ContextPanel />
+            )}
+          </aside>
+        )}
+        {isMobile && state.ask && (
+          <div className="fixed inset-x-0 bottom-12 top-0 z-[55] overflow-y-auto bg-white">
+            <DisabledCard reason={agent.reason} model={agent.model} functions={fns} rule={rule} />
+          </div>
+        )}
+        {isMobile && rail}
+      </div>
+    </ExplorerContext.Provider>
   );
 }
+

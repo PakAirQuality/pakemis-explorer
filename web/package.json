@@ -11,13 +11,17 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query": "^5.102.8",
     "echarts": "^6.1.0",
+    "lucide-react": "^1.37.0",
     "maplibre-gl": "^6.6.0",
     "next": "15.5.24",
+    "nuqs": "^2.10.1",
     "pmtiles": "^4.5.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "tailwindcss": "^4.3.3",
     "zod": "^4.5.2"
   },
   "devDependencies": {

@@ -82,7 +82,7 @@ export const ReleaseSchema = z
       reporting_period: z.object({ label: z.string(), start: z.string(), end: z.string() }).nullable(),
       lulucf: z.object({ status: z.string(), notation_key: z.string(), note: z.string() }),
     }),
-    dims: z.record(z.string(), z.record(z.string(), z.unknown())),
+    dims: z.record(z.string(), z.unknown()),
     digests: z.object({
       semantic_release_json: z.string(),
       release_manifest_json: z.string(),
@@ -99,7 +99,8 @@ export type ReleaseInfo = z.infer<typeof ReleaseSchema>;
 
 /** A cell's label: its group values joined, or the request type. */
 export function cellLabel(cell: Cell, fallback = "all"): string {
-  const g = cell.group ?? {};
+  const left = (cell as Record<string, unknown>).left as { group?: Record<string, string | null> } | undefined;
+  const g = cell.group ?? left?.group ?? {};
   const parts = Object.values(g).filter((v): v is string => typeof v === "string" && v.length > 0);
   return parts.length ? parts.join(" · ") : fallback;
 }

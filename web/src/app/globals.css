@@ -1,43 +1,61 @@
-:root { --ink: #1b2430; --muted: #5c6b7a; --line: #d9dee5; --accent: #2a6f97; --bg: #ffffff; --panel: #f5f7f9; --warn: #8a3b12; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-main { max-width: 1180px; margin: 0 auto; padding: 16px 20px 40px; }
-h1 { font-size: 1.5rem; margin: 8px 0 4px; }
-h2 { font-size: 1.2rem; margin: 20px 0 8px; }
-h3 { font-size: 1.05rem; margin: 0; }
-h4 { font-size: 0.95rem; margin: 12px 0 4px; }
-a { color: var(--accent); }
-code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
-.small { font-size: 0.85rem; color: var(--muted); }
-.num { text-align: right; font-variant-numeric: tabular-nums; }
-.top-nav { display: flex; gap: 14px; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.top-nav .brand { font-weight: 700; margin-right: 10px; }
-.top-nav a { text-decoration: none; color: var(--ink); padding: 4px 6px; border-radius: 4px; }
-.top-nav a.active { background: var(--panel); color: var(--accent); font-weight: 600; }
-.context-bar { display: flex; gap: 18px; flex-wrap: wrap; padding: 8px 20px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 0.85rem; }
-.context-bar.error { color: var(--warn); }
-.context-key { color: var(--muted); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.04em; }
-.context-value { font-weight: 600; }
-.chart-frame { border: 1px solid var(--line); border-radius: 6px; margin: 16px 0; background: var(--bg); }
-.chart-frame header { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 14px; border-bottom: 1px solid var(--line); gap: 12px; flex-wrap: wrap; }
-.chart-frame .receipt { color: var(--muted); }
-.tabs { display: flex; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.tabs button { border: 1px solid transparent; background: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: var(--ink); font: inherit; font-size: 0.85rem; }
-.tabs button.active { border-color: var(--line); background: var(--panel); font-weight: 600; }
-.chart-body, .panel, .envelope-table { padding: 10px 14px; overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
-th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
-pre { background: var(--panel); padding: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
-.refusal { border-left: 4px solid var(--warn); background: #fff6f0; padding: 8px 12px; margin: 10px 0; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
-.controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin: 8px 0; }
-.controls label { display: flex; flex-direction: column; font-size: 0.8rem; color: var(--muted); }
-.controls select, .controls input { font: inherit; padding: 4px 6px; }
-.map { width: 100%; height: 520px; border: 1px solid var(--line); border-radius: 6px; }
-.card { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; margin: 12px 0; background: var(--panel); }
-.kpi { display: flex; gap: 24px; flex-wrap: wrap; }
-.kpi .value { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.kpi .label { color: var(--muted); font-size: 0.8rem; }
-footer { border-top: 1px solid var(--line); padding: 12px 20px; }
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* Design tokens (plan section C). Light UI over a light basemap; the rail is the one dark element. */
+@theme {
+  --color-ink: #1b2430;
+  --color-muted: #5c6b7a;
+  --color-line: #d9dee5;
+  --color-accent: #2a6f97;
+  --color-accent-soft: #e6eff5;
+  --color-warn: #8a3b12;
+  --color-refusal: #fff6f0;
+  --color-rail: #1e293b;
+  --color-amber: #f59e0b;
+  --color-amber-soft: #fbbf24;
+  --color-panel: rgba(255, 255, 255, 0.92);
+  --color-canvas: #f5f7f9;
+  --font-sans: var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-card: 0.625rem;
+  --text-micro: 11px;
+  --text-micro--line-height: 14px;
+  --text-micro--letter-spacing: 0.06em;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 18px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-md: 16px;
+  --text-md--line-height: 22px;
+  --text-xl: 22px;
+  --text-xl--line-height: 26px;
+  --text-3xl: 30px;
+  --text-3xl--line-height: 34px;
+  --shadow-card: 0 1px 2px rgba(27, 36, 48, 0.06), 0 8px 24px rgba(27, 36, 48, 0.1);
+  --shadow-pill: 0 1px 2px rgba(27, 36, 48, 0.08), 0 4px 12px rgba(27, 36, 48, 0.08);
+}
+
+@layer base {
+  html, body { height: 100%; }
+  body { background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--text-base--line-height); font-feature-settings: "tnum" 1, "cv11" 1; -webkit-font-smoothing: antialiased; }
+  .num, .tabular { font-variant-numeric: tabular-nums; }
+  code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+  button { cursor: pointer; font: inherit; }
+  select, input { font: inherit; }
+}
+
+@utility glass { background: var(--color-panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(27, 36, 48, 0.08); box-shadow: var(--shadow-pill); }
+@utility card { background: #fff; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+@utility micro { font-size: var(--text-micro); line-height: var(--text-micro--line-height); letter-spacing: var(--text-micro--letter-spacing); text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
+@utility pill { border-radius: 9999px; }
+@utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+
+/* MapLibre chrome */
+.maplibregl-ctrl-attrib { font-size: 10px; background: rgba(255, 255, 255, 0.75) !important; color: var(--color-muted); }
+.maplibregl-ctrl-attrib a { color: var(--color-muted); }
+.maplibregl-canvas:focus { outline: none; }
+
+/* Chart decal for bounded cells (the same diagonal hatch as the map). */
+.hatch-swatch { background-image: repeating-linear-gradient(135deg, rgba(27, 36, 48, 0.55) 0 1.5px, transparent 1.5px 5px); }
