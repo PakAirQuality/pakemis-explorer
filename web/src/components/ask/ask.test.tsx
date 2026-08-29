@@ -91,7 +91,7 @@ function sseResponse(text: string, chunkSize = 37): Response {
   return { ok: true, status: 200, statusText: "OK", headers: new Headers({ "content-type": "text/event-stream" }), body: streamOf(chunks) } as unknown as Response;
 }
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: true, c: null, cam: null, raster: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: true, c: null, cam: null, raster: false, view3d: false };
 
 function ctx(setState = vi.fn(), agent = { enabled: true, model: "claude-sonnet-5", reason: "" }, state = base): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;

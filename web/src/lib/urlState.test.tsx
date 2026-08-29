@@ -10,7 +10,7 @@ import { adm1Body, adm2Body, detailBodies, gridCellBody, requestFromState, state
 
 const D: StateDefaults = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
 
 const CASES: ExplorerState[] = [
   base,
@@ -67,12 +67,18 @@ describe("request bodies", () => {
 describe("resolve / raw / patch", () => {
   it("defaults are absent from the URL and restored on read", () => {
     expect(resolveState({}, D)).toEqual({ ...base });
-    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, panel: null, ask: null, c: null, cam: null, raster: null });
+    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, panel: null, ask: null, c: null, cam: null, raster: null, view3d: null });
     const grid = resolveState({ level: "grid" }, D);
     expect(grid.gas).toBe("CO2");
     expect(grid.raster).toBe(true);
     expect(rawFromState(grid, D).gas).toBeNull();
     expect(rawFromState(grid, D).raster).toBeNull();
+  });
+  it("view3d is a flag: absent when off, `1` when on, and survives a level change", () => {
+    expect(resolveState({ view3d: true }, D).view3d).toBe(true);
+    expect(rawFromState({ ...base, view3d: true }, D).view3d).toBe(true);
+    expect(rawFromState(base, D).view3d).toBeNull();
+    expect(applyPatch({ ...base, view3d: true }, { level: "adm2" }).view3d).toBe(true);
   });
   it("a level change drops the selection; a period change drops the month", () => {
     const s = { ...base, geo: "Punjab", month: "202307" };
@@ -101,5 +107,10 @@ describe("useExplorerState with the nuqs testing adapter", () => {
     });
     expect(result.current.state).toMatchObject({ level: "grid", geo: null, gas: "CO2", raster: true });
     expect(updates[updates.length - 1].queryString).not.toContain("gas=");
+    await act(async () => {
+      await result.current.setState({ view3d: true });
+    });
+    expect(result.current.state.view3d).toBe(true);
+    expect(updates[updates.length - 1].queryString).toContain("view3d=1");
   });
 });

@@ -8,7 +8,7 @@
 import { useCallback, useMemo } from "react";
 import { createParser, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 
-/** `1` | `0` flags (the plan's `ask=1`, `raster=0`); `true`/`false` are read too. */
+/** `1` | `0` flags (the plan's `ask=1`, `raster=0`, `view3d=1`); `true`/`false` are read too. */
 const parseAsFlag = createParser<boolean>({
   parse: (v) => (v === "1" || v === "true" ? true : v === "0" || v === "false" ? false : null),
   serialize: (v) => (v ? "1" : "0"),
@@ -35,6 +35,7 @@ export type ExplorerState = {
   c: string | null;
   cam: string | null;
   raster: boolean;
+  view3d: boolean;
 };
 
 export type StateDefaults = { period_id: string; configuration_id: string; gwp_basis: string; spatial_view: string; grid_gas: string };
@@ -55,6 +56,7 @@ export const parsers = {
   c: parseAsString,
   cam: parseAsString.withOptions({ history: "replace", throttleMs: 400 }),
   raster: parseAsFlag,
+  view3d: parseAsFlag,
 };
 
 export type RawState = { [K in keyof typeof parsers]: ReturnType<(typeof parsers)[K]["parse"]> | null };
@@ -77,6 +79,7 @@ export function resolveState(raw: Partial<RawState>, d: StateDefaults): Explorer
     c: raw.c ?? null,
     cam: raw.cam ?? null,
     raster: raw.raster ?? level === "grid",
+    view3d: raw.view3d ?? false,
   };
 }
 
@@ -98,6 +101,7 @@ export function rawFromState(s: ExplorerState, d: StateDefaults): RawState {
     c: s.c,
     cam: s.cam,
     raster: s.raster === (s.level === "grid") ? null : s.raster,
+    view3d: s.view3d ? true : null,
   };
 }
 

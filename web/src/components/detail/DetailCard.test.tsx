@@ -28,7 +28,7 @@ const DISPLAYS = {
 const EXACTS = { unallocProvince: "4.837161474822386761", unallocModuleGas: "4.827234056166698500", cellExact: "1.1618150472640991" };
 const COORDS = { lat: "24.925000000000004", lon: "67.075" };
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
 
 function ctx(state: ExplorerState): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
