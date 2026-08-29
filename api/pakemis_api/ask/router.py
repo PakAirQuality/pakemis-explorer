@@ -8,7 +8,7 @@ Events (name: data), in the order a turn emits them:
     refusal       {k, id, name, error, error_class, limitation_id, message, detail}
     map_action    {level?, geo?, period?, month?, sector?, gas?, config?, gwp?, view?}
     answer        {text, receipts, citations, elapsed_s}   text carries <cite k cell receipt> tags
-    error         {code, message}                          bare_numbers | placeholder_error | turn_limit | budget_exhausted | model_error | model_refusal | agent_disabled
+    error         {code, message}                          bare_numbers | placeholder_error | empty_answer | turn_limit | budget_exhausted | model_error | model_refusal | agent_disabled
     done          {conversation_id, usage, cost_estimate_usd}
 No model client (no provider key and nothing injected) -> HTTP 503 {"error": "agent_disabled"}.
 The provider (anthropic | gemini) and model come from settings; `service.agent_status` reports

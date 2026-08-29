@@ -310,6 +310,16 @@ class Turn:
             if stop.stop_reason == "max_tokens":
                 yield "error", {"code": "model_error", "message": "the answer hit the output token cap"}
                 break
+            if not text.strip():
+                # the model ended the turn with no text (Gemini writes its answer beside the last tool
+                # call, which is not shown, then believes it has answered): ask once, then say so
+                if not corrected:
+                    corrected = True
+                    yield "status", {"phase": "correction", "reason": "the model ended the turn without an answer"}
+                    messages.append({"role": "user", "content": PROMPT.empty_answer_message()})
+                    continue
+                yield "error", {"code": "empty_answer", "message": "the model ended the turn without an answer"}
+                break
             # a final text: render or correct once
             try:
                 rendered, citations = render_multi(text, self.results, allowlist=(self.dims.version, self.dims.release_id))

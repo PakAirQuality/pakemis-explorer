@@ -109,7 +109,9 @@ def test_every_tool_schema_translates(tools):
         # enums (string fields only) and required survive the translation
         for name, prop in tool["input_schema"]["properties"].items():
             if prop.get("type") == "string" and "enum" in prop:
-                assert decl.parameters.properties[name].enum == prop["enum"], (tool["name"], name)
+                got = decl.parameters.properties[name]
+                assert got.enum == [v for v in prop["enum"] if v != ""], (tool["name"], name)   # Gemini rejects "" in an enum
+                assert "" not in got.enum and got.default != ""
         assert (decl.parameters.required or []) == tool["input_schema"].get("required", [])
     assert "additionalProperties" in json.dumps(tools[-1]["input_schema"])     # set_map_view carries it in the loop's shape
     assert len(gemini_tools(tools)) == 1 and len(gemini_tools(tools)[0].function_declarations) == 12
@@ -118,6 +120,7 @@ def test_every_tool_schema_translates(tools):
 def test_clean_schema_rules():
     raw = {"type": "object", "title": "T", "$schema": "x", "additionalProperties": False, "examples": [1],
            "properties": {"a": {"anyOf": [{"type": "string", "enum": ["p", "q"]}, {"type": "null"}], "description": "d", "const": "p", "title": "A"},
+                          "e": {"type": "string", "enum": ["x", ""], "default": ""},
                           "n": {"type": "integer", "enum": [1, 2], "format": "int32"},
                           "l": {"type": "array", "items": {"type": "string", "title": "I"}},
                           "u": {"type": ["string", "null"]}},
@@ -125,6 +128,7 @@ def test_clean_schema_rules():
     out = clean_schema(raw)
     assert out == {"type": "object", "required": ["a"],
                    "properties": {"a": {"type": "string", "enum": ["p", "q"], "description": "d", "nullable": True},
+                                  "e": {"type": "string", "enum": ["x"]},
                                   "n": {"type": "integer"},
                                   "l": {"type": "array", "items": {"type": "string"}},
                                   "u": {"type": "string", "nullable": True}}}

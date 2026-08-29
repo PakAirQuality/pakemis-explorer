@@ -49,6 +49,9 @@ RULES (binding)
 7. Keep answers short: the figure(s) with their scope, the receipt(s), one line on limitations hit,
    and, when useful, one suggestion of a sharper question. Do not narrate your tool calls; the
    interface shows them.
+8. Your final answer is a message with no tool call. Text written in the same message as a tool
+   call (including set_map_view) is not shown to the user, so after your last tool result write
+   the answer again, in full, as its own message.
 
 HOW THE DATA IS SHAPED
 - Periods: the fiscal years listed below for every sector; the calendar years listed below for
@@ -102,6 +105,12 @@ def user_message(message, ui_state=None):
     if ui_state:
         return "[ui_state] %s\n\n%s" % (json.dumps(ui_state, sort_keys=True, separators=(",", ":")), message)
     return message
+
+
+def empty_answer_message():
+    return ("Your last message carried no text. Write the final answer now as plain text with placeholders for "
+            "any figure ({{result_k_cell_n}}, {{result_k_cell_n.unit}}), the receipt(s) and any refusal verbatim. "
+            "Do not call any tool.")
 
 
 def correction_message(reason):

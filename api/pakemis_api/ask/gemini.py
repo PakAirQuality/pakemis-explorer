@@ -37,7 +37,8 @@ def clean_schema(node):
     """The subset of JSON Schema Gemini function parameters accept: strips additionalProperties,
     $schema, title, const, examples and format; keeps type/description/enum/required/items/
     properties/default; flattens anyOf to its first non-null variant (nullable when a null
-    variant exists); enum only on strings."""
+    variant exists); enum only on strings and never the empty string (Gemini rejects it; the
+    loop's "" default means "omit the field", which the model then does)."""
     if isinstance(node, list):
         return [clean_schema(v) for v in node]
     if not isinstance(node, dict):
@@ -61,9 +62,13 @@ def clean_schema(node):
         if key == "enum":
             if node.get("type") != "string":
                 continue
-            value = [v for v in value if isinstance(v, str)]
+            value = [v for v in value if isinstance(v, str) and v != ""]      # Gemini: "enum[n]: cannot be empty"
             if not value:
                 continue
+            if "" in node[key] and out.get("default") == "":
+                out.pop("default")             # the empty default is "omit the field"; the model omits it
+        elif key == "default" and value == "" and "" in (node.get("enum") or ()):
+            continue
         elif key == "properties":
             value = {name: clean_schema(prop) for name, prop in value.items()}
         elif key == "items":

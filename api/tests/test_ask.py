@@ -175,6 +175,24 @@ def test_bare_decimal_is_corrected_once_then_withheld(ask_client, fake):
     assert only(events, "done")
 
 
+def test_empty_final_text_is_asked_for_once_then_named(ask_client, fake):
+    """A tool-call turn's text is not the answer; a final turn with no text gets one nudge."""
+    fake.load([text("Punjab: {{result_1_cell_0}}"), tool_use("set_map_view", {"level": "adm1", "geo": "Punjab"}), stop("tool_use")],
+              [stop()],
+              [text("Punjab agriculture: {{result_1_cell_0}} {{result_1_cell_0.unit}}."), stop()])
+    fake.scripts.insert(0, [tool_use("query_emissions", {"periods": ["FY2023-24"], "geography_level": "adm1", "geography_ids": ["Punjab"], "sectors": ["agriculture"]}), stop("tool_use")])
+    events = ask(ask_client, "Punjab agriculture, show it")
+    corrections = [d for n, d in events if n == "status" and d["phase"] == "correction"]
+    assert len(corrections) == 1 and "without an answer" in corrections[0]["reason"]
+    assert fake.calls[3]["messages"][-1]["content"].startswith("Your last message carried no text")
+    answer = only(events, "answer")
+    assert answer and "123.3050" in answer[0]["text"] and only(events, "map_action")
+    fake.load([stop()], [stop()])
+    events = ask(ask_client, "say nothing")
+    assert only(events, "error") == [{"code": "empty_answer", "message": "the model ended the turn without an answer"}]
+    assert not only(events, "answer") and only(events, "done")
+
+
 def test_correction_turn_can_succeed(ask_client, fake):
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
               [text("It is 452.35 Mt."), stop()],
