@@ -31,7 +31,8 @@ data/releases/<v>/      the payload (gitignored) + FETCH.json (committed)
 RELEASES.md             the pinned version and its two digests
 api/                    FastAPI over pakemis_query (imported from PAKEMIS_QUERY_PATH, never copied)
 api/openapi.json        committed schema; web/src/types.gen.ts is generated from it
-tiles/build_tiles.py    ADM1, ADM2 and 0.05 degree grid PMTiles keyed by name / shape_id / cell_id
+tiles/build_tiles.py    ADM1, ADM2 and 0.05 degree grid PMTiles keyed by name / shape_id / cell_id;
+                        bboxes.json; --raster: visual-only shading PNGs of the two grid cubes
 web/                    Next.js 15 + TypeScript: seven pages, ContextBar, ChartFrame, EnvelopeTable
 ```
 
@@ -50,14 +51,16 @@ exists to fetch. When one does, `RELEASES.md` gains a row with the same two dige
 ```
 export PAKEMIS_QUERY_PATH=/path/to/emissions/src   # default: /Users/rehanahmad/Desktop/emissions/src
 make api      # http://localhost:8000  (docs at /docs; GET /v1/release shows the context bar and digests)
-make tiles    # once per release: PMTiles into web/public/tiles
+make tiles    # once per release: PMTiles + bboxes.json into web/public/tiles (needs tippecanoe)
+make raster   # once per release: 78 grid-shading PNGs (2 configurations x 3 gases x 12 months + annual)
+              # into web/public/tiles/raster; visual only, every value shown comes from get_grid_cell
 make web      # http://localhost:3000
 make types    # regenerate web/src/types.gen.ts after any API change (CI checks openapi.json is fresh)
 make test     # api pytest + web vitest
 docker compose up   # api + web (mounts the release and the query core read-only)
 ```
 
-Python needs `fastapi uvicorn pydantic>=2 duckdb pyarrow netCDF4 httpx pytest` (`api/requirements.txt`).
+Python needs `fastapi uvicorn pydantic>=2 duckdb pyarrow netCDF4 numpy Pillow httpx pytest` (`api/requirements.txt`).
 
 ## The API
 

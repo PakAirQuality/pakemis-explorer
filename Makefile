@@ -4,7 +4,7 @@ REF       ?= HEAD
 VERSION   ?= $(shell sed -n 's/^pinned:[[:space:]]*//p' RELEASES.md)
 export PAKEMIS_QUERY_PATH ?= $(EMISSIONS)/src
 
-.PHONY: fetch verify api web types openapi tiles test test-api test-web build
+.PHONY: fetch verify api web types openapi tiles raster test test-api test-web build
 
 fetch:              ## copy a semantic release out of the emissions checkout at $(REF)
 	python3 data/fetch_release.py --from-git $(EMISSIONS) --ref $(REF)
@@ -21,8 +21,11 @@ openapi:            ## regenerate api/openapi.json from the app
 types: openapi      ## regenerate web/src/types.gen.ts from api/openapi.json
 	cd web && npx --yes openapi-typescript ../api/openapi.json -o src/types.gen.ts
 
-tiles:              ## ADM1/ADM2/grid PMTiles (geometry + ids only) into tiles/out and web/public/tiles
+tiles:              ## ADM1/ADM2/grid PMTiles (geometry + ids only) + bboxes.json into tiles/out and web/public/tiles
 	python3 tiles/build_tiles.py
+
+raster:             ## visual-only grid rasters (2 configurations x 3 gases x 13 frames) + bboxes.json; numpy + Pillow, no tippecanoe
+	python3 tiles/build_tiles.py --raster
 
 web:                ## Next.js dev server on :3000 (NEXT_PUBLIC_PAKEMIS_API defaults to http://localhost:8000)
 	cd web && npm run dev
