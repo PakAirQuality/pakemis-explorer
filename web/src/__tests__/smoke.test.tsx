@@ -44,7 +44,8 @@ describe("PakEmis Explorer", () => {
   it("renders the shell with the national KPI from an envelope and the receipt as a footer", async () => {
     mount(<Page />);
     expect(await screen.findByTestId("explorer")).toBeTruthy();
-    // the national KPI and its receipt footer are asserted once the ContextPanel lands (step 4)
+    expect(await screen.findByTestId("national-kpi")).toHaveTextContent("452.34662");
+    expect((await screen.findAllByTestId("receipt-footer")).length).toBeGreaterThan(0);
     expect(screen.getByTestId("map-stub")).toBeTruthy();
   });
   it("shows the Ask placeholder as a disabled card with the release's reason", async () => {

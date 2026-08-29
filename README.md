@@ -33,7 +33,11 @@ api/                    FastAPI over pakemis_query (imported from PAKEMIS_QUERY_
 api/openapi.json        committed schema; web/src/types.gen.ts is generated from it
 tiles/build_tiles.py    ADM1, ADM2 and 0.05 degree grid PMTiles keyed by name / shape_id / cell_id;
                         bboxes.json; --raster: visual-only shading PNGs of the two grid cubes
-web/                    Next.js 15 + TypeScript: seven pages, ContextBar, ChartFrame, EnvelopeTable
+web/                    Next.js 15 + TypeScript, map-first: one screen (/) whose state lives in the URL
+                        (lib/urlState.ts), request bodies as pure functions of it (lib/requests.ts),
+                        MapLibre + pmtiles choropleth painted through feature-state (components/map),
+                        detail card and rail panels (components/detail, components/panels), /data
+                        (receipt replay, downloads, digests, evidence browser), /r/<receipt>
 ```
 
 ## Fetch and verify a release
@@ -55,6 +59,10 @@ make tiles    # once per release: PMTiles + bboxes.json into web/public/tiles (n
 make raster   # once per release: 78 grid-shading PNGs (2 configurations x 3 gases x 12 months + annual)
               # into web/public/tiles/raster; visual only, every value shown comes from get_grid_cell
 make web      # http://localhost:3000
+              # basemap: put NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (gitignored, never
+              # committed) for Mapbox light-v11 style tiles; or NEXT_PUBLIC_BASEMAP_STYLE=<a keyless
+              # vector style URL, e.g. an OpenFreeMap style>; with neither the map has a plain
+              # background and a one-line notice. The tiles and rasters are the same either way.
 make types    # regenerate web/src/types.gen.ts after any API change (CI checks openapi.json is fresh)
 make test     # api pytest + web vitest
 docker compose up   # api + web (mounts the release and the query core read-only)
@@ -87,10 +95,28 @@ dataclasses (`api/pakemis_api/models_gen.py`); a test asserts they mirror the da
 
 - No authentication, no users, no PostgreSQL. Receipts live in an in-memory map mirrored to
   `data/receipts.json`; a database is the declared home for users and conversations later.
-- No agent. The Ask PakEmis page is a disabled beta card that states the rule: the agent may only
-  call the typed functions above, with `{{result_cell_n}}` placeholders inserted server-side.
+- No agent yet. The Ask rail button opens a disabled card reading `/v1/release.agent` (reason, model)
+  and the typed-function rule; the `ask/` package lands separately.
 - No deployment, no object storage, no CDN. Tiles are static files under `web/public/tiles`.
 - No copy of `pakemis_query` or of the release. Both are read from where they live.
 
 Licences: code MIT; data and text CC-BY-4.0; OSM-derived tables ODbL (see the release's
 `licences.odbl_note`). Cite as the envelope's `citation` field, which names the receipt.
+
+## The web app's rules (enforced by tests)
+
+- No numeric literal reaches the UI: every number is an envelope's `display` (or `exact`, or a
+  coordinate the envelope returned); a cell's `value` may only size a bar or shade a polygon
+  (`src/components/detail/DetailCard.test.tsx` walks every text node for decimals).
+- Every request body is a pure function of the URL state (`src/lib/requests.ts`), so the same
+  URL yields the same receipts; `stateFromRequest` is the inverse (`/data?receipt=` -> Show on
+  map; the agent later). `src/lib/urlState.test.tsx` round-trips it.
+- Labels come from `/v1/release.labels` and the dims; the enumerations (AR5 | AR6, views,
+  levels) from `openapi.json` field descriptions; nothing is a hard-coded list.
+- The legend's five labels are real cells' displays at ranks 0, n/4, n/2, 3n/4, n-1 (no
+  client-computed breaks); a refused map request puts the typed refusal in the legend's place;
+  bounded ADM2 cells print "[low, high]" verbatim with an interval badge and a hatch.
+- Receipts are footers (`ReceiptFooter`: first 8 hex, kebab -> Copy, Replay, Evidence,
+  Calculation, CSV, RECEIPT.json, Cite).
+
+Screenshots of the screen at 1440 px and 390 px are under `web/docs/screenshots/`.

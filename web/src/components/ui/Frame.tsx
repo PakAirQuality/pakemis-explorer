@@ -30,7 +30,9 @@ export type FrameProps = {
 };
 
 export function Frame({ title, scope, env, error, isLoading, children, tableExtra, labels, dims, defaultTab, maxRows, className = "", actions, flat = false }: FrameProps) {
-  const [tab, setTab] = useState<"chart" | "table">(defaultTab ?? (children ? "chart" : "table"));
+  // null = automatic: a chart when children arrive (they may come after the envelope), else the table
+  const [chosen, setTab] = useState<"chart" | "table" | null>(defaultTab ?? null);
+  const tab = chosen ?? (children ? "chart" : "table");
   const seg = (id: "chart" | "table", label: string) => (
     <button key={id} onClick={() => setTab(id)} className={`px-2 py-0.5 text-micro normal-case tracking-normal ${tab === id ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>
       {label}
