@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/v1/ask": {
+    "/api/v1/emissions/ask": {
         parameters: {
             query?: never;
             header?: never;
@@ -14,14 +14,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Ask */
-        post: operations["ask_v1_ask_post"];
+        post: operations["ask_api_v1_emissions_ask_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/download/{receipt}.csv": {
+    "/api/v1/emissions/download/{receipt}.csv": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,7 +29,7 @@ export interface paths {
             cookie?: never;
         };
         /** Download Csv */
-        get: operations["download_csv_v1_download__receipt__csv_get"];
+        get: operations["download_csv_api_v1_emissions_download__receipt__csv_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -38,7 +38,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/download/{receipt}.receipt.json": {
+    "/api/v1/emissions/download/{receipt}.receipt.json": {
         parameters: {
             query?: never;
             header?: never;
@@ -46,7 +46,7 @@ export interface paths {
             cookie?: never;
         };
         /** Download Receipt */
-        get: operations["download_receipt_v1_download__receipt__receipt_json_get"];
+        get: operations["download_receipt_api_v1_emissions_download__receipt__receipt_json_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -55,7 +55,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/evidence/{stream_id}": {
+    "/api/v1/emissions/evidence/{stream_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -63,7 +63,7 @@ export interface paths {
             cookie?: never;
         };
         /** Evidence */
-        get: operations["evidence_v1_evidence__stream_id__get"];
+        get: operations["evidence_api_v1_emissions_evidence__stream_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -72,7 +72,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/method/{method_or_category}": {
+    "/api/v1/emissions/method/{method_or_category}": {
         parameters: {
             query?: never;
             header?: never;
@@ -80,7 +80,7 @@ export interface paths {
             cookie?: never;
         };
         /** Method */
-        get: operations["method_v1_method__method_or_category__get"];
+        get: operations["method_api_v1_emissions_method__method_or_category__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -89,7 +89,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/query/compare": {
+    "/api/v1/emissions/query/compare": {
         parameters: {
             query?: never;
             header?: never;
@@ -99,14 +99,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Compare */
-        post: operations["compare_v1_query_compare_post"];
+        post: operations["compare_api_v1_emissions_query_compare_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/query/completeness": {
+    "/api/v1/emissions/query/completeness": {
         parameters: {
             query?: never;
             header?: never;
@@ -116,14 +116,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Completeness */
-        post: operations["completeness_v1_query_completeness_post"];
+        post: operations["completeness_api_v1_emissions_query_completeness_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/query/emissions": {
+    "/api/v1/emissions/query/emissions": {
         parameters: {
             query?: never;
             header?: never;
@@ -133,14 +133,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Query Emissions */
-        post: operations["query_emissions_v1_query_emissions_post"];
+        post: operations["query_emissions_api_v1_emissions_query_emissions_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/query/timeseries": {
+    "/api/v1/emissions/query/timeseries": {
         parameters: {
             query?: never;
             header?: never;
@@ -150,14 +150,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Timeseries */
-        post: operations["timeseries_v1_query_timeseries_post"];
+        post: operations["timeseries_api_v1_emissions_query_timeseries_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/query/uncertainty": {
+    "/api/v1/emissions/query/uncertainty": {
         parameters: {
             query?: never;
             header?: never;
@@ -167,14 +167,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Uncertainty */
-        post: operations["uncertainty_v1_query_uncertainty_post"];
+        post: operations["uncertainty_api_v1_emissions_query_uncertainty_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/receipt/{receipt}": {
+    "/api/v1/emissions/receipt/{receipt}": {
         parameters: {
             query?: never;
             header?: never;
@@ -182,7 +182,7 @@ export interface paths {
             cookie?: never;
         };
         /** Receipt */
-        get: operations["receipt_v1_receipt__receipt__get"];
+        get: operations["receipt_api_v1_emissions_receipt__receipt__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -191,7 +191,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/release": {
+    "/api/v1/emissions/release": {
         parameters: {
             query?: never;
             header?: never;
@@ -199,7 +199,7 @@ export interface paths {
             cookie?: never;
         };
         /** Release */
-        get: operations["release_v1_release_get"];
+        get: operations["release_api_v1_emissions_release_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -208,7 +208,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/spatial/grid": {
+    "/api/v1/emissions/spatial/grid": {
         parameters: {
             query?: never;
             header?: never;
@@ -218,14 +218,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Grid Cell */
-        post: operations["grid_cell_v1_spatial_grid_post"];
+        post: operations["grid_cell_api_v1_emissions_spatial_grid_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/spatial/lineage/{shape_id}": {
+    "/api/v1/emissions/spatial/lineage/{shape_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -233,7 +233,7 @@ export interface paths {
             cookie?: never;
         };
         /** Spatial Lineage */
-        get: operations["spatial_lineage_v1_spatial_lineage__shape_id__get"];
+        get: operations["spatial_lineage_api_v1_emissions_spatial_lineage__shape_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -242,7 +242,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/transfers": {
+    "/api/v1/emissions/tiles/bboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** bboxes.json: [w, s, e, n] per ADM1 name and ADM2 shape_id */
+        get: operations["tiles_bboxes_api_v1_emissions_tiles_bboxes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/tiles/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** TILES.json: the tile builder's record */
+        get: operations["tiles_meta_api_v1_emissions_tiles_meta_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/tiles/raster/{config}/{gas}/{frame}.png": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One visual-only grid shading PNG */
+        get: operations["tiles_raster_api_v1_emissions_tiles_raster__config___gas___frame__png_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/tiles/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** TileJSON 3.0.0 for adm1 | adm2 | grid */
+        get: operations["tiles_tilejson_api_v1_emissions_tiles__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/tiles/{name}/{z}/{x}/{y}.mvt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One vector tile as stored in the archive */
+        get: operations["tiles_tile_api_v1_emissions_tiles__name___z___x___y__mvt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/transfers": {
         parameters: {
             query?: never;
             header?: never;
@@ -250,7 +335,7 @@ export interface paths {
             cookie?: never;
         };
         /** Transfers */
-        get: operations["transfers_v1_transfers_get"];
+        get: operations["transfers_api_v1_emissions_transfers_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -477,7 +562,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    ask_v1_ask_post: {
+    ask_api_v1_emissions_ask_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -510,7 +595,7 @@ export interface operations {
             };
         };
     };
-    download_csv_v1_download__receipt__csv_get: {
+    download_csv_api_v1_emissions_download__receipt__csv_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -541,7 +626,7 @@ export interface operations {
             };
         };
     };
-    download_receipt_v1_download__receipt__receipt_json_get: {
+    download_receipt_api_v1_emissions_download__receipt__receipt_json_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -572,7 +657,7 @@ export interface operations {
             };
         };
     };
-    evidence_v1_evidence__stream_id__get: {
+    evidence_api_v1_emissions_evidence__stream_id__get: {
         parameters: {
             query?: {
                 category?: string;
@@ -606,7 +691,7 @@ export interface operations {
             };
         };
     };
-    method_v1_method__method_or_category__get: {
+    method_api_v1_emissions_method__method_or_category__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -637,7 +722,7 @@ export interface operations {
             };
         };
     };
-    compare_v1_query_compare_post: {
+    compare_api_v1_emissions_query_compare_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -670,7 +755,7 @@ export interface operations {
             };
         };
     };
-    completeness_v1_query_completeness_post: {
+    completeness_api_v1_emissions_query_completeness_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -703,7 +788,7 @@ export interface operations {
             };
         };
     };
-    query_emissions_v1_query_emissions_post: {
+    query_emissions_api_v1_emissions_query_emissions_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -736,7 +821,7 @@ export interface operations {
             };
         };
     };
-    timeseries_v1_query_timeseries_post: {
+    timeseries_api_v1_emissions_query_timeseries_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -769,7 +854,7 @@ export interface operations {
             };
         };
     };
-    uncertainty_v1_query_uncertainty_post: {
+    uncertainty_api_v1_emissions_query_uncertainty_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -802,7 +887,7 @@ export interface operations {
             };
         };
     };
-    receipt_v1_receipt__receipt__get: {
+    receipt_api_v1_emissions_receipt__receipt__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -833,7 +918,7 @@ export interface operations {
             };
         };
     };
-    release_v1_release_get: {
+    release_api_v1_emissions_release_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -853,7 +938,7 @@ export interface operations {
             };
         };
     };
-    grid_cell_v1_spatial_grid_post: {
+    grid_cell_api_v1_emissions_spatial_grid_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -886,7 +971,7 @@ export interface operations {
             };
         };
     };
-    spatial_lineage_v1_spatial_lineage__shape_id__get: {
+    spatial_lineage_api_v1_emissions_spatial_lineage__shape_id__get: {
         parameters: {
             query?: {
                 month?: string;
@@ -921,7 +1006,168 @@ export interface operations {
             };
         };
     };
-    transfers_v1_transfers_get: {
+    tiles_bboxes_api_v1_emissions_tiles_bboxes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    tiles_meta_api_v1_emissions_tiles_meta_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    tiles_raster_api_v1_emissions_tiles_raster__config___gas___frame__png_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                config: string;
+                gas: string;
+                frame: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "image/png": unknown;
+                };
+            };
+            /** @description no such frame */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tiles_tilejson_api_v1_emissions_tiles__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tiles_tile_api_v1_emissions_tiles__name___z___x___y__mvt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+                z: number;
+                x: number;
+                y: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.mapbox-vector-tile": unknown;
+                };
+            };
+            /** @description the archive holds no such tile */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description unknown tile set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfers_api_v1_emissions_transfers_get: {
         parameters: {
             query?: {
                 ledger_id?: string;

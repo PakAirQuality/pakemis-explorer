@@ -353,5 +353,7 @@ Screenshots of the screen at 1440 px and 390 px are under `web/docs/screenshots/
 (`13-ask-disabled.jpg` is the dock without the key; `14-globe.jpg` the globe with its
 atmosphere, `15-3d-terrain.jpg` the 3D view; `16-welcome.jpg` the first-visit explainer's
 first screen and `16b-welcome-3.jpg` its third, with the number and "View source";
+`19-static-export.jpg` the static export (`web/out`, served by a plain file server) reading every
+tile, raster and envelope from the API at `/api/v1/emissions`;
 `17-other-territories.jpg` the hover on Gilgit-Baltistan showing the shared `Other` cell and
 `17b-other-card.jpg` its detail card; `18-about.jpg` the `/about` page).
