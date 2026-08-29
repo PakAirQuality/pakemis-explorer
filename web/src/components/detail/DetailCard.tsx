@@ -18,6 +18,8 @@ import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { sectorColor } from "@/lib/palette";
+import { joinNames, residualUnit } from "@/lib/geography";
+import { useBboxes } from "@/components/map/tiles";
 
 type Snap = "peek" | "half" | "full";
 
@@ -130,6 +132,8 @@ function scopeLine(state: ReturnType<typeof useExplorer>["state"], labels: Retur
 
 function ProvinceCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "province" }> }) {
   const { state, setState, labels, dims } = useExplorer();
+  const bboxes = useBboxes();
+  const residual = useMemo(() => residualUnit(dims, bboxes.data), [dims, bboxes.data]);
   const total = useEmissions(bodies.total);
   const byModule = useEmissions(bodies.byModule);
   const byGas = useEmissions(bodies.byGas);
@@ -139,7 +143,7 @@ function ProvinceCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "provi
   const u = lineage.data?.unallocated as Unalloc | undefined;
   return (
     <div>
-      <Header kicker="Province" title={bodies.id} sub={scope} />
+      <Header kicker={residual && bodies.id === residual.name ? "Territories · one ADM1 unit" : "Province"} title={bodies.id} sub={residual && bodies.id === residual.name ? <>{joinNames(residual.members)} together · {scope}</> : scope} />
       <Headline q={total} what="the province total" />
       <UnallocatedLine env={total.data} province={bodies.id} />
       <Limitations env={total.data} />

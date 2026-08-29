@@ -2,13 +2,16 @@
 /**
  * The legend. Five swatches at the ranks 0, n/4, n/2, 3n/4, n-1 of the envelope's cells sorted
  * by value, labelled with THOSE cells' display strings (no client-computed breaks), a hatch row
- * when any cell is bounded, a no-cell row, the scope and the ReceiptFooter. A refused map
+ * when any cell is bounded, a dotted-outline row when the residual ADM1 unit's members share
+ * one cell, a no-cell row only while some polygon still has none, the scope and the
+ * ReceiptFooter. A refused map
  * request puts the RefusalCard here. At grid level: the raster's gradient labelled with two
  * real displays fetched through get_grid_cell at the builder's anchor cells.
  */
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Envelope, Cell } from "@/lib/envelope";
+import type { Residual } from "@/lib/geography";
 import { rampColor, RAMP, NO_CELL } from "@/lib/palette";
 import { gridCellBody } from "@/lib/requests";
 import type { ExplorerState } from "@/lib/urlState";
@@ -27,7 +30,7 @@ export function legendRanks(cells: Cell[]): Cell[] {
   return out;
 }
 
-export function Legend({ state, scope, env, index, error, isLoading, raster, rasterOn, hasCells }: { state: ExplorerState; scope: string; env: Envelope | null | undefined; index: CellIndex | null; error: unknown; isLoading: boolean; raster: RasterInfo | undefined; rasterOn: boolean; hasCells: boolean }) {
+export function Legend({ state, scope, env, index, error, isLoading, raster, rasterOn, hasCells, shared = null }: { state: ExplorerState; scope: string; env: Envelope | null | undefined; index: CellIndex | null; error: unknown; isLoading: boolean; raster: RasterInfo | undefined; rasterOn: boolean; hasCells: boolean; shared?: (Residual & { cell: Cell }) | null }) {
   return (
     <div className="glass w-[272px] rounded-card text-xs" data-testid="legend">
       <div className="px-3 pt-2">
@@ -51,6 +54,12 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
               <li className="flex items-center gap-2">
                 <span className="hatch-swatch inline-block h-3 w-5 rounded-sm border border-ink/10" style={{ backgroundColor: RAMP[2] }} />
                 <span className="text-muted">interval [low, high] (mixed CH₄ origin)</span>
+              </li>
+            )}
+            {shared && (
+              <li className="flex items-center gap-2" data-testid="legend-shared">
+                <span className="inline-block h-3 w-5 rounded-sm border-2 border-dotted border-ink/80" style={{ background: typeof shared.cell.value === "number" ? rampColor(shared.cell.value, index.min, index.max) : NO_CELL }} />
+                <span className="text-muted">{shared.name}: {shared.members.join(" + ")} share one cell</span>
               </li>
             )}
             {hasCells && (

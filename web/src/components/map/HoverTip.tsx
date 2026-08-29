@@ -1,18 +1,22 @@
 "use client";
 /**
  * The hover tip: the feature's name and its cell's `display` + unit verbatim (an interval badge
- * and the cell's `interpretation` when bounded); for polygons without a cell, why (the
- * territories that sit in the ADM1 "Other" row; census units sharing one shape are listed).
+ * and the cell's `interpretation` when bounded); for a member of the release's residual ADM1
+ * unit, that unit's one cell with the sentence saying it is shared (the member names come from
+ * lib/geography.ts, not from here); for polygons without a cell, why (census units sharing
+ * one shape are listed).
  */
 import type { Cell } from "@/lib/envelope";
+import { joinNames, type Residual } from "@/lib/geography";
 import { adm2RowsForShape } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import type { Dims } from "@/components/ExplorerContext";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import type { Hover } from "./useMapInteractions";
 
-export function HoverTip({ hover, cell, labels, dims, refused, container }: { hover: Hover; cell: Cell | null; labels: Labels; dims: Dims; refused: boolean; container: { width: number; height: number } }) {
+export function HoverTip({ hover, cell, labels, dims, refused, container, residual = null }: { hover: Hover; cell: Cell | null; labels: Labels; dims: Dims; refused: boolean; container: { width: number; height: number }; residual?: Residual | null }) {
   if (!hover) return null;
+  const shared = hover.level === "adm1" && !!residual && residual.members.includes(hover.id) && !!cell;
   const left = Math.min(hover.x + 14, Math.max(0, container.width - 300));
   const top = Math.min(hover.y + 14, Math.max(0, container.height - 140));
   let title = hover.id;
@@ -22,6 +26,8 @@ export function HoverTip({ hover, cell, labels, dims, refused, container }: { ho
     title = rows[0]?.shape_name || (hover.props.shape_name as string) || hover.id;
     if (rows.length > 1) sub = `one shape for ${rows.map((r) => r.name).join(", ")} (shared_shape)`;
     else if (rows[0]) sub = `${rows[0].name} · ${rows[0].parent_id.replace(/^ADM1:/, "")}`;
+  } else if (shared) {
+    sub = `part of the release's '${residual!.name}' unit — ${joinNames(residual!.members)} together`;
   } else if (hover.level === "grid") {
     title = `Grid cell ${String(hover.props.cell_id ?? "")}`;
     sub = `row ${String(hover.props.row ?? "")} · col ${String(hover.props.col ?? "")} · ${String(hover.props.lat ?? "")}, ${String(hover.props.lon ?? "")}`;
@@ -41,6 +47,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container }: { ho
           <span className="text-muted">{cell.unit}</span>
           {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           {isBounded(cell) && <div className="w-full text-muted">{String((cell as Record<string, unknown>).interpretation ?? "")}</div>}
+          {shared && <div className="w-full text-muted" data-testid="hover-shared">one cell for the whole unit; coverage differs by sector for these territories — see About</div>}
         </div>
       ) : (
         <div className="mt-1 text-muted">

@@ -18,8 +18,9 @@ import { configLetter, gasLabel, monthLabel, periodShort, sectorLabel, viewLabel
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap } from "./basemap";
 import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setSelected, setView3d, TILES } from "./layers";
-import { clearPaint, indexCells, paintEnvelope } from "./paint";
+import { anyWithoutCell, cellForFeature, clearPaint, indexCells, paintEnvelope } from "./paint";
 import { rasterFile, unionBbox, useBboxes, useTilesInfo } from "./tiles";
+import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
 import { AskHint, AskPill } from "@/components/ask/AskEntry";
@@ -51,6 +52,11 @@ export function ExplorerMap() {
   const body = useMemo(() => mapBody(state), [state]);
   const mapQ = useQuery({ queryKey: ["map", body], queryFn: () => api.queryEmissions(body!), enabled: !!body, retry: false });
   const index = useMemo(() => (mapQ.data && state.level !== "grid" ? indexCells(mapQ.data, state.level) : null), [mapQ.data, state.level]);
+  // the release's residual ADM1 unit ("Other": one cell, several polygons), derived from the dims and the boundary file
+  const residual = useMemo(() => residualUnit(dims, bboxes.data), [dims, bboxes.data]);
+  const residualRef = useRef(residual);
+  residualRef.current = residual;
+  const ids = useMemo(() => (state.level === "adm1" ? Object.keys(bboxes.data?.adm1 ?? {}) : state.level === "adm2" ? Object.keys(bboxes.data?.adm2 ?? {}) : []), [state.level, bboxes.data]);
 
   // --- the map itself
   useEffect(() => {
@@ -147,26 +153,24 @@ export function ExplorerMap() {
   // --- paint the envelope (or clear on refusal)
   useEffect(() => {
     if (!map || state.level === "grid") return;
-    if (index) {
-      const ids = state.level === "adm1" ? Object.keys(bboxes.data?.adm1 ?? {}) : Object.keys(bboxes.data?.adm2 ?? {});
-      paintEnvelope(map, state.level, index, ids);
-    } else if (mapQ.error) clearPaint(map, state.level);
-  }, [map, index, state.level, mapQ.error, bboxes.data]);
+    if (index) paintEnvelope(map, state.level, index, ids, residual);
+    else if (mapQ.error) clearPaint(map, state.level);
+  }, [map, index, state.level, mapQ.error, ids, residual]);
 
   // --- selection outline and flyTo
   useEffect(() => {
     if (!map) return;
-    setSelected(map, state.level, state.geo, parseCell(state.cell));
-  }, [map, state.level, state.geo, state.cell]);
+    setSelected(map, state.level, state.geo, parseCell(state.cell), residual && state.geo === residual.name ? residual.members : undefined);
+  }, [map, state.level, state.geo, state.cell, residual]);
   const lastFlown = useRef<string | null>(null);
   useEffect(() => {
     if (!map || !bboxes.data || !state.geo) return;
     const key = `${state.level}:${state.geo}`;
     if (lastFlown.current === key) return;
     lastFlown.current = key;
-    const box = state.level === "adm1" ? bboxes.data.adm1[state.geo] : state.level === "adm2" ? bboxes.data.adm2[state.geo] : null;
+    const box = state.level === "adm1" ? (residual && state.geo === residual.name ? unionOf(bboxes.data.adm1, residual.members) : bboxes.data.adm1[state.geo]) : state.level === "adm2" ? bboxes.data.adm2[state.geo] : null;
     if (box) map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding: isMobile ? { top: 60, bottom: 260, left: 16, right: 16 } : { top: 90, bottom: 120, left: 60, right: 420 }, maxZoom: 9, duration: 700 });
-  }, [map, bboxes.data, state.geo, state.level, isMobile]);
+  }, [map, bboxes.data, state.geo, state.level, isMobile, residual]);
 
   // --- the grid raster (visual only): one image source, updated per frame, opacity 0 when off
   const raster = tiles.data?.raster;
@@ -178,12 +182,18 @@ export function ExplorerMap() {
 
   // --- interactions
   const onSelect = useCallback((lvl: "adm1" | "adm2" | "grid", id: string, props: Record<string, unknown>) => {
+    // a member of the residual unit selects the release's own id for it (the API answers geography_ids: [<row name>])
+    const r = residualRef.current;
+    const geo = lvl === "adm1" && r && r.members.includes(id) ? r.name : id;
     if (lvl === "grid") setStateRef.current({ cell: `${props.lat},${props.lon}` });
-    else setStateRef.current({ geo: id });
-    if (stateRef.current.ask) emitMapPick({ level: lvl, id, props }); // an @mention for the Ask composer
+    else setStateRef.current({ geo });
+    if (stateRef.current.ask) emitMapPick({ level: lvl, id: geo, props }); // an @mention for the Ask composer
   }, []);
   const hover = useMapInteractions(map, state.level, onSelect);
-  const hoverCell = hover && index ? index.byId.get(hover.id) ?? null : null;
+  const hoverCell = hover && index ? cellForFeature(index, hover.level, hover.id, residual).cell ?? null : null;
+  const sharedCell = index && residual && state.level === "adm1" ? index.byId.get(residual.name) : undefined;
+  const legendShared = sharedCell && residual ? { ...residual, cell: sharedCell } : null;
+  const anyNoCell = !!index && anyWithoutCell(index, state.level, ids, residual);
 
   const scope = [LEVEL_WORD[state.level], periodShort(labels, state.period), configLetter(labels, state.config), state.gwp, sectorLabel(labels, state.sector), state.gas || state.level === "grid" ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null]
     .filter(Boolean)
@@ -201,7 +211,7 @@ export function ExplorerMap() {
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
       {bm.notice && <div className="absolute inset-x-0 top-0 z-20 bg-refusal px-3 py-1 text-center text-micro normal-case tracking-normal text-warn" data-testid="basemap-notice">{bm.notice}</div>}
       {mapError && <div className="absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded bg-refusal px-3 py-1 text-xs text-warn" data-testid="map-error">Map: {mapError}</div>}
-      <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} />
+      <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} residual={residual} />
 
       <div className={`absolute left-3 z-20 ${bm.notice ? "top-8" : "top-3"}`}>
         <ScopeChips />
@@ -223,7 +233,7 @@ export function ExplorerMap() {
             {legendOpen ? "hide legend" : "legend"}
           </button>
         )}
-        {legendOpen && <Legend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} rasterOn={state.raster} hasCells={!!index} />}
+        {legendOpen && <Legend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} rasterOn={state.raster} hasCells={anyNoCell} shared={legendShared} />}
         {!isMobile && <div className="mt-1.5 text-micro normal-case tracking-normal text-muted/90">PakEmis Explorer</div>}
       </div>
       <div className={`absolute z-20 flex justify-center ${isMobile ? "bottom-2 left-2 right-2" : "bottom-8 left-[296px] right-[300px]"}`}>

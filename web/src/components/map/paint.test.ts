@@ -1,13 +1,15 @@
 /**
  * The choropleth's paint logic against a fake map: feature-state carries {value, display,
- * unit, has_cell, bounded}; polygons without a cell (Gilgit-Baltistan) are marked has_cell
- * false; the fill expression's stops are the envelope's own min and max; the legend's five
- * swatches are the display strings of real cells at ranks 0, n/4, n/2, 3n/4, n-1.
+ * unit, has_cell, bounded}; the residual ADM1 unit's members (Gilgit-Baltistan, Azad Kashmir,
+ * Islamabad Capital Territory) carry the "Other" cell verbatim with `shared`, and without the
+ * unit are marked has_cell false; a province never gets `shared`; the fill expression's stops
+ * are the envelope's own min and max; the legend's five swatches are the display strings of
+ * real cells at ranks 0, n/4, n/2, 3n/4, n-1.
  */
 import { describe, expect, it } from "vitest";
 import type { Envelope } from "@/lib/envelope";
 import { RAMP, NO_CELL } from "@/lib/palette";
-import { fillColorExpression, indexCells, paintEnvelope, clearPaint } from "./paint";
+import { anyWithoutCell, cellForFeature, fillColorExpression, indexCells, paintEnvelope, clearPaint } from "./paint";
 import { legendRanks } from "./Legend";
 import { envelope } from "@/__tests__/fixtures";
 
@@ -45,7 +47,34 @@ const ADM2 = envelope([
   { display: "0.1200", group: { shape_id: "C" }, value: 0.12, exactness: "exact" },
 ]) as unknown as Envelope;
 
+const ADM1_IDS = ["Punjab", "Sindh", "Balochistan", "Khyber Pakhtunkhwa", "Gilgit-Baltistan", "Azad Kashmir", "Islamabad Capital Territory"];
+const OTHER = { name: "Other", members: ["Azad Kashmir", "Gilgit-Baltistan", "Islamabad Capital Territory"] };
+
 describe("paint", () => {
+  it("paints the residual unit's one cell on each member polygon, verbatim and marked shared", () => {
+    const idx = indexCells(ADM1, "adm1");
+    const map = fakeMap();
+    paintEnvelope(map as never, "adm1", idx, ADM1_IDS, OTHER);
+    const other = { value: 1.997204043148, display: "1.9972", unit: "Mt CO2e AR5", has_cell: true, bounded: false, shared: true, shared_with: "Other" };
+    expect(map.states.get("adm1:Gilgit-Baltistan")).toEqual(other);
+    expect(map.states.get("adm1:Azad Kashmir")).toEqual(other);
+    expect(map.states.get("adm1:Islamabad Capital Territory")).toEqual(other);
+    // provinces never carry `shared`
+    for (const p of ["Punjab", "Sindh", "Balochistan", "Khyber Pakhtunkhwa"]) expect(map.states.get(`adm1:${p}`)).not.toHaveProperty("shared");
+    expect(map.states.get("adm1:Punjab")).toEqual({ value: 228.716826597061, display: "228.7168", unit: "Mt CO2e AR5", has_cell: true, bounded: false });
+    expect(cellForFeature(idx, "adm1", "Gilgit-Baltistan", OTHER)).toEqual({ cell: idx.byId.get("Other"), shared: true });
+    expect(cellForFeature(idx, "adm1", "Punjab", OTHER)).toEqual({ cell: idx.byId.get("Punjab"), shared: false });
+    expect(anyWithoutCell(idx, "adm1", ADM1_IDS, OTHER)).toBe(false);
+    expect(anyWithoutCell(idx, "adm1", [...ADM1_IDS, "Nowhere"], OTHER)).toBe(true);
+  });
+  it("without the residual unit's cell in the envelope the members have no cell", () => {
+    const noOther = { ...ADM1, values: ADM1.values.filter((c) => c.group?.province !== "Other") } as Envelope;
+    const idx = indexCells(noOther, "adm1");
+    const map = fakeMap();
+    paintEnvelope(map as never, "adm1", idx, ADM1_IDS, OTHER);
+    expect(map.states.get("adm1:Gilgit-Baltistan")).toEqual({ value: null, display: null, unit: null, has_cell: false, bounded: false });
+    expect(anyWithoutCell(idx, "adm1", ADM1_IDS, OTHER)).toBe(true);
+  });
   it("indexes by province and marks polygons without a cell", () => {
     const idx = indexCells(ADM1, "adm1");
     expect(idx.min).toBe(1.997204043148);

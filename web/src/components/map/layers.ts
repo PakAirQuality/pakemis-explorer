@@ -1,7 +1,8 @@
 /**
  * The layer stack (bottom -> top): basemap fills · grid-raster (image) · grid-fill (hit-test
  * only) + grid-line + grid-selected · adm2-fill + adm2-hatch · adm1-fill · adm2-line · adm1-line
- * · selected outlines · the basemap's symbol (label) layers. Everything of ours is inserted
+ * · adm1-shared (the dotted outline of the residual unit's members) · selected outlines · the
+ * basemap's symbol (label) layers. Everything of ours is inserted
  * before the style's first symbol layer so place names stay readable. adm1 keyed by `name`,
  * adm2 by `shape_id`, grid by `cell_id` (promoteId). Visibility follows the URL `level`. Tiles
  * carry geometry and ids only; they reach Mapbox GL as TileJSON from app/tiles/[name].
@@ -71,6 +72,8 @@ export function layerSpecs(): LayerSpecification[] {
     { id: "adm1-fill", type: "fill", source: "adm1", "source-layer": "adm1", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.95, 0.82] } },
     { id: "adm2-line", type: "line", source: "adm2", "source-layer": "adm2", paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.3, 8, 0.9] } },
     { id: "adm1-line", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": "#1b2430", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 8, 1.6], "line-opacity": 0.7 } },
+    // the dotted outline of the polygons sharing the residual unit's one cell (feature-state `shared`, paint.ts)
+    { id: "adm1-shared", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": "#1b2430", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 2.2], "line-dasharray": [0.6, 1.6], "line-opacity": ["case", ["boolean", ["feature-state", "shared"], false], 0.95, 0] } },
     { id: "adm2-selected", type: "line", source: "adm2", "source-layer": "adm2", filter: ["==", ["get", "shape_id"], ""], paint: { "line-color": AMBER, "line-width": 2.5 } },
     { id: "adm1-selected", type: "line", source: "adm1", "source-layer": "adm1", filter: ["==", ["get", "name"], ""], paint: { "line-color": AMBER, "line-width": 2.5 } },
   ];
@@ -87,6 +90,7 @@ export function applyLevel(map: MBMap, level: Level, raster: boolean) {
   const show = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
   show("adm1-fill", level === "adm1");
   show("adm1-selected", level === "adm1");
+  show("adm1-shared", level === "adm1");
   show("adm2-fill", level === "adm2");
   show("adm2-hatch", level === "adm2");
   show("adm2-selected", level === "adm2");
@@ -99,9 +103,16 @@ export function applyLevel(map: MBMap, level: Level, raster: boolean) {
   if (map.getLayer(RASTER_LAYER)) map.setPaintProperty(RASTER_LAYER, "raster-opacity", raster ? RASTER_OPACITY : 0);
 }
 
-export function setSelected(map: MBMap, level: Level, id: string | null, cell?: { lat: number; lon: number } | null) {
+/**
+ * The selection outline. `adm1Names` lists the ADM1 polygons that stand for `id` when it is
+ * the residual unit (lib/geography.ts); otherwise the polygon named `id` is outlined.
+ */
+export function setSelected(map: MBMap, level: Level, id: string | null, cell?: { lat: number; lon: number } | null, adm1Names?: string[]) {
   const f = (key: string, v: string | null): FilterSpecification => ["==", ["get", key], v ?? ""] as unknown as FilterSpecification;
-  if (map.getLayer("adm1-selected")) map.setFilter("adm1-selected", f("name", level === "adm1" ? id : null));
+  if (map.getLayer("adm1-selected")) {
+    const names = level === "adm1" && id ? (adm1Names?.length ? adm1Names : [id]) : [];
+    map.setFilter("adm1-selected", (names.length ? ["in", ["get", "name"], ["literal", names]] : f("name", null)) as unknown as FilterSpecification);
+  }
   if (map.getLayer("adm2-selected")) map.setFilter("adm2-selected", f("shape_id", level === "adm2" ? id : null));
   if (map.getLayer("grid-selected")) {
     const c = level === "grid" ? cell : null;
