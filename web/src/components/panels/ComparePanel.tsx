@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { compareBody } from "@/lib/requests";
 import { useCompare } from "@/lib/queries";
-import { configLabel, periodLabel, periodShort } from "@/lib/labels";
+import { configLabel, periodShort } from "@/lib/labels";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
 
@@ -31,7 +31,7 @@ export function ComparePanel() {
         <label className="block">
           <div className="micro mb-1">Left period (right = the rail&apos;s {periodShort(labels, state.period)})</div>
           <select className={SEL} value={left} onChange={(e) => setLeft(e.target.value)}>
-            {dims.fiscalPeriods.map((p) => <option key={p} value={p}>{periodLabel(labels, p)}</option>)}
+            {dims.fiscalPeriods.map((p) => <option key={p} value={p}>{periodShort(labels, p)}</option>)}
           </select>
         </label>
       ) : (

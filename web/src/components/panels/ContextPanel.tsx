@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { contextBodies } from "@/lib/requests";
 import { configCoversPeriod, useCompare, useEmissions, useTimeseries } from "@/lib/queries";
-import { configLabel, configLetter, gasLabel, monthLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { configLabel, configLetter, envelopeUnitLine, gasLabel, monthLabel, periodShort, sectorLabel } from "@/lib/labels";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
@@ -69,15 +69,15 @@ export function ContextPanel() {
         </div>
       )}
       <div className="space-y-3 p-3">
-        <Frame title="Sectors" scope={scope} env={bySector.data} error={bySector.error} isLoading={bySector.isLoading} labels={labels} dims={dims} flat className="border-b border-line">
+        <Frame title="Sectors" unitLine={envelopeUnitLine(bySector.data)} scope={scope} env={bySector.data} error={bySector.error} isLoading={bySector.isLoading} labels={labels} dims={dims} flat className="border-b border-line">
           {bySector.data && <BarChart env={bySector.data} horizontal height={Math.max(150, bySector.data.values.length * 22)} labels={labels} dims={dims} onClick={(c) => setState({ sector: state.sector === c.group?.sector_id ? null : c.group?.sector_id ?? null })} selectedIndex={state.sector ? bySector.data.values.findIndex((c) => c.group?.sector_id === state.sector) : null} />}
         </Frame>
         {bodies.compareSL && (
-          <Frame title="S minus L by sector" scope={`${configLetter(labels, pair!.survey)} − ${configLetter(labels, pair!.reference)} · ${periodShort(labels, state.period)}`} env={compare.data} error={compare.error} isLoading={compare.isLoading} labels={labels} dims={dims} flat className="border-b border-line">
+          <Frame title="S minus L by sector" unitLine={envelopeUnitLine(compare.data)} scope={`${configLetter(labels, pair!.survey)} − ${configLetter(labels, pair!.reference)} · ${periodShort(labels, state.period)}`} env={compare.data} error={compare.error} isLoading={compare.isLoading} labels={labels} dims={dims} flat className="border-b border-line">
             {compare.data && <BarChart env={compare.data} horizontal height={Math.max(120, compare.data.values.length * 20)} labels={labels} dims={dims} compact />}
           </Frame>
         )}
-        <Frame title="Fiscal years" scope="national · click a bar to change the year" env={series.data} error={series.error} isLoading={series.isLoading} labels={labels} dims={dims} flat>
+        <Frame title="Fiscal years" unitLine={envelopeUnitLine(series.data)} scope="national · click a bar to change the year" env={series.data} error={series.error} isLoading={series.isLoading} labels={labels} dims={dims} flat>
           {series.data && <BarChart env={series.data} height={150} labels={labels} dims={dims} colorBy="accent" compact onClick={(c) => c.group?.period_id && setState({ period: c.group.period_id })} selectedIndex={series.data.values.findIndex((c) => c.group?.period_id === state.period)} />}
         </Frame>
         {national.data && national.data.limitations_hit.length > 0 && (

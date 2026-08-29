@@ -12,7 +12,7 @@ import { ArrowLeft } from "lucide-react";
 import { api, API_BASE } from "@/lib/api";
 import { useContractOptions } from "@/lib/contract";
 import { releaseDefaults, releaseDims, releaseLabels, useRelease } from "@/lib/release";
-import { periodLabel, periodShort } from "@/lib/labels";
+import { periodShort } from "@/lib/labels";
 import { stateFromEnvelopeRequest } from "@/lib/requests";
 import { rawFromState, resolveState } from "@/lib/urlState";
 import { Frame } from "@/components/ui/Frame";
@@ -93,7 +93,7 @@ function Data() {
             <h2 className="text-md font-semibold">Sector × gas</h2>
             <select value={periodId} onChange={(e) => setPeriod(e.target.value)} className="rounded border border-line bg-white px-2 py-1 text-xs" aria-label="period">
               {dims.fiscalPeriods.map((p) => (
-                <option key={p} value={p}>{periodLabel(labels, p)}</option>
+                <option key={p} value={p}>{periodShort(labels, p)}</option>
               ))}
             </select>
           </div>

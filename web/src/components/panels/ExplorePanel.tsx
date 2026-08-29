@@ -1,7 +1,7 @@
 "use client";
 /** The controls: level, period, month, configuration, GWP, sector, gas, view, raster. Every list comes from the dims / labels / openapi contract; every select shows the raw id as secondary text. */
 import { useExplorer } from "@/components/ExplorerContext";
-import { configLabel, gasLabel, monthLabel, periodLabel, sectorLabel, viewLabel } from "@/lib/labels";
+import { configLabel, gasLabel, monthLabel, periodBasisNote, periodLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
 import type { Level } from "@/lib/urlState";
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
@@ -30,10 +30,10 @@ export function ExplorePanel() {
           ))}
         </div>
       </Field>
-      <Field label="Fiscal year" hint={state.period}>
-        <select className={SEL} value={state.period} onChange={(e) => setState({ period: e.target.value })}>
+      <Field label="Fiscal year" hint={periodLabel(labels, state.period)}>
+        <select className={SEL} value={state.period} onChange={(e) => setState({ period: e.target.value })} title={periodBasisNote(labels, state.period)}>
           {dims.fiscalPeriods.map((p) => (
-            <option key={p} value={p}>{periodLabel(labels, p)}{labels.periods[p]?.is_reference ? "" : " · national only"}</option>
+            <option key={p} value={p}>{periodShort(labels, p)}{labels.periods[p]?.is_reference ? "" : " · national only"}</option>
           ))}
         </select>
       </Field>

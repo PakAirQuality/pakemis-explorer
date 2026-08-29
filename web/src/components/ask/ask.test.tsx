@@ -152,7 +152,7 @@ describe("AskDock", () => {
     const setState = vi.fn();
     mount(ctx(setState));
     expect(screen.getAllByTestId("suggestion").length).toBeGreaterThan(2);
-    expect(screen.getByText("What is Pakistan's largest sector in FY2023-24?")).toBeTruthy();
+    expect(screen.getByText("What is Pakistan's largest sector in 2023–24?")).toBeTruthy(); // the release's short label, never the id
     await askQuestion("How much did Punjab's agriculture emit in FY2023-24, and show it on the map");
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
     // the request carried ui_state = the URL scope and no history on the first turn

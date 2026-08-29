@@ -54,6 +54,51 @@ export function periodLabel(labels: Labels, id: string): string {
 export function periodShort(labels: Labels, id: string): string {
   return labels.periods[id]?.short ?? id;
 }
+/** The API's one-line statement of what a period's basis means ("a fiscal year runs from July to June"), or "". */
+export function periodBasisNote(labels: Labels, id: string): string {
+  return labels.periods[id]?.basis_note ?? "";
+}
+/**
+ * "years run July–June": the two month names of the period's own label ("July 2023 – June
+ * 2024") as a figure subtitle phrase; "" when the label is not of that shape (a calendar row).
+ */
+export function periodSpanWords(labels: Labels, id: string): string {
+  const m = /^([A-Za-z]+) \d{4} – ([A-Za-z]+) \d{4}$/.exec(labels.periods[id]?.label ?? "");
+  return m ? `years run ${m[1]}–${m[2]}` : "";
+}
+/** "2015–16 to 2023–24": the first and last of the fiscal periods by their short labels. */
+export function periodRange(dims: { fiscalPeriods: string[] }, labels: Labels): string {
+  const ids = dims.fiscalPeriods;
+  if (!ids.length) return "";
+  const first = periodShort(labels, ids[0]);
+  const last = periodShort(labels, ids[ids.length - 1]);
+  return first === last ? first : `${first} to ${last}`;
+}
+
+const MAGNITUDE_WORDS: Record<string, string> = { Mt: "million tonnes", Gg: "thousand tonnes", kt: "thousand tonnes", t: "tonnes" };
+const SUBSCRIPT_DIGITS: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+/**
+ * An envelope's unit as words for a figure subtitle: "Mt CO2e AR5" -> "million tonnes CO₂e
+ * (AR5)", "Gg" -> "thousand tonnes", "Gg CO2e AR6" -> "thousand tonnes CO₂e (AR6)". The
+ * magnitude word comes from a four-entry map; the species keeps its letters with digits
+ * subscripted; a GWP basis token goes in parentheses. A unit outside that shape is returned as
+ * it is: this names the contract's units, it never changes a value.
+ */
+export function unitWords(unit: string): string {
+  const tokens = unit.trim().split(/\s+/).filter(Boolean);
+  if (!tokens.length || !(tokens[0] in MAGNITUDE_WORDS)) return unit;
+  const out = [MAGNITUDE_WORDS[tokens[0]]];
+  for (const t of tokens.slice(1)) {
+    if (/^AR\d$/.test(t)) out.push(`(${t})`);
+    else out.push(t.replace(/\d/g, (d) => SUBSCRIPT_DIGITS[d] ?? d));
+  }
+  return out.join(" ");
+}
+/** The unit line of a frame: the envelope's first cell's unit as words, "" while there is no envelope. */
+export function envelopeUnitLine(env: { values: { unit: string }[] } | null | undefined): string {
+  const unit = env?.values[0]?.unit;
+  return unit ? unitWords(unit) : "";
+}
 export function monthLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "Annual";
   return labels.months[id] ?? id;

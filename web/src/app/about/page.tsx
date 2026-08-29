@@ -10,7 +10,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api, API_BASE } from "@/lib/api";
 import { releaseAgent, releaseDims, releaseFacts, releaseLabels, useRelease } from "@/lib/release";
-import { configLabel, gasLabel, limitationText } from "@/lib/labels";
+import { configLabel, gasLabel, limitationText, periodLabel, periodShort } from "@/lib/labels";
 import { joinNames, residualUnit } from "@/lib/geography";
 import { useBboxes } from "@/components/map/tiles";
 import { ASK_SENTENCES, SHORT_SUMMARY, forgetIntro } from "@/components/shell/WelcomeModal";
@@ -39,6 +39,9 @@ function About() {
   const lim = (id: string) => (labels.limitations[id] ? limitationText(labels, id) : null);
   const gases = dims.gases.map((g) => gasLabel(labels, g));
   const rp = facts.reportingPeriod;
+  // the reporting period's label is a period id ("FY2023-24"); a person reads its short label
+  const rpShort = rp ? periodShort(labels, rp.label) : "";
+  const rpLong = rp ? periodLabel(labels, rp.label) : "";
   const unitName = residual?.name ?? "Other";
   return (
     <div className="h-dvh overflow-y-auto bg-canvas">
@@ -54,7 +57,7 @@ function About() {
           <p className="mt-2 leading-relaxed">{SHORT_SUMMARY}</p>
           <p className="mt-2 leading-relaxed">
             The Explorer is a window onto one release of that dataset{rel ? <>, <span className="mono">{rel.release_id}</span></> : null}
-            {rp ? <>, whose reporting period is {rp.label} ({rp.start} to {rp.end})</> : null}. It shows nothing it computed itself: every number on the map, in a panel or in an answer is a string the API returned from a query, together with a receipt that replays the query. The browser shades polygons and sizes bars; it never adds, divides or rounds.
+            {rp ? <>, whose reporting period is {rpShort} ({rp.start} to {rp.end})</> : null}. It shows nothing it computed itself: every number on the map, in a panel or in an answer is a string the API returned from a query, together with a receipt that replays the query. The browser shades polygons and sizes bars; it never adds, divides or rounds.
           </p>
           <p className="mt-2 text-xs text-muted">
             <Link href="/" onClick={forgetIntro} className="text-accent underline" data-testid="about-intro">Show the introduction again</Link> · the four short panels that open on a first visit.
@@ -64,7 +67,10 @@ function About() {
         <section className="card mb-5 p-4 text-sm" data-testid="about-data">
           <h2 className="text-md font-semibold">What &ldquo;emissions data&rdquo; means here</h2>
           <p className="mt-2 leading-relaxed">An estimate, not a measurement. Each sector&apos;s emissions are reconstructed from public documents: an activity statistic (fuel sold, animals kept, cement made, waste collected) multiplied by an emission factor, category by category under the IPCC classification, with every step recorded. No instrument was read, and no figure was copied from another inventory as a whole.</p>
-          <p className="mt-2 leading-relaxed">Years are fiscal, July to June{rp?.note ? <>: {rp.note}</> : null}. Months and districts are disaggregations of those years, each carrying its own evidence class.</p>
+          <p className="mt-2 leading-relaxed" data-testid="about-years">
+            Years are fiscal years, July to June{rp ? <>: {rpShort} means {rpLong.replace(" – ", " to ")}</> : null}. The Explorer prints a year that way everywhere; the release&apos;s id for it{rp ? <>, <span className="mono" data-allow-fy>{rp.label}</span>,</> : null} appears only in URLs, requests and receipts.
+            {rp?.note ? <> The release&apos;s own note on the period: {rp.note}.</> : null} Months and districts are disaggregations of those years, each carrying its own evidence class.
+          </p>
           {gases.length > 0 && (
             <p className="mt-2 leading-relaxed">
               The gases are {joinNames(gases)}, reported together as CO₂-equivalent{facts.gwp.reported ? <> on {facts.gwp.reported}</> : null}

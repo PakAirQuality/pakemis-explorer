@@ -12,7 +12,8 @@ export type Adm2Row = { geography_id: string; name: string; shape_id: string; sh
 export type Adm1Row = { geography_id: string; name: string; shape_id: string; has_polygon: "yes" | "no" };
 export type PeriodRow = { period_id: string; basis: string; is_reference: string; availability: string };
 export type ConfigLabel = { label: string; letter: string; kind: string; display_name: string; queryable: boolean; axis: string; module: string; note: string };
-export type PeriodLabel = { label: string; short: string; start: string; end: string; basis: string; availability: string; is_reference: boolean; note: string };
+/** `short` is what a chip, rail or axis prints ("2023–24"); `label` spells the months out ("July 2023 – June 2024"), the tooltip; `basis_note` says once what the basis means. */
+export type PeriodLabel = { label: string; short: string; start: string; end: string; basis: string; availability: string; is_reference: boolean; note: string; basis_note?: string };
 export type Labels = {
   configurations: Record<string, ConfigLabel>;
   periods: Record<string, PeriodLabel>;

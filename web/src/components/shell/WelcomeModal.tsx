@@ -5,11 +5,15 @@
  * until localStorage remembers a dismissal (the AskEntry pattern: read on mount so the server
  * render never flashes it) and re-openable through `openIntro()` (the "?" on the rail's brand
  * square) or from /about, which carries the methodology prose this modal deliberately leaves
- * out. Numbers: the visual is the national timeseries envelope (values size the shape, the
- * first and last points are labelled with their `display` strings); the one number in the
+ * out. Numbers: screen 1's figure is the national timeseries envelope (values size the shape,
+ * the ends and the reference year are labelled with their `display` strings, the axis carries
+ * the release's short period labels); screen 2's figure is the reference year's sector
+ * breakdown envelope (bars in sector colours, labelled with displays); the one number in the
  * copy, from the third screen on, is the national total's `display` printed as the API returned
  * it (the integer part large, the fraction lighter: typography, never rounding) with a "View
- * source" that opens the envelope's evidence drawer. The facts row is words, not digits.
+ * source" that opens the envelope's evidence drawer. The facts row is words and the release's
+ * period labels, never a digit of a value. No period is ever printed by its id: "2023–24", not
+ * "FY2023-24"; the July–June basis is said once, in the figure subtitle, and on /about.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -17,10 +21,12 @@ import { ArrowRight, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { contextBodies, seriesBody } from "@/lib/requests";
 import { useEmissions, useTimeseries } from "@/lib/queries";
-import { periodShort } from "@/lib/labels";
+import { periodRange, periodShort, periodSpanWords, unitWords } from "@/lib/labels";
 import type { Envelope } from "@/lib/envelope";
 import type { ExplorerState } from "@/lib/urlState";
 import { TrendChart } from "@/components/ui/TrendChart";
+import { BarChart } from "@/components/ui/BarChart";
+import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
 import { EnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
 
 export const INTRO_KEY = "pakemis.intro.dismissed";
@@ -203,23 +209,62 @@ function useNationalSeries() {
   return useTimeseries(body);
 }
 
+/** The reference period's id: the dim row flagged is_reference, else the last fiscal period. */
+function useReferencePeriod(): string {
+  const { dims } = useExplorer();
+  return dims.periods.find((p) => String(p.is_reference).toLowerCase() === "true")?.period_id ?? dims.fiscalPeriods[dims.fiscalPeriods.length - 1] ?? "";
+}
+
+/** Screen 1's figure: the national series by year, framed by TrendChart (title, unit and basis subtitle, the years on the axis, the receipt line). */
 function Trend() {
-  const { labels, dims } = useExplorer();
+  const { labels } = useExplorer();
   const series = useNationalSeries();
-  const reference = dims.periods.find((p) => String(p.is_reference).toLowerCase() === "true")?.period_id ?? dims.fiscalPeriods[dims.fiscalPeriods.length - 1];
+  const reference = useReferencePeriod();
   const label = useMemo(() => (id: string) => periodShort(labels, id), [labels]);
   return (
     <div className="mt-8" data-testid="intro-trend">
-      <TrendChart env={series.data} referencePeriod={reference} periodLabel={label} height={150} />
-      <div className="mt-1 text-micro normal-case tracking-normal text-muted">The national total across the fiscal years; the reference year in amber.</div>
+      <TrendChart env={series.data} referencePeriod={reference} periodLabel={label} height={150} title="Pakistan's greenhouse-gas emissions, by year" basisWords={periodSpanWords(labels, reference)} />
     </div>
   );
 }
 
+/**
+ * Screen 2's figure: where the reference year's emissions came from, the sector breakdown of
+ * the scope (the same request the context panel makes, so the envelope is already cached),
+ * drawn as bars in sector colours labelled with their displays.
+ */
+function SectorFigure() {
+  const { state, labels, dims } = useExplorer();
+  const bySector = useEmissions(contextBodies(state, null).bySector);
+  const env = bySector.data;
+  const period = periodShort(labels, env?.context.periods?.[0] ?? state.period);
+  const unit = env?.values[0]?.unit ? unitWords(env.values[0].unit) : "";
+  return (
+    <figure className="m-0 mt-8" data-testid="intro-sectors">
+      <figcaption>
+        <div className="text-sm font-semibold text-ink" data-testid="intro-sectors-title">Where {period}&rsquo;s emissions came from</div>
+        <div className="mt-0.5 text-xs text-muted">{unit ? `${unit}, reference configuration` : "reference configuration"}</div>
+      </figcaption>
+      {env ? (
+        <>
+          <BarChart env={env} horizontal height={Math.max(120, env.values.length * 22)} labels={labels} dims={dims} compact={false} />
+          <ReceiptFooter env={env} className="mt-1" />
+        </>
+      ) : bySector.error ? (
+        <p className="mt-2 text-sm text-muted">The sector breakdown could not be read from the API right now; the panels show the refusal by name.</p>
+      ) : (
+        <div className="mt-3 animate-pulse rounded-lg bg-ink/5" style={{ height: 150 }} aria-hidden="true" data-testid="intro-sectors-skeleton" />
+      )}
+      <p className="mt-2 text-micro normal-case tracking-normal text-muted">Every sector can be followed down the map&rsquo;s three levels: provinces, districts and a grid.</p>
+    </figure>
+  );
+}
+
 function ScreenWhat() {
-  const { dims } = useExplorer();
+  const { dims, labels } = useExplorer();
   const years = capitalise(countWord(dims.fiscalPeriods.length));
-  const facts = [`${years} fiscal years`, "Monthly detail", "District-level data", "Source-traceable"];
+  const range = periodRange(dims, labels);
+  const facts = [range ? `${years} years, ${range}` : `${years} years`, "Monthly detail", "District-level data", "Source-traceable"];
   return (
     <div>
       <Headline eyebrow={SCREENS[0].eyebrow} dek={SCREENS[0].dek}>{SCREENS[0].headline}</Headline>
@@ -246,16 +291,17 @@ function ScreenExplore() {
         <li><span className="font-semibold">Years and months</span> <span className="text-muted">— the rail at the bottom of the map.</span></li>
         <li><span className="font-semibold">Ask PakEmis</span> <span className="text-muted">— a question, answered from the same data.</span></li>
       </ul>
-      <Trend />
+      <SectorFigure />
     </div>
   );
 }
 
 function ScreenTrust({ onExplore, onSource }: { onExplore: () => void; onSource: (env: Envelope) => void }) {
-  const { state, release } = useExplorer();
+  const { state, labels } = useExplorer();
   const national = useEmissions(contextBodies(state, null).national);
   const kpi = national.data?.values[0];
-  const period = release.context_bar.reporting_period?.label ?? "";
+  // the year the envelope itself answers for, by its short label ("2023–24"), never the id
+  const period = periodShort(labels, national.data?.context.periods?.[0] ?? state.period);
   return (
     <div>
       <Headline eyebrow={SCREENS[2].eyebrow} dek={SCREENS[2].dek}>{SCREENS[2].headline}</Headline>

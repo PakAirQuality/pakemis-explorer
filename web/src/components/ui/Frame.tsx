@@ -1,7 +1,7 @@
 "use client";
 /**
- * Every chart and table sits in a Frame: title, scope subtitle, a chart | table segmented
- * control when a chart is given, and the ReceiptFooter whose menu opens the EnvelopeDrawer.
+ * Every chart and table sits in a Frame: title, the envelope's unit as words when given
+ * (`unitLine`), scope subtitle, a chart | table segmented control when a chart is given, and the ReceiptFooter whose menu opens the EnvelopeDrawer.
  * A loading or refused envelope renders its state in the same frame.
  */
 import { useState, type ReactNode } from "react";
@@ -27,9 +27,11 @@ export type FrameProps = {
   className?: string;
   actions?: ReactNode;
   flat?: boolean;
+  /** The envelope's unit as words ("million tonnes CO₂e (AR5)"), under the title; see envelopeUnitLine. */
+  unitLine?: string;
 };
 
-export function Frame({ title, scope, env, error, isLoading, children, tableExtra, labels, dims, defaultTab, maxRows, className = "", actions, flat = false }: FrameProps) {
+export function Frame({ title, scope, env, error, isLoading, children, tableExtra, labels, dims, defaultTab, maxRows, className = "", actions, flat = false, unitLine }: FrameProps) {
   // null = automatic: a chart when children arrive (they may come after the envelope), else the table
   const [chosen, setTab] = useState<"chart" | "table" | null>(defaultTab ?? null);
   const tab = chosen ?? (children ? "chart" : "table");
@@ -43,6 +45,7 @@ export function Frame({ title, scope, env, error, isLoading, children, tableExtr
       <header className="flex items-start justify-between gap-2 px-3 pt-2.5 pb-1.5">
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold text-ink">{title}</h3>
+          {unitLine && <div className="truncate text-xs text-ink/70" data-testid="frame-unit">{unitLine}</div>}
           {scope && <div className="truncate text-xs text-muted">{scope}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-2">

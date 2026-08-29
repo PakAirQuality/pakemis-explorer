@@ -38,7 +38,10 @@ export const RELEASE = {
   },
   labels: {
     configurations: { REF_2023_24: { label: "Inventory reference (L)", letter: "L", kind: "reference", display_name: "inventory_reference", queryable: true, axis: "", module: "", note: "" }, S_2023_24: { label: "Observed household demand (S)", letter: "S", kind: "survey", display_name: "observed_household_demand", queryable: true, axis: "", module: "residential", note: "" } },
-    periods: { "FY2023-24": { label: "FY2023-24 (1 Jul 2023 – 30 Jun 2024)", short: "FY2023-24", start: "2023-07-01", end: "2024-06-30", basis: "fiscal", availability: "all_sectors", is_reference: true, note: "" }, "FY2020-21": { label: "FY2020-21 (1 Jul 2020 – 30 Jun 2021)", short: "FY2020-21", start: "2020-07-01", end: "2021-06-30", basis: "fiscal", availability: "all_sectors", is_reference: false, note: "" } },
+    periods: {
+      "FY2023-24": { label: "July 2023 – June 2024", short: "2023–24", basis_note: "a fiscal year runs from July to June", start: "2023-07-01", end: "2024-06-30", basis: "fiscal", availability: "all_sectors", is_reference: true, note: "" },
+      "FY2020-21": { label: "July 2020 – June 2021", short: "2020–21", basis_note: "a fiscal year runs from July to June", start: "2020-07-01", end: "2021-06-30", basis: "fiscal", availability: "all_sectors", is_reference: false, note: "" },
+    },
     months: { "202307": "Jul 2023", "202308": "Aug 2023", "202007": "Jul 2020", "202008": "Aug 2020" },
     views: { all: "all three views", physical: "physical: where it is emitted", origin: "origin: where the generating activity originates", accounting: "accounting: where the statistic is booked" },
     limitations: {

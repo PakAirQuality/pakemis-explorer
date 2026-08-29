@@ -2,10 +2,14 @@ import "@testing-library/jest-dom/vitest";
 /**
  * The first-visit explainer: shows when localStorage holds no dismissal, hides after a dismissal
  * and stays hidden on a fresh mount, re-opens on openIntro(); the four screens carry their copy;
- * screen 1 prints no release version, receipt, GWP basis or configuration label; the national
- * total appears from screen 3 on, as the mocked envelope's display split typographically (never
- * rounded) with a "View source" opening the evidence drawer; every decimal on any screen is the
- * mocked display; no phrase from the manuscript's "avoid" list appears.
+ * screen 1 prints no release version or configuration label and its facts row names the years
+ * by the release's short labels; screen 2 carries the sector figure titled with the reference
+ * year and labelled with the breakdown's displays; the national total appears from screen 3 on,
+ * as the mocked envelope's display split typographically (never rounded) with a "View source"
+ * opening the evidence drawer; every decimal on any screen is a mocked display; the token "FY"
+ * appears nowhere; no phrase from the manuscript's "avoid" list appears. The two charts are
+ * mocked here (TrendChart.test.tsx renders the real one); the BarChart mock prints the displays
+ * it was given, which is what the real one draws.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,10 +22,12 @@ import { RELEASE, envelope, mockFetch } from "@/__tests__/fixtures";
 import { AVOID_PHRASES, avoidPhrasesIn } from "@/__tests__/vocabulary";
 import { INTRO_KEY, SCREENS, WelcomeModal, countWord, openIntro, splitDisplay, unitText } from "./WelcomeModal";
 
-vi.mock("@/components/ui/TrendChart", () => ({ TrendChart: ({ env }: { env: unknown }) => <div data-testid={env ? "trend-chart" : "trend-skeleton"} /> }));
+vi.mock("@/components/ui/TrendChart", () => ({ TrendChart: ({ env, title }: { env: unknown; title?: string }) => <div data-testid={env ? "trend-chart" : "trend-skeleton"}>{env ? title : null}</div> }));
+vi.mock("@/components/ui/BarChart", () => ({ BarChart: ({ env }: { env: { values: { display: string }[] } }) => <div data-testid="bar-chart">{env.values.map((v) => v.display).join(" ")}</div> }));
 
 const NATIONAL = "452.34662";
 const SERIES = ["372.397", "452.347"];
+const SECTORS = [{ display: "196.789", group: { sector_id: "agriculture" } }, { display: "58.123", group: { sector_id: "power" } }];
 
 const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
 
@@ -52,10 +58,11 @@ beforeEach(() => {
   window.localStorage.clear();
   vi.stubGlobal(
     "fetch",
-    mockFetch((url) => {
+    mockFetch((url, body) => {
       if (url.endsWith("/release")) return RELEASE;
       if (url.includes("/timeseries")) return envelope([{ display: SERIES[0], group: { period_id: "FY2020-21" } }, { display: SERIES[1], group: { period_id: "FY2023-24" } }], { request_type: "get_timeseries" });
-      return envelope([{ display: NATIONAL }]);
+      if (body?.group_by?.[0] === "sector_id") return envelope(SECTORS, { context: { ...envelope([]).context, periods: ["FY2023-24"] } });
+      return envelope([{ display: NATIONAL }], { context: { ...envelope([]).context, periods: ["FY2023-24"] } });
     }),
   );
 });
@@ -66,14 +73,14 @@ describe("WelcomeModal", () => {
     const modal = await screen.findByTestId("welcome-modal");
     expect(modal).toHaveTextContent(SCREENS[0].headline);
     expect(modal).toHaveTextContent(SCREENS[0].dek);
-    expect(screen.getByTestId("intro-facts")).toHaveTextContent("Two fiscal years"); // the fixture's dims hold two fiscal periods
+    expect(screen.getByTestId("intro-facts")).toHaveTextContent("Two years, 2020–21 to 2023–24"); // the fixture's dims hold two fiscal periods, named by their short labels
     expect(screen.getByTestId("intro-facts")).toHaveTextContent("Monthly detail");
     expect(screen.getByTestId("intro-facts")).toHaveTextContent("Source-traceable");
     expect(screen.getByTestId("intro-counter")).toHaveTextContent("01 / 04");
     expect(screen.getByTestId("intro-next")).toHaveTextContent("Explore the project");
-    await screen.findByTestId("trend-chart");
+    expect(await screen.findByTestId("trend-chart")).toHaveTextContent("Pakistan's greenhouse-gas emissions, by year");
     const text = modal.textContent ?? "";
-    for (const forbidden of [RELEASE.release_id, RELEASE.version, "receipt", "AR5", "Inventory reference", "2023-07-01", NATIONAL]) expect(text).not.toContain(forbidden);
+    for (const forbidden of [RELEASE.release_id, RELEASE.version, "Inventory reference", "2023-07-01", NATIONAL, "FY"]) expect(text).not.toContain(forbidden);
     expect(decimals(modal)).toEqual([]);
   });
   it("screens 2 to 4 carry their copy; the number appears from screen 3 on as the envelope's display, split typographically", async () => {
@@ -83,7 +90,17 @@ describe("WelcomeModal", () => {
     expect(modal).toHaveTextContent(SCREENS[1].headline);
     expect(modal).toHaveTextContent(SCREENS[1].dek);
     expect(screen.getByTestId("intro-counter")).toHaveTextContent("02 / 04");
-    expect(decimals(modal)).toEqual([]);
+    // the sector figure: titled with the envelope's own year by its short label, the unit as words, the breakdown's displays, the three map levels
+    expect(screen.getByTestId("intro-sectors-title")).toHaveTextContent("Where 2023–24’s emissions came from");
+    await screen.findByTestId("bar-chart");
+    expect(screen.getByTestId("intro-sectors")).toHaveTextContent("million tonnes CO₂e (AR5), reference configuration");
+    expect(screen.getByTestId("bar-chart")).toHaveTextContent(SECTORS[0].display);
+    expect(screen.getByTestId("intro-sectors")).toHaveTextContent("provinces, districts and a grid");
+    expect(screen.queryByTestId("trend-chart")).toBeNull(); // the trend figure stays on screen 1
+    const sectorDisplays = new Set(SECTORS.map((c) => c.display));
+    expect(decimals(modal).length).toBe(SECTORS.length);
+    for (const t of decimals(modal)) expect(sectorDisplays.has(t)).toBe(true);
+    expect(modal.textContent).not.toContain("FY");
     fireEvent.click(screen.getByTestId("intro-next"));
     expect(modal).toHaveTextContent(SCREENS[2].headline);
     expect(modal).toHaveTextContent(SCREENS[2].dek);
@@ -91,7 +108,8 @@ describe("WelcomeModal", () => {
     expect(kpi).toHaveTextContent(NATIONAL);
     expect(kpi.children[0]).toHaveTextContent("452");
     expect(kpi.children[1]).toHaveTextContent(".34662");
-    expect(screen.getByTestId("intro-example")).toHaveTextContent(`Pakistan emitted ${NATIONAL} Mt CO₂e in FY2023-24.`);
+    expect(screen.getByTestId("intro-example")).toHaveTextContent(`Pakistan emitted ${NATIONAL} Mt CO₂e in 2023–24.`);
+    expect(modal.textContent).not.toContain("FY");
     expect(screen.getByTestId("intro-source")).toBeInTheDocument();
     for (const t of decimals(modal)) expect(t).toBe(NATIONAL);
     fireEvent.click(screen.getByTestId("intro-next"));

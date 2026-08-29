@@ -10,7 +10,7 @@ import { X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { detailBodies, type DetailBodies } from "@/lib/requests";
 import { useEmissions, useGridCell, useLineage } from "@/lib/queries";
-import { adm2RowsForShape, gasLabel, monthLabel, periodShort, configLetter, sectorLabel } from "@/lib/labels";
+import { adm2RowsForShape, configLetter, envelopeUnitLine, gasLabel, monthLabel, periodShort, sectorLabel } from "@/lib/labels";
 import type { Envelope } from "@/lib/envelope";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
@@ -149,13 +149,13 @@ function ProvinceCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "provi
       <Limitations env={total.data} />
       <GasChips q={byGas} />
       <div className="mt-3 space-y-3">
-        <Frame title="Sectors" scope={scope} env={byModule.data} error={byModule.error} isLoading={byModule.isLoading} labels={labels} dims={dims}>
+        <Frame title="Sectors" unitLine={envelopeUnitLine(byModule.data)} scope={scope} env={byModule.data} error={byModule.error} isLoading={byModule.isLoading} labels={labels} dims={dims}>
           {byModule.data && <BarChart env={byModule.data} horizontal height={Math.max(160, byModule.data.values.length * 24)} labels={labels} dims={dims} onClick={(c) => setState({ sector: c.group?.module ?? null })} />}
         </Frame>
-        <Frame title="Months" scope={`${periodShort(labels, state.period)} · click a month`} env={byMonth.data} error={byMonth.error} isLoading={byMonth.isLoading} labels={labels} dims={dims}>
+        <Frame title="Months" unitLine={envelopeUnitLine(byMonth.data)} scope={`${periodShort(labels, state.period)} · click a month`} env={byMonth.data} error={byMonth.error} isLoading={byMonth.isLoading} labels={labels} dims={dims}>
           {byMonth.data && <BarChart env={byMonth.data} height={140} labels={labels} dims={dims} colorBy="accent" compact onClick={(c) => setState({ month: c.group?.month ?? null })} selectedIndex={state.month ? byMonth.data.values.findIndex((c) => c.group?.month === state.month) : null} />}
         </Frame>
-        <Frame title="Lineage: unallocated by sector × gas" scope={`get_spatial_lineage · ${monthLabel(labels, bodies.lineage.params.month)}`} env={lineage.data} error={lineage.error} isLoading={lineage.isLoading} labels={labels} dims={dims} maxRows={12} tableExtra={["module", "gas", "month", "spatial_view", "allocation_status"]}>
+        <Frame title="Lineage: unallocated by sector × gas" unitLine={envelopeUnitLine(lineage.data)} scope={`get_spatial_lineage · ${monthLabel(labels, bodies.lineage.params.month)}`} env={lineage.data} error={lineage.error} isLoading={lineage.isLoading} labels={labels} dims={dims} maxRows={12} tableExtra={["module", "gas", "month", "spatial_view", "allocation_status"]}>
           {lineage.data && (
             <div>
               {u?.by_module_gas?.length ? (
@@ -215,13 +215,13 @@ function DistrictCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "distr
       <Limitations env={total.data} />
       <GasChips q={byGas} />
       <div className="mt-3 space-y-3">
-        <Frame title="Sectors" scope="hatched bars are bounded intervals (mixed CH₄ origin)" env={byModule.data} error={byModule.error} isLoading={byModule.isLoading} labels={labels} dims={dims}>
+        <Frame title="Sectors" unitLine={envelopeUnitLine(byModule.data)} scope="hatched bars are bounded intervals (mixed CH₄ origin)" env={byModule.data} error={byModule.error} isLoading={byModule.isLoading} labels={labels} dims={dims}>
           {byModule.data && <BarChart env={byModule.data} horizontal height={Math.max(160, byModule.data.values.length * 24)} labels={labels} dims={dims} onClick={(c) => setState({ sector: c.group?.module ?? null })} />}
         </Frame>
-        <Frame title="Months" scope={`${periodShort(labels, state.period)} · click a month`} env={byMonth.data} error={byMonth.error} isLoading={byMonth.isLoading} labels={labels} dims={dims}>
+        <Frame title="Months" unitLine={envelopeUnitLine(byMonth.data)} scope={`${periodShort(labels, state.period)} · click a month`} env={byMonth.data} error={byMonth.error} isLoading={byMonth.isLoading} labels={labels} dims={dims}>
           {byMonth.data && <BarChart env={byMonth.data} height={140} labels={labels} dims={dims} colorBy="accent" compact onClick={(c) => setState({ month: c.group?.month ?? null })} selectedIndex={state.month ? byMonth.data.values.findIndex((c) => c.group?.month === state.month) : null} />}
         </Frame>
-        <Frame title="Lineage" scope={`get_spatial_lineage · module × gas × month × view${bodies.lineage.params.month ? ` · ${monthLabel(labels, bodies.lineage.params.month)}` : ""}`} env={lineage.data} error={lineage.error} isLoading={lineage.isLoading} labels={labels} dims={dims} maxRows={24} tableExtra={["module", "gas", "month", "spatial_view", "allocation_status"]} defaultTab="table" />
+        <Frame title="Lineage" unitLine={envelopeUnitLine(lineage.data)} scope={`get_spatial_lineage · module × gas × month × view${bodies.lineage.params.month ? ` · ${monthLabel(labels, bodies.lineage.params.month)}` : ""}`} env={lineage.data} error={lineage.error} isLoading={lineage.isLoading} labels={labels} dims={dims} maxRows={24} tableExtra={["module", "gas", "month", "spatial_view", "allocation_status"]} defaultTab="table" />
         {u?.by_module_gas?.length ? (
           <p className="text-xs text-muted" data-testid="unallocated-line">
             Unallocated at ADM1 (not placed in any district):{" "}

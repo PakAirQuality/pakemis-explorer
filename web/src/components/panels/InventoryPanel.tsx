@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { contextBodies, scopeBody } from "@/lib/requests";
 import { useCompare, useEmissions, useTimeseries } from "@/lib/queries";
-import { configLetter, gasLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { configLetter, envelopeUnitLine, gasLabel, periodShort, sectorLabel } from "@/lib/labels";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
 import { useSurveyPair } from "./ContextPanel";
@@ -31,11 +31,11 @@ export function InventoryPanel() {
         {byCatGas.data && <BarChart env={byCatGas.data} horizontal height={Math.max(240, Math.min(byCatGas.data.values.length, 40) * 18)} labels={labels} dims={dims} compact />}
       </Frame>
       {bodies.compareSL && (
-        <Frame title="S minus L by sector" scope={`national · ${periodShort(labels, state.period)}`} env={compare.data} error={compare.error} isLoading={compare.isLoading} labels={labels} dims={dims}>
+        <Frame title="S minus L by sector" unitLine={envelopeUnitLine(compare.data)} scope={`national · ${periodShort(labels, state.period)}`} env={compare.data} error={compare.error} isLoading={compare.isLoading} labels={labels} dims={dims}>
           {compare.data && <BarChart env={compare.data} horizontal height={Math.max(160, compare.data.values.length * 20)} labels={labels} dims={dims} compact />}
         </Frame>
       )}
-      <Frame title="Fiscal years" scope="national series · click a bar" env={series.data} error={series.error} isLoading={series.isLoading} labels={labels} dims={dims}>
+      <Frame title="Fiscal years" unitLine={envelopeUnitLine(series.data)} scope="national series · click a bar" env={series.data} error={series.error} isLoading={series.isLoading} labels={labels} dims={dims}>
         {series.data && <BarChart env={series.data} height={200} labels={labels} dims={dims} colorBy="accent" onClick={(c) => c.group?.period_id && setState({ period: c.group.period_id })} selectedIndex={series.data.values.findIndex((c) => c.group?.period_id === state.period)} />}
       </Frame>
     </div>
