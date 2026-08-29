@@ -80,7 +80,7 @@ export PAKEMIS_QUERY_PATH=/Users/rehanahmad/Desktop/emissions/src
 export ANTHROPIC_API_KEY=...                 # optional, API shell only: enables Ask PakEmis
 make verify && make api                      # :8000
 make tiles && make raster                    # once per release
-cd web && npm run build && npm run start     # :3000  (NEXT_PUBLIC_BASEMAP_STYLE or the Mapbox token in web/.env.local)
+cd web && npm run build && npm run start     # :3000  (NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local; no map without it)
 ```
 
 ## Verification pass of 2026-08-30 (visible rendering, by the maintainer's session)
@@ -110,3 +110,73 @@ The one live model turn attempted returned HTTP 401 "API key is invalid" from th
 for the key exported in the maintainer's shell; the dock rendered it as a `model_error` card
 (12). A valid key is needed for the two live checks (a cited answer that moves the map; a
 refusal for AR6 by district); the same paths are covered by the FakeModel tests.
+
+## Mapbox globe basemap and the visible Ask entry (2026-08-30, second pass)
+
+The map engine is now Mapbox GL JS v3 (`mapbox-gl` 3.29, `^3.19`), the same as hawanama.org:
+`mapbox://styles/mapbox/streets-v12` with hawanama's `MapRefactored.tsx` flags (`maxPitch 45`,
+`dragRotate false`, `touchPitch false`, `pitchWithRotate false`, `renderWorldCopies false`,
+`antialias false`, no `projection` so v3's globe applies), our layers inserted before the
+style's first `symbol` layer so labels stay above the choropleth, Mapbox's own attribution
+control with our custom line and the wordmark bottom-left. `maplibre-gl`, the worker vendoring
+script and its `dev`/`build`/`postinstall` hooks are gone; `pmtiles` stays as the server-side
+reader. Everything else ported 1:1: `promoteId`, feature-state paint, the hatch `fill-pattern`,
+the `image` raster source (`updateImage`), `fitBounds`, layer-scoped events, `?hidden=render`.
+
+Two facts found while building, neither in the plan:
+
+- **Mapbox GL JS renders nothing without a valid token, whatever the style.** v2+ authenticates
+  every map load (`Map#_authenticate`) and `_revokeAuth` clears the canvas and fires "A valid
+  Mapbox access token is required" even for an OpenFreeMap style URL. The plan's keyless
+  fallback (`NEXT_PUBLIC_BASEMAP_STYLE` without a token) therefore cannot exist under this
+  engine and is not worked around: without the token no map is created, a one-line notice says
+  why, and the legend, panels and dock keep working (the envelope numbers never came from the
+  map). `NEXT_PUBLIC_BASEMAP_STYLE` is now a style override on top of the token.
+- **streets-v12 declares no fog**, so v3's globe showed a bare edge rather than the atmosphere
+  the plan expected as a default. The ops dashboard's fog (`#ffffff` / high `#b8d4e8` / space
+  `#d8f2ff`, horizon-blend 0.08) is set once on load when the style has none; the 3D toggle
+  adds terrain and the tilted camera on top, and switching it off keeps the atmosphere.
+
+PMTiles reach Mapbox GL (which has no `addProtocol`) through two Next route handlers on the
+same origin: `GET /tiles/{adm1|adm2|grid}` returns TileJSON 3.0.0 with absolute tile URLs
+built from the request origin (forwarded host honoured) and the archive's zooms, bounds and
+`vector_layers`; `GET /tiles/<name>/{z}/{x}/{y}.mvt` returns the tile bytes exactly as stored
+with `Content-Type: application/vnd.mapbox-vector-tile`, `Content-Encoding: gzip` when the
+archive's `tileCompression` is gzip (the directory walk mirrors the package's `getZxyAttempt`
+without its decompression), 204 for a tile the archive does not hold, a year of immutable
+cache, and 404 for any other name. Next serves `public/` files before dynamic routes, so
+`/tiles/TILES.json`, `bboxes.json`, `*.pmtiles` and `raster/*` are unchanged (checked with
+curl). `web/src/lib/pmtilesServer.test.ts` runs against the real archives.
+
+Discoverability: an accent "Ask PakEmis" pill at the map's top-right (the rail button stays),
+a one-time hint chip under the scope chips remembered in `localStorage`, and a README section
+"Talking to the agent". `view3d` joined the URL state.
+
+Verification (Chrome at 1440 px, `?hidden=render`, API on :8000):
+
+```
+cd web && npm run build     clean: /tiles/[name] and /tiles/[name]/[z]/[x]/[y] as dynamic routes
+cd web && npx vitest run    7 files, 42 tests (pmtilesServer 7, AskEntry 3, urlState +1, the rest as before)
+cd web && npx eslint        0 errors, the same 2 pre-existing warnings
+curl -s localhost:3000/tiles/adm1            TileJSON, tiles ["http://localhost:3000/tiles/adm1/{z}/{x}/{y}.mvt"], zoom 0-8, Pakistan bounds
+curl -sI localhost:3000/tiles/adm2/6/44/26.mvt   200, vnd.mapbox-vector-tile, gzip, immutable
+```
+
+Seen rendered with the token: the globe with the atmosphere halo and streets-v12 labels above
+the choropleth (`14-globe.jpg`, taken at zoom 2.1 by script because the UI keeps hawanama's
+`minZoom 3.5`, where the globe fills the viewport; `14b-globe-national.jpg` is the UI's own
+national view at 3.5, curvature visible, `getProjection().name === "globe"`); Punjab hover
+`228.7168 Mt CO2e AR5`; `?level=adm2&sector=power` hatched as bounded intervals (Lahore's
+feature-state `[0.5865, 0.5866]`, bounded); `?level=grid&gas=CH4&month=202401&cam=73.5,31.2,6.4`
+shows the raster below the labels and a cell click reads `0.04928880 Gg` through
+`get_grid_cell` with its receipt; `?view3d=1` at zoom 7.2 over the Karakoram foothills has
+`mapbox-dem` terrain, pitch 30, bearing -10 and fog with the choropleth draped
+(`15-3d-terrain.jpg`); the Ask pill opens the dock (`ask=1`). Every `api.mapbox.com` and
+`events.mapbox.com` request carries the token only as the `access_token` query parameter; as a
+`NEXT_PUBLIC_` variable it is compiled into the client bundle by design and appears in no log,
+screenshot or commit. Without the token (the server started with the variable empty) the notice
+shows and no map is created; the legend and panels are unchanged.
+
+Not verified: a live model turn (no valid `ANTHROPIC_API_KEY`; the dock showed the disabled
+card), and Mapbox's per-load billing on the user's token, which this engine incurs on every
+page load.

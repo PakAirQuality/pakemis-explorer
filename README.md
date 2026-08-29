@@ -17,7 +17,7 @@ different views of the same verified release. The rule this repository enforces 
   the `limitation_id`), never approximated. The agent reports refusals verbatim.
 - A receipt is replayed, never served from a stored result. `GET /v1/receipt/{r}` recomputes the
   stored canonical request and fails loudly if the receipt no longer reproduces.
-- Map tiles and rasters carry geometry and identifiers only; values are painted through MapLibre
+- Map tiles and rasters carry geometry and identifiers only; values are painted through Mapbox GL
   `feature-state` from `/v1/query/emissions` envelopes; the grid raster is visual shading and
   every grid value shown comes from `get_grid_cell`.
 - The agent calls only the release's eleven typed functions (plus `set_map_view`, which runs no
@@ -44,8 +44,9 @@ tiles/build_tiles.py    ADM1, ADM2 and 0.05 degree grid PMTiles keyed by name / 
                         bboxes.json; --raster: visual-only shading PNGs of the two grid cubes
 web/                    Next.js 15 + TypeScript, map-first: one screen (/) whose state lives in the
                         URL (lib/urlState.ts), request bodies as pure functions of it
-                        (lib/requests.ts), MapLibre + pmtiles choropleth painted through
-                        feature-state (components/map), detail card and rail panels
+                        (lib/requests.ts), Mapbox GL JS v3 choropleth painted through
+                        feature-state (components/map; the PMTiles reach it as TileJSON from
+                        app/tiles/[name], lib/pmtilesServer.ts), detail card and rail panels
                         (components/detail, components/panels), the Ask dock (components/ask),
                         /data (receipt replay, downloads, digests, evidence browser), /r/<receipt>
 ```
@@ -53,12 +54,19 @@ web/                    Next.js 15 + TypeScript, map-first: one screen (/) whose
 ## The screen
 
 `/` is one map-first screen: a 48 px rail (Explore, Inventory, Compare, Evidence, Data, Ask),
-a sliding 370 px panel, the full-bleed map with floating scope chips, layer toggle, time rail,
-legend and context pill, a detail card that slides in over the map's right edge, and a right
-column that is the national context panel or, with `ask=1`, the Ask dock. Every control reads
-and writes the URL (`level`, `period`, `month`, `sector`, `gas`, `config`, `gwp`, `view`,
-`geo`, `cell`, `panel`, `ask`, `c`, `cam`, `raster`), so a copied URL opens with identical
-receipts. Spatial products exist for FY2023-24 only: other years drive national numbers and
+a sliding 370 px panel, the full-bleed map with floating scope chips, the Ask PakEmis pill,
+raster / 3D / frame buttons, time rail, legend and context pill, a detail card that slides in
+over the map's right edge, and a right column that is the national context panel or, with
+`ask=1`, the Ask dock. Every control reads and writes the URL (`level`, `period`, `month`,
+`sector`, `gas`, `config`, `gwp`, `view`, `geo`, `cell`, `panel`, `ask`, `c`, `cam`, `raster`,
+`view3d`), so a copied URL opens with identical receipts.
+
+The map is hawanama.org's: Mapbox GL JS v3 rendering `mapbox://styles/mapbox/streets-v12`
+with hawanama's flags (maxPitch 45, no drag-rotate, no world copies) and v3's default globe
+projection, so the national view is a globe with the atmosphere halo below zoom ~5 and flattens
+as you zoom into a province; the choropleth, hatch and grid raster sit below the style's label
+layers. The 3D button (`view3d=1`) applies the ops dashboard's recipe: `mapbox-dem` terrain
+(exaggeration 1.5 tapering to 1.0), fog, pitch 30, bearing -10, with the choropleth draped. Spatial products exist for FY2023-24 only: other years drive national numbers and
 show the typed refusal in the legend's place.
 
 ## Fetch and verify a release
@@ -81,10 +89,14 @@ make tiles    # once per release: PMTiles + bboxes.json into web/public/tiles (n
 make raster   # once per release: 78 grid-shading PNGs (2 configurations x 3 gases x 12 months + annual)
               # into web/public/tiles/raster; visual only, every value shown comes from get_grid_cell
 make web      # http://localhost:3000
-              # basemap: put NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (gitignored, never
-              # committed) for Mapbox light-v11 style tiles; or NEXT_PUBLIC_BASEMAP_STYLE=<a keyless
-              # vector style URL, e.g. an OpenFreeMap style>; with neither the map has a plain
-              # background and a one-line notice. The tiles and rasters are the same either way.
+              # basemap: NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (gitignored, never committed)
+              # renders Mapbox streets-v12 on v3's globe. Mapbox GL JS v3 authenticates every map
+              # load and renders NOTHING without a valid token, whatever the style, so there is no
+              # keyless map: without it the screen shows a one-line notice and no map (legend, panels
+              # and the dock still work). NEXT_PUBLIC_BASEMAP_STYLE=<style URL> overrides the style
+              # (still billed to the token). The PMTiles are served to the browser as TileJSON by
+              # the app's own /tiles/<adm1|adm2|grid> route handlers; TILES.json, bboxes.json and
+              # the rasters stay static files under the same prefix.
 make types    # regenerate web/src/types.gen.ts after any API change (CI checks openapi.json is fresh)
 make test     # api pytest + web vitest
 docker compose up   # api + web (mounts the release and the query core read-only)
@@ -105,6 +117,16 @@ reason. Caps: `PAKEMIS_ASK_MAX_TURNS` (8), `PAKEMIS_ASK_MAX_TOOL_CALLS` (12),
 
 Python needs `fastapi uvicorn pydantic>=2 duckdb pyarrow netCDF4 numpy Pillow httpx pytest
 anthropic>=0.93 sse-starlette>=3.3` (`api/requirements.txt`).
+
+## Talking to the agent
+
+Open `/?ask=1`, click the accent **Ask PakEmis** pill at the map's top-right, the Ask button
+at the bottom of the rail, or the one-time hint under the scope chips (dismissed once, kept
+in `localStorage`). The dock needs a **valid** `ANTHROPIC_API_KEY` exported in the shell that
+starts the API (`export ANTHROPIC_API_KEY=...; make api`); the web app never sees it. Without
+it `/v1/release.agent.enabled` is false and the dock shows the disabled card with the reason.
+With an invalid key the provider's answer (a 401 "API key is invalid") is shown verbatim in
+the dock as a model-error card; nothing is retried or hidden.
 
 ## The API
 
@@ -192,4 +214,5 @@ Licences: code MIT; data and text CC-BY-4.0; OSM-derived tables ODbL (see the re
   Calculation, CSV, RECEIPT.json, Cite; a footer holding only a receipt replays it on demand).
 
 Screenshots of the screen at 1440 px and 390 px are under `web/docs/screenshots/`
-(`13-ask-disabled.jpg` is the dock without the key).
+(`13-ask-disabled.jpg` is the dock without the key; `14-globe.jpg` the globe with its
+atmosphere, `15-3d-terrain.jpg` the 3D view).
