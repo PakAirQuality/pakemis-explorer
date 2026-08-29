@@ -91,6 +91,11 @@ function post(body: unknown): RequestInit {
   return { method: "POST", body: JSON.stringify(body) };
 }
 
+/** The URL of a receipt: the /data page replays it (static export has no dynamic /r/<receipt> route). */
+export function receiptHref(receipt: string): string {
+  return `/data?receipt=${encodeURIComponent(receipt)}`;
+}
+
 export const api = {
   release: async (): Promise<ReleaseInfo> => ReleaseSchema.parse(await call("/release")),
   queryEmissions: (body: QueryEmissions) => envelope("/query/emissions", post(body)),

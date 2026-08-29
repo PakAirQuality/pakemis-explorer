@@ -2,12 +2,14 @@ import "@testing-library/jest-dom/vitest";
 /**
  * The static export has no server routes: no link points at /r/<receipt> (a receipt's URL is
  * /data?receipt=<hash>), the app has no app/tiles or app/r route folders and no PMTiles reader,
- * and the ReceiptFooter's Replay item links to /data?receipt=.
+ * and the Result details drawer's "Reproduce this result" link points at /data?receipt=.
  */
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import type { Envelope } from "@/lib/envelope";
+import { envelope } from "./fixtures";
 import { ReceiptFooter, receiptHref } from "@/components/ui/ReceiptFooter";
 
 const SRC = path.resolve(__dirname, "..");
@@ -36,11 +38,12 @@ describe("static-export link scheme", () => {
   it("a receipt's URL is /data?receipt=<hash>", () => {
     const id = "0123456789abcdef0123456789abcdef";
     expect(receiptHref(id)).toBe(`/data?receipt=${id}`);
-    render(<ReceiptFooter receipt={id} />);
-    fireEvent.click(screen.getByLabelText("Receipt menu"));
-    const replay = screen.getByRole("menu").querySelector("a[href^='/data?receipt=']");
+    render(<ReceiptFooter env={envelope([{ display: "1.0" }], { receipt: id }) as unknown as Envelope} />);
+    fireEvent.click(screen.getByTestId("result-details"));
+    const drawer = screen.getByRole("dialog");
+    const replay = drawer.querySelector("a[href^='/data?receipt=']");
     expect(replay).not.toBeNull();
     expect(replay).toHaveAttribute("href", `/data?receipt=${id}`);
-    expect(screen.getByRole("menu").querySelector("a[href^='/r/']")).toBeNull();
+    expect(drawer.querySelector("a[href^='/r/']")).toBeNull();
   });
 });

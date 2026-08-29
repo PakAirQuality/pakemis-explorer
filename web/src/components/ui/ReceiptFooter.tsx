@@ -1,86 +1,46 @@
 "use client";
 /**
- * The receipt, demoted: one muted mono line (first 8 hex, full on hover) and a kebab menu with
- * Copy, Replay (/data?receipt=<receipt>, the receipt's URL), Evidence, Calculation, CSV,
- * RECEIPT.json, Cite. The menu's
- * Evidence / Calculation / Cite open the EnvelopeDrawer over the envelope itself.
- */
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
-import { api } from "@/lib/api";
-import type { Envelope } from "@/lib/envelope";
-import { EnvelopeDrawer, type DrawerTab } from "./EnvelopeDrawer";
-
-/**
+ * The source line under every result: one quiet text button, "Result details", that opens the
+ * EnvelopeDrawer (Sources, Filters, Calculation, API request, Download, Cite; the Result ID and
+ * the replay link at its foot). The receipt is not printed here; it is the drawer's Result ID.
+ *
  * `env` is the envelope in hand; a consumer that holds only a receipt (the Ask dock's tool
  * results carry the receipt and the cells, not the envelope) passes `receipt`, and the drawer
- * replays it through GET {API_BASE}/receipt/{r} when opened.
+ * replays it through GET {API_BASE}/receipt/{r} when opened. `labels` name the ids in the
+ * Filters tab; the Explorer's context supplies them when the caller does not.
  */
-/** The URL of a receipt: the /data page replays it (static export has no dynamic /r/<receipt> route). */
-export function receiptHref(receipt: string): string {
-  return `/data?receipt=${encodeURIComponent(receipt)}`;
-}
+import { useContext, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { api } from "@/lib/api";
+import type { Envelope } from "@/lib/envelope";
+import type { Labels } from "@/lib/release";
+import { ExplorerContext } from "@/components/ExplorerContext";
+import { EnvelopeDrawer } from "./EnvelopeDrawer";
 
-export function ReceiptFooter({ env = null, receipt, className = "" }: { env?: Envelope | null; receipt?: string; className?: string }) {
+export { receiptHref } from "@/lib/api";
+
+export const RESULT_DETAILS_TITLE = "Sources · filters · calculation · API request";
+
+export function ReceiptFooter({ env = null, receipt, className = "", labels }: { env?: Envelope | null; receipt?: string; className?: string; labels?: Labels }) {
+  const ctx = useContext(ExplorerContext);
   const [open, setOpen] = useState(false);
-  const [drawer, setDrawer] = useState<DrawerTab | null>(null);
-  const [copied, setCopied] = useState(false);
   const [replayed, setReplayed] = useState<Envelope | null>(null);
   const [replayError, setReplayError] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
   const id = env?.receipt ?? receipt ?? "";
   const shown = env ?? replayed;
-  const openDrawer = (tab: DrawerTab) => {
-    setDrawer(tab);
-    setOpen(false);
+  const openDrawer = () => {
+    setOpen(true);
     if (!env && !replayed && id) {
       api.receipt(id).then(setReplayed, (e) => setReplayError(String((e as Error)?.message ?? e)));
     }
   };
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* clipboard unavailable: the full receipt is in the title */
-    }
-    setOpen(false);
-  };
-  const item = "block w-full px-3 py-1.5 text-left text-xs hover:bg-canvas";
   return (
-    <div ref={ref} className={`relative flex items-center justify-between gap-2 text-micro normal-case tracking-normal ${className}`} data-testid="receipt-footer">
-      <span className="mono truncate text-muted" title={`receipt ${id} · replayable at /data?receipt=${id}`}>
-        receipt <span data-receipt={id}>{id.slice(0, 8)}</span>
-        {copied ? " · copied" : ""}
-      </span>
-      <button type="button" aria-label="Receipt menu" onClick={() => setOpen((o) => !o)} className="pill flex h-5 w-5 items-center justify-center text-muted hover:bg-canvas hover:text-ink">
-        <MoreHorizontal size={14} />
+    <div className={`flex items-center gap-2 text-micro normal-case tracking-normal ${className}`} data-testid="receipt-footer" data-receipt={id}>
+      <button type="button" onClick={openDrawer} title={RESULT_DETAILS_TITLE} className="flex items-center gap-0.5 text-muted hover:text-ink" data-testid="result-details">
+        Result details <ChevronRight size={12} aria-hidden="true" />
       </button>
-      {open && (
-        <div className="card absolute bottom-6 right-0 z-30 w-44 py-1" role="menu">
-          <button className={item} onClick={copy}>Copy receipt</button>
-          <Link className={item} href={receiptHref(id)} onClick={() => setOpen(false)}>Replay {id.slice(0, 8)}</Link>
-          <button className={item} onClick={() => openDrawer("evidence")}>Evidence</button>
-          <button className={item} onClick={() => openDrawer("calculation")}>Calculation</button>
-          <a className={item} href={api.downloadCsvUrl(id)} onClick={() => setOpen(false)}>CSV</a>
-          <a className={item} href={api.downloadReceiptUrl(id)} onClick={() => setOpen(false)}>RECEIPT.json</a>
-          <button className={item} onClick={() => openDrawer("cite")}>Cite</button>
-        </div>
-      )}
-      {drawer && shown && <EnvelopeDrawer env={shown} tab={drawer} onClose={() => setDrawer(null)} />}
-      {drawer && !shown && (
-        <span className="ml-2 text-xs text-muted" role="status">{replayError ? `replay failed: ${replayError}` : "replaying the receipt…"}</span>
-      )}
+      {open && shown && <EnvelopeDrawer env={shown} tab="sources" labels={labels ?? ctx?.labels} onClose={() => setOpen(false)} />}
+      {open && !shown && <span className="text-muted" role="status">{replayError ? `could not load the result: ${replayError}` : "loading the result…"}</span>}
     </div>
   );
 }

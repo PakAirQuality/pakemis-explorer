@@ -4,7 +4,8 @@ import "@testing-library/jest-dom/vitest";
  * the subtitle built from the envelope (unit as words, scope with the LULUCF status, the year
  * basis); the x-axis carries every period's short label; the ends and the reference year are
  * labelled with their displays; there is no y-axis text at all, so the only decimals in the
- * figure are the envelope's displays; the receipt line sits under the figure; the tooltip
+ * figure are the envelope's displays; the Result details line sits under the figure unless
+ * `showReceipt` is false, and a caller may write the subtitle; the tooltip
  * formatter prints the cell's display and unit, never the axis value; under 420 px only the
  * first, the reference and the last year are labelled.
  */
@@ -67,8 +68,17 @@ describe("TrendChart", () => {
     const texts = svgTexts(chart);
     for (const id of Object.keys(SHORT)) expect(texts).toContain(SHORT[id]);
     for (const c of CELLS) expect(texts).toContain(c.display);
-    expect(screen.getByTestId("receipt-footer")).toHaveTextContent(`receipt ${env.receipt.slice(0, 8)}`);
+    expect(screen.getByTestId("receipt-footer")).toHaveTextContent("Result details");
+    expect(screen.getByTestId("receipt-footer")).toHaveAttribute("data-receipt", env.receipt);
     expect(chart.textContent).not.toContain("FY");
+  });
+  it("a written subtitle replaces the built one, and showReceipt={false} drops the Result details line", async () => {
+    await mount({ title: "Pakistan greenhouse-gas emissions", subtitle: "Million tonnes CO₂e (AR5), excluding land use", showReceipt: false });
+    expect(screen.getByTestId("trend-title")).toHaveTextContent("Pakistan greenhouse-gas emissions");
+    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e (AR5), excluding land use");
+    expect(screen.getByTestId("trend-subtitle")).not.toHaveTextContent("years run");
+    expect(screen.queryByTestId("receipt-footer")).toBeNull();
+    expect(screen.getByTestId("trend-figure").textContent).not.toContain("receipt");
   });
   it("prints no number it computed: every decimal in the SVG is an envelope display, and there is no y-axis text", async () => {
     const { chart } = await mount(); // the reference is the last year: the ends are labelled, the middle point is not

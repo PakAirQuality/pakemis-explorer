@@ -169,7 +169,7 @@ describe("AskDock", () => {
     expect(kinds).toEqual(["thinking-card", "tool-card", "tool-card", "map-action", "tool-card", "refusal-card", "answer-bubble", "usage-line"]);
     // thinking merged from two deltas, collapsed
     expect(screen.getByTestId("thinking-card")).toHaveTextContent("The user asks for Punjab's agriculture in FY2023-24; query_emissions at adm1 answers it.");
-    // the tool card: humanised name, chips through the labels, the result's display and unit verbatim, the receipt footer
+    // the tool card: humanised name, chips through the labels, the result's display and unit verbatim, the Result details line
     const cards = screen.getAllByTestId("tool-card");
     expect(cards[0]).toHaveTextContent("Query emissions");
     expect(within(cards[0]).getByText("Agriculture")).toBeTruthy();
@@ -177,7 +177,9 @@ describe("AskDock", () => {
     expect(cell).toHaveTextContent(`${DISPLAY} ${UNIT}`);
     expect(cell).toHaveTextContent("Punjab");
     expect(within(cards[0]).getByText("LULUCF is excluded")).toBeTruthy();
-    expect(within(cards[0]).getByTestId("receipt-footer")).toHaveTextContent(RECEIPT.slice(0, 8));
+    expect(within(cards[0]).getByTestId("receipt-footer")).toHaveTextContent("Result details");
+    expect(within(cards[0]).getByTestId("receipt-footer")).toHaveAttribute("data-receipt", RECEIPT);
+    expect(within(cards[0]).getByTestId("receipt-footer").textContent).not.toContain(RECEIPT.slice(0, 8));
     // the cited number is the tool result's display, and hovering it highlights that card and cell
     const cites = screen.getAllByTestId("cite");
     expect(cites.map((c) => c.textContent)).toEqual([DISPLAY, UNIT]);

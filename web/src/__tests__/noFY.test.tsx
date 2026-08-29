@@ -51,7 +51,7 @@ describe("no FY anywhere", () => {
       </Providers>,
     );
     await screen.findByTestId("welcome-modal");
-    await screen.findByTestId("intro-kpi");
+    await screen.findByTestId("intro-question");
     await screen.findByTestId("bar-chart");
     expect(RELEASE.labels.periods["FY2023-24"].short).toBe("2023–24");
     const text = document.body.textContent ?? "";
@@ -62,9 +62,10 @@ describe("no FY anywhere", () => {
     const periodChip = screen.getAllByTestId("scope-chip").find((c) => c.textContent === "2023–24");
     expect(periodChip).toBeTruthy();
     expect(periodChip).toHaveAttribute("title", "July 2023 – June 2024");
-    expect(screen.getByTestId("intro-facts")).toHaveTextContent("Two years, 2020–21 to 2023–24");
-    expect(screen.getByTestId("intro-sectors-title")).toHaveTextContent("Where 2023–24’s emissions came from");
-    expect(screen.getByTestId("intro-example")).toHaveTextContent("in 2023–24.");
+    expect(screen.getByRole("heading", { level: 1, name: "Pakistan greenhouse-gas emissions, 2020–21 to 2023–24" })).toBeInTheDocument();
+    expect(screen.getByTestId("intro-facts")).toHaveTextContent("2 fiscal years");
+    expect(screen.getByTestId("intro-sectors-title")).toHaveTextContent("Emissions by sector, 2023–24");
+    expect(screen.getByTestId("intro-question")).toHaveTextContent("since 2020–21?");
     // nothing in any title attribute either
     for (const el of Array.from(document.body.querySelectorAll("[title]"))) expect(el.getAttribute("title")).not.toContain("FY");
   });

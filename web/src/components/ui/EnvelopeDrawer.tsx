@@ -1,27 +1,63 @@
 "use client";
 /**
- * The envelope, opened: Evidence (provenance tables, unallocated mass, limitations hit, defaults
- * applied, uncertainty), Calculation (SQL in mono, formula, result_sha256), Download, Cite.
- * Everything shown is a field of the envelope as received.
+ * Result details: a result's envelope opened as six tabs. Sources (provenance tables,
+ * unallocated mass, limitations hit, uncertainty, completeness), Filters (the request's context
+ * as the API returned it: periods, configuration, GWP basis, geography, view, basis, defaults
+ * applied), Calculation (SQL in mono, formula, result_sha256), API request (the canonical
+ * request JSON and a curl line against the prefixed API base), Download, Cite. The foot carries
+ * the Result ID (the receipt, in full, with a copy button) and the replay link. Everything shown
+ * is a field of the envelope as received; the labels, when given, only name ids.
  */
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
-import { api } from "@/lib/api";
+import Link from "next/link";
+import { Copy, X } from "lucide-react";
+import { absoluteApiBase, api, receiptHref } from "@/lib/api";
 import type { Envelope } from "@/lib/envelope";
+import { apiCallOf, curlLine } from "@/lib/requests";
+import { releaseLabels, type Labels } from "@/lib/release";
+import { configLabel, geographyName, periodShort, viewLabel } from "@/lib/labels";
 
-export type DrawerTab = "evidence" | "calculation" | "download" | "cite";
-const TABS: [DrawerTab, string][] = [["evidence", "Evidence"], ["calculation", "Calculation"], ["download", "Download"], ["cite", "Cite"]];
+export type DrawerTab = "sources" | "filters" | "calculation" | "request" | "download" | "cite";
+export const DRAWER_TABS: [DrawerTab, string][] = [["sources", "Sources"], ["filters", "Filters"], ["calculation", "Calculation"], ["request", "API request"], ["download", "Download"], ["cite", "Cite"]];
 
 /** Line breaks before the SQL clauses so the statement reads; no token is changed. */
 export function formatSql(sql: string): string {
   return sql.replace(/\s+(FROM|WHERE|GROUP BY|ORDER BY|HAVING|LIMIT|LEFT JOIN|JOIN|UNION ALL|UNION|WITH|SELECT)\b/g, "\n$1").replace(/\s+(AND|OR)\b/g, "\n  $1").trim();
 }
 
+/** The canonical request JSON, indented; the string as received when it does not parse. */
+export function prettyRequest(request: string): string {
+  try {
+    return JSON.stringify(JSON.parse(request), null, 2);
+  } catch {
+    return request;
+  }
+}
+
 type Prov = { tables?: { table?: string; path: string; sha256: string | null }[] };
 type Unalloc = { level?: string; by_province?: { province: string; exact: string; n_rows: number }[]; by_module_gas?: { module: string; gas: string; exact: string }[]; note?: string };
 
-export function EnvelopeDrawer({ env, tab: initial, onClose }: { env: Envelope; tab: DrawerTab; onClose: () => void }) {
+const NO_LABELS = releaseLabels(undefined);
+
+/** The Filters rows: the envelope's context, ids named through the labels where they exist. */
+export function filterRows(env: Envelope, labels: Labels = NO_LABELS): { name: string; value: string; id?: string }[] {
+  const c = env.context;
+  const periods = c.periods ?? [];
+  const ids = c.geography_ids ?? [];
+  const rows: { name: string; value: string; id?: string }[] = [];
+  rows.push({ name: periods.length === 1 ? "Period" : "Periods", value: periods.map((p) => periodShort(labels, p)).join(", ") || "not set" });
+  if (c.configuration_id) rows.push({ name: "Configuration", value: configLabel(labels, c.configuration_id), id: c.configuration_id });
+  if (c.gwp_basis) rows.push({ name: "GWP basis", value: c.gwp_basis });
+  rows.push({ name: "Geography", value: [c.geography_level || "not set", ids.map((g) => geographyName(labels, g)).join(", ")].filter(Boolean).join(": "), id: ids.length ? ids.join(", ") : undefined });
+  if (c.spatial_view) rows.push({ name: "Spatial view", value: viewLabel(labels, c.spatial_view).split(":")[0], id: c.spatial_view });
+  if (c.basis) rows.push({ name: "Basis", value: c.basis });
+  rows.push({ name: "Defaults applied", value: c.defaults_applied.length ? c.defaults_applied.join(", ") : "none" });
+  return rows;
+}
+
+export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: Envelope; tab: DrawerTab; onClose: () => void; labels?: Labels }) {
   const [tab, setTab] = useState<DrawerTab>(initial);
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -31,23 +67,33 @@ export function EnvelopeDrawer({ env, tab: initial, onClose }: { env: Envelope; 
   const unalloc = env.unallocated as Unalloc;
   const calc = env.calculation as { sql?: string; kind?: string; [k: string]: unknown };
   const unit = env.values[0]?.unit ?? "";
+  const call = apiCallOf(env.request_type, env.request, env.receipt);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(env.receipt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard unavailable: the full id is on screen */
+    }
+  };
   return (
-    <div className="fixed inset-0 z-[90] flex justify-end bg-ink/30" onClick={onClose} role="dialog" aria-label="Envelope">
+    <div className="fixed inset-0 z-[90] flex justify-end bg-ink/30" onClick={onClose} role="dialog" aria-label="Result details">
       <div className="flex h-full w-full max-w-xl flex-col bg-white shadow-card" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
-            <div className="micro">{env.request_type}</div>
-            <div className="mono text-xs text-muted">receipt {env.receipt}</div>
+            <div className="text-sm font-semibold text-ink">Result details</div>
+            <div className="mono text-xs text-muted">{env.request_type}</div>
           </div>
           <button aria-label="Close" onClick={onClose} className="pill p-1 text-muted hover:bg-canvas hover:text-ink"><X size={16} /></button>
         </div>
-        <div className="flex gap-1 border-b border-line px-3 py-2">
-          {TABS.map(([id, label]) => (
-            <button key={id} onClick={() => setTab(id)} className={`pill px-3 py-1 text-xs ${tab === id ? "bg-ink text-white" : "text-muted hover:bg-canvas"}`}>{label}</button>
+        <div className="flex flex-wrap gap-1 border-b border-line px-3 py-2" role="tablist">
+          {DRAWER_TABS.map(([id, label]) => (
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`pill px-3 py-1 text-xs ${tab === id ? "bg-ink text-white" : "text-muted hover:bg-canvas"}`}>{label}</button>
           ))}
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-3 text-sm">
-          {tab === "evidence" && (
+        <div className="flex-1 overflow-y-auto px-4 py-3 text-sm" data-testid={`drawer-${tab}`}>
+          {tab === "sources" && (
             <div className="space-y-4">
               <section>
                 <h4 className="micro mb-1">Provenance</h4>
@@ -83,12 +129,6 @@ export function EnvelopeDrawer({ env, tab: initial, onClose }: { env: Envelope; 
                   {!env.limitations_hit.length && <li className="text-xs text-muted">none</li>}
                 </ul>
               </section>
-              {env.context.defaults_applied.length > 0 && (
-                <section>
-                  <h4 className="micro mb-1">Defaults applied by the contract</h4>
-                  <p className="mono text-xs">{env.context.defaults_applied.join(", ")}</p>
-                </section>
-              )}
               {Object.keys(env.uncertainty).length > 0 && (
                 <section>
                   <h4 className="micro mb-1">Uncertainty</h4>
@@ -103,6 +143,21 @@ export function EnvelopeDrawer({ env, tab: initial, onClose }: { env: Envelope; 
               )}
             </div>
           )}
+          {tab === "filters" && (
+            <table className="w-full text-xs" data-testid="filters-table">
+              <tbody>
+                {filterRows(env, labels).map((r) => (
+                  <tr key={r.name} className="border-b border-line align-top">
+                    <th scope="row" className="w-32 py-1.5 pr-3 text-left font-semibold text-ink">{r.name}</th>
+                    <td className="py-1.5">
+                      {r.value}
+                      {r.id && r.id !== r.value ? <span className="mono ml-2 text-muted">{r.id}</span> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           {tab === "calculation" && (
             <div className="space-y-3">
               {calc.kind && <p className="text-xs text-muted">kind <span className="mono">{String(calc.kind)}</span></p>}
@@ -114,10 +169,21 @@ export function EnvelopeDrawer({ env, tab: initial, onClose }: { env: Envelope; 
               <p className="text-xs">values {env.values.length} · result_sha256 <span className="mono break-all">{env.result_sha256}</span></p>
             </div>
           )}
+          {tab === "request" && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted">The canonical request this result answers, as the envelope carries it.</p>
+              <pre className="mono whitespace-pre-wrap break-all rounded bg-canvas p-2 text-xs" data-testid="request-json">{prettyRequest(env.request)}</pre>
+              <p className="text-xs text-muted">
+                The same call against the API, returning the same envelope and Result ID
+                {env.context.defaults_applied.length ? <>: the fields the contract filled by default ({env.context.defaults_applied.join(", ")}) are left out so that it fills them again</> : null}.
+              </p>
+              <pre className="mono whitespace-pre-wrap break-all rounded bg-canvas p-2 text-xs" data-testid="request-curl">{curlLine(absoluteApiBase(), call)}</pre>
+            </div>
+          )}
           {tab === "download" && (
             <div className="space-y-2 text-sm">
               <p><a className="text-accent underline" href={api.downloadCsvUrl(env.receipt)}>canonical CSV</a> · <a className="text-accent underline" href={api.downloadReceiptUrl(env.receipt)}>RECEIPT.json</a></p>
-              <p className="text-xs text-muted">Both are served by replaying receipt {env.receipt}; the download restates every provenance digest and the licence note.</p>
+              <p className="text-xs text-muted">Both are served by replaying this result from its Result ID; the download restates every provenance digest and the licence note.</p>
             </div>
           )}
           {tab === "cite" && (
@@ -126,6 +192,18 @@ export function EnvelopeDrawer({ env, tab: initial, onClose }: { env: Envelope; 
               <p className="text-xs text-muted">{env.context.release} · {env.context.basis} · {env.context.configuration_id} · {env.context.gwp_basis} · LULUCF {env.context.lulucf.status} ({env.context.lulucf.notation_key})</p>
             </div>
           )}
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
+          <div className="min-w-0">
+            <div className="micro">Result ID</div>
+            <div className="mono break-all text-xs text-ink" data-testid="result-id">{env.receipt}</div>
+          </div>
+          <div className="flex shrink-0 items-center gap-4">
+            <button type="button" onClick={copy} aria-label="Copy the Result ID" className="flex items-center gap-1 text-xs text-muted hover:text-ink">
+              <Copy size={12} /> {copied ? "Copied" : "Copy"}
+            </button>
+            <Link href={receiptHref(env.receipt)} className="text-xs font-semibold text-accent hover:underline" data-testid="reproduce-link">Reproduce this result →</Link>
+          </div>
         </div>
       </div>
     </div>

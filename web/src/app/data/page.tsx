@@ -68,6 +68,7 @@ function Data() {
 
         <section className="card mb-5 p-4">
           <h2 className="text-md font-semibold">Replay a receipt</h2>
+          <p className="mt-1 text-xs text-muted">A result&apos;s receipt is its Result ID, shown under &ldquo;Result details&rdquo; wherever the Explorer prints the result; replaying it returns the same envelope.</p>
           <form
             className="mt-2 flex flex-wrap items-center gap-2"
             onSubmit={(e) => {
@@ -75,7 +76,7 @@ function Data() {
               setReceiptParam(draft.trim() || null);
             }}
           >
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={receiptParam ?? "32 hex characters"} className="mono w-96 max-w-full rounded border border-line px-2 py-1 text-xs" aria-label="receipt" />
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={receiptParam ?? "Result ID: 32 hex characters"} className="mono w-96 max-w-full rounded border border-line px-2 py-1 text-xs" aria-label="Result ID" />
             <button type="submit" className="pill bg-ink px-3 py-1 text-xs text-white">Replay</button>
             {receiptParam && <span className="mono text-xs text-muted">?receipt={receiptParam}</span>}
           </form>
@@ -85,7 +86,7 @@ function Data() {
             </div>
           )}
           {replay.error && <div className="mt-3"><RefusalCard error={replay.error} what="the receipt" /></div>}
-          {receiptParam && receiptParam.length !== 32 && <p className="mt-2 text-xs text-warn">A receipt is 32 hex characters.</p>}
+          {receiptParam && receiptParam.length !== 32 && <p className="mt-2 text-xs text-warn">A Result ID is 32 hex characters.</p>}
         </section>
 
         <section className="mb-5">

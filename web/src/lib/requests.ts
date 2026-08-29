@@ -104,8 +104,18 @@ export function compareBody(s: ExplorerState, left: Partial<QueryEmissions>, rig
   return { left: compact({ ...base, ...left }), right: compact({ ...base, ...right }), mode };
 }
 
-export function seriesBody(s: ExplorerState, step: "annual" | "monthly" = "annual"): TimeseriesRequest {
+export function seriesBody(s: Pick<ExplorerState, "config" | "gwp" | "sector" | "gas">, step: "annual" | "monthly" = "annual"): TimeseriesRequest {
   return { query: compact({ configuration_id: s.config, gwp_basis: s.gwp, sectors: s.sector ? [s.sector] : [], gases: s.gas ? [s.gas] : [] }), step };
+}
+
+/** One sector's annual series under the configuration and GWP basis given, every gas (the intro's example). */
+export function sectorSeriesBody(s: Pick<ExplorerState, "config" | "gwp">, sector: string): TimeseriesRequest {
+  return seriesBody({ config: s.config, gwp: s.gwp, sector, gas: null });
+}
+
+/** The transport series: `get_timeseries`, `sectors: ["transport"]`, annual, under the configuration and GWP basis given. */
+export function transportSeriesBody(s: Pick<ExplorerState, "config" | "gwp">): TimeseriesRequest {
+  return sectorSeriesBody(s, "transport");
 }
 
 export type ContextBodies = { national: QueryEmissions; bySector: QueryEmissions; byGas: QueryEmissions; series: TimeseriesRequest; compareSL: CompareRequest | null };
@@ -210,6 +220,76 @@ export function stateFromRequest(req: NamedRequest): Partial<ExplorerState> {
     return stateFromRequest({ name: "query_emissions", body: b.left as Record<string, unknown> });
   }
   return out;
+}
+
+export type ApiCall = { method: "GET" | "POST"; path: string; body: string | null };
+
+/** The six functions the API takes as a POST body, by the envelope's `request_type`. */
+const POST_ROUTES: Record<string, string> = {
+  query_emissions: "/query/emissions",
+  compare_emissions: "/query/compare",
+  get_timeseries: "/query/timeseries",
+  get_uncertainty: "/query/uncertainty",
+  get_completeness: "/query/completeness",
+  get_grid_cell: "/spatial/grid",
+};
+
+function query(params: Record<string, unknown>): string {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (typeof v === "string" && v.length) p.set(k, v);
+  const s = p.toString();
+  return s ? `?${s}` : "";
+}
+
+/**
+ * The canonical request as a body that reproduces the same receipt: the fields the contract
+ * filled by default (those named in `defaults_applied`, at every level: a timeseries' `query`,
+ * a compare's `left` and `right`) are left out together with the list itself, so the API
+ * applies the same defaults again and canonicalises to the same request. Posting the canonical
+ * form verbatim would fill those fields explicitly, apply no default, and hash differently.
+ */
+export function replayBody(fields: unknown): unknown {
+  if (Array.isArray(fields)) return fields.map(replayBody);
+  if (!fields || typeof fields !== "object") return fields;
+  const obj = fields as Record<string, unknown>;
+  const defaulted = new Set(Array.isArray(obj.defaults_applied) ? obj.defaults_applied.map(String) : []);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (k === "defaults_applied" || defaulted.has(k)) continue;
+    out[k] = replayBody(v);
+  }
+  return out;
+}
+
+/**
+ * The HTTP call that reproduces an envelope, from its `request_type` and canonical `request`
+ * (the JSON the envelope carries, `_type` included: the API accepts it as posted). The six
+ * POST functions post the replay body (`replayBody`) to their route; the four GET functions
+ * take their fields as path and query; any other type is addressed by its receipt. The path is
+ * relative to the prefixed API base; nothing here is a credential.
+ */
+export function apiCallOf(requestType: string, request: string, receipt: string): ApiCall {
+  let fields: Record<string, unknown> = {};
+  let body = request;
+  try {
+    fields = JSON.parse(request) as Record<string, unknown>;
+    body = JSON.stringify(replayBody(fields));
+  } catch {
+    /* an unparseable request is posted verbatim */
+  }
+  const post = POST_ROUTES[requestType];
+  if (post) return { method: "POST", path: post, body };
+  if (requestType === "get_spatial_lineage") return { method: "GET", path: `/spatial/lineage/${encodeURIComponent(str(fields.shape_id) ?? str(fields.province) ?? "")}${query({ month: fields.month, gas: fields.gas, configuration_id: fields.configuration_id })}`, body: null };
+  if (requestType === "get_evidence") return { method: "GET", path: `/evidence/${encodeURIComponent(str(fields.source_stream_id) ?? "_")}${query({ module: fields.module, category: fields.category })}`, body: null };
+  if (requestType === "get_method") return { method: "GET", path: `/method/${encodeURIComponent(str(fields.method_id) ?? str(fields.category) ?? "")}`, body: null };
+  if (requestType === "get_cross_sector_transfer") return { method: "GET", path: `/transfers${query({ ledger_id: fields.ledger_id, configuration_id: fields.configuration_id })}`, body: null };
+  return { method: "GET", path: `/receipt/${receipt}`, body: null };
+}
+
+/** The call as one curl line against the base given (the JSON body single-quoted; JSON holds no single quote). */
+export function curlLine(base: string, call: ApiCall): string {
+  if (call.method === "POST") return `curl -X POST ${base}${call.path} -H 'content-type: application/json' -d '${call.body ?? ""}'`;
+  return `curl ${base}${call.path}`;
 }
 
 /** The same inverse for an envelope: its `request` field is the canonical JSON with `_type`. */

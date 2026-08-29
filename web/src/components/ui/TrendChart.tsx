@@ -5,7 +5,7 @@
  * status, the year basis), an x-axis carrying every period's short label, the first and last
  * points (and the reference year, in amber) labelled with their `display` strings, a hover
  * tooltip of the cell's display and unit, a faint baseline at zero, and the envelope's
- * ReceiptFooter as the source line. The `value` of each cell sizes the shape and nothing
+ * ReceiptFooter as the source line (`showReceipt`; a caller may also write the `subtitle`). The `value` of each cell sizes the shape and nothing
  * else: there is no y-axis, no tick numbers, no gridlines (ECharts would invent the values).
  * Nothing is summed, rounded or converted here. A skeleton stands in while the envelope loads.
  */
@@ -31,6 +31,10 @@ export type TrendChartProps = {
   scopeWords?: string;
   /** The year-basis phrase of the subtitle ("years run July–June"); omitted when empty. */
   basisWords?: string;
+  /** The whole subtitle, when the caller writes it ("Million tonnes CO₂e (AR5), excluding land use"); else built from the envelope. */
+  subtitle?: string;
+  /** The ReceiptFooter under the figure (the panels keep it; the intro does not). */
+  showReceipt?: boolean;
 };
 
 /** "all sectors" unless the envelope's request names sectors, then those ids joined. */
@@ -54,7 +58,7 @@ export function trendSubtitle(env: Envelope, scopeWords?: string, basisWords?: s
   return [unit, scope, basisWords].filter(Boolean).join(" · ");
 }
 
-export function TrendChart({ env, referencePeriod, height = 160, periodLabel, title = "Pakistan's greenhouse-gas emissions, by year", scopeWords, basisWords }: TrendChartProps) {
+export function TrendChart({ env, referencePeriod, height = 160, periodLabel, title = "Pakistan's greenhouse-gas emissions, by year", scopeWords, basisWords, subtitle: given, showReceipt = true }: TrendChartProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!env || !ref.current) return;
@@ -138,7 +142,7 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
       </div>
     );
   }
-  const subtitle = trendSubtitle(env, scopeWords, basisWords);
+  const subtitle = given ?? trendSubtitle(env, scopeWords, basisWords);
   return (
     <figure data-testid="trend-figure" className="m-0">
       <figcaption>
@@ -146,7 +150,7 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
         <div className="mt-0.5 text-xs text-muted" data-testid="trend-subtitle">{subtitle}</div>
       </figcaption>
       <div ref={ref} className="mt-2" style={{ height, width: "100%" }} data-testid="trend-chart" role="img" aria-label={`${title}: ${subtitle}`} />
-      <ReceiptFooter env={env} className="mt-1" />
+      {showReceipt && <ReceiptFooter env={env} className="mt-1" />}
     </figure>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 /**
  * Every chart and table sits in a Frame: title, the envelope's unit as words when given
- * (`unitLine`), scope subtitle, a chart | table segmented control when a chart is given, and the ReceiptFooter whose menu opens the EnvelopeDrawer.
+ * (`unitLine`), scope subtitle, a chart | table segmented control when a chart is given, and the ReceiptFooter ("Result details", opening the EnvelopeDrawer).
  * A loading or refused envelope renders its state in the same frame.
  */
 import { useState, type ReactNode } from "react";
@@ -62,7 +62,7 @@ export function Frame({ title, scope, env, error, isLoading, children, tableExtr
           <Loading what={typeof title === "string" ? title : "the envelope"} />
         ) : null}
       </div>
-      {env && <ReceiptFooter env={env} className="border-t border-line px-3 py-1.5" />}
+      {env && <ReceiptFooter env={env} labels={labels} className="border-t border-line px-3 py-1.5" />}
     </section>
   );
 }

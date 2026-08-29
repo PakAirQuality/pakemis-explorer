@@ -64,7 +64,7 @@ function About() {
           </p>
         </section>
 
-        <section className="card mb-5 p-4 text-sm" data-testid="about-data">
+        <section id="methods" className="card mb-5 scroll-mt-4 p-4 text-sm" data-testid="about-data">
           <h2 className="text-md font-semibold">What &ldquo;emissions data&rdquo; means here</h2>
           <p className="mt-2 leading-relaxed">An estimate, not a measurement. Each sector&apos;s emissions are reconstructed from public documents: an activity statistic (fuel sold, animals kept, cement made, waste collected) multiplied by an emission factor, category by category under the IPCC classification, with every step recorded. No instrument was read, and no figure was copied from another inventory as a whole.</p>
           <p className="mt-2 leading-relaxed" data-testid="about-years">
