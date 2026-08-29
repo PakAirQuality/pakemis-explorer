@@ -53,7 +53,22 @@ export function ExplorerMap() {
     (async () => {
       const maplibre = await import("maplibre-gl");
       const { Protocol } = await import("pmtiles");
+      // Development aid: a hidden document never fires requestAnimationFrame, so MapLibre
+      // neither loads tiles nor paints there (browser automation windows are hidden). With
+      // `?hidden=render` the frame callback runs on a timer instead; nothing else changes.
+      if (new URLSearchParams(window.location.search).get("hidden") === "render") {
+        window.requestAnimationFrame = ((cb: FrameRequestCallback) =>
+          window.setTimeout(() => cb(performance.now()), 16)) as typeof window.requestAnimationFrame;
+        window.cancelAnimationFrame = ((id: number) => window.clearTimeout(id)) as typeof window.cancelAnimationFrame;
+        // MapLibre also pauses tile requests while the document reports itself hidden.
+        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+        Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+      }
       if (cancelled || !containerRef.current) return;
+      // MapLibre 6 ships its worker as a separate module and locates it relative to
+      // import.meta.url, which the bundler rewrites; serve it as a static file instead
+      // (scripts/vendor-maplibre-worker.mjs copies it into public/vendor on install/dev/build).
+      maplibre.setWorkerUrl("/vendor/maplibre-gl-worker.mjs");
       const protocol = new Protocol();
       maplibre.addProtocol("pmtiles", protocol.tile);
       const initial = stateRef.current.cam?.split(",").map(Number);
@@ -67,6 +82,7 @@ export function ExplorerMap() {
         minZoom: 3.5,
       });
       mapRef.current = m;
+      if (new URLSearchParams(window.location.search).get("hidden") === "render") (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = m;
       (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = m; // inspection aid: the map holds no numbers
       m.addControl(new maplibre.AttributionControl({ compact: true, customAttribution: bm.kind === "mapbox" ? "Boundaries: geoBoundaries gbOpen · values: PakEmis API envelopes" : bm.attribution }), "bottom-right");
       m.on("error", (e) => {
@@ -164,7 +180,9 @@ export function ExplorerMap() {
 
   return (
     <div className="absolute inset-0" data-testid="explorer-map">
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* maplibre-gl.css (imported after Tailwind) sets .maplibregl-map { position: relative },
+          which beats `absolute`; the explicit height keeps the container full-size either way. */}
+      <div ref={containerRef} className="absolute inset-0 h-full w-full" />
       {bm.notice && <div className="absolute inset-x-0 top-0 z-20 bg-refusal px-3 py-1 text-center text-micro normal-case tracking-normal text-warn">{bm.notice}</div>}
       {mapError && <div className="absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded bg-refusal px-3 py-1 text-xs text-warn" data-testid="map-error">Map: {mapError}</div>}
       <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} />

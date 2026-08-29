@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/vendor-maplibre-worker.mjs && next dev",
+    "build": "node scripts/vendor-maplibre-worker.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "types": "openapi-typescript ../api/openapi.json -o src/types.gen.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "vendor:maplibre": "node scripts/vendor-maplibre-worker.mjs",
+    "postinstall": "node scripts/vendor-maplibre-worker.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
