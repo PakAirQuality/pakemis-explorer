@@ -43,12 +43,12 @@ def test_receipts_deterministic_across_instances(settings, tmp_path):
               {"periods": ["FY2023-24"], "geography_level": "adm1"}]
     with TestClient(create_app(settings)) as a, TestClient(create_app(other)) as b:
         for body in bodies:
-            ea, eb = a.post("/v1/query/emissions", json=body).json(), b.post("/v1/query/emissions", json=body).json()
+            ea, eb = a.post("/api/v1/emissions/query/emissions", json=body).json(), b.post("/api/v1/emissions/query/emissions", json=body).json()
             assert ea["receipt"] == eb["receipt"]
             assert ea["result_sha256"] == eb["result_sha256"]
             assert [v["display"] for v in ea["values"]] == [v["display"] for v in eb["values"]]
             # the receipt is content-addressed: b can replay what it minted, and the replay agrees with a
-            assert b.get("/v1/receipt/%s" % ea["receipt"]).json()["result_sha256"] == ea["result_sha256"]
+            assert b.get("/api/v1/emissions/receipt/%s" % ea["receipt"]).json()["result_sha256"] == ea["result_sha256"]
 
 
 @pytest.mark.parametrize("body,error_class,error", [
@@ -60,29 +60,29 @@ def test_receipts_deterministic_across_instances(settings, tmp_path):
     ({"periods": ["FY2023-24"], "configuration_id": "power_with_kelectric"}, "UnknownDimensionValue", "unknown_dimension_value"),
 ])
 def test_refusals_are_422_with_class(client, body, error_class, error):
-    r = client.post("/v1/query/emissions", json=body)
+    r = client.post("/api/v1/emissions/query/emissions", json=body)
     assert r.status_code == 422
     assert r.json()["error_class"] == error_class and r.json()["error"] == error
 
 
 def test_compare_refuses_mixed_gwp(client):
-    r = client.post("/v1/query/compare", json={"left": {"periods": ["FY2023-24"]}, "right": {"periods": ["FY2023-24"], "gwp_basis": "AR6"}})
+    r = client.post("/api/v1/emissions/query/compare", json={"left": {"periods": ["FY2023-24"]}, "right": {"periods": ["FY2023-24"], "gwp_basis": "AR6"}})
     assert r.status_code == 422 and r.json()["error_class"] == "MixedGwpError"
 
 
 def test_unknown_receipt_is_404(client):
-    assert client.get("/v1/receipt/0000").status_code == 404
+    assert client.get("/api/v1/emissions/receipt/0000").status_code == 404
 
 
 def test_grid_cell_reads_the_cube(client):
-    r = client.post("/v1/spatial/grid", json={"lat": 31.5, "lon": 74.3, "month": "202307", "gas": "CO2"})
+    r = client.post("/api/v1/emissions/spatial/grid", json={"lat": 31.5, "lon": 74.3, "month": "202307", "gas": "CO2"})
     assert r.status_code == 200
     v = r.json()["values"][0]
     assert v["unit"] == "Gg" and v["display"] and r.json()["limitations_hit"][0]["id"] == "grid_not_tabular"
 
 
 def test_envelope_is_not_reshaped(client):
-    env = client.post("/v1/query/emissions", json={"periods": ["FY2023-24"]}).json()
+    env = client.post("/api/v1/emissions/query/emissions", json={"periods": ["FY2023-24"]}).json()
     assert set(env) == {"request_type", "request", "context", "values", "calculation", "provenance", "uncertainty",
                         "evidence", "unallocated", "completeness", "limitations_hit", "citation", "result_sha256", "receipt"}
     assert set(env["values"][0]) >= {"exact", "value", "display", "unit", "result_row_ids", "formula"}

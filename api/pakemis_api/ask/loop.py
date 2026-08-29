@@ -22,6 +22,7 @@ from pakemis_api.ask import prompt as PROMPT
 from pakemis_api.ask.limits import Limits, cost_estimate_usd, usage_total
 from pakemis_api.ask.render import BareNumberError, render_multi
 from pakemis_api.ask.tools import DOWNLOAD_TOOL, FUNCTION_MODEL, MAP_TOOL, ToolInputError, validate_map_view
+from pakemis_api.settings import API_PREFIX
 from pakemis_query import errors as E
 from pakemis_query.placeholders import PlaceholderError
 
@@ -224,7 +225,7 @@ class Turn:
         if receipt not in self.conv.receipts:
             err = ToolInputError("receipt %r was not minted in this conversation; run the query first" % receipt)
             return "error: %s" % err, True, [("refusal", refusal_payload(k, call.id, call.name, err))]
-        links = {"csv": "/v1/download/%s.csv" % receipt, "receipt_json": "/v1/download/%s.receipt.json" % receipt}
+        links = {"csv": "%s/download/%s.csv" % (API_PREFIX, receipt), "receipt_json": "%s/download/%s.receipt.json" % (API_PREFIX, receipt)}
         result = {"k": k, "id": call.id, "name": call.name, "receipt": receipt, "request_type": "DownloadRequest",
                   "context": {}, "n_values": 0, "cells": [], "limitations_hit": [], "download": links}
         return json.dumps(result, sort_keys=True), False, [("tool_result", result)]

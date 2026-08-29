@@ -5,7 +5,7 @@ PAKEMIS_ASK_MAX_TOOL_CALLS       tool calls per user message (default 12)
 PAKEMIS_ASK_MAX_OUTPUT_TOKENS    max_tokens per model call (default 8000)
 PAKEMIS_ASK_CONVERSATION_TOKENS  input+output tokens one conversation may spend (default 400000)
 PAKEMIS_ASK_DAILY_TOKENS         input+output tokens the process may spend per UTC day (default 3000000)
-PAKEMIS_ASK_PER_IP_PER_HOUR      /v1/ask requests one client address may make per hour (default 60)
+PAKEMIS_ASK_PER_IP_PER_HOUR      POST /ask requests one client address may make per hour (default 60)
 PAKEMIS_ASK_EFFORT               output_config.effort for the model (default medium)
 
 The price table is USD per million tokens (input, output); cache reads are billed at a tenth

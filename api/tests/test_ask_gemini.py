@@ -296,12 +296,12 @@ def test_install_ask_reports_gemini(settings, monkeypatch):
     with TestClient(create_app(s)) as c:
         status = c.app.state.service.agent_status
         assert status == {"enabled": True, "model": "gemini-2.5-flash", "provider": "gemini", "reason": None}
-        assert c.get("/v1/release").json()["agent"] == status
+        assert c.get("/api/v1/emissions/release").json()["agent"] == status
         model = c.app.state.ask.model
         assert isinstance(model, GeminiModel) and model.max_output_tokens == c.app.state.ask.limits.max_output_tokens
         assert "test" not in json.dumps(status)
         model.on_model_change("gemini-2.5-pro")               # the chain moved: the status names what answers now
-        assert c.get("/v1/release").json()["agent"]["model"] == "gemini-2.5-pro"
+        assert c.get("/api/v1/emissions/release").json()["agent"]["model"] == "gemini-2.5-pro"
 
 
 def test_provider_auto_rules(settings, monkeypatch):

@@ -7,11 +7,11 @@ import pytest
 from conftest import load_goldens
 
 ROUTES = {
-    "query_emissions": "/v1/query/emissions",
-    "compare_emissions": "/v1/query/compare",
-    "get_timeseries": "/v1/query/timeseries",
-    "get_uncertainty": "/v1/query/uncertainty",
-    "get_completeness": "/v1/query/completeness",
+    "query_emissions": "/api/v1/emissions/query/emissions",
+    "compare_emissions": "/api/v1/emissions/query/compare",
+    "get_timeseries": "/api/v1/emissions/query/timeseries",
+    "get_uncertainty": "/api/v1/emissions/query/uncertainty",
+    "get_completeness": "/api/v1/emissions/query/completeness",
 }
 
 GOLDENS = load_goldens()
@@ -23,13 +23,13 @@ def post_golden(client, golden):
     if fn in ROUTES:
         return client.post(ROUTES[fn], json=req)
     if fn == "get_evidence":
-        return client.get("/v1/evidence/%s" % (req.get("source_stream_id") or "_"),
+        return client.get("/api/v1/emissions/evidence/%s" % (req.get("source_stream_id") or "_"),
                           params={k: v for k, v in req.items() if k != "source_stream_id"})
     if fn == "get_spatial_lineage":
-        return client.get("/v1/spatial/lineage/%s" % (req.get("shape_id") or req.get("province")),
+        return client.get("/api/v1/emissions/spatial/lineage/%s" % (req.get("shape_id") or req.get("province")),
                           params={k: v for k, v in req.items() if k not in ("shape_id", "province")})
     if fn == "get_cross_sector_transfer":
-        return client.get("/v1/transfers", params=req)
+        return client.get("/api/v1/emissions/transfers", params=req)
     raise KeyError(fn)
 
 
@@ -63,9 +63,9 @@ def test_golden(client, name, golden):
     if golden.get("expect_receipt"):
         assert env["receipt"] == golden["expect_receipt"], "receipt %s != frozen %s" % (env["receipt"], golden["expect_receipt"])
     # the receipt replays to the same envelope, and the download restates it
-    again = client.get("/v1/receipt/%s" % env["receipt"])
+    again = client.get("/api/v1/emissions/receipt/%s" % env["receipt"])
     assert again.status_code == 200
     assert again.json()["result_sha256"] == env["result_sha256"]
-    csv = client.get("/v1/download/%s.csv" % env["receipt"])
+    csv = client.get("/api/v1/emissions/download/%s.csv" % env["receipt"])
     assert csv.status_code == 200 and csv.headers["x-pakemis-receipt"] == env["receipt"]
     assert csv.text.startswith("display,exact,unit,formula,result_row_ids")

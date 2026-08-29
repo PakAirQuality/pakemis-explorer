@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 """build_tiles: boundaries and grid cells -> PMTiles for the map, carrying NO emission values;
-with --raster, visual-only shading PNGs of the two grid cubes.
+with --raster, visual-only shading PNGs of the two grid cubes.  Everything is written into the
+release payload, data/releases/<version>/tiles/ (OUT below), where the API serves it from
+(GET /api/v1/emissions/tiles/*):
 
-  tiles/out/adm1.pmtiles   ADM1 polygons; properties: shape_id, name, level        (promoteId name)
-  tiles/out/adm2.pmtiles   ADM2 polygons; properties: shape_id, name, level        (promoteId shape_id)
-  tiles/out/grid.pmtiles   0.05 degree cell polygons from the cube's lat_bnds/lon_bnds;
-                           properties: cell_id, row, col, lat, lon               (promoteId cell_id)
-  tiles/out/bboxes.json    {adm1: {name: [w, s, e, n]}, adm2: {shape_id: [w, s, e, n]}} for fitBounds
-  tiles/out/raster/<configuration>/<gas>/<YYYYMM|annual>.png   (--raster)
-                           340 x 267 RGBA at native cell resolution: log10 of Gg stretched at the
-                           gas's p2-p98 over all twelve months (the annual frame at the p2-p98 of
-                           the annual sums), zero and missing cells transparent.  Shading only:
-                           every value the UI shows is read through get_grid_cell.
-  tiles/out/TILES.json     digests of the inputs and outputs (+ the raster block)
+  OUT/adm1.pmtiles   ADM1 polygons; properties: shape_id, name, level        (promoteId name)
+  OUT/adm2.pmtiles   ADM2 polygons; properties: shape_id, name, level        (promoteId shape_id)
+  OUT/grid.pmtiles   0.05 degree cell polygons from the cube's lat_bnds/lon_bnds;
+                     properties: cell_id, row, col, lat, lon               (promoteId cell_id)
+  OUT/bboxes.json    {adm1: {name: [w, s, e, n]}, adm2: {shape_id: [w, s, e, n]}} for fitBounds
+  OUT/raster/<configuration>/<gas>/<YYYYMM|annual>.png   (--raster)
+                     340 x 267 RGBA at native cell resolution: log10 of Gg stretched at the
+                     gas's p2-p98 over all twelve months (the annual frame at the p2-p98 of
+                     the annual sums), zero and missing cells transparent.  Shading only:
+                     every value the UI shows is read through get_grid_cell.
+  OUT/TILES.json     digests of the inputs and outputs (+ the raster block); the API refuses to
+                     start when an output present under OUT differs from its recorded digest
 
-Values are painted through MapLibre feature-state from /v1/spatial/* envelopes; a tile never
-holds a number the API did not return.  ADM1 features are keyed by `name` because the release's
+Values are painted through Mapbox GL feature-state from the API's envelopes; a tile never holds
+a number the API did not return.  ADM1 features are keyed by `name` because the release's
 dim_geography carries no ADM1 shape_id; the ADM1 shapeID is kept as a property.  Every cell of the
 267 x 340 cube is emitted (90,780 squares); the cube's mass is not read for the PMTiles.
 
-Usage: python3 tiles/build_tiles.py [--version V] [--copy-to web/public/tiles] [--no-grid]
+Usage: python3 tiles/build_tiles.py [--version V] [--copy-to DIR] [--no-grid]
        python3 tiles/build_tiles.py --raster          (numpy + Pillow; no tippecanoe, no GDAL)
+
+--copy-to defaults to web/public/tiles for one more release (the web app's transition from its
+own route handlers to the API's /tiles routes); pass --copy-to "" to skip the copy.
 """
 import argparse
 import hashlib
@@ -33,7 +39,11 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-OUT = os.path.join(HERE, "out")
+
+
+def out_dir(version):
+    """data/releases/<version>/tiles: the outputs live inside the payload the API serves."""
+    return os.path.join(ROOT, "data", "releases", version, "tiles")
 
 # the explorer's sequential ramp (design system, 7 stops), light -> dark
 RAMP = ("#f1f5f4", "#d7e8e4", "#a8cfd4", "#6faec5", "#3f88ad", "#23618f", "#0f3d66")
@@ -237,8 +247,8 @@ def build_rasters(rel, out_dir):
 
 # --- main --------------------------------------------------------------------------------------
 
-def load_record(version):
-    path = os.path.join(OUT, "TILES.json")
+def load_record(version, out):
+    path = os.path.join(out, "TILES.json")
     if os.path.exists(path):
         with open(path, encoding="utf-8") as handle:
             record = json.load(handle)
@@ -257,6 +267,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     version = args.version or pinned_version()
     rel = os.path.join(ROOT, "data", "releases", version)
+    OUT = out_dir(version)
     adm1 = os.path.join(rel, "data", "gis", "PAK_ADM1.geojson")
     adm2 = os.path.join(rel, "data", "gis", "PAK_ADM2.geojson")
     cube = os.path.join(rel, "outputs", CUBES["REF_2023_24"])
@@ -264,7 +275,7 @@ def main(argv=None):
         if not os.path.exists(p):
             sys.exit("%s is absent; run data/fetch_release.py first" % p)
     os.makedirs(OUT, exist_ok=True)
-    record = load_record(version)
+    record = load_record(version, OUT)
     if args.raster:
         record["raster"] = build_rasters(rel, os.path.join(OUT, "raster"))
         print("  %d raster files" % len(record["raster"]["files"]))

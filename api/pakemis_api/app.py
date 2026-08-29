@@ -5,6 +5,10 @@ number and reshapes nothing.  A typed refusal (pakemis_query.errors.QueryError) 
 the error class name and the limitation id.  The app refuses to start unless
 data/verify_release.py passes for the pinned version AND Release.open(verify=True) accepts every
 table digest; the mismatch is logged by file name.
+
+Every route lives under settings.API_PREFIX (/api/v1/emissions), the prefix Firebase Hosting
+rewrites to the Cloud Run service; the same router is mounted a second time under the legacy
+/v1 prefix, out of the schema, answered with `Deprecation: true`, for one release.
 """
 import csv
 import datetime
@@ -14,14 +18,17 @@ import os
 import threading
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from starlette.middleware.gzip import GZipMiddleware
 
 from pakemis_api import models_gen as G
 from pakemis_api.ask.router import install_ask, router as ask_router
+from pakemis_api.middleware import ResponseHeadersMiddleware
 from pakemis_api.receipts import ReceiptStore
-from pakemis_api.settings import Settings, import_query_core
+from pakemis_api.settings import API_PREFIX, LEGACY_PREFIX, Settings, import_query_core
+from pakemis_api.tiles import TileStore, router as tiles_router
 
 log = logging.getLogger("pakemis_api")
 API_VERSION = "0.1.0"
@@ -118,6 +125,16 @@ class Service:
             self.manifest = json.load(handle)
         with open(os.path.join(settings.release_dir, "FETCH.json"), encoding="utf-8") as handle:
             self.fetch = json.load(handle)
+        # the map's tiles: one reader per archive, the outputs proven against TILES.json's digests
+        self.tiles = TileStore(settings.tiles_dir, settings.version)
+        if self.tiles.available:
+            try:
+                self.tiles.verify()
+            except TileStore.Mismatch as exc:
+                log.error("tiles of %s refused: %s", settings.version, exc)
+                raise RuntimeError("tiles of %s refused: %s" % (settings.version, exc)) from exc
+        else:
+            log.warning("no tiles under %s (run tiles/build_tiles.py); /tiles/* answers 404", settings.tiles_dir)
 
     @staticmethod
     def _read_methods(path):
@@ -235,7 +252,7 @@ class Service:
             "doi": self.manifest.get("doi"),
             "placeholders": {"auth": "none (declared placeholder)", "postgresql": "none; receipts are an in-memory map mirrored to JSON",
                              "agent": "Ask PakEmis is disabled; it may only call the typed functions listed in query_contract.functions",
-                             "object_storage": "none; tiles are built locally and served as static files"},
+                             "object_storage": "none; tiles are built locally into the release payload and served by this API"},
         }
 
     def labels(self):
@@ -288,59 +305,66 @@ def create_app(settings=None, model_client=None):
 
     app = FastAPI(title="PakEmis Explorer API", version=API_VERSION, lifespan=lifespan,
                   description="Deterministic query API over one verified PakEmis semantic release. Every response is a "
-                              "pakemis_query Envelope with a replayable receipt; typed refusals are HTTP 422.")
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+                              "pakemis_query Envelope with a replayable receipt; typed refusals are HTTP 422. "
+                              "Routes live under %s; the same routes under %s are a deprecated alias for one release." % (API_PREFIX, LEGACY_PREFIX))
+    # add_middleware wraps outermost-last: gzip innermost, then the headers, CORS on the outside
+    app.add_middleware(GZipMiddleware, minimum_size=1024)          # skips text/event-stream and pre-encoded (tile) bodies
+    app.add_middleware(ResponseHeadersMiddleware, prefix=API_PREFIX, legacy_prefix=LEGACY_PREFIX)
+    app.add_middleware(CORSMiddleware, allow_origins=list(settings.allowed_origins), allow_methods=["*"], allow_headers=["*"],
+                       expose_headers=["Content-Disposition", "X-PakEmis-Receipt", "X-PakEmis-Result-SHA256", "X-PakEmis-Release", "Deprecation", "Link"])
 
     @app.exception_handler(E.QueryError)
     async def _query_error(request: Request, exc: E.QueryError):
         return refusal(exc)
 
-    app.include_router(ask_router)                                    # ask: POST /v1/ask (SSE)
+    api = APIRouter()
+    api.include_router(ask_router)                                    # ask: POST {prefix}/ask (SSE)
+    api.include_router(tiles_router)                                  # tiles: GET {prefix}/tiles/*
 
     def svc() -> Service:
         return app.state.service
 
-    @app.get("/v1/release", tags=["release"])
+    @api.get("/release", tags=["release"])
     def release():
         return svc().release_summary()
 
-    @app.post("/v1/query/emissions", tags=["query"])
+    @api.post("/query/emissions", tags=["query"])
     def query_emissions(body: G.QueryEmissionsModel):
         return svc().run(G.to_request(body))
 
-    @app.post("/v1/query/compare", tags=["query"])
+    @api.post("/query/compare", tags=["query"])
     def compare(body: G.CompareRequestModel):
         return svc().run(G.to_request(body))
 
-    @app.post("/v1/query/timeseries", tags=["query"])
+    @api.post("/query/timeseries", tags=["query"])
     def timeseries(body: G.TimeseriesRequestModel):
         return svc().run(G.to_request(body))
 
-    @app.post("/v1/query/uncertainty", tags=["query"])
+    @api.post("/query/uncertainty", tags=["query"])
     def uncertainty(body: G.UncertaintyRequestModel):
         return svc().run(G.to_request(body))
 
-    @app.post("/v1/query/completeness", tags=["query"])
+    @api.post("/query/completeness", tags=["query"])
     def completeness(body: G.CompletenessRequestModel):
         return svc().run(G.to_request(body))
 
-    @app.get("/v1/evidence/{stream_id:path}", tags=["lineage"])
+    @api.get("/evidence/{stream_id:path}", tags=["lineage"])
     def evidence(stream_id: str, category: str = "", module: str = ""):
         req = G.to_request(G.EvidenceRequestModel(source_stream_id="" if stream_id == "_" else stream_id, category=category, module=module))
         return svc().run(req)
 
-    @app.get("/v1/method/{method_or_category}", tags=["lineage"])
+    @api.get("/method/{method_or_category}", tags=["lineage"])
     def method(method_or_category: str):
         s = svc()
         ids = {r["method_id"] for r in s.method_rows}
         body = G.MethodRequestModel(method_id=method_or_category) if method_or_category in ids else G.MethodRequestModel(category=method_or_category)
         return s.run(G.to_request(body))
 
-    @app.get("/v1/transfers", tags=["lineage"])
+    @api.get("/transfers", tags=["lineage"])
     def transfers(ledger_id: str = "", configuration_id: str = ""):
         return svc().run(G.to_request(G.TransferRequestModel(ledger_id=ledger_id, configuration_id=configuration_id)))
 
-    @app.get("/v1/spatial/lineage/{shape_id}", tags=["spatial"])
+    @api.get("/spatial/lineage/{shape_id}", tags=["spatial"])
     def spatial_lineage(shape_id: str, month: str = "", gas: str = "", configuration_id: str = ""):
         s = svc()
         provinces = {r["name"] for r in s.release.dim("dim_geography") if r["level"] == "adm1"}
@@ -350,15 +374,15 @@ def create_app(settings=None, model_client=None):
             body = G.SpatialLineageRequestModel(shape_id=shape_id, month=month, gas=gas, configuration_id=configuration_id)
         return s.run(G.to_request(body))
 
-    @app.post("/v1/spatial/grid", tags=["spatial"])
+    @api.post("/spatial/grid", tags=["spatial"])
     def grid_cell(body: G.GridCellRequestModel):
         return svc().run(G.to_request(body))
 
-    @app.get("/v1/receipt/{receipt}", tags=["receipt"])
+    @api.get("/receipt/{receipt}", tags=["receipt"])
     def receipt(receipt: str):
         return svc().replay(receipt)
 
-    @app.get("/v1/download/{receipt}.csv", tags=["download"], response_class=PlainTextResponse)
+    @api.get("/download/{receipt}.csv", tags=["download"], response_class=PlainTextResponse)
     def download_csv(receipt: str):
         s = svc()
         env = s.replay(receipt)
@@ -368,7 +392,7 @@ def create_app(settings=None, model_client=None):
                    "X-PakEmis-Release": env["context"]["release"]}
         return Response(content=text, media_type="text/csv; charset=utf-8", headers=headers)
 
-    @app.get("/v1/download/{receipt}.receipt.json", tags=["download"])
+    @api.get("/download/{receipt}.receipt.json", tags=["download"])
     def download_receipt(receipt: str):
         s = svc()
         env = s.replay(receipt)
@@ -376,10 +400,14 @@ def create_app(settings=None, model_client=None):
         return Response(content=text, media_type="application/json",
                         headers={"Content-Disposition": 'attachment; filename="RECEIPT_%s.json"' % receipt})
 
-    @app.get("/healthz", include_in_schema=False)
+    @api.get("/healthz", include_in_schema=False)
     def healthz():
         s = svc()
         return {"ok": True, "release": s.release.release_id, "receipts": len(s.receipts)}
+
+    app.include_router(api, prefix=API_PREFIX)                           # the canonical paths (the schema)
+    app.include_router(api, prefix=LEGACY_PREFIX, include_in_schema=False)   # the alias, `Deprecation: true` via the middleware
+    app.add_api_route("/healthz", healthz, include_in_schema=False)      # the container's health check, outside both prefixes
 
     return app
 

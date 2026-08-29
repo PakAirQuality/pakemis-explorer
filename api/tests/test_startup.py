@@ -48,7 +48,7 @@ def test_tampered_boundary_refused(settings, tmp_path):
 
 
 def test_pinned_release_starts(client):
-    body = client.get("/v1/release").json()
+    body = client.get("/api/v1/emissions/release").json()
     assert body["version"] == client.app.state.service.settings.version
     assert len(body["digests"]["tables"]) == 22
     assert body["context_bar"]["lulucf"]["status"] == "excluded"

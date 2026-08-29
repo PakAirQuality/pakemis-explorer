@@ -342,15 +342,15 @@
   }
  },
  "info": {
-  "description": "Deterministic query API over one verified PakEmis semantic release. Every response is a pakemis_query Envelope with a replayable receipt; typed refusals are HTTP 422.",
+  "description": "Deterministic query API over one verified PakEmis semantic release. Every response is a pakemis_query Envelope with a replayable receipt; typed refusals are HTTP 422. Routes live under /api/v1/emissions; the same routes under /v1 are a deprecated alias for one release.",
   "title": "PakEmis Explorer API",
   "version": "0.1.0"
  },
  "openapi": "3.1.0",
  "paths": {
-  "/v1/ask": {
+  "/api/v1/emissions/ask": {
    "post": {
-    "operationId": "ask_v1_ask_post",
+    "operationId": "ask_api_v1_emissions_ask_post",
     "requestBody": {
      "content": {
       "application/json": {
@@ -387,9 +387,9 @@
     ]
    }
   },
-  "/v1/download/{receipt}.csv": {
+  "/api/v1/emissions/download/{receipt}.csv": {
    "get": {
-    "operationId": "download_csv_v1_download__receipt__csv_get",
+    "operationId": "download_csv_api_v1_emissions_download__receipt__csv_get",
     "parameters": [
      {
       "in": "path",
@@ -429,9 +429,9 @@
     ]
    }
   },
-  "/v1/download/{receipt}.receipt.json": {
+  "/api/v1/emissions/download/{receipt}.receipt.json": {
    "get": {
-    "operationId": "download_receipt_v1_download__receipt__receipt_json_get",
+    "operationId": "download_receipt_api_v1_emissions_download__receipt__receipt_json_get",
     "parameters": [
      {
       "in": "path",
@@ -469,9 +469,9 @@
     ]
    }
   },
-  "/v1/evidence/{stream_id}": {
+  "/api/v1/emissions/evidence/{stream_id}": {
    "get": {
-    "operationId": "evidence_v1_evidence__stream_id__get",
+    "operationId": "evidence_api_v1_emissions_evidence__stream_id__get",
     "parameters": [
      {
       "in": "path",
@@ -529,9 +529,9 @@
     ]
    }
   },
-  "/v1/method/{method_or_category}": {
+  "/api/v1/emissions/method/{method_or_category}": {
    "get": {
-    "operationId": "method_v1_method__method_or_category__get",
+    "operationId": "method_api_v1_emissions_method__method_or_category__get",
     "parameters": [
      {
       "in": "path",
@@ -569,9 +569,9 @@
     ]
    }
   },
-  "/v1/query/compare": {
+  "/api/v1/emissions/query/compare": {
    "post": {
-    "operationId": "compare_v1_query_compare_post",
+    "operationId": "compare_api_v1_emissions_query_compare_post",
     "requestBody": {
      "content": {
       "application/json": {
@@ -608,9 +608,9 @@
     ]
    }
   },
-  "/v1/query/completeness": {
+  "/api/v1/emissions/query/completeness": {
    "post": {
-    "operationId": "completeness_v1_query_completeness_post",
+    "operationId": "completeness_api_v1_emissions_query_completeness_post",
     "requestBody": {
      "content": {
       "application/json": {
@@ -647,9 +647,9 @@
     ]
    }
   },
-  "/v1/query/emissions": {
+  "/api/v1/emissions/query/emissions": {
    "post": {
-    "operationId": "query_emissions_v1_query_emissions_post",
+    "operationId": "query_emissions_api_v1_emissions_query_emissions_post",
     "requestBody": {
      "content": {
       "application/json": {
@@ -686,9 +686,9 @@
     ]
    }
   },
-  "/v1/query/timeseries": {
+  "/api/v1/emissions/query/timeseries": {
    "post": {
-    "operationId": "timeseries_v1_query_timeseries_post",
+    "operationId": "timeseries_api_v1_emissions_query_timeseries_post",
     "requestBody": {
      "content": {
       "application/json": {
@@ -725,9 +725,9 @@
     ]
    }
   },
-  "/v1/query/uncertainty": {
+  "/api/v1/emissions/query/uncertainty": {
    "post": {
-    "operationId": "uncertainty_v1_query_uncertainty_post",
+    "operationId": "uncertainty_api_v1_emissions_query_uncertainty_post",
     "requestBody": {
      "content": {
       "application/json": {
@@ -764,9 +764,9 @@
     ]
    }
   },
-  "/v1/receipt/{receipt}": {
+  "/api/v1/emissions/receipt/{receipt}": {
    "get": {
-    "operationId": "receipt_v1_receipt__receipt__get",
+    "operationId": "receipt_api_v1_emissions_receipt__receipt__get",
     "parameters": [
      {
       "in": "path",
@@ -804,9 +804,9 @@
     ]
    }
   },
-  "/v1/release": {
+  "/api/v1/emissions/release": {
    "get": {
-    "operationId": "release_v1_release_get",
+    "operationId": "release_api_v1_emissions_release_get",
     "responses": {
      "200": {
       "content": {
@@ -823,9 +823,9 @@
     ]
    }
   },
-  "/v1/spatial/grid": {
+  "/api/v1/emissions/spatial/grid": {
    "post": {
-    "operationId": "grid_cell_v1_spatial_grid_post",
+    "operationId": "grid_cell_api_v1_emissions_spatial_grid_post",
     "requestBody": {
      "content": {
       "application/json": {
@@ -862,9 +862,9 @@
     ]
    }
   },
-  "/v1/spatial/lineage/{shape_id}": {
+  "/api/v1/emissions/spatial/lineage/{shape_id}": {
    "get": {
-    "operationId": "spatial_lineage_v1_spatial_lineage__shape_id__get",
+    "operationId": "spatial_lineage_api_v1_emissions_spatial_lineage__shape_id__get",
     "parameters": [
      {
       "in": "path",
@@ -932,9 +932,223 @@
     ]
    }
   },
-  "/v1/transfers": {
+  "/api/v1/emissions/tiles/bboxes": {
    "get": {
-    "operationId": "transfers_v1_transfers_get",
+    "operationId": "tiles_bboxes_api_v1_emissions_tiles_bboxes_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "bboxes.json: [w, s, e, n] per ADM1 name and ADM2 shape_id",
+    "tags": [
+     "tiles"
+    ]
+   }
+  },
+  "/api/v1/emissions/tiles/meta": {
+   "get": {
+    "operationId": "tiles_meta_api_v1_emissions_tiles_meta_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "TILES.json: the tile builder's record",
+    "tags": [
+     "tiles"
+    ]
+   }
+  },
+  "/api/v1/emissions/tiles/raster/{config}/{gas}/{frame}.png": {
+   "get": {
+    "operationId": "tiles_raster_api_v1_emissions_tiles_raster__config___gas___frame__png_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "config",
+      "required": true,
+      "schema": {
+       "title": "Config",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "gas",
+      "required": true,
+      "schema": {
+       "title": "Gas",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "frame",
+      "required": true,
+      "schema": {
+       "title": "Frame",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "image/png": {}
+      },
+      "description": "Successful Response"
+     },
+     "404": {
+      "description": "no such frame"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "One visual-only grid shading PNG",
+    "tags": [
+     "tiles"
+    ]
+   }
+  },
+  "/api/v1/emissions/tiles/{name}": {
+   "get": {
+    "operationId": "tiles_tilejson_api_v1_emissions_tiles__name__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "name",
+      "required": true,
+      "schema": {
+       "title": "Name",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "TileJSON 3.0.0 for adm1 | adm2 | grid",
+    "tags": [
+     "tiles"
+    ]
+   }
+  },
+  "/api/v1/emissions/tiles/{name}/{z}/{x}/{y}.mvt": {
+   "get": {
+    "operationId": "tiles_tile_api_v1_emissions_tiles__name___z___x___y__mvt_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "name",
+      "required": true,
+      "schema": {
+       "title": "Name",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "z",
+      "required": true,
+      "schema": {
+       "title": "Z",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "path",
+      "name": "x",
+      "required": true,
+      "schema": {
+       "title": "X",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "path",
+      "name": "y",
+      "required": true,
+      "schema": {
+       "title": "Y",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "application/vnd.mapbox-vector-tile": {}
+      },
+      "description": "Successful Response"
+     },
+     "204": {
+      "description": "the archive holds no such tile"
+     },
+     "404": {
+      "description": "unknown tile set"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "One vector tile as stored in the archive",
+    "tags": [
+     "tiles"
+    ]
+   }
+  },
+  "/api/v1/emissions/transfers": {
+   "get": {
+    "operationId": "transfers_api_v1_emissions_transfers_get",
     "parameters": [
      {
       "in": "query",

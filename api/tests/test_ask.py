@@ -76,7 +76,7 @@ def ask(client, message, ui_state=None, conversation_id=None, client_history=Non
     if client_history:
         body["client_history"] = client_history
     events = []
-    with client.stream("POST", "/v1/ask", json=body) as r:
+    with client.stream("POST", "/api/v1/emissions/ask", json=body) as r:
         assert r.status_code == 200, r.read()
         assert r.headers["content-type"].startswith("text/event-stream")
         name, data = None, []
@@ -134,7 +134,7 @@ def test_golden_through_agent(ask_client, fake, name, golden):
     assert results[0]["k"] == 1 and results[0]["name"] == fn and results[0]["n_values"] >= 1
     assert "release" not in results[0]["context"]
     answer = only(events, "answer")[0]
-    env = ask_client.get("/v1/receipt/%s" % golden["expect_receipt"]).json()
+    env = ask_client.get("/api/v1/emissions/receipt/%s" % golden["expect_receipt"]).json()
     cell = env["values"][0]
     assert cell["display"] in answer["text"] and cell["unit"] in answer["text"]
     cites = CITE.findall(answer["text"])
@@ -291,8 +291,8 @@ def test_download_only_for_receipts_the_conversation_holds(ask_client, fake):
               [text("Links below."), stop()])
     events = ask(ask_client, "total then download")
     results = only(events, "tool_result")
-    assert results[1]["download"] == {"csv": "/v1/download/5eb40940d01be992a296f658fb91ab9e.csv",
-                                      "receipt_json": "/v1/download/5eb40940d01be992a296f658fb91ab9e.receipt.json"}
+    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/5eb40940d01be992a296f658fb91ab9e.csv",
+                                      "receipt_json": "/api/v1/emissions/download/5eb40940d01be992a296f658fb91ab9e.receipt.json"}
     assert ask_client.get(results[1]["download"]["csv"]).status_code == 200
 
 
@@ -311,7 +311,7 @@ def test_tools_are_the_contract_functions_plus_set_map_view(ask_client):
     from pakemis_api import models_gen as G
     from pakemis_api.ask.tools import FUNCTION_MODEL, inline_schema
     runtime = ask_client.app.state.ask
-    contract = ask_client.get("/v1/release").json()["query_contract"]["functions"]
+    contract = ask_client.get("/api/v1/emissions/release").json()["query_contract"]["functions"]
     assert [t["name"] for t in runtime.tools] == contract + ["set_map_view"]
     assert len(runtime.tools) == 12
     for tool in runtime.tools:
@@ -379,7 +379,7 @@ def test_503_when_disabled(settings, monkeypatch):
     for var in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
         monkeypatch.delenv(var, raising=False)
     with TestClient(create_app(settings)) as c:
-        r = c.post("/v1/ask", json={"message": "hi", "ui_state": {}})
+        r = c.post("/api/v1/emissions/ask", json={"message": "hi", "ui_state": {}})
         assert r.status_code == 503 and r.json()["error"] == "agent_disabled"
         assert c.app.state.service.agent_status["enabled"] is False and c.app.state.service.agent_status["model"] is None
         assert "KEY" not in json.dumps(c.app.state.service.agent_status).replace("ANTHROPIC_API_KEY", "").replace("GEMINI_API_KEY", "")

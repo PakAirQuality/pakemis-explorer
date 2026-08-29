@@ -1,4 +1,4 @@
-"""POST /v1/ask -> server-sent events, and the runtime create_app installs behind it.
+"""POST {API_PREFIX}/ask -> server-sent events, and the runtime create_app installs behind it.
 
 Events (name: data), in the order a turn emits them:
     status        {phase: model|tool|correction|tool_limit, turn?, k?, name?, reason?}
@@ -107,7 +107,7 @@ def _client_ip(request: Request):
     return request.client.host if request.client else "unknown"
 
 
-@router.post("/v1/ask", tags=["ask"])
+@router.post("/ask", tags=["ask"])
 def ask(body: AskBody, request: Request):
     runtime = getattr(request.app.state, "ask", None)
     if runtime is None:

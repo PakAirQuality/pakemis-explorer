@@ -1,8 +1,10 @@
 """Settings: where the query core lives, which release is served, where receipts are kept.
 
-PAKEMIS_QUERY_PATH      the `src/` directory that holds pakemis_query (default: the sibling
-                        emissions checkout, /Users/rehanahmad/Desktop/emissions/src); the package
-                        is imported from there and never copied into this repository.
+PAKEMIS_QUERY_PATH      the directory that holds pakemis_query. Default: the sibling emissions
+                        checkout's src/ (/Users/rehanahmad/Desktop/emissions/src) when it exists,
+                        else the vendored copy api/vendor/ (written by scripts/vendor_query_core.py
+                        from a recorded commit; the container image carries only that copy).
+ALLOWED_ORIGINS         comma-separated CORS origins (default `*`, the development setting).
 PAKEMIS_RELEASES_ROOT   data/releases (default) - the directory fetch_release.py writes into.
 PAKEMIS_RELEASE_VERSION the version to serve (default: the `pinned:` line of RELEASES.md).
 PAKEMIS_RECEIPT_STORE   a JSON file mapping receipt -> canonical request (default data/receipts.json);
@@ -23,6 +25,9 @@ from dataclasses import dataclass
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DEFAULT_QUERY_PATH = "/Users/rehanahmad/Desktop/emissions/src"
+VENDOR_QUERY_PATH = os.path.join(os.path.dirname(HERE), "vendor")     # api/vendor/pakemis_query
+API_PREFIX = "/api/v1/emissions"     # every route; Firebase Hosting rewrites this prefix to the Cloud Run service
+LEGACY_PREFIX = "/v1"                # the pre-prefix paths, answered with `Deprecation: true` for one release
 DEFAULT_ASK_MODEL = "claude-sonnet-5"
 DEFAULT_ASK_MODELS = {"anthropic": DEFAULT_ASK_MODEL, "gemini": "gemini-3.1-pro-preview"}
 GEMINI_FALLBACKS = ("gemini-2.5-pro", "gemini-2.5-flash")
@@ -32,6 +37,25 @@ KEY_VARS = {"anthropic": ("ANTHROPIC_API_KEY",), "gemini": ("GEMINI_API_KEY", "G
 
 def _key_present(provider):
     return any(os.environ.get(v) for v in KEY_VARS[provider])
+
+
+def default_query_path():
+    """PAKEMIS_QUERY_PATH, else the emissions checkout when it is present (development: its golden
+    files sit beside it), else the vendored copy (the container)."""
+    explicit = os.environ.get("PAKEMIS_QUERY_PATH")
+    if explicit:
+        return explicit
+    if os.path.isdir(os.path.join(DEFAULT_QUERY_PATH, "pakemis_query")):
+        return DEFAULT_QUERY_PATH
+    if os.path.isdir(os.path.join(VENDOR_QUERY_PATH, "pakemis_query")):
+        return VENDOR_QUERY_PATH
+    return DEFAULT_QUERY_PATH
+
+
+def parse_origins(text):
+    """'a, b' -> ('a', 'b'); empty -> ('*',)."""
+    origins = tuple(o.strip() for o in (text or "").split(",") if o.strip())
+    return origins or ("*",)
 
 
 def pinned_version(releases_md):
@@ -52,19 +76,21 @@ class Settings:
     releases_md: str
     ask_model: str = ""                           # ask: PAKEMIS_ASK_MODEL; empty -> the provider's default; caps are read by ask/limits.py
     ask_provider: str = "auto"                    # ask: PAKEMIS_ASK_PROVIDER
+    allowed_origins: tuple = ("*",)               # ALLOWED_ORIGINS (CORS); `*` in development
 
     @classmethod
     def from_env(cls, **override):
         releases_md = override.get("releases_md") or os.path.join(ROOT, "RELEASES.md")
         version = override.get("version") or os.environ.get("PAKEMIS_RELEASE_VERSION") or pinned_version(releases_md)
         return cls(
-            query_path=override.get("query_path") or os.environ.get("PAKEMIS_QUERY_PATH", DEFAULT_QUERY_PATH),
+            query_path=override.get("query_path") or default_query_path(),
             releases_root=override.get("releases_root") or os.environ.get("PAKEMIS_RELEASES_ROOT", os.path.join(ROOT, "data", "releases")),
             version=version,
             receipt_store=override.get("receipt_store") or os.environ.get("PAKEMIS_RECEIPT_STORE", os.path.join(ROOT, "data", "receipts.json")),
             releases_md=releases_md,
             ask_model=override.get("ask_model") or os.environ.get("PAKEMIS_ASK_MODEL", ""),
             ask_provider=override.get("ask_provider") or os.environ.get("PAKEMIS_ASK_PROVIDER", "auto"),
+            allowed_origins=override.get("allowed_origins") or parse_origins(os.environ.get("ALLOWED_ORIGINS", "*")),
         )
 
     @property
@@ -116,14 +142,20 @@ class Settings:
         return os.path.join(self.release_dir, "data", "method_registry.csv")
 
     @property
+    def tiles_dir(self):
+        """tiles/build_tiles.py's output inside the release payload: the PMTiles, TILES.json,
+        bboxes.json and raster/."""
+        return os.path.join(self.release_dir, "tiles")
+
+    @property
     def cube_paths(self):
         return {"REF_2023_24": os.path.join(self.release_dir, "outputs", "pakemis_grid_0p05_monthly.nc"),
                 "S_2023_24": os.path.join(self.release_dir, "outputs", "pakemis_grid_0p05_monthly_survey.nc")}
 
 
 def import_query_core(query_path=None):
-    """Put PAKEMIS_QUERY_PATH on sys.path and import pakemis_query from there."""
-    path = query_path or os.environ.get("PAKEMIS_QUERY_PATH", DEFAULT_QUERY_PATH)
+    """Put the query core's directory on sys.path and import pakemis_query from there."""
+    path = query_path or default_query_path()
     if path not in sys.path:
         sys.path.insert(0, path)
     import pakemis_query  # noqa: F401

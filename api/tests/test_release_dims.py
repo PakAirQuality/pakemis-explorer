@@ -1,4 +1,4 @@
-"""/v1/release carries what the map needs: the ADM2 rows, the sectors, months by period and
+"""/api/v1/emissions/release carries what the map needs: the ADM2 rows, the sectors, months by period and
 server-built labels for every id; the agent block reports "not mounted" until an ask module
 mounts and overwrites Service.agent_status."""
 import pytest
@@ -6,7 +6,7 @@ import pytest
 
 @pytest.fixture(scope="module")
 def release(client):
-    return client.get("/v1/release").json()
+    return client.get("/api/v1/emissions/release").json()
 
 
 def test_adm2_rows(release):
@@ -85,10 +85,10 @@ def test_agent_status_hook(client):
     before = service.agent_status
     try:
         service.agent_status = {"enabled": True, "model": "test-model", "provider": "test", "reason": ""}
-        assert client.get("/v1/release").json()["agent"] == {"enabled": True, "model": "test-model", "provider": "test", "reason": ""}
+        assert client.get("/api/v1/emissions/release").json()["agent"] == {"enabled": True, "model": "test-model", "provider": "test", "reason": ""}
     finally:
         service.agent_status = before
-    assert client.get("/v1/release").json()["agent"]["enabled"] is False
+    assert client.get("/api/v1/emissions/release").json()["agent"]["enabled"] is False
 
 
 def test_existing_keys_unchanged(release):
