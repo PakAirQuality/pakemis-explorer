@@ -27,10 +27,13 @@ export function useBboxes() {
 /** The frame name of a raster file for (config, gas, month|annual) as TILES.json lists it, or null if the builder wrote none. */
 export function rasterFile(info: RasterInfo | undefined, config: string, gas: string, month: string | null): string | null {
   if (!info) return null;
-  const frames = Object.keys(info.files);
+  // TILES.json keys the frames as `raster/<config>/<gas>/<frame>.png` (relative to the tiles
+  // folder); the map builds `${TILES}/raster/<name>`, so the prefix is stripped here.
+  const strip = (f: string) => f.replace(/^raster\//, "");
+  const frames = Object.keys(info.files).map(strip);
   const annual = frames.find((f) => f.startsWith(`${config}/${gas}/`) && !/\/\d{6}\.png$/.test(f));
   const name = month ? `${config}/${gas}/${month}.png` : annual;
-  return name && info.files[name] ? name : null;
+  return name && frames.includes(name) ? name : null;
 }
 
 export function unionBbox(b: Record<string, [number, number, number, number]>): [number, number, number, number] | null {
