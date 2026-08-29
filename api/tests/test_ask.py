@@ -148,6 +148,11 @@ def test_golden_through_agent(ask_client, fake, name, golden):
     assert tr["type"] == "tool_result" and "is_error" not in tr
     body = json.loads(tr["content"])
     assert body["receipt"] == golden["expect_receipt"] and "cells" in body and "1.0.0rc" not in tr["content"]
+    # beyond display/unit, a cell hands the model identifying strings only, never a second figure
+    for c in body["cells"]:
+        assert set(c) <= {"i", "display", "unit", "group", "exactness", "interpretation", "attrs"}
+        for key, val in c.get("attrs", {}).items():       # "1.A.2" is a code; "6977.44" is a figure
+            assert isinstance(val, str) and (key in ("month", "period_id") or not re.match(r"^[-+]?(\d+[.,]?\d*|\.\d+)([eE][-+]?\d+)?$", val)), c
 
 
 # --- the rendering gate ----------------------------------------------------------------------

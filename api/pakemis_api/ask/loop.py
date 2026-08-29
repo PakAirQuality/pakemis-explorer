@@ -10,6 +10,7 @@ run_turn(...) is a generator of (event_name, payload) pairs: the SSE stream of o
 """
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Iterator, Protocol
@@ -115,6 +116,8 @@ def _compact_context(context):
 
 
 _CELL_SKIP = {"exact", "value", "display", "unit", "result_row_ids", "formula", "group"}
+_NUMERIC = re.compile(r"^[-+]?(\d+[.,]?\d*|\.\d+)([eE][-+]?\d+)?$")
+_ID_KEYS = ("month", "period_id")           # digit-shaped identifiers the model may name
 
 
 def compact_cells(values, cap):
@@ -126,8 +129,11 @@ def compact_cells(values, cap):
         for key in ("co2e_exactness", "exactness", "interpretation"):
             if v.get(key):
                 cell["exactness" if key != "interpretation" else key] = v[key]
+        # identifying strings only (ledger_id, month, kind, ...): a numeric attribute is a figure the
+        # model could restate, and only `display`/`exact`/`unit` are printable through placeholders
         attrs = {k: val for k, val in v.items() if k not in _CELL_SKIP and not k.startswith("co2e_exact")
-                 and k not in ("exactness", "interpretation") and isinstance(val, (str, int, float, bool)) and val not in ("", None)}
+                 and k not in ("exactness", "interpretation") and isinstance(val, str) and val
+                 and (k in _ID_KEYS or not _NUMERIC.match(val))}
         if attrs:
             cell["attrs"] = attrs
         cells.append(cell)
