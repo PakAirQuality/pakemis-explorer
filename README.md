@@ -69,6 +69,26 @@ layers. The 3D button (`view3d=1`) applies the ops dashboard's recipe: `mapbox-d
 (exaggeration 1.5 tapering to 1.0), fog, pitch 30, bearing -10, with the choropleth draped. Spatial products exist for FY2023-24 only: other years drive national numbers and
 show the typed refusal in the legend's place.
 
+First visit: a four-panel explainer (`WelcomeModal`: what this is, what "emissions data"
+means here, how to read the map, Ask PakEmis) opens over the screen until it is dismissed
+(`localStorage['pakemis.intro.dismissed']`), and re-opens from the "?" on the rail's brand
+square or from `/about`, which carries the same four sections in full prose plus the
+territories' sector coverage, the licences and a vocabulary note. Every sentence of both is the
+project's own wording, every release fact (period, LULUCF, GWP bases, configuration and
+limitation texts, the contract's functions, the agent's status) is read from `/v1/release`,
+and the one number the explainer prints is the national total's `display` with its receipt;
+tests assert every decimal is an envelope display and that no phrase from the manuscript's
+"avoid" list appears.
+
+The territories at province level: the release's ADM1 table has one row without a polygon
+(`has_polygon: no`, named `Other`) while the boundary file draws Gilgit-Baltistan, Azad
+Kashmir and Islamabad Capital Territory separately. `src/lib/geography.ts` derives the
+members (the drawn ADM1 polygons no province row claims; nothing is hard-coded), the map
+paints the row's one cell on each member verbatim with a dotted outline (feature-state
+`shared`, `shared_with`), the hover and legend say the cell is shared, and clicking a member
+selects `geo=Other`, the release's own id, which the detail card and the API answer as one
+unit. Coverage of the three differs by sector; `/about` says how.
+
 ## Fetch and verify a release
 
 ```
@@ -231,4 +251,6 @@ Licences: code MIT; data and text CC-BY-4.0; OSM-derived tables ODbL (see the re
 
 Screenshots of the screen at 1440 px and 390 px are under `web/docs/screenshots/`
 (`13-ask-disabled.jpg` is the dock without the key; `14-globe.jpg` the globe with its
-atmosphere, `15-3d-terrain.jpg` the 3D view).
+atmosphere, `15-3d-terrain.jpg` the 3D view; `16-welcome.jpg` the first-visit explainer;
+`17-other-territories.jpg` the hover on Gilgit-Baltistan showing the shared `Other` cell and
+`17b-other-card.jpg` its detail card; `18-about.jpg` the `/about` page).

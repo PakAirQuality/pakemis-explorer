@@ -180,3 +180,39 @@ shows and no map is created; the legend and panels are unchanged.
 Not verified: a live model turn (no valid `ANTHROPIC_API_KEY`; the dock showed the disabled
 card), and Mapbox's per-load billing on the user's token, which this engine incurs on every
 page load.
+
+## The territories at province level and the first-visit explainer (2026-08-30, third pass)
+
+Decision on Gilgit-Baltistan, Azad Kashmir and Islamabad Capital Territory: they are in the
+numbers (the release's fifth ADM1 unit `Other`, `has_polygon: no`) but were drawn flat grey at
+province level because the boundary file has three polygons where the envelope has one cell.
+The map now paints that one cell on each member polygon, verbatim, with `shared: true` and
+`shared_with: "Other"` in feature-state and a dotted outline layer (`adm1-shared`) above
+`adm1-line`; nothing is divided or apportioned, and the hover ("part of the release's 'Other'
+unit — … together"; "coverage differs by sector for these territories — see About"), the
+legend's dotted swatch and the detail card's kicker all say the cell is shared. The members
+are derived (`src/lib/geography.ts`: every ADM1 polygon in `bboxes.json` that is not a
+`has_polygon: yes` row), never listed; clicking a member selects `geo=Other`, the API answers
+`geography_ids: ["Other"]` (checked live: `1.9972 Mt CO2e AR5` for FY2023-24, the same display
+the hover shows), and `fitBounds` unions the three boxes. ADM2 is unchanged: each of their
+districts already had its own cell.
+
+The explainer is `WelcomeModal` (four panels with a stepper, one scroll under 768 px), shown
+until `localStorage['pakemis.intro.dismissed'] === "1"` and re-openable from the rail's "?"
+and from `/about`. It quotes `paper_national/short_summary.txt` verbatim, the release's
+reporting period and note, LULUCF status and note, GWP bases, configuration labels and notes,
+the seven structural limitation texts, the contract's functions and the agent's status, all
+from `/v1/release`; the one number it prints is the national total's `display` from the same
+context envelope the right column uses, with its receipt. `/about` is the prose version plus
+the territories' sector coverage written from `data/province_shares.csv`'s own notes (no
+numbers), what `Other` is, the licences (incl. `odbl_note` and the carve-outs), a vocabulary
+note and links. `src/__tests__/vocabulary.ts` holds the manuscript outline's "avoid" list;
+`WelcomeModal.test.tsx` and `about.test.tsx` assert no phrase appears and that every decimal on
+screen is a mocked envelope display (or a string of the release itself: the id, `CC-BY-4.0`).
+
+One thing the brief summarised more coarsely than the source: `province_shares.csv` gives the
+`Other` column a share for the railway route model (Islamabad trackage), for industrial and
+captive gas (Islamabad's part of the SNGPL franchise) and a large one for domestic aviation
+(Islamabad International plus Gilgit, Skardu, Muzaffarabad and Rawalakot); power, fugitives and
+cement are zero there. `/about` follows the file's notes.
+
