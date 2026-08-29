@@ -11,6 +11,7 @@ import { ChartFrame } from "@/components/ChartFrame";
 import { BarChart } from "@/components/BarChart";
 import { Status } from "@/components/Status";
 import type { Envelope } from "@/lib/envelope";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 const TILES = process.env.NEXT_PUBLIC_TILES_BASE ?? "/tiles";
 
@@ -18,6 +19,7 @@ function AdmMap({ env, onCell }: { env: Envelope; onCell: (lat: number, lon: num
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
   const [hover, setHover] = useState<string>("");
+  const [mapError, setMapError] = useState<string>("");
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -35,6 +37,8 @@ function AdmMap({ env, onCell }: { env: Envelope; onCell: (lat: number, lon: num
         attributionControl: false,
       });
       mapRef.current = map;
+      (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = map; // inspection aid: the map holds no numbers
+      map.on("error", (e) => setMapError((e as { error?: { message?: string } }).error?.message ?? "map error"));
       map.on("load", () => {
         map.addSource("adm1", { type: "vector", url: `pmtiles://${origin}${TILES}/adm1.pmtiles`, promoteId: "name" });
         map.addSource("adm2", { type: "vector", url: `pmtiles://${origin}${TILES}/adm2.pmtiles`, promoteId: "shape_id" });
@@ -75,6 +79,7 @@ function AdmMap({ env, onCell }: { env: Envelope; onCell: (lat: number, lon: num
   return (
     <div>
       <div ref={ref} className="map" />
+      {mapError && <div className="refusal" data-testid="map-error">Map error: {mapError}</div>}
       <p className="small">{hover || "Hover a province for its envelope cell; click anywhere for the 0.05 degree cell read from the cube."}</p>
     </div>
   );

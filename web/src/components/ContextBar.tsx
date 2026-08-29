@@ -15,7 +15,7 @@ export function useRelease() {
 
 export function ContextBar({ override = {} }: { override?: ContextOverride }) {
   const { data, error, isLoading } = useRelease();
-  if (isLoading) return <div className="context-bar" data-testid="context-bar">Loading release…</div>;
+  if (isLoading || (!data && !error)) return <div className="context-bar" data-testid="context-bar">Loading release…</div>;
   if (error || !data)
     return (
       <div className="context-bar error" data-testid="context-bar">

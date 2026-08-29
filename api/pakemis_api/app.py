@@ -10,7 +10,7 @@ import csv
 import json
 import logging
 import os
-import sys
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
@@ -60,6 +60,9 @@ class Service:
             log.error("release %s refused by pakemis_query: %s", settings.version, exc)
             raise RuntimeError("release %s refused: %s" % (settings.version, exc)) from exc
         self.engine = Engine(self.release, threads=1)
+        # one DuckDB connection per process, used by one request at a time: FastAPI runs sync
+        # handlers on a threadpool, and a DuckDB connection is not safe under concurrent use
+        self._lock = threading.Lock()
         self.method_rows = self._read_methods(settings.method_registry)
         self.cube_paths = settings.cube_paths
         self.receipts = ReceiptStore(settings.receipt_store)
@@ -83,6 +86,10 @@ class Service:
 
     def run(self, request):
         """One typed request -> one envelope; the receipt is remembered for replay."""
+        with self._lock:
+            return self._run(request)
+
+    def _run(self, request):
         name = type(request).__name__
         if name == "QueryEmissions":
             env = self.engine.query_emissions(request)

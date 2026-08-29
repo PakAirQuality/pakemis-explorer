@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { cellLabel, type Envelope } from "@/lib/envelope";
 
+/** An extra column as received: strings verbatim, objects as compact JSON, never reformatted. */
+function fmt(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return typeof v === "object" ? JSON.stringify(v) : String(v);
+}
+
 export function EnvelopeTable({ env, extra = [], showExact = false }: { env: Envelope; extra?: string[]; showExact?: boolean }) {
   const [exact, setExact] = useState(showExact);
   const groupKeys = Array.from(new Set(env.values.flatMap((v) => Object.keys(v.group ?? {}))));
@@ -29,7 +35,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false }: { env: Env
             <tr key={i}>
               {groupKeys.length ? groupKeys.map((k) => <td key={k}>{v.group?.[k] ?? ""}</td>) : <td>{cellLabel(v)}</td>}
               {extra.map((k) => (
-                <td key={k}>{String((v as Record<string, unknown>)[k] ?? "")}</td>
+                <td key={k}>{fmt((v as Record<string, unknown>)[k])}</td>
               ))}
               <td className="num">{v.display}</td>
               <td>{v.unit}</td>
