@@ -1,0 +1,909 @@
+{
+ "components": {
+  "schemas": {
+   "CompareRequest": {
+    "description": "CompareRequest(left: pakemis_query.models.QueryEmissions, right: pakemis_query.models.QueryEmissions, mode: str = 'absolute')",
+    "properties": {
+     "left": {
+      "$ref": "#/components/schemas/QueryEmissions"
+     },
+     "mode": {
+      "default": "absolute",
+      "description": "absolute | relative",
+      "title": "Mode",
+      "type": "string"
+     },
+     "right": {
+      "$ref": "#/components/schemas/QueryEmissions"
+     }
+    },
+    "required": [
+     "left",
+     "right"
+    ],
+    "title": "CompareRequest",
+    "type": "object"
+   },
+   "CompletenessRequest": {
+    "description": "CompletenessRequest(notation_keys: tuple = (), ipcc_codes: tuple = ())",
+    "properties": {
+     "ipcc_codes": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Ipcc Codes",
+      "type": "array"
+     },
+     "notation_keys": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Notation Keys",
+      "type": "array"
+     }
+    },
+    "title": "CompletenessRequest",
+    "type": "object"
+   },
+   "GridCellRequest": {
+    "description": "GridCellRequest(lat: float = 0.0, lon: float = 0.0, month: str = '', gas: str = 'CO2', configuration_id: str = '')",
+    "properties": {
+     "configuration_id": {
+      "default": "",
+      "title": "Configuration Id",
+      "type": "string"
+     },
+     "gas": {
+      "default": "CO2",
+      "title": "Gas",
+      "type": "string"
+     },
+     "lat": {
+      "default": 0.0,
+      "title": "Lat",
+      "type": "number"
+     },
+     "lon": {
+      "default": 0.0,
+      "title": "Lon",
+      "type": "number"
+     },
+     "month": {
+      "default": "",
+      "description": "YYYYMM or \"annual\"",
+      "title": "Month",
+      "type": "string"
+     }
+    },
+    "title": "GridCellRequest",
+    "type": "object"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "title": "Detail",
+      "type": "array"
+     }
+    },
+    "title": "HTTPValidationError",
+    "type": "object"
+   },
+   "QueryEmissions": {
+    "description": "QueryEmissions(periods: tuple = (), basis: str = '', configuration_id: str = '', gwp_basis: str = '', gases: tuple = (), sectors: tuple = (), ipcc_codes: tuple = (), categories: tuple = (), streams: tuple = (), geography_level: str = '', geography_ids: tuple = (), months: tuple = (), spatial_view: str = '', group_by: tuple = (), order_by: str = '', limit: int = 0, defaults_applied: tuple = ())",
+    "properties": {
+     "basis": {
+      "default": "",
+      "description": "fiscal | calendar; empty -> default",
+      "title": "Basis",
+      "type": "string"
+     },
+     "categories": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Categories",
+      "type": "array"
+     },
+     "configuration_id": {
+      "default": "",
+      "description": "REF_2023_24 | S_2023_24",
+      "title": "Configuration Id",
+      "type": "string"
+     },
+     "gases": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Gases",
+      "type": "array"
+     },
+     "geography_ids": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Geography Ids",
+      "type": "array"
+     },
+     "geography_level": {
+      "default": "",
+      "description": "national | adm1 | adm2; empty -> national",
+      "title": "Geography Level",
+      "type": "string"
+     },
+     "group_by": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Group By",
+      "type": "array"
+     },
+     "gwp_basis": {
+      "default": "",
+      "description": "AR5 | AR6",
+      "title": "Gwp Basis",
+      "type": "string"
+     },
+     "ipcc_codes": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Ipcc Codes",
+      "type": "array"
+     },
+     "limit": {
+      "default": 0,
+      "title": "Limit",
+      "type": "integer"
+     },
+     "months": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Months",
+      "type": "array"
+     },
+     "order_by": {
+      "default": "",
+      "description": "\"value desc\" | \"value asc\" | \"\"",
+      "title": "Order By",
+      "type": "string"
+     },
+     "periods": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Periods",
+      "type": "array"
+     },
+     "sectors": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Sectors",
+      "type": "array"
+     },
+     "spatial_view": {
+      "default": "",
+      "description": "all | physical | origin | accounting",
+      "title": "Spatial View",
+      "type": "string"
+     },
+     "streams": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Streams",
+      "type": "array"
+     }
+    },
+    "title": "QueryEmissions",
+    "type": "object"
+   },
+   "TimeseriesRequest": {
+    "description": "TimeseriesRequest(query: pakemis_query.models.QueryEmissions, step: str = 'annual')",
+    "properties": {
+     "query": {
+      "$ref": "#/components/schemas/QueryEmissions"
+     },
+     "step": {
+      "default": "annual",
+      "description": "annual | monthly",
+      "title": "Step",
+      "type": "string"
+     }
+    },
+    "required": [
+     "query"
+    ],
+    "title": "TimeseriesRequest",
+    "type": "object"
+   },
+   "UncertaintyRequest": {
+    "description": "UncertaintyRequest(scope: str = 'national', category: str = '', module: str = '', resolution: str = '', configuration_id: str = '', period_id: str = '')",
+    "properties": {
+     "category": {
+      "default": "",
+      "title": "Category",
+      "type": "string"
+     },
+     "configuration_id": {
+      "default": "",
+      "title": "Configuration Id",
+      "type": "string"
+     },
+     "module": {
+      "default": "",
+      "title": "Module",
+      "type": "string"
+     },
+     "period_id": {
+      "default": "",
+      "title": "Period Id",
+      "type": "string"
+     },
+     "resolution": {
+      "default": "",
+      "description": "annual | monthly | adm1 | adm2 | grid (joint table)",
+      "title": "Resolution",
+      "type": "string"
+     },
+     "scope": {
+      "default": "national",
+      "description": "national | category | series",
+      "title": "Scope",
+      "type": "string"
+     }
+    },
+    "title": "UncertaintyRequest",
+    "type": "object"
+   },
+   "ValidationError": {
+    "properties": {
+     "ctx": {
+      "title": "Context",
+      "type": "object"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "title": "Location",
+      "type": "array"
+     },
+     "msg": {
+      "title": "Message",
+      "type": "string"
+     },
+     "type": {
+      "title": "Error Type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError",
+    "type": "object"
+   }
+  }
+ },
+ "info": {
+  "description": "Deterministic query API over one verified PakEmis semantic release. Every response is a pakemis_query Envelope with a replayable receipt; typed refusals are HTTP 422.",
+  "title": "PakEmis Explorer API",
+  "version": "0.1.0"
+ },
+ "openapi": "3.1.0",
+ "paths": {
+  "/v1/download/{receipt}.csv": {
+   "get": {
+    "operationId": "download_csv_v1_download__receipt__csv_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "receipt",
+      "required": true,
+      "schema": {
+       "title": "Receipt",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Download Csv",
+    "tags": [
+     "download"
+    ]
+   }
+  },
+  "/v1/download/{receipt}.receipt.json": {
+   "get": {
+    "operationId": "download_receipt_v1_download__receipt__receipt_json_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "receipt",
+      "required": true,
+      "schema": {
+       "title": "Receipt",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Download Receipt",
+    "tags": [
+     "download"
+    ]
+   }
+  },
+  "/v1/evidence/{stream_id}": {
+   "get": {
+    "operationId": "evidence_v1_evidence__stream_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "stream_id",
+      "required": true,
+      "schema": {
+       "title": "Stream Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "category",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Category",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "module",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Module",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Evidence",
+    "tags": [
+     "lineage"
+    ]
+   }
+  },
+  "/v1/method/{method_or_category}": {
+   "get": {
+    "operationId": "method_v1_method__method_or_category__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "method_or_category",
+      "required": true,
+      "schema": {
+       "title": "Method Or Category",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Method",
+    "tags": [
+     "lineage"
+    ]
+   }
+  },
+  "/v1/query/compare": {
+   "post": {
+    "operationId": "compare_v1_query_compare_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CompareRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Compare",
+    "tags": [
+     "query"
+    ]
+   }
+  },
+  "/v1/query/completeness": {
+   "post": {
+    "operationId": "completeness_v1_query_completeness_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CompletenessRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Completeness",
+    "tags": [
+     "query"
+    ]
+   }
+  },
+  "/v1/query/emissions": {
+   "post": {
+    "operationId": "query_emissions_v1_query_emissions_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/QueryEmissions"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Query Emissions",
+    "tags": [
+     "query"
+    ]
+   }
+  },
+  "/v1/query/timeseries": {
+   "post": {
+    "operationId": "timeseries_v1_query_timeseries_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TimeseriesRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Timeseries",
+    "tags": [
+     "query"
+    ]
+   }
+  },
+  "/v1/query/uncertainty": {
+   "post": {
+    "operationId": "uncertainty_v1_query_uncertainty_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UncertaintyRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Uncertainty",
+    "tags": [
+     "query"
+    ]
+   }
+  },
+  "/v1/receipt/{receipt}": {
+   "get": {
+    "operationId": "receipt_v1_receipt__receipt__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "receipt",
+      "required": true,
+      "schema": {
+       "title": "Receipt",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Receipt",
+    "tags": [
+     "receipt"
+    ]
+   }
+  },
+  "/v1/release": {
+   "get": {
+    "operationId": "release_v1_release_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Release",
+    "tags": [
+     "release"
+    ]
+   }
+  },
+  "/v1/spatial/grid": {
+   "post": {
+    "operationId": "grid_cell_v1_spatial_grid_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/GridCellRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Grid Cell",
+    "tags": [
+     "spatial"
+    ]
+   }
+  },
+  "/v1/spatial/lineage/{shape_id}": {
+   "get": {
+    "operationId": "spatial_lineage_v1_spatial_lineage__shape_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "shape_id",
+      "required": true,
+      "schema": {
+       "title": "Shape Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "month",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Month",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "gas",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Gas",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "configuration_id",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Configuration Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Spatial Lineage",
+    "tags": [
+     "spatial"
+    ]
+   }
+  },
+  "/v1/transfers": {
+   "get": {
+    "operationId": "transfers_v1_transfers_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "ledger_id",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Ledger Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "configuration_id",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Configuration Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Transfers",
+    "tags": [
+     "lineage"
+    ]
+   }
+  }
+ }
+}
