@@ -67,9 +67,16 @@ def test_labels_cover_every_id(release):
     assert labels["geographies"]["ADM1:Punjab"] == "Punjab"
 
 
-def test_agent_block_not_mounted(release):
-    assert release["agent"] == {"enabled": False, "model": "", "reason": "not mounted"}
-    assert "KEY" not in str(release["agent"]).upper() or release["agent"]["model"] == ""
+def test_agent_block_reports_the_ask_module(release):
+    """The ask module is mounted; without ANTHROPIC_API_KEY in the API's environment it
+    reports itself disabled with the configured model and a reason that names the
+    variable (never its value)."""
+    agent = release["agent"]
+    assert set(agent) == {"enabled", "model", "reason"}
+    assert agent["enabled"] is False
+    assert agent["model"] == "claude-sonnet-5"
+    assert "ANTHROPIC_API_KEY" in agent["reason"]
+    assert len(agent["reason"]) < 200
 
 
 def test_agent_status_hook(client):

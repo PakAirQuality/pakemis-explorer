@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/v1/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask */
+        post: operations["ask_v1_ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/download/{receipt}.csv": {
         parameters: {
             query?: never;
@@ -246,6 +263,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AskBody */
+        AskBody: {
+            /** Client History */
+            client_history?: {
+                [key: string]: unknown;
+            }[];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Message */
+            message: string;
+            /** Ui State */
+            ui_state?: {
+                [key: string]: unknown;
+            };
+        };
         /**
          * CompareRequest
          * @description CompareRequest(left: pakemis_query.models.QueryEmissions, right: pakemis_query.models.QueryEmissions, mode: str = 'absolute')
@@ -445,6 +477,39 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ask_v1_ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     download_csv_v1_download__receipt__csv_get: {
         parameters: {
             query?: never;
