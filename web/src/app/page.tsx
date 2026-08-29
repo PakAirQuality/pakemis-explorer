@@ -14,6 +14,7 @@ import { useExplorerState, type StateDefaults } from "@/lib/urlState";
 import type { ReleaseInfo } from "@/lib/envelope";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
 import { IconRail } from "@/components/shell/IconRail";
+import { WelcomeModal, openIntro } from "@/components/shell/WelcomeModal";
 import { SlidingPanel } from "@/components/shell/SlidingPanel";
 import { AskDock } from "@/components/ask/AskDock";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
@@ -72,7 +73,7 @@ function Loaded({ release, contract }: { release: ReleaseInfo; contract: ReturnT
   const ctx: ExplorerContextValue = { state, setState, release, labels, dims, defaults, contract, agent, isMobile };
   const panel =
     state.panel === "explore" ? <ExplorePanel /> : state.panel === "inventory" ? <InventoryPanel /> : state.panel === "compare" ? <ComparePanel /> : state.panel === "evidence" ? <EvidencePanel /> : null;
-  const rail = <IconRail active={state.panel} onChange={(p) => setState({ panel: p })} ask={state.ask} onAsk={() => setState({ ask: !state.ask })} horizontal={isMobile} />;
+  const rail = <IconRail active={state.panel} onChange={(p) => setState({ panel: p })} ask={state.ask} onAsk={() => setState({ ask: !state.ask })} onIntro={openIntro} horizontal={isMobile} />;
   return (
     <ExplorerContext.Provider value={ctx}>
       <div className={`flex h-dvh w-screen overflow-hidden ${isMobile ? "flex-col" : "flex-row"}`} data-testid="explorer">
@@ -95,6 +96,7 @@ function Loaded({ release, contract }: { release: ReleaseInfo; contract: ReturnT
           </div>
         )}
         {isMobile && rail}
+        <WelcomeModal />
       </div>
     </ExplorerContext.Provider>
   );

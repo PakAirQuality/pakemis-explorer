@@ -67,6 +67,34 @@ export function releaseDefaults(r: ReleaseInfo | undefined): Defaults | undefine
   return { basis: d.basis ?? "", configuration_id: d.configuration_id, gwp_basis: d.gwp_basis, period_id: d.period_id, spatial_view: d.spatial_view ?? "all", geography_id: d.geography_id ?? "" };
 }
 
+export type ReleaseFacts = {
+  reportingPeriod: { label: string; start: string; end: string; note: string } | null;
+  lulucf: { status: string; notation_key: string; note: string };
+  gwp: { reported: string; secondary: string; bases: string[] };
+  licences: { code: string; data_and_text: string; odbl_note: string; odbl_carveouts: string[]; undetermined: string };
+};
+
+/**
+ * The release's own statements the explainer quotes: the reporting period and its note, the
+ * LULUCF status and note, the GWP bases (reported / secondary) and the licences. All from the
+ * nested `release` block of /v1/release (the semantic release), with the context bar as the
+ * fallback for the period and LULUCF; nothing here is typed in the client.
+ */
+export function releaseFacts(r: ReleaseInfo | undefined): ReleaseFacts {
+  const nested = ((r as unknown as { release?: Record<string, unknown> } | undefined)?.release ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const rp = (nested.reporting_period ?? r?.context_bar?.reporting_period ?? null) as Record<string, unknown> | null;
+  const lu = (nested.lulucf ?? r?.context_bar?.lulucf ?? {}) as Record<string, unknown>;
+  const gw = (nested.gwp_bases ?? {}) as Record<string, unknown>;
+  const li = (nested.licences ?? r?.licences ?? {}) as Record<string, unknown>;
+  return {
+    reportingPeriod: rp ? { label: str(rp.label), start: str(rp.start), end: str(rp.end), note: str(rp.note) } : null,
+    lulucf: { status: str(lu.status), notation_key: str(lu.notation_key), note: str(lu.note) },
+    gwp: { reported: str(gw.reported), secondary: str(gw.secondary), bases: Object.keys((gw.factors as Record<string, unknown> | undefined) ?? {}) },
+    licences: { code: str(li.code), data_and_text: str(li.data_and_text), odbl_note: str(li.odbl_note), odbl_carveouts: Array.isArray(li.odbl_carveouts) ? (li.odbl_carveouts as unknown[]).map(String) : [], undetermined: str(li.undetermined) },
+  };
+}
+
 export function releaseAgent(r: ReleaseInfo | undefined): { enabled: boolean; model: string; reason: string } {
   const a = (r as unknown as { agent?: { enabled?: boolean; model?: string; reason?: string } } | undefined)?.agent;
   return { enabled: !!a?.enabled, model: a?.model ?? "", reason: a?.reason ?? "not mounted" };
