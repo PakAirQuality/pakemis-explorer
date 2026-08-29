@@ -53,7 +53,8 @@ def test_labels_cover_every_id(release):
     for p in dims["dim_period"]["values"]:
         entry = labels["periods"][p["period_id"]]
         assert entry["start"] and entry["end"] and entry["basis"] == p["basis"]
-    assert labels["periods"]["FY2023-24"]["label"] == "FY2023-24 (1 Jul 2023 – 30 Jun 2024)"
+    assert labels["periods"]["FY2023-24"]["label"] == "July 2023 – June 2024"
+    assert labels["periods"]["FY2023-24"]["short"] == "2023–24"
     assert labels["periods"]["FY2023-24"]["is_reference"] is True
     for m in dims["dim_month"]["values"]:
         assert m in labels["months"]
@@ -97,3 +98,36 @@ def test_existing_keys_unchanged(release):
         assert key in release, key
     assert release["dims"]["dim_gas"]["values"] == ["CH4", "CO2", "N2O"]
     assert len(release["dims"]["dim_configuration"]["queryable"]) == 2
+
+
+def test_period_labels_carry_no_basis_prefix(release):
+    """A person reads '2023–24', never 'FY2023-24': the prefix stays in the id (the key), the
+    basis is said once in `basis_note`, and the tooltip label spells the months out."""
+    periods = release["labels"]["periods"]
+    assert len(periods) == len(release["dims"]["dim_period"]["values"])
+    for pid, entry in periods.items():
+        assert not entry["short"].startswith("FY") and not entry["short"].startswith("CY"), pid
+        assert "FY" not in entry["label"] and "CY" not in entry["label"], pid
+        assert entry["short"] and entry["label"] and entry["basis_note"], pid
+    fiscal = {pid: e for pid, e in periods.items() if e["basis"] == "fiscal"}
+    calendar = {pid: e for pid, e in periods.items() if e["basis"] == "calendar"}
+    assert len(fiscal) == 9 and len(calendar) == 35
+    for pid, e in fiscal.items():
+        assert pid.startswith("FY")
+        assert e["short"] == pid[2:].replace("-", "–")               # FY2015-16 -> 2015–16 (en dash)
+        assert e["label"].startswith("July ") and " – June " in e["label"]
+        assert e["basis_note"] == "a fiscal year runs from July to June"
+    assert fiscal["FY2015-16"]["label"] == "July 2015 – June 2016"
+    for pid, e in calendar.items():
+        assert pid.startswith("CY")
+        assert e["short"] == pid[2:]                                   # CY1990 -> 1990
+        assert e["label"] == "calendar year " + pid[2:]
+        assert e["basis_note"] == "a calendar year runs from January to December"
+    assert calendar["CY1990"] == dict(calendar["CY1990"], short="1990", label="calendar year 1990")
+
+
+def test_period_label_helpers():
+    from pakemis_api.app import period_labels, period_short
+    assert period_short("FY2023-24") == "2023–24" and period_short("CY1990") == "1990" and period_short("2001") == "2001"
+    other = period_labels({"basis": "other", "label": "X1", "period_start": "2001-01-01", "period_end": "2001-03-31"})
+    assert other == {"label": "X1 (1 Jan 2001 – 31 Mar 2001)", "short": "X1", "basis_note": ""}

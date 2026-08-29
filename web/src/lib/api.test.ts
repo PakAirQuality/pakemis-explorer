@@ -59,9 +59,9 @@ describe("routes are relative to the base", () => {
     expect(api.downloadReceiptUrl("r1")).toBe(`${API_BASE}/download/r1.receipt.json`);
     expect(api.askUrl()).toBe(`${API_BASE}/ask`);
     // the schema and docs live at the app root; the prefixed path is the second candidate (the rewrite's)
-    expect(api.openapiUrls()).toEqual(["http://localhost:8000/openapi.json", `${API_BASE}/openapi.json`]);
-    expect(api.openapiUrl()).toBe("http://localhost:8000/openapi.json");
-    expect(api.docsUrl()).toBe("http://localhost:8000/docs");
+    expect(api.openapiUrls()).toEqual([`${API_BASE}/openapi.json`, "http://localhost:8000/openapi.json"]);
+    expect(api.openapiUrl()).toBe(`${API_BASE}/openapi.json`);
+    expect(api.docsUrl()).toBe(`${API_BASE}/docs`);
     for (const u of [api.downloadCsvUrl("r1"), api.askUrl(), `${API_BASE}/release`]) expect(u.replace(API_PREFIX, "")).not.toContain("/v1/");
     vi.unstubAllGlobals();
   });

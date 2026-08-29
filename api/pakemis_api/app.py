@@ -8,18 +8,22 @@ table digest; the mismatch is logged by file name.
 
 Every route lives under settings.API_PREFIX (/api/v1/emissions), the prefix Firebase Hosting
 rewrites to the Cloud Run service; the same router is mounted a second time under the legacy
-/v1 prefix, out of the schema, answered with `Deprecation: true`, for one release.
+/v1 prefix, out of the schema, answered with `Deprecation: true`, for one release.  The schema
+and the Swagger docs are served under the prefix ({prefix}/openapi.json, {prefix}/docs) and,
+for a direct base and `make openapi`, at the root (/openapi.json, /docs).
 """
 import csv
 import datetime
 import json
 import logging
 import os
+import re
 import threading
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from starlette.middleware.gzip import GZipMiddleware
 
@@ -54,6 +58,12 @@ def _verify_module():
 
 # --- humanised labels, built from the dims (never a hard-coded list) --------------------------
 MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+MONTH_NAMES = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+EN_DASH = "\u2013"
+# the basis prefix of a period id / dim label ("FY2023-24", "CY1990"): dropped from every label a
+# person reads; the id itself stays the key (URLs, requests, receipts)
+BASIS_PREFIX = re.compile(r"^(FY|CY)")
+BASIS_NOTES = {"fiscal": "a fiscal year runs from July to June", "calendar": "a calendar year runs from January to December"}
 SUBSCRIPT_DIGITS = str.maketrans("0123456789", "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089")
 ACRONYMS = {"ippu": "IPPU"}   # the one sector id that is an acronym; every other label is title-cased
 # the three placements, worded as the release's spatial products contract words them
@@ -79,6 +89,35 @@ def date_label(iso):
     except (TypeError, ValueError):
         return iso
     return "%d %s %d" % (d.day, MONTH_ABBR[d.month - 1], d.year)
+
+
+def month_year(iso):
+    """'2023-07-01' -> 'July 2023'; an unparsable string is returned as it is."""
+    try:
+        d = datetime.date.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return iso
+    return "%s %d" % (MONTH_NAMES[d.month - 1], d.year)
+
+
+def period_short(label):
+    """The dim label without its basis prefix, the year pair joined by an en dash:
+    'FY2023-24' -> '2023–24', 'CY1990' -> '1990'."""
+    return BASIS_PREFIX.sub("", str(label)).replace("-", EN_DASH)
+
+
+def period_labels(row):
+    """`short` is what a chip, rail or axis prints; `label` spells the months out ('July 2023 –
+    June 2024' for a fiscal row, 'calendar year 1990' for a calendar row) and is the tooltip;
+    `basis_note` says once what the basis means, so no label needs a prefix to say it."""
+    basis = row["basis"]
+    if basis == "fiscal":
+        label = "%s %s %s" % (month_year(row["period_start"]), EN_DASH, month_year(row["period_end"]))
+    elif basis == "calendar":
+        label = "calendar year %s" % period_short(row["label"])
+    else:
+        label = "%s (%s %s %s)" % (row["label"], date_label(row["period_start"]), EN_DASH, date_label(row["period_end"]))
+    return {"label": label, "short": period_short(row["label"]), "basis_note": BASIS_NOTES.get(basis, "")}
 
 
 def configuration_label(row, baseline_letter):
@@ -268,10 +307,8 @@ class Service:
                 "queryable": r["queryable"] == "yes", "axis": r["axis"], "module": r["module"], "note": r["note"]}
         periods = {}
         for r in self.release.dim("dim_period"):
-            periods[r["period_id"]] = {
-                "label": "%s (%s \u2013 %s)" % (r["label"], date_label(r["period_start"]), date_label(r["period_end"])),
-                "short": r["label"], "start": r["period_start"], "end": r["period_end"], "basis": r["basis"],
-                "availability": r["availability"], "is_reference": r["is_reference"] == "True", "note": r["note"]}
+            periods[r["period_id"]] = dict(period_labels(r), start=r["period_start"], end=r["period_end"], basis=r["basis"],
+                                           availability=r["availability"], is_reference=r["is_reference"] == "True", note=r["note"])
         months = {}
         for r in self.release.dim("dim_month"):
             months[r["month"]] = "%s %s" % (MONTH_ABBR[int(r["calendar_month"]) - 1], r["calendar_year"])
@@ -304,6 +341,9 @@ def create_app(settings=None, model_client=None):
         yield
 
     app = FastAPI(title="PakEmis Explorer API", version=API_VERSION, lifespan=lifespan,
+                  # the schema and the docs live under the prefix too: behind the hosting rewrite only
+                  # the prefix reaches the service; the root copies below keep a direct base working
+                  openapi_url=API_PREFIX + "/openapi.json", docs_url=API_PREFIX + "/docs", redoc_url=None,
                   description="Deterministic query API over one verified PakEmis semantic release. Every response is a "
                               "pakemis_query Envelope with a replayable receipt; typed refusals are HTTP 422. "
                               "Routes live under %s; the same routes under %s are a deprecated alias for one release." % (API_PREFIX, LEGACY_PREFIX))
@@ -409,6 +449,15 @@ def create_app(settings=None, model_client=None):
     app.include_router(api, prefix=API_PREFIX)                           # the canonical paths (the schema)
     app.include_router(api, prefix=LEGACY_PREFIX, include_in_schema=False)   # the alias, `Deprecation: true` via the middleware
     app.add_api_route("/healthz", healthz, include_in_schema=False)      # the container's health check, outside both prefixes
+
+    async def openapi_root():
+        return JSONResponse(app.openapi())
+
+    async def docs_root():
+        return get_swagger_ui_html(openapi_url=app.openapi_url, title=app.title + " - Swagger UI")
+
+    app.add_api_route("/openapi.json", openapi_root, include_in_schema=False)   # the root copies: `make openapi`, a direct base
+    app.add_api_route("/docs", docs_root, include_in_schema=False)
 
     return app
 

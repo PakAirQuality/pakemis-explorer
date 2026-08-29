@@ -115,7 +115,7 @@ exists to fetch. When one does, `RELEASES.md` gains a row with the same two dige
 
 ```
 export PAKEMIS_QUERY_PATH=/path/to/emissions/src   # default: /Users/rehanahmad/Desktop/emissions/src
-make api      # http://localhost:8000  (docs at /docs; GET /api/v1/emissions/release shows the context
+make api      # http://localhost:8000  (docs at /api/v1/emissions/docs and /docs; GET /api/v1/emissions/release shows the context
               # bar, dims, labels, defaults and the agent block; /v1/* still answers, deprecated)
 make tiles    # once per release: PMTiles + bboxes.json into data/releases/<v>/tiles (needs tippecanoe);
               # served by the API at /api/v1/emissions/tiles/*; copied to web/public/tiles for one release

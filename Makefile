@@ -45,7 +45,7 @@ push-release:       ## upload data/releases/$(VERSION) (payload + tiles) to gs:/
 deploy:             ## Cloud Build: image + Cloud Run service `pakemis` (cloudbuild.yaml)
 	gcloud builds submit --config cloudbuild.yaml --substitutions _RELEASES_BUCKET=$(BUCKET),_RELEASE_VERSION=$(VERSION) .
 
-web:                ## Next.js dev server on :3000 (NEXT_PUBLIC_PAKEMIS_API defaults to http://localhost:8000)
+web:                ## Next.js dev server on :3000 (NEXT_PUBLIC_API_BASE defaults to http://localhost:8000/api/v1/emissions)
 	cd web && npm run dev
 
 build:              ## production build of the web app

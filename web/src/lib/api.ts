@@ -112,12 +112,13 @@ export const api = {
   /** The SSE endpoint of Ask PakEmis (POST). */
   askUrl: () => `${API_BASE}/ask`,
   /**
-   * The schema and the interactive docs. FastAPI serves them at the app root (`/openapi.json`,
-   * `/docs`), which only a direct base reaches; behind the hosting rewrite only the prefix is
-   * forwarded, so a same-origin base links under the prefix. `openapiUrls` lists both candidates
-   * in that order for the contract fetch, which takes the first that answers.
+   * The schema and the interactive docs. The API serves both under the prefix
+   * (`{base}/openapi.json`, `{base}/docs`), which is what reaches it behind the hosting rewrite,
+   * and keeps root copies (`/openapi.json`, `/docs`) for a direct base. `openapiUrls` lists the
+   * prefixed URL first and, for an absolute base, the root copy second; the contract fetch takes
+   * the first that answers.
    */
-  openapiUrls: () => (isAbsolute(API_BASE) ? [`${new URL(API_BASE).origin}/openapi.json`, `${API_BASE}/openapi.json`] : [`${API_BASE}/openapi.json`]),
+  openapiUrls: () => (isAbsolute(API_BASE) ? [`${API_BASE}/openapi.json`, `${new URL(API_BASE).origin}/openapi.json`] : [`${API_BASE}/openapi.json`]),
   openapiUrl: () => api.openapiUrls()[0],
-  docsUrl: () => (isAbsolute(API_BASE) ? `${new URL(API_BASE).origin}/docs` : `${API_BASE}/docs`),
+  docsUrl: () => `${API_BASE}/docs`,
 };

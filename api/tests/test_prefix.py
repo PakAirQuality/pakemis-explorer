@@ -85,3 +85,17 @@ def test_head_answers_as_get_without_a_body(client):
     r = client.head(LEGACY_PREFIX + "/release")
     assert r.status_code == 200 and r.headers["deprecation"] == "true"
     assert client.head(P + "/receipt/0000").status_code == 404
+
+
+def test_schema_and_docs_under_the_prefix_and_at_the_root(client):
+    """Behind the hosting rewrite only the prefix reaches the service, so the schema and the
+    Swagger page answer there; the root copies keep a direct base and `make openapi` working."""
+    prefixed = client.get(P + "/openapi.json")
+    root = client.get("/openapi.json")
+    assert prefixed.status_code == 200 and root.status_code == 200
+    assert prefixed.json() == root.json() == client.app.openapi()
+    for path in (P + "/docs", "/docs"):
+        r = client.get(path)
+        assert r.status_code == 200 and "swagger" in r.text.lower(), path
+    assert P + "/openapi.json" in client.get(P + "/docs").text
+    assert client.get(P + "/redoc").status_code == 404 and client.get("/redoc").status_code == 404

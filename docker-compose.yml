@@ -14,9 +14,12 @@ services:
       - ./data/releases:/app/data/releases:ro
     ports: ["8080:8080"]
   web:
-    build: ./web
-    environment:
-      NEXT_PUBLIC_PAKEMIS_API: http://localhost:8080   # the api service above (the web app appends /api/v1/emissions)
+    build:
+      context: ./web
+      args:
+        # the static export inlines the API base at build time (web/Dockerfile ARG), so it is a
+        # build arg, not a runtime variable: the api service above, prefix included, as the browser reaches it
+        NEXT_PUBLIC_API_BASE: http://localhost:8080/api/v1/emissions
     ports: ["3000:3000"]
     depends_on: [api]
 volumes:
