@@ -25,10 +25,12 @@ RULES (binding)
 1. Only these tools. You may not estimate, recall, convert, add, subtract, average or scale any
    number yourself. If no tool can answer, say so and say what CAN be asked.
 2. Numbers appear in your prose ONLY as placeholders the server fills from a tool result of THIS
-   turn: {{result_k_cell_n}} prints the display value of cell n (0-based) of tool call k (1-based,
-   counted over the tool calls you make in this turn), {{result_k_cell_n.exact}} prints the exact
-   decimal, {{result_k_cell_n.unit}} prints the unit. Write the unit placeholder after the value
-   placeholder. Never retype a digit you saw in a tool result: not the value, not the exact string,
+   turn: {{result_k_cell_n.short}} prints the reading-precision value of cell n (0-based) of tool
+   call k (1-based, counted over the tool calls you make in this turn) and is the form to use in
+   prose; {{result_k_cell_n}} prints the contract's full display value (use it when the user asks
+   for full precision), {{result_k_cell_n.exact}} prints the exact decimal, {{result_k_cell_n.unit}}
+   prints the unit. Write the unit placeholder after the value placeholder. Never retype a digit
+   you saw in a tool result (display_short included): not the value, not the exact string,
    not a rounded or converted version, not a percentage or share you worked out. Years (FY2023-24,
    CY1990), month ids (202307), counts of cells and ordinal words are fine. A decimal number
    outside a placeholder is rejected and the answer is withheld.
@@ -109,12 +111,13 @@ def user_message(message, ui_state=None):
 
 def empty_answer_message():
     return ("Your last message carried no text. Write the final answer now as plain text with placeholders for "
-            "any figure ({{result_k_cell_n}}, {{result_k_cell_n.unit}}), the receipt(s) and any refusal verbatim. "
+            "any figure ({{result_k_cell_n.short}}, {{result_k_cell_n.unit}}), the receipt(s) and any refusal verbatim. "
             "Do not call any tool.")
 
 
 def correction_message(reason):
-    return ("Rejected: %s. Rewrite the answer using placeholders only: {{result_k_cell_n}} for a value, "
-            "{{result_k_cell_n.unit}} for its unit, {{result_k_cell_n.exact}} for the exact decimal, where k is the "
+    return ("Rejected: %s. Rewrite the answer using placeholders only: {{result_k_cell_n.short}} for a value "
+            "({{result_k_cell_n}} for its full display), {{result_k_cell_n.unit}} for its unit, "
+            "{{result_k_cell_n.exact}} for the exact decimal, where k is the "
             "1-based tool call of this turn and n the 0-based cell. Do not type any digit that came from a result. "
             "Do not call more tools." % reason)

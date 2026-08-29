@@ -243,6 +243,27 @@ tiles are not touched); every response carries `Strict-Transport-Security`,
 Request bodies are pydantic models generated at import time from the `pakemis_query.models`
 dataclasses (`api/pakemis_api/models_gen.py`); a test asserts they mirror the dataclass fields.
 
+### Presentation rounding
+
+The web computes nothing, so the number a screen prints at reading precision is minted by the
+API: every envelope cell (and a compare cell's nested `left`/`right`, and the `quantiles` of an
+uncertainty cell as `quantiles_short`) carries `display_short` beside the contract's `display`
+and `exact`, plus `unit_words` (the unit as words, `Mt CO2e AR5` → `million tonnes CO₂e (AR5)`).
+`display_short` is derived from `exact` with `Decimal` and `ROUND_HALF_EVEN` under the rule
+`api/pakemis_api/presentation.py` declares and `GET /release` publishes as
+`rounding.presentation`: a mass (`Mt`, `Gg`, `t`) at or above 10 keeps one decimal, between 1
+and 10 two decimals, below 1 three significant figures, a zero prints as `0`; a percentage keeps
+one decimal; a share or ratio keeps three significant figures; a count prints as it is; any other
+unit prints the `display`. A bounded cell rounds both ends by the same rule and, when they
+coincide, adds decimals up to the `display`'s precision until they differ, else prints the single
+value with an `≈` prefix (`[12.2565, 12.2769]` → `[12.26, 12.28]`; two exactly equal ends print
+the one value). Trailing zeros stay (`452.3`, `9.01`, `0.350`). The decoration runs after the
+query core has minted `result_sha256` and the receipt, so both stand and a golden replays to its
+frozen receipt; the CSV download is the core's data product and carries no presentation column.
+In Ask PakEmis the compact tool result and the `tool_result` event carry `display_short`, and the
+placeholder `{{result_k_cell_n.short}}` renders it; `{{result_k_cell_n}}` keeps rendering
+`display`, and the bare-number gate is unchanged.
+
 ## Ask PakEmis: the contract
 
 `POST /api/v1/emissions/ask` takes `{conversation_id?, message, ui_state, client_history?}` and streams:

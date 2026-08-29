@@ -1,7 +1,10 @@
 """PakEmis Explorer API: FastAPI over pakemis_query, one Engine per process, threads=1.
 
-Every response body is the Envelope exactly as pakemis_query returns it; the service adds no
-number and reshapes nothing.  A typed refusal (pakemis_query.errors.QueryError) is HTTP 422 with
+Every response body is the Envelope as pakemis_query returns it, with one presentation layer on
+top: every cell gains `display_short` (the exact decimal at reading precision, under the rule
+/release publishes as rounding.presentation) and `unit_words`; the service adds no other number
+and reshapes nothing, and the receipt and result_sha256 are the core's, minted before the
+decoration.  A typed refusal (pakemis_query.errors.QueryError) is HTTP 422 with
 the error class name and the limitation id.  The app refuses to start unless
 data/verify_release.py passes for the pinned version AND Release.open(verify=True) accepts every
 table digest; the mismatch is logged by file name.
@@ -30,6 +33,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from pakemis_api import models_gen as G
 from pakemis_api.ask.router import install_ask, router as ask_router
 from pakemis_api.middleware import HeadAsGetMiddleware, ResponseHeadersMiddleware
+from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate
 from pakemis_api.receipts import ReceiptStore
 from pakemis_api.settings import API_PREFIX, LEGACY_PREFIX, Settings, import_query_core
 from pakemis_api.tiles import TileStore, router as tiles_router
@@ -185,10 +189,14 @@ class Service:
 
     # --- dispatch ---------------------------------------------------------------------------
 
-    def run(self, request):
-        """One typed request -> one envelope; the receipt is remembered for replay."""
+    def run(self, request, decorate_cells=True):
+        """One typed request -> one envelope; the receipt is remembered for replay. The envelope
+        leaves with display_short and unit_words on every cell (added after the core minted the
+        receipt and result_sha256, so both stand); decorate_cells=False hands out the core's
+        envelope untouched, for the downloads."""
         with self._lock:
-            return self._run(request)
+            env = self._run(request)
+        return decorate(env) if decorate_cells else env
 
     def _run(self, request):
         name = type(request).__name__
@@ -222,11 +230,11 @@ class Service:
         self.receipts.remember(env["receipt"], canonical_json(request))
         return env
 
-    def replay(self, receipt):
+    def replay(self, receipt, decorate_cells=True):
         canonical = self.receipts.get(receipt)
         if canonical is None:
             raise HTTPException(404, {"error": "unknown_receipt", "message": "no request is stored for receipt %s; POST the request again to mint it" % receipt})
-        env = self.run(G.from_canonical(canonical))
+        env = self.run(G.from_canonical(canonical), decorate_cells=decorate_cells)
         if env["receipt"] != receipt:
             raise HTTPException(500, {"error": "receipt_not_reproduced", "message": "replaying the stored request gave receipt %s, not %s: the release changed under the receipt" % (env["receipt"], receipt), "expected": receipt, "recomputed": env["receipt"]})
         return env
@@ -278,7 +286,8 @@ class Service:
                             "geography_id": defaults["geography_id"], "reporting_period": self.manifest.get("reporting_period"),
                             "lulucf": rel["lulucf"]},
             "dims": dims,
-            "rounding": c["rounding"],
+            # the contract's rounding, plus the presentation rule this service applies on top (display_short)
+            "rounding": dict(c["rounding"], presentation=dict(PRESENTATION_ROUNDING)),
             "query_contract": c["query_contract"],
             "known_limitations": c["known_limitations"],
             "labels": self.labels(),
@@ -435,7 +444,7 @@ def create_app(settings=None, model_client=None):
     @api.get("/download/{receipt}.csv", tags=["download"], response_class=PlainTextResponse)
     def download_csv(receipt: str):
         s = svc()
-        env = s.replay(receipt)
+        env = s.replay(receipt, decorate_cells=False)      # the CSV is the core's data product, no presentation columns
         text = download.result_csv(env)
         headers = {"Content-Disposition": 'attachment; filename="pakemis_%s.csv"' % receipt,
                    "X-PakEmis-Receipt": env["receipt"], "X-PakEmis-Result-SHA256": env["result_sha256"],
@@ -445,7 +454,7 @@ def create_app(settings=None, model_client=None):
     @api.get("/download/{receipt}.receipt.json", tags=["download"])
     def download_receipt(receipt: str):
         s = svc()
-        env = s.replay(receipt)
+        env = s.replay(receipt, decorate_cells=False)
         text = download.receipt_json(env, odbl_in_scope=s.odbl_in_scope(env))
         return Response(content=text, media_type="application/json",
                         headers={"Content-Disposition": 'attachment; filename="RECEIPT_%s.json"' % receipt})

@@ -1,9 +1,11 @@
 """Multi-result placeholders over the query core's single-result guardrail.
 
 The agent writes `{{result_k_cell_n}}` (k = the 1-based tool call of this turn, n = the 0-based
-cell of that result), or `.exact` / `.unit` / `.value` variants; the legacy `{{result_cell_n}}`
-names the last result. Each placeholder is delegated to `pakemis_query.placeholders.render` on
-the one envelope it names, so the core's index and attribute rules hold; then the core's
+cell of that result), or `.exact` / `.unit` / `.value` / `.short` variants; the legacy
+`{{result_cell_n}}` names the last result. Each placeholder is delegated to
+`pakemis_query.placeholders.render` on the one envelope it names, so the core's index and
+attribute rules hold (`.short` is the service's own attribute, `display_short` minted by
+presentation.py, and is resolved here under the same index rule); then the core's
 `reject_bare_numbers` runs over the text with every placeholder and every allowlisted string
 removed, so an invented decimal never reaches a reader.
 
@@ -18,7 +20,8 @@ import re
 
 from pakemis_query import placeholders as P
 
-MULTI = re.compile(r"\{\{result_(?:(\d+)_)?cell_(\d+)(?:\.(exact|unit|value))?\}\}")
+MULTI = re.compile(r"\{\{result_(?:(\d+)_)?cell_(\d+)(?:\.(exact|unit|value|short))?\}\}")
+SERVICE_ATTRS = {"short": "display_short"}     # attributes the service adds; the rest are the core's
 
 
 class BareNumberError(P.PlaceholderError):
@@ -56,8 +59,15 @@ def render_multi(template, results, allowlist=()):
         env = results[k - 1]
         if env is None:
             raise P.PlaceholderError("template names result_%d but tool call %d returned no cells" % (k, k))
-        single = "{{result_cell_%s%s}}" % (n_text, "." + attr if attr else "")
-        text = P.render(single, env)
+        if attr in SERVICE_ATTRS:
+            index, values = int(n_text), env["values"]
+            if index >= len(values):
+                raise P.PlaceholderError("template names result_cell_%d; the result has %d cells" % (index, len(values)))
+            cell = values[index]
+            text = str(cell.get(SERVICE_ATTRS[attr], cell["display"]))
+        else:
+            single = "{{result_cell_%s%s}}" % (n_text, "." + attr if attr else "")
+            text = P.render(single, env)
         citations.append({"k": k, "cell": int(n_text), "attr": attr or "display",
                           "receipt": env.get("receipt", ""), "text": text})
         return '<cite k="%d" cell="%s" receipt="%s">%s</cite>' % (k, n_text, html.escape(env.get("receipt", ""), quote=True), html.escape(text, quote=False))

@@ -116,7 +116,7 @@ def _compact_context(context):
     return out
 
 
-_CELL_SKIP = {"exact", "value", "display", "unit", "result_row_ids", "formula", "group"}
+_CELL_SKIP = {"exact", "value", "display", "display_short", "unit", "unit_words", "quantiles_short", "result_row_ids", "formula", "group"}
 _NUMERIC = re.compile(r"^[-+]?(\d+[.,]?\d*|\.\d+)([eE][-+]?\d+)?$")
 _ID_KEYS = ("month", "period_id")           # digit-shaped identifiers the model may name
 
@@ -124,7 +124,9 @@ _ID_KEYS = ("month", "period_id")           # digit-shaped identifiers the model
 def compact_cells(values, cap):
     cells = []
     for i, v in enumerate(values[:cap]):
-        cell = {"i": i, "display": v.get("display"), "unit": v.get("unit")}
+        # display_short is the server's reading-precision rendering (presentation.py); the model may
+        # print it through {{result_k_cell_n.short}} and is asked to prefer it in prose
+        cell = {"i": i, "display": v.get("display"), "display_short": v.get("display_short", v.get("display")), "unit": v.get("unit")}
         if v.get("group"):
             cell["group"] = v["group"]
         for key in ("co2e_exactness", "exactness", "interpretation"):
