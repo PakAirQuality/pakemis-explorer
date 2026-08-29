@@ -1,0 +1,27 @@
+# api/Dockerfile builds from the repository root; only api/, data/verify_release.py and RELEASES.md go in.
+.git
+web
+tiles
+scripts
+docs
+data/releases
+data/receipts.json
+data/fetch_release.py
+api/tests
+api/docs
+api/export_openapi.py
+api/.env
+**/.env
+**/.env.*
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/node_modules
+README.md
+REPORT.md
+Makefile
+docker-compose.yml
+cloudbuild.yaml
+firebase.json
+.firebaserc
+.DS_Store

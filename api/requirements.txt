@@ -11,3 +11,4 @@ anthropic>=0.93
 google-genai>=1.67
 sse-starlette>=3.3
 pytest>=7.4
+google-cloud-storage>=2.16

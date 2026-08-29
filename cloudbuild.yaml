@@ -1,0 +1,57 @@
+# PakEmis Explorer API -> the Cloud Run service `pakemis` (modelled on hawanama-main/cloudbuild.yaml).
+#
+#     make push-release BUCKET=<bucket>                     # once per release: the payload + tiles to GCS
+#     gcloud builds submit --config cloudbuild.yaml \
+#         --substitutions _RELEASES_BUCKET=<bucket>,_RELEASE_VERSION=1.0.0rc42,_ALLOWED_ORIGINS=https://<site>.web.app .
+#
+# The image carries the API and the vendored query core only; on start the service pulls
+# gs://${_RELEASES_BUCKET}/releases/${_RELEASE_VERSION}/ and verifies it (api/start.sh), so the
+# runtime service account needs roles/storage.objectViewer on the bucket. GEMINI_API_KEY comes from
+# Secret Manager. Firebase Hosting rewrites /api/v1/emissions/** to this service (firebase.json).
+substitutions:
+  _REGION: asia-south1
+  _RELEASES_BUCKET: pakemis-releases
+  _RELEASE_VERSION: 1.0.0rc42
+  _ALLOWED_ORIGINS: https://pakemis.web.app
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'api/Dockerfile'
+      - '-t'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/pakemis:latest'
+      - '.'
+    env:
+      - 'DOCKER_BUILDKIT=1'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/pakemis:latest'
+
+  # Public read API (no partner key: the emissions API is public, read-only, receipt-bearing).
+  # ^|^ makes | the list separator so _ALLOWED_ORIGINS may itself be a comma list.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'pakemis'
+      - '--image=asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/pakemis:latest'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest'
+      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini'
+      - '--cpu=2'
+      - '--memory=2Gi'
+      - '--concurrency=20'
+      - '--timeout=300'
+      - '--min-instances=1'
+      - '--max-instances=4'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
