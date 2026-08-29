@@ -19,6 +19,7 @@ import { addLayers, addSources, applyLevel, ensureRaster, RASTER_OPACITY, setSel
 import { clearPaint, indexCells, paintEnvelope } from "./paint";
 import { rasterFile, unionBbox, useBboxes, useTilesInfo } from "./tiles";
 import { useMapInteractions } from "./useMapInteractions";
+import { emitMapPick } from "@/components/ask/mentions";
 import { HoverTip } from "./HoverTip";
 import { Legend } from "./Legend";
 import { TimeRail } from "./TimeRail";
@@ -147,6 +148,7 @@ export function ExplorerMap() {
   const onSelect = useCallback((lvl: "adm1" | "adm2" | "grid", id: string, props: Record<string, unknown>) => {
     if (lvl === "grid") setStateRef.current({ cell: `${props.lat},${props.lon}` });
     else setStateRef.current({ geo: id });
+    if (stateRef.current.ask) emitMapPick({ level: lvl, id, props }); // an @mention for the Ask composer
   }, []);
   const hover = useMapInteractions(map, state.level, onSelect);
   const hoverCell = hover && index ? index.byId.get(hover.id) ?? null : null;

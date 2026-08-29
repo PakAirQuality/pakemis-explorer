@@ -3,7 +3,8 @@
  * The one screen: [IconRail 48] [SlidingPanel 0|370] [Map flex-1] [Right column 300|420].
  * Floating over the map: ScopeChips (top-left), layer toggle (top-right), TimeRail
  * (bottom-centre), brand + Legend (bottom-left), context pill (bottom-right); the DetailCard
- * slides in over the map's right edge. Everything reads one URL state (lib/urlState.ts).
+ * slides in over the map's right edge. The right column is the ContextPanel, or the AskDock when
+ * `ask=1`. Everything reads one URL state (lib/urlState.ts).
  */
 import { Suspense, useMemo } from "react";
 import { API_BASE } from "@/lib/api";
@@ -14,7 +15,7 @@ import type { ReleaseInfo } from "@/lib/envelope";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
 import { IconRail } from "@/components/shell/IconRail";
 import { SlidingPanel } from "@/components/shell/SlidingPanel";
-import { DisabledCard } from "@/components/shell/DisabledCard";
+import { AskDock } from "@/components/ask/AskDock";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { ExplorerMap } from "@/components/map/ExplorerMap";
 import { DetailCard } from "@/components/detail/DetailCard";
@@ -69,8 +70,6 @@ function Loaded({ release, contract }: { release: ReleaseInfo; contract: ReturnT
   const { state, setState } = useExplorerState(defaults);
   const isMobile = useMediaQuery("(max-width: 767px)");
   const ctx: ExplorerContextValue = { state, setState, release, labels, dims, defaults, contract, agent, isMobile };
-  const fns = (release.query_contract.functions as string[] | undefined) ?? [];
-  const rule = (release.query_contract.placeholder_rule as string | undefined) ?? "";
   const panel =
     state.panel === "explore" ? <ExplorePanel /> : state.panel === "inventory" ? <InventoryPanel /> : state.panel === "compare" ? <ComparePanel /> : state.panel === "evidence" ? <EvidencePanel /> : null;
   const rail = <IconRail active={state.panel} onChange={(p) => setState({ panel: p })} ask={state.ask} onAsk={() => setState({ ask: !state.ask })} horizontal={isMobile} />;
@@ -86,17 +85,13 @@ function Loaded({ release, contract }: { release: ReleaseInfo; contract: ReturnT
           <DetailCard />
         </main>
         {!isMobile && (
-          <aside className="relative z-40 h-full shrink-0 overflow-y-auto border-l border-line bg-white transition-[width] duration-250" style={{ width: state.ask ? 420 : 300 }} data-testid="right-column">
-            {state.ask ? (
-              <DisabledCard reason={agent.reason} model={agent.model} functions={fns} rule={rule} />
-            ) : (
-              <ContextPanel />
-            )}
+          <aside className={`relative z-40 h-full shrink-0 border-l border-line bg-white transition-[width] duration-250 ${state.ask ? "overflow-hidden" : "overflow-y-auto"}`} style={{ width: state.ask ? 420 : 300 }} data-testid="right-column">
+            {state.ask ? <AskDock /> : <ContextPanel />}
           </aside>
         )}
         {isMobile && state.ask && (
-          <div className="fixed inset-x-0 bottom-12 top-0 z-[55] overflow-y-auto bg-white">
-            <DisabledCard reason={agent.reason} model={agent.model} functions={fns} rule={rule} />
+          <div className="fixed inset-x-0 bottom-12 top-0 z-[55] overflow-hidden bg-white">
+            <AskDock />
           </div>
         )}
         {isMobile && rail}

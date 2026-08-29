@@ -1,106 +1,84 @@
-# Wave 6 report: PakEmis Explorer shell and deterministic query API
+# Report: PakEmis Explorer v2, map-first with Ask PakEmis
 
-Repository: `/Users/rehanahmad/Desktop/pakemis-explorer` (new, no remote). Nothing under
-`/Users/rehanahmad/Desktop/emissions` was created, modified or deleted; the release was read with
-`git show HEAD:<path>` (HEAD `5e42b7cb`; the manifest describes `bc1716d6`, the rc42 fixpoint) and
-the golden files are read in place from `<emissions>/tests/semantic/golden/`.
+Repository: `/Users/rehanahmad/Desktop/pakemis-explorer`. Nothing under
+`/Users/rehanahmad/Desktop/emissions` was created, modified or deleted; the release is read at
+`data/releases/1.0.0rc42/` (fetched from `git show` at the rc42 fixpoint `bc1716d6`) and
+`pakemis_query` is imported from `PAKEMIS_QUERY_PATH`.
 
-## What was delivered
+## What was delivered, by step
 
-| item | state |
+| step | state |
 |---|---|
-| `data/fetch_release.py --from-git ... --ref HEAD` | done: 53 files (22 CSV + 22 Parquet + contract + manifest + 2 NetCDF cubes + adm2_canonical + ADM1/ADM2 GeoJSON + BOUNDARY_SOURCES + method_registry) mirrored under `data/releases/1.0.0rc42/` with FETCH.json (ref, commit, manifest commit, sha256 + bytes per file). `--zenodo` is a declared stub (no deposit exists; the DOI slots are empty). |
-| `data/verify_release.py` | done: 44 table digests (CSV bytes; Parquet re-serialised over the primary key), listed products vs manifest/contract, every byte vs FETCH.json, the RELEASES.md pin. Names the file and exits 1 on the first mismatch. |
-| `RELEASES.md` | pins 1.0.0rc42, semantic_release.json `0d612d2e...`, release_manifest.json `630d1122...`. Payload gitignored, FETCH.json committed. |
-| `api/` | FastAPI, one `Engine(threads=1)` per process, engine access serialised behind a lock (see defects). 13 routes; envelopes returned unchanged; `QueryError` -> 422 with `error_class` + `limitation_id`; startup refuses on any verification failure and logs the file. Request models generated from the dataclasses at import (`pakemis_api/models_gen.py`), asserted 1:1 by a test. `openapi.json` committed; `make types` -> `web/src/types.gen.ts`. |
-| receipts | in-memory map + `data/receipts.json` mirror of receipt -> the CALLER's canonical request; `GET /v1/receipt/{r}` replays and answers `receipt_not_reproduced` if the recomputed receipt differs. Downloads (`.csv`, `.receipt.json`) are replays too; the ODbL block is attached when a spatial table is in provenance and an OSM-derived surface (rail/road/osm/landfill) backs a module in scope. |
-| `tiles/build_tiles.py` | done: adm1 (61 KB, promoteId `name`), adm2 (632 KB, `shape_id`), grid (9.1 MB, 90,780 cells from the cube's lat/lon bounds, `cell_id`), TILES.json with input/output digests. No values in any tile. |
-| `web/` | Next.js 15.5 + TypeScript, seven pages, `ContextBar`, `ChartFrame` (view data / inspect evidence / show calculation / download / cite, all from the envelope), `EnvelopeTable`, `BarChart` (ECharts; bar length from the envelope's own `value`, every label from `display`), `AdmMap` (MapLibre + pmtiles, feature-state painting). `next build` passes; vitest smoke (3 tests) passes. |
-| `docker-compose.yml`, `Makefile`, `README.md` | done (images written, not built). |
+| 1 API + tiles groundwork | `/v1/release` carries the ADM2 rows (152, 126 shape ids), the ten sectors, months by period, server-built labels, defaults and the agent block; `build_tiles.py --raster` writes the 78 visual-only grid PNGs and `bboxes.json`; `test_release_dims.py`. |
+| 2 shell + design system + URL state | Tailwind v4 tokens, Inter + JetBrains Mono, `layout.tsx` with `NuqsAdapter`, one screen `page.tsx` (rail, sliding panel, map, right column), `/data`, `/r/[receipt]`, `lib/urlState.ts` (defaults resolved against `/v1/release`), `lib/requests.ts` (every body a pure function of the state; `stateFromRequest` the inverse), `lib/labels.ts`, `Frame`, `ReceiptFooter`, `EnvelopeTable`, `RefusalCard`; the seven v1 pages deleted. |
+| 3 map | `ExplorerMap` with basemap (token or keyless style), the ADM1/ADM2/grid layer stack, feature-state paint from envelopes, hatch for bounded cells, the raster kept mounted at opacity 0, `Legend` (five real displays), `HoverTip`, `TimeRail`, `ScopeChips`, `useMapInteractions`, mobile sheet. Screenshots `03`–`07`. |
+| 4 detail + panels | `DetailCard` (province, bounded district with lineage table, grid cell), `ContextPanel` (national KPI, sector bars, S minus L, annual series), Explore / Inventory / Compare / Evidence panels, ECharts bars with sector palette and decals. Screenshots `08`–`10`; `DetailCard.test.tsx` walks every text node for decimals. |
+| 5 Ask PakEmis, API | `api/pakemis_api/ask/`: 12 tools (11 from `models_gen.MODELS` with `$defs` inlined and dims-enriched descriptions, plus `set_map_view`), cached system prompt with a dims appendix, the loop over an injectable `ModelClient` (`AnthropicModel` uses `messages.stream`, adaptive summarised thinking, effort), `render_multi` for `{{result_k_cell_n}}` with `<cite>` wrapping and the bare-number gate, in-process memory, limits and per-IP bucket, `POST /v1/ask` as SSE, 503 without the key. `test_ask.py`: 16 goldens through the agent, correction then withholding, multi-result, map tool valid/invalid/district, downloads, turn cap, memory, 503. |
+| 5 Ask PakEmis, web | `web/src/components/ask/`: `useAskStream` (POST + `ReadableStream` SSE parser handling split chunks, `\r\n`, multi-line data, keep-alive comments; 503 -> disabled, 429 -> error card), `timeline.ts` (event log -> cards), `store.ts` (`localStorage['pakemis.ask.<id>']`, restored from `?c=`), `AskDock`, `ReasoningTimeline`, `ThinkingCard`, `ToolCard` (humanised name, input chips through the labels, result rows `display unit` with group labels and interval badge, limitation chips, `ReceiptFooter` by receipt, "Show on map" via `stateFromRequest`), `AnswerBubble` (`<cite>` -> underlined numbers that highlight and scroll to their card and cell), `UsageLine`, `Composer` (Enter / Shift+Enter, suggestions from the scope, `@` mentions from map clicks via `mentions.ts`), `DisabledCard` (moved from `shell/`). `map_action` applies to the URL as it arrives and shows a chip. `ask.test.tsx`: 7 tests over a scripted SSE body. |
 
-## Verification
+## Verification (this step)
 
 ```
-$ python3 data/verify_release.py
-  44 semantic tables (CSV + Parquet twins) match semantic_release.json
-  3 listed products present in the copy match their manifest digest
-  53 fetched files match FETCH.json
-  RELEASES.md pins both digests
-OK PakEmis 1.0.0rc42 verified in .../data/releases/1.0.0rc42          exit 0
-
-# one byte of fact_annual.csv flipped:
-VERIFY FAILED: outputs/semantic/fact_annual.csv: sha256 d7fdaf2c... != contract 8e141394...   exit 1
+cd web && npx vitest run        5 files, 31 tests passed (ask.test.tsx 7, DetailCard 5, urlState, paint, smoke)
+cd web && npm run lint          0 errors, 2 pre-existing warnings (DetailCard useMemo deps, BarChart effect deps)
+cd web && npm run build         clean: / 24.9 kB (179 kB first load), /data, /r/[receipt]
 ```
 
-`pytest api/tests`: 35 passed. The 16 goldens replay over HTTP with the frozen receipts and
-display values (the five refusal goldens as 422 of the right class); three startup-refusal tests
-(tampered CSV, cube, boundary file); openapi freshness; model/dataclass mirror; receipt
-determinism across two app instances; a refusal matrix; the grid cell; envelope shape; ten
-parallel POSTs.
+The scripted SSE body used by `ask.test.tsx` is built from the API's real event shapes: the
+`adm1_punjab_agriculture` golden (receipt `8328128a5bd1eca6b1a29ad79cf6d910`, cell
+`123.3050 Mt CO2e AR5`, `limitations_hit: [lulucf_excluded]`, the compacted context), the
+`set_map_view` call and `map_action` of `test_set_map_view_valid_emits_map_action`, the
+`refuse_ar6_adm2` golden's refusal (`not_estimated` / `NotEstimated` / `ar6_adm2_ne` /
+"AR6 CO2e is not carried at ADM2"), an `answer` with two `<cite k="1" cell="0">` tags and a
+`done` with usage. The body is serialised as sse-starlette writes it (`\r\n`, a `: ping`
+comment) and fed to the reader in 37-byte chunks. The test asserts the arrival order
+(thinking, tool, tool, map action, tool + refusal, answer, usage), that the cited number equals
+the tool result's `display`, that hovering a cite highlights its card and cell, the
+`RefusalCard`'s `error_class` and `limitation_id`, `setState` called with
+`{geo, level, period, sector}` for the map action and with `{c: <id>}` after `done`, the
+localStorage log, the usage line as received, "Show on map" through `stateFromRequest`, and that
+every decimal on screen is one of the strings the stream carried. Separate tests cover the
+parser across chunk boundaries, the 503 -> `DisabledCard` path (API reason + the contract's
+functions), the release-disabled path (no request made), restoration from `?c=`, and the
+`bare_numbers` error card with the correction notice.
 
-`curl localhost:8000/v1/release` (excerpt):
-```
-version 1.0.0rc42   release_id "PakEmis 1.0.0rc42"   commit bc1716d6df797d3232daf95122197eaee25fa8bd
-context_bar {release, basis fiscal, configuration_id REF_2023_24, gwp_basis AR5, geography_id PK,
-             reporting_period FY2023-24 2023-07-01..2024-06-30, lulucf excluded (NE)}
-digests.semantic_release_json 0d612d2e19ec055cf7768f86cb5dffd2b803a0856a22a9e36c0a9af03ef28d4d
-digests.release_manifest_json 630d11228d768eef5e3889a916bdf5c7610f330f4327689ba38ef845e203c9ce
-digests.tables: 22 entries (fact_annual 8e141394...); digests.products: the two .nc cubes
-```
+Browser (production build on :3000, API on :8000 without the key, keyless basemap style
+exported in the shell): `/?ask=1` renders the dock with the 503 reason
+"ANTHROPIC_API_KEY is not set in the API's environment", the eleven functions and the disabled
+composer: `web/docs/screenshots/13-ask-disabled.jpg`. `document.visibilityState` was
+`"hidden"` in the automation window, so the map canvas stayed at its background colour there
+(MapLibre renders on animation frames); the dock does not depend on it.
 
-`npm run types && git diff --exit-code`: clean. `python3 api/export_openapi.py --check`: fresh.
-`next build`: 8 routes, all static, no type or lint errors.
+## Defects found while building (this step)
 
-### Manual walk (production build on :3000 against the API on :8000, read through Chrome)
-
-| page | shows | one real number | receipt |
-|---|---|---|---|
-| Overview | L/S x AR5/AR6 totals, sector bars | L AR5 452.34662 Mt CO2e (S AR5 447.21383; L AR6 445.43983; S AR6 440.45244) | `cd4341a5...` (the body names configuration and GWP explicitly; the golden's `5eb40940...` is the defaults-only request and is reproduced by the test suite) |
-| Inventory Explorer | period/configuration/GWP selectors, sector and category x gas frames | agriculture 223.454 Mt | `93aa968b...` |
-| Spatial Explorer | ADM1 envelope, unallocated table beside the map, grid-cell lookup, province bars | Punjab 228.7168 Mt; unallocated Punjab exact `4.837161474822386761` | `3ddaf21e...` |
-| Compare | S minus L national and by sector; two periods by sector; the annual series | S minus L -5.133 Mt (exact -5.13279) | `9da13e3f...`; series `1440719b...` (= golden) |
-| Evidence & Methods | stream lineage (189 streams), method registry row, national uncertainty, the 37 NE rows | buffalo enteric grade E2 / T4 / S3; national P50 456.914 [407.282, 533.733] | `fc2d3aeb...`; completeness `cc11fb8a...` (= golden) |
-| Ask PakEmis | disabled beta card listing the 11 typed functions and the placeholder rule | none by design | n/a |
-| Downloads & API | sector x gas table with CSV/RECEIPT.json links, receipt replay box, all 22 table digests + cube digests | agriculture CH4 181.926 Mt | `73607b6c...` |
-
-## Defects found while building
-
-1. Parallel requests hung the API. FastAPI runs sync handlers on a threadpool; the first browser
-   page fired five POSTs at once and DuckDB's single connection deadlocked (even `/healthz` hung).
-   Fixed by serialising all engine work behind one lock in `Service.run`;
-   `api/tests/test_concurrency.py` fires ten parallel POSTs and asserts the receipts match a serial run.
-2. Receipt replay stored the wrong request. Storing the envelope's `request` (the engine's filled
-   request, with `defaults_applied`) and replaying it re-derived a different receipt; the store now
-   keeps the caller's canonical request and the goldens replay to their frozen receipts.
-3. `openapi-typescript` marks every defaulted field required; the client wraps the generated types
-   in `DeepPartial` (the contract fills every omitted field server-side) instead of hand-editing them.
+1. `ReceiptFooter` required a whole envelope; the dock's tool results carry the receipt and the
+   cells only. The footer now accepts `receipt` alone and replays it through
+   `GET /v1/receipt/{r}` when the drawer is opened.
+2. The conversation restore effect first keyed on the hook's own id and would have wiped a
+   fresh turn between `done` (id in hand) and the URL write (`c` param); it now keys on the
+   URL parameter changing to an id the hook did not just mint.
 
 ## What is incomplete, and why
 
-- The choropleth was not visually confirmed. The Chrome automation window is hidden
-  (`document.visibilityState === "hidden"`; `requestAnimationFrame` never fires) and MapLibre
-  loads its style on an animation frame, so the map stayed at its background colour there. The
-  container, canvas, attribution control, PMTiles range requests (HTTP 206) and the feature-state
-  painting code are in place, and the `/v1/spatial/*` numbers beside the map are live; it needs one
-  look in a visible browser. A `Map error:` banner surfaces any MapLibre error on the page and
-  `window.__pakemisMap` is exposed for inspection (it holds no numbers).
-- The grid layer (90,780 cells) is built and served but not drawn; the grid-cell lookup uses map
-  clicks against the cube through `/v1/spatial/grid`.
-- ADM2 is drawn as outlines only; an ADM2 choropleth needs a colour convention for the bounded
-  `[low, high]` cells, which the envelope states and the map does not yet decide.
-- `get_method` and `get_grid_cell` carry a `null` provenance digest: `data/method_registry.csv` is
-  in neither manifest (a finding for the emissions repo; FETCH.json is its only digest here) and
-  the cubes are manifest products, not semantic products, which is what `product_digest` reads.
-- "Other" (the residual territories row) has no polygon; ADM1 features are keyed by name because
-  `dim_geography` carries no ADM1 shape_id.
-- Docker images written, not built or run. No auth, PostgreSQL, agent or object storage: declared
-  placeholders in `/v1/release.placeholders`.
+- **Visible-window map check pending.** Every browser session of this build ran with
+  `document.visibilityState === "hidden"`, where MapLibre never renders. Basemap, choropleth,
+  legend, hover and the raster need one look in a visible Chrome window.
+- **No live model turn.** `ANTHROPIC_API_KEY` was not in the shell; the two live checks of the
+  plan (Punjab agriculture with a `map_action`, and "AR6 by district" refusing with
+  `ar6_adm2_ne`) and screenshots `11`–`12` wait for `export ANTHROPIC_API_KEY=...` in the API's
+  shell. The SDK's acceptance of the `claude-sonnet-5` id is likewise unverified live
+  (`PAKEMIS_ASK_MODEL` overrides it).
+- No authentication, users, PostgreSQL, deployment, object storage or CDN; conversations live
+  in the API process (24 h) and in the browser.
+- Emissions-repo follow-ups (gated, not blocking): `data/method_registry.csv` into the source
+  manifest; `{{result_k_cell_n}}` adopted by `placeholders.py` once the agent proves it.
 
 ## How to run
 
 ```
 export PAKEMIS_QUERY_PATH=/Users/rehanahmad/Desktop/emissions/src
+export ANTHROPIC_API_KEY=...                 # optional, API shell only: enables Ask PakEmis
 make verify && make api                      # :8000
-make tiles                                   # once per release
-cd web && npm run build && npm run start     # :3000
+make tiles && make raster                    # once per release
+cd web && npm run build && npm run start     # :3000  (NEXT_PUBLIC_BASEMAP_STYLE or the Mapbox token in web/.env.local)
 ```

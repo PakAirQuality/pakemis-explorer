@@ -143,3 +143,85 @@ export function groupValueLabel(labels: Labels, dims: Dims, key: string, value: 
       return value;
   }
 }
+
+/** "query_emissions" -> "Query emissions": a contract function name as a card title (the id stays as secondary text). */
+export function functionLabel(name: string): string {
+  return name.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+export type InputChip = { key: string; label: string; value: string; raw: string };
+
+function geoName(labels: Labels, dims: Dims, id: string): string {
+  return labels.geographies[id] ?? labels.geographies[`ADM1:${id}`] ?? (adm2RowsForShape(dims, id).length ? districtName(dims, id) : id);
+}
+
+function humanValue(labels: Labels, dims: Dims, key: string, v: unknown): string {
+  const one = (x: unknown): string => {
+    if (typeof x !== "string") return typeof x === "object" && x !== null ? JSON.stringify(x) : String(x);
+    switch (key) {
+      case "periods":
+      case "period":
+        return periodShort(labels, x);
+      case "sectors":
+      case "sector":
+      case "module":
+        return sectorLabel(labels, x);
+      case "gases":
+      case "gas":
+        return gasLabel(labels, x);
+      case "geography_ids":
+      case "geo":
+      case "province":
+        return geoName(labels, dims, x);
+      case "shape_id":
+        return districtName(dims, x);
+      case "configuration_id":
+      case "config":
+        return configLabel(labels, x);
+      case "months":
+      case "month":
+        return labels.months[x] ?? x;
+      case "spatial_view":
+      case "view":
+        return (labels.views[x] ?? x).split(":")[0];
+      case "group_by":
+        return columnLabel(x);
+      case "receipt_id":
+        return x.slice(0, 8);
+      case "source_stream_id":
+      case "stream_id":
+        return streamLabel(labels, x);
+      case "limitation_id":
+        return limitationText(labels, x);
+      default:
+        return x;
+    }
+  };
+  return Array.isArray(v) ? v.map(one).join(", ") : one(v);
+}
+
+/**
+ * A tool call's input (or a map action) as chips: the contract's field name humanised through
+ * COLUMN_NAMES and its value through the release's labels; nested request objects (a compare's
+ * left/right, a timeseries' query) are flattened with a prefix. Empty values are skipped.
+ */
+export function inputChips(labels: Labels, dims: Dims, input: Record<string, unknown>, prefix = ""): InputChip[] {
+  const out: InputChip[] = [];
+  for (const [key, v] of Object.entries(input ?? {})) {
+    if (v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
+    if (typeof v === "object" && !Array.isArray(v)) {
+      out.push(...inputChips(labels, dims, v as Record<string, unknown>, `${prefix}${key}.`));
+      continue;
+    }
+    out.push({ key: prefix + key, label: prefix ? `${prefix}${columnLabel(key).toLowerCase()}` : columnLabel(key), value: humanValue(labels, dims, key, v), raw: typeof v === "string" ? v : JSON.stringify(v) });
+  }
+  return out;
+}
+
+/** A tool-result cell's group as one label: "Punjab › Agriculture › CH₄". */
+export function groupText(labels: Labels, dims: Dims, group: Record<string, string | null> | undefined): string {
+  return Object.entries(group ?? {})
+    .map(([k, v]) => groupValueLabel(labels, dims, k, v))
+    .filter((s) => s.length > 0)
+    .join(" › ");
+}
