@@ -251,3 +251,72 @@ Mapbox ignored the automation tool's synthetic clicks in the hidden window (Punj
 Gilgit-Baltistan), while `mousedown`/`mouseup`/`click` dispatched on the canvas selected both
 (`geo=Other` with the three members outlined); hover worked either way.
 
+
+## Stage 0, the API half (2026-08-30): the Explorer made merge-shaped
+
+The merge plan for hawanama-main asks three mechanical changes of the API before it can be a
+fourth app of that monorepo: routes under `/api/v1/emissions`, tiles served by the API rather
+than by Next route handlers, and a Cloud Run image built the way hawanama builds its own.
+All three are in; the web half (static export, `NEXT_PUBLIC_API_BASE`, `/data?receipt=`,
+`firebase.json`) was done alongside by the web side.
+
+**Prefix.** One `APIRouter` carries every route and is mounted twice: under `/api/v1/emissions`
+(the canonical paths, the only ones `openapi.json` names) and under the legacy `/v1` (out of the
+schema). A pure-ASGI headers middleware marks the alias with `Deprecation: true` and
+`Link: </api/v1/emissions/...>; rel="successor-version"`, and adds hawanama's baseline headers
+(HSTS, nosniff, Referrer-Policy) everywhere. `POST /ask` and the download links the agent hands
+back follow the prefix. `/healthz` stays at the root for the container's health check and also
+answers under the prefix. A second small middleware answers HEAD as GET without the body:
+FastAPI's `get` routes reply 405 to HEAD, and `curl -I` on a tile is the natural deployment check.
+`GZipMiddleware(minimum_size=1024)` compresses the JSON (`/release` is 300 KB) and leaves the SSE
+stream and the already-gzipped tiles alone; `ALLOWED_ORIGINS` (comma list, `*` by default)
+replaces the hard-coded CORS.
+
+**Tiles.** `api/pakemis_api/tiles.py` is a port of `web/src/lib/pmtilesServer.ts` to Python over
+`seek`/`read` range reads, without the `pmtiles` package: the 127-byte v3 header, gzip'd varint
+directories (ids delta-coded, run lengths, offsets), the leaf walk, Hilbert tile ids. A test
+cross-checks tile ids and tile bytes against the `pmtiles` package when it is installed (it is,
+here) and skips otherwise. Routes: `/tiles/meta` (TILES.json), `/tiles/bboxes`,
+`/tiles/{adm1|adm2|grid}` (TileJSON 3.0.0, absolute URLs on the forwarded origin),
+`/tiles/{name}/{z}/{x}/{y}.mvt` (the stored bytes with `Content-Encoding: gzip` passed through,
+immutable, 204 when absent, 404 for an unknown name), `/tiles/raster/{config}/{gas}/{frame}.png`.
+The archives moved into the release payload: `tiles/build_tiles.py` writes
+`data/releases/<v>/tiles/` (`Settings.tiles_dir`) and still copies to `web/public/tiles` for one
+release; the Service verifies every output present against `TILES.json`'s digests at start and
+refuses a tampered archive exactly as it refuses a tampered table (a test flips one byte).
+
+**Container and build.** `api/Dockerfile` (python:3.11-slim, non-root `pakemis`, port 8080,
+built from the repository root; `.dockerignore` keeps `api/.env`, `web/` and the payload out),
+`api/start.sh` (pull `gs://$PAKEMIS_RELEASES_BUCKET/releases/<v>/` through `api/pull_release.py`
+when the directory is absent; `verify_release.py`; one uvicorn worker with `--proxy-headers`),
+root `cloudbuild.yaml` for the service `pakemis` (build, push to Artifact Registry, `gcloud run
+deploy` with `--set-secrets GEMINI_API_KEY`, 2 CPU / 2 GiB, concurrency 20, timeout 300,
+min-instances 1), `make vendor | docker-build | docker-run | push-release | deploy`.
+
+The one design decision worth recording is the query core. The image has no emissions checkout,
+and the rule until now was "no copy of `pakemis_query`". The copy is now explicit and pinned:
+`scripts/vendor_query_core.py` reads `src/pakemis_query` through `git show <ref>:...` (so a dirty
+working tree cannot leak in) into `api/vendor/pakemis_query`, and `VENDOR.json` records the
+repository, the commit (631b95f0), every file's sha256 and one digest; `test_vendor.py` proves the
+copy byte-equal to that commit whenever the checkout is on the machine. The copy is committed
+because Cloud Build sees only this repository. Development is unchanged: `PAKEMIS_QUERY_PATH`
+overrides, and the default prefers the checkout when it exists (the golden files sit beside it)
+and falls back to the vendored copy only when it does not, which is the image's case.
+
+**Verification.** `PAKEMIS_API_LAZY=1 pytest api/tests`: 97 -> 124 passed (test_prefix.py 10,
+test_tiles.py 14, test_vendor.py 3); `api/export_openapi.py --check` fresh. `docker build -t
+pakemis -f api/Dockerfile .` (598 MB); `docker run -p 8080:8080 -v $PWD/data/releases:/app/data/
+releases:ro -e PAKEMIS_RELEASE_VERSION=1.0.0rc42 pakemis`: the log shows the 44 tables, 3 products
+and 53 fetched files verified, then `GET /api/v1/emissions/release` 200 (version 1.0.0rc42, the
+agent disabled since no key is passed), `HEAD /api/v1/emissions/tiles/adm2/6/44/26.mvt` 200
+`application/vnd.mapbox-vector-tile` `content-encoding: gzip` immutable, `/tiles/meta` the
+TILES.json with 78 raster files, `/tiles/adm1` with `X-Forwarded-Host: pakemis.web.app` giving
+`https://pakemis.web.app/api/v1/emissions/tiles/adm1/{z}/{x}/{y}.mvt`, `/v1/release` with
+`deprecation: true`, the raster PNG 63,587 bytes; `/app/api/.env` absent in the container; the
+process runs as `pakemis`.
+
+**Not done here.** `web/src/types.gen.ts` must be regenerated (`make types`) from the new
+`openapi.json`; the bucket `pakemis-releases`, the Secret Manager entry and the Cloud Run service
+do not exist yet (`cloudbuild.yaml` is written, not run); `docker-compose.yml`'s web service still
+names the old variable `NEXT_PUBLIC_PAKEMIS_API` (port updated to 8080); the `/v1` alias and the
+`web/public/tiles` copy are both due for removal after one release.

@@ -77,3 +77,11 @@ def test_restricted_origins(settings):
         assert ok.status_code == 200 and ok.headers["access-control-allow-origin"] == "https://pakemis.web.app"
         no = c.options(P + "/release", headers={"Origin": "https://elsewhere.example", "Access-Control-Request-Method": "GET"})
         assert "access-control-allow-origin" not in no.headers
+
+
+def test_head_answers_as_get_without_a_body(client):
+    r = client.head(P + "/release")
+    assert r.status_code == 200 and r.content == b"" and r.headers["content-type"].startswith("application/json")
+    r = client.head(LEGACY_PREFIX + "/release")
+    assert r.status_code == 200 and r.headers["deprecation"] == "true"
+    assert client.head(P + "/receipt/0000").status_code == 404

@@ -1,5 +1,5 @@
 """Response headers on every route: hawanama's baseline security headers, and the deprecation
-signal on the legacy `/v1/*` alias.
+signal on the legacy `/v1/*` alias; HEAD answered as GET without the body.
 
 Pure ASGI (no BaseHTTPMiddleware) so the SSE stream of POST /ask and the pass-through gzip of the
 tile bytes are untouched; only the `http.response.start` message is edited.
@@ -44,3 +44,24 @@ class ResponseHeadersMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_headers)
+
+
+class HeadAsGetMiddleware:
+    """HEAD runs the GET handler and drops the body: FastAPI's `get` routes answer HEAD with 405,
+    and `curl -I` on a tile or the release is the natural check of a deployment."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope.get("method") != "HEAD":
+            await self.app(scope, receive, send)
+            return
+        scope = dict(scope, method="GET")
+
+        async def send_without_body(message):
+            if message["type"] == "http.response.body":
+                message = {"type": "http.response.body", "body": b"", "more_body": message.get("more_body", False)}
+            await send(message)
+
+        await self.app(scope, receive, send_without_body)

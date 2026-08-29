@@ -15,10 +15,10 @@ different views of the same verified release. The rule this repository enforces 
   mass, limitations hit, citation, `result_sha256`, receipt).
 - A request the release cannot answer is refused by name (HTTP 422 with the error class and
   the `limitation_id`), never approximated. The agent reports refusals verbatim.
-- A receipt is replayed, never served from a stored result. `GET /v1/receipt/{r}` recomputes the
+- A receipt is replayed, never served from a stored result. `GET /api/v1/emissions/receipt/{r}` recomputes the
   stored canonical request and fails loudly if the receipt no longer reproduces.
 - Map tiles and rasters carry geometry and identifiers only; values are painted through Mapbox GL
-  `feature-state` from `/v1/query/emissions` envelopes; the grid raster is visual shading and
+  `feature-state` from `/api/v1/emissions/query/emissions` envelopes; the grid raster is visual shading and
   every grid value shown comes from `get_grid_cell`.
 - The agent calls only the release's eleven typed functions (plus `set_map_view`, which runs no
   query). Numbers reach its prose only as `{{result_k_cell_n}}` placeholders the server fills
@@ -36,12 +36,17 @@ data/verify_release.py  every table digest vs semantic_release.json; products vs
                         every byte vs FETCH.json; the pin vs RELEASES.md
 data/releases/<v>/      the payload (gitignored) + FETCH.json (committed)
 RELEASES.md             the pinned version and its two digests
-api/                    FastAPI over pakemis_query (imported from PAKEMIS_QUERY_PATH, never copied)
+api/                    FastAPI over pakemis_query, every route under /api/v1/emissions (imported from
+                        PAKEMIS_QUERY_PATH, the emissions checkout, in development; the container
+                        image imports the vendored copy api/vendor/pakemis_query, see Deploying the API)
+api/pakemis_api/tiles.py the PMTiles reader and the /tiles routes (TileJSON, z/x/y, TILES.json, rasters)
+api/Dockerfile, api/start.sh, cloudbuild.yaml   the Cloud Run image and its build (Deploying the API)
 api/pakemis_api/ask/    Ask PakEmis: tools from the generated request models, the system prompt,
                         the loop over an injectable model client, the placeholder renderer, limits
 api/openapi.json        committed schema; web/src/types.gen.ts is generated from it
 tiles/build_tiles.py    ADM1, ADM2 and 0.05 degree grid PMTiles keyed by name / shape_id / cell_id;
-                        bboxes.json; --raster: visual-only shading PNGs of the two grid cubes
+                        bboxes.json; --raster: visual-only shading PNGs of the two grid cubes; all
+                        written into data/releases/<v>/tiles/, where the API serves them from
 web/                    Next.js 15 + TypeScript, a static export (next.config.ts: output
                         "export"), map-first: one screen (/) whose state lives in the URL
                         (lib/urlState.ts), request bodies as pure functions of it
@@ -110,11 +115,12 @@ exists to fetch. When one does, `RELEASES.md` gains a row with the same two dige
 
 ```
 export PAKEMIS_QUERY_PATH=/path/to/emissions/src   # default: /Users/rehanahmad/Desktop/emissions/src
-make api      # http://localhost:8000  (docs at /docs; GET /v1/release shows the context bar, dims,
-              # labels, defaults and the agent block)
-make tiles    # once per release: PMTiles + bboxes.json into web/public/tiles (needs tippecanoe)
+make api      # http://localhost:8000  (docs at /docs; GET /api/v1/emissions/release shows the context
+              # bar, dims, labels, defaults and the agent block; /v1/* still answers, deprecated)
+make tiles    # once per release: PMTiles + bboxes.json into data/releases/<v>/tiles (needs tippecanoe);
+              # served by the API at /api/v1/emissions/tiles/*; copied to web/public/tiles for one release
 make raster   # once per release: 78 grid-shading PNGs (2 configurations x 3 gases x 12 months + annual)
-              # into web/public/tiles/raster; visual only, every value shown comes from get_grid_cell
+              # into data/releases/<v>/tiles/raster; visual only, every value shown comes from get_grid_cell
 make web      # http://localhost:3000; the page calls the API at NEXT_PUBLIC_API_BASE (default
               # http://localhost:8000/api/v1/emissions; the old NEXT_PUBLIC_PAKEMIS_API origin still
               # resolves for one release, with the prefix appended). CORS is open on the API, so
@@ -131,7 +137,7 @@ make web      # http://localhost:3000; the page calls the API at NEXT_PUBLIC_API
               # read by the app any more (the builder still writes it there for one release).
 make types    # regenerate web/src/types.gen.ts after any API change (CI checks openapi.json is fresh)
 make test     # api pytest + web vitest
-docker compose up   # api + web (mounts the release and the query core read-only)
+docker compose up   # api (:8080, the Cloud Run image with the release mounted read-only) + web
 ```
 
 ### Deploying the web app
@@ -158,10 +164,10 @@ To enable Ask PakEmis, export the key in the shell that starts the API and nothi
 ```
 export ANTHROPIC_API_KEY=...        # in the API's shell only; never in a file of this repository
 export PAKEMIS_ASK_MODEL=...        # optional; default claude-sonnet-5
-make api                            # /v1/release.agent.enabled becomes true
+make api                            # /api/v1/emissions/release .agent.enabled becomes true
 ```
 
-Without the key the API answers `POST /v1/ask` with 503 `agent_disabled` and the dock shows the
+Without the key the API answers `POST /api/v1/emissions/ask` with 503 `agent_disabled` and the dock shows the
 reason. Caps: `PAKEMIS_ASK_MAX_TURNS` (8), `PAKEMIS_ASK_MAX_TOOL_CALLS` (12),
 `PAKEMIS_ASK_CONVERSATION_TOKENS`, `PAKEMIS_ASK_DAILY_TOKENS`, `PAKEMIS_ASK_PER_IP_PER_HOUR` (60),
 `PAKEMIS_ASK_EFFORT` (medium).
@@ -182,7 +188,7 @@ rendering gate:
 - **Gemini** (the default when only a Gemini key is present; the way hawanama's copilot runs):
   `GEMINI_API_KEY` (or `GOOGLE_API_KEY`), model `gemini-3.1-pro-preview` falling back to
   `gemini-2.5-pro` then `gemini-2.5-flash` when the key cannot use a model (a 429 or 404
-  before the first token; a begun stream is never restarted). `/v1/release.agent.model`
+  before the first token; a begun stream is never restarted). `/api/v1/emissions/release` `.agent.model`
   names the model actually answering.
 - **Anthropic**: `ANTHROPIC_API_KEY`, model `claude-sonnet-5`.
 
@@ -194,35 +200,52 @@ with `python3 scripts/copy_gemini_key.py /path/to/other/.env`, which copies the 
 `GEMINI_API_KEY=` line by name and prints only the value's length) and still honours a key
 exported in the shell. No key is ever printed, logged, put in a response or committed; the
 test suite greps the tree for key prefixes. The web app never sees a key. Without one
-`/v1/release.agent.enabled` is false and the dock shows the disabled card with the reason
+`/api/v1/emissions/release` `.agent.enabled` is false and the dock shows the disabled card with the reason
 (the name of the missing variable). With an invalid key the provider's answer is shown
 verbatim in the dock as a model-error card; nothing is retried or hidden.
 
 ## The API
 
-| route | function |
+Every route lives under the prefix `/api/v1/emissions` (the prefix Firebase Hosting rewrites to
+the Cloud Run service; in development `http://localhost:8000/api/v1/emissions`). The same routes
+answer under the legacy `/v1` prefix for one more release, out of the schema, with
+`Deprecation: true` and a `Link: <successor>; rel="successor-version"` header.
+
+| route (under `/api/v1/emissions`) | function |
 |---|---|
-| `GET /v1/release` | identity, defaults, dims (periods, months by period, ADM1/ADM2 rows, sectors, gases), server-built labels, digests, context-bar fields, the agent block, placeholders |
-| `POST /v1/query/emissions` | `query_emissions` |
-| `POST /v1/query/compare` | `compare_emissions` (two configurations or two periods; never two bases) |
-| `POST /v1/query/timeseries` | `get_timeseries` |
-| `POST /v1/query/uncertainty` | `get_uncertainty` |
-| `POST /v1/query/completeness` | `get_completeness` |
-| `GET /v1/evidence/{stream_id}` | `get_evidence` (`_` for every stream; `?module=` `?category=`) |
-| `GET /v1/method/{method_id_or_category}` | `get_method` |
-| `GET /v1/transfers?ledger_id=` | `get_cross_sector_transfer` |
-| `GET /v1/spatial/lineage/{shape_id_or_province}` | `get_spatial_lineage` |
-| `POST /v1/spatial/grid` | `get_grid_cell` (reads the NetCDF cube) |
-| `GET /v1/receipt/{receipt}` | replay |
-| `GET /v1/download/{receipt}.csv`, `.receipt.json` | `download_query_result` (canonical CSV; RECEIPT.json with the ODbL note when an OSM-derived surface is in scope) |
-| `POST /v1/ask` | Ask PakEmis: one user message in, server-sent events out |
+| `GET /release` | identity, defaults, dims (periods, months by period, ADM1/ADM2 rows, sectors, gases), server-built labels, digests, context-bar fields, the agent block, placeholders |
+| `POST /query/emissions` | `query_emissions` |
+| `POST /query/compare` | `compare_emissions` (two configurations or two periods; never two bases) |
+| `POST /query/timeseries` | `get_timeseries` |
+| `POST /query/uncertainty` | `get_uncertainty` |
+| `POST /query/completeness` | `get_completeness` |
+| `GET /evidence/{stream_id}` | `get_evidence` (`_` for every stream; `?module=` `?category=`) |
+| `GET /method/{method_id_or_category}` | `get_method` |
+| `GET /transfers?ledger_id=` | `get_cross_sector_transfer` |
+| `GET /spatial/lineage/{shape_id_or_province}` | `get_spatial_lineage` |
+| `POST /spatial/grid` | `get_grid_cell` (reads the NetCDF cube) |
+| `GET /receipt/{receipt}` | replay |
+| `GET /download/{receipt}.csv`, `.receipt.json` | `download_query_result` (canonical CSV; RECEIPT.json with the ODbL note when an OSM-derived surface is in scope) |
+| `POST /ask` | Ask PakEmis: one user message in, server-sent events out |
+| `GET /tiles/meta`, `GET /tiles/bboxes` | `TILES.json` (the tile builder's record) and `bboxes.json` |
+| `GET /tiles/{adm1\|adm2\|grid}` | TileJSON 3.0.0 from the archive's header and metadata, absolute tile URLs on the request's (forwarded) origin |
+| `GET /tiles/{name}/{z}/{x}/{y}.mvt` | one vector tile as stored (`Content-Encoding: gzip` passed through, `Cache-Control: immutable`; 204 when the archive holds none, 404 for an unknown name) |
+| `GET /tiles/raster/{config}/{gas}/{frame}.png` | one visual-only grid shading PNG |
+| `GET /healthz` (also at the root) | liveness: the release id and the receipt count |
+
+The tiles come from `data/releases/<v>/tiles/` (`tiles/build_tiles.py`); the service refuses to
+start when an archive present there differs from the digest `TILES.json` records, as it refuses a
+tampered table. Responses over 1 KB are gzip-compressed (the SSE stream and the pre-compressed
+tiles are not touched); every response carries `Strict-Transport-Security`,
+`X-Content-Type-Options: nosniff` and `Referrer-Policy`; CORS origins come from `ALLOWED_ORIGINS`
+(comma-separated; `*` by default, the development setting).
 
 Request bodies are pydantic models generated at import time from the `pakemis_query.models`
 dataclasses (`api/pakemis_api/models_gen.py`); a test asserts they mirror the dataclass fields.
 
 ## Ask PakEmis: the contract
 
-`POST /v1/ask` takes `{conversation_id?, message, ui_state, client_history?}` and streams:
+`POST /api/v1/emissions/ask` takes `{conversation_id?, message, ui_state, client_history?}` and streams:
 
 | event | payload |
 |---|---|
@@ -254,6 +277,48 @@ and cell, and the `UsageLine` (tokens, cost estimate, elapsed, as received). `ma
 events move the map as they arrive; `ui_state` (the URL scope) goes with every question; a map
 click while the dock is open inserts an `@` mention; suggested questions are worded from the
 current scope; conversations persist in `localStorage['pakemis.ask.<id>']` and restore from `?c=`.
+
+## Deploying the API
+
+The API ships as one Cloud Run service, `pakemis`, behind the Firebase Hosting rewrite of
+`/api/v1/emissions/**` (the pattern hawanama uses for its own API; `firebase.json` carries the
+rewrite, and the web app is a static export on the same site, so the browser sees one origin).
+
+```
+make vendor                     # api/vendor/pakemis_query from the emissions checkout at $(REF)
+make docker-build               # docker build -t pakemis -f api/Dockerfile .   (context: the repo root)
+make docker-run                 # :8080 with data/releases mounted read-only; api/.env is not passed
+curl -s localhost:8080/api/v1/emissions/release | head -c 200
+make push-release BUCKET=...    # gsutil rsync data/releases/<v> (payload + tiles) to gs://<bucket>/releases/<v>
+make deploy BUCKET=...          # gcloud builds submit --config cloudbuild.yaml (build, push, run deploy)
+```
+
+- **The image** (`api/Dockerfile`, python:3.11-slim, non-root, port 8080) carries `api/`,
+  `data/verify_release.py` and `RELEASES.md`, nothing else: no release payload, no `web/`, and
+  `.dockerignore` keeps `api/.env` and every `.env*` out.
+- **The query core** cannot be imported from an emissions checkout inside the image, so
+  `scripts/vendor_query_core.py` copies `src/pakemis_query` out of the checkout through
+  `git show <ref>:...` (a dirty tree cannot leak in) into `api/vendor/pakemis_query`;
+  `api/vendor/VENDOR.json` records the repository, the commit, every file's sha256 and one digest,
+  and `api/tests/test_vendor.py` proves the copy byte-equal to that commit whenever the checkout
+  is on the machine. `PAKEMIS_QUERY_PATH` still overrides: development imports the checkout
+  itself (its golden files sit beside it) and falls back to the vendored copy only when the
+  checkout is absent; the image sets `PAKEMIS_QUERY_PATH=/app/api/vendor`. The copy is committed
+  so Cloud Build, which sees only this repository, can build; `make vendor` refreshes it.
+- **The release** is pulled on start: `api/start.sh` downloads
+  `gs://$PAKEMIS_RELEASES_BUCKET/releases/$PAKEMIS_RELEASE_VERSION/` (`api/pull_release.py`,
+  Application Default Credentials, anonymous for a public bucket) when the directory is absent,
+  runs `verify_release.py` against it (a mismatch stops the container), then starts one uvicorn
+  worker with `--proxy-headers` so the rewrite's `X-Forwarded-Proto/Host` reach the TileJSON
+  URLs. Locally `make docker-run` mounts `data/releases` instead and pulls nothing. The runtime
+  service account needs `roles/storage.objectViewer` on the bucket.
+- **Environment**: `PAKEMIS_RELEASES_BUCKET`, `PAKEMIS_RELEASE_VERSION`, `ALLOWED_ORIGINS`
+  (the hosting site's origins; `*` in development), `PAKEMIS_ASK_PROVIDER=gemini`;
+  `GEMINI_API_KEY` from Secret Manager (`--set-secrets`). `cloudbuild.yaml` sets 2 CPU / 2 GiB,
+  concurrency 20, timeout 300 s, min-instances 1 (DuckDB + netCDF4 cold starts).
+- **Prefix change**: clients on `/v1/*` keep working for one release and receive
+  `Deprecation: true`; `api/openapi.json` names only the `/api/v1/emissions/*` paths, so
+  `make types` regenerates `web/src/types.gen.ts` with the new paths.
 
 ## What is NOT here
 

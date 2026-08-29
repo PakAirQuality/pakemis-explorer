@@ -73,6 +73,14 @@ def test_one_real_tile_is_gzip_passthrough(client, tiles_dir):
     assert b"adm2" in mvt and b"shape_id" in mvt                  # the layer name and the id property
 
 
+def test_head_on_a_tile(client, tiles_dir):
+    """`curl -sI` on a tile: the GET's headers, no body."""
+    r = client.head(P + "/adm2/6/44/26.mvt")
+    assert r.status_code == 200 and r.content == b""
+    assert r.headers["content-type"] == "application/vnd.mapbox-vector-tile" and r.headers["content-encoding"] == "gzip"
+    assert int(r.headers["content-length"]) > 0
+
+
 def test_absent_tile_is_204(client, tiles_dir):
     for path in (P + "/adm2/6/0/0.mvt", P + "/adm2/15/1/1.mvt", P + "/grid/2/1/1.mvt"):
         r = client.get(path)

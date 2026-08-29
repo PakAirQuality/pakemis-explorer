@@ -25,7 +25,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from pakemis_api import models_gen as G
 from pakemis_api.ask.router import install_ask, router as ask_router
-from pakemis_api.middleware import ResponseHeadersMiddleware
+from pakemis_api.middleware import HeadAsGetMiddleware, ResponseHeadersMiddleware
 from pakemis_api.receipts import ReceiptStore
 from pakemis_api.settings import API_PREFIX, LEGACY_PREFIX, Settings, import_query_core
 from pakemis_api.tiles import TileStore, router as tiles_router
@@ -307,9 +307,10 @@ def create_app(settings=None, model_client=None):
                   description="Deterministic query API over one verified PakEmis semantic release. Every response is a "
                               "pakemis_query Envelope with a replayable receipt; typed refusals are HTTP 422. "
                               "Routes live under %s; the same routes under %s are a deprecated alias for one release." % (API_PREFIX, LEGACY_PREFIX))
-    # add_middleware wraps outermost-last: gzip innermost, then the headers, CORS on the outside
+    # add_middleware wraps outermost-last: gzip innermost, then the headers, HEAD->GET, CORS on the outside
     app.add_middleware(GZipMiddleware, minimum_size=1024)          # skips text/event-stream and pre-encoded (tile) bodies
     app.add_middleware(ResponseHeadersMiddleware, prefix=API_PREFIX, legacy_prefix=LEGACY_PREFIX)
+    app.add_middleware(HeadAsGetMiddleware)
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.allowed_origins), allow_methods=["*"], allow_headers=["*"],
                        expose_headers=["Content-Disposition", "X-PakEmis-Receipt", "X-PakEmis-Result-SHA256", "X-PakEmis-Release", "Deprecation", "Link"])
 
