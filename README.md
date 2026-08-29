@@ -42,13 +42,16 @@ api/pakemis_api/ask/    Ask PakEmis: tools from the generated request models, th
 api/openapi.json        committed schema; web/src/types.gen.ts is generated from it
 tiles/build_tiles.py    ADM1, ADM2 and 0.05 degree grid PMTiles keyed by name / shape_id / cell_id;
                         bboxes.json; --raster: visual-only shading PNGs of the two grid cubes
-web/                    Next.js 15 + TypeScript, map-first: one screen (/) whose state lives in the
-                        URL (lib/urlState.ts), request bodies as pure functions of it
+web/                    Next.js 15 + TypeScript, a static export (next.config.ts: output
+                        "export"), map-first: one screen (/) whose state lives in the URL
+                        (lib/urlState.ts), request bodies as pure functions of it
                         (lib/requests.ts), Mapbox GL JS v3 choropleth painted through
-                        feature-state (components/map; the PMTiles reach it as TileJSON from
-                        app/tiles/[name], lib/pmtilesServer.ts), detail card and rail panels
-                        (components/detail, components/panels), the Ask dock (components/ask),
-                        /data (receipt replay, downloads, digests, evidence browser), /r/<receipt>
+                        feature-state (components/map; the tiles reach it as TileJSON from the
+                        API's /tiles routes), detail card and rail panels (components/detail,
+                        components/panels), the Ask dock (components/ask), /data (receipt replay
+                        at /data?receipt=<hash>, downloads, digests, evidence browser), /about
+firebase.json           Firebase Hosting for web/out: the rewrite /api/v1/emissions/** -> Cloud Run
+                        service `pakemis`; .firebaserc names the project and the `pakemis` target
 ```
 
 ## The screen
@@ -112,19 +115,43 @@ make api      # http://localhost:8000  (docs at /docs; GET /v1/release shows the
 make tiles    # once per release: PMTiles + bboxes.json into web/public/tiles (needs tippecanoe)
 make raster   # once per release: 78 grid-shading PNGs (2 configurations x 3 gases x 12 months + annual)
               # into web/public/tiles/raster; visual only, every value shown comes from get_grid_cell
-make web      # http://localhost:3000
+make web      # http://localhost:3000; the page calls the API at NEXT_PUBLIC_API_BASE (default
+              # http://localhost:8000/api/v1/emissions; the old NEXT_PUBLIC_PAKEMIS_API origin still
+              # resolves for one release, with the prefix appended). CORS is open on the API, so
+              # nothing is proxied: every route, tile and raster is fetched from the base directly.
               # basemap: NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (gitignored, never committed)
               # renders Mapbox streets-v12 on v3's globe. Mapbox GL JS v3 authenticates every map
               # load and renders NOTHING without a valid token, whatever the style, so there is no
               # keyless map: without it the screen shows a one-line notice and no map (legend, panels
               # and the dock still work). NEXT_PUBLIC_BASEMAP_STYLE=<style URL> overrides the style
-              # (still billed to the token). The PMTiles are served to the browser as TileJSON by
-              # the app's own /tiles/<adm1|adm2|grid> route handlers; TILES.json, bboxes.json and
-              # the rasters stay static files under the same prefix.
+              # (still billed to the token). The PMTiles reach the browser as TileJSON from the
+              # API ({base}/tiles/<adm1|adm2|grid>, tiles at {base}/tiles/<name>/{z}/{x}/{y}.mvt);
+              # TILES.json is {base}/tiles/meta, bboxes.json {base}/tiles/bboxes and the rasters
+              # {base}/tiles/raster/<config>/<gas>/<frame>.png. Nothing under web/public/tiles is
+              # read by the app any more (the builder still writes it there for one release).
 make types    # regenerate web/src/types.gen.ts after any API change (CI checks openapi.json is fresh)
 make test     # api pytest + web vitest
 docker compose up   # api + web (mounts the release and the query core read-only)
 ```
+
+### Deploying the web app
+
+The web app is a static export: `cd web && npm run export` (the same as `npm run build`) writes
+`web/out/` with `/`, `/data/`, `/about/` and `404.html`; there are no server routes, so a
+receipt's URL is `/data?receipt=<hash>`. Build it with the production base baked in, then
+deploy the `pakemis` Firebase Hosting target from the repository root:
+
+```
+cd web && NEXT_PUBLIC_API_BASE=/api/v1/emissions npm run export && cd ..
+npx firebase deploy --only hosting:pakemis        # project and target from .firebaserc
+```
+
+`firebase.json` serves `web/out` (trailing slashes, immutable caching for `/_next/static/**`,
+`tiles/**` ignored) and rewrites `/api/v1/emissions/**` to the Cloud Run service `pakemis`
+(asia-south1), so the page and the API share one origin and `NEXT_PUBLIC_API_BASE` is the
+same-origin path. Anywhere else, set `NEXT_PUBLIC_API_BASE` to the API's absolute base
+(`https://<host>/api/v1/emissions`) at build time; `web/Dockerfile` bakes it in and serves
+`out/` with nginx on :3000.
 
 To enable Ask PakEmis, export the key in the shell that starts the API and nothing else:
 
@@ -232,7 +259,8 @@ current scope; conversations persist in `localStorage['pakemis.ask.<id>']` and r
 
 - No authentication, no users, no PostgreSQL. Receipts live in an in-memory map mirrored to
   `data/receipts.json`; conversations live in the API process and the browser.
-- No deployment, no object storage, no CDN. Tiles are static files under `web/public/tiles`.
+- No object storage, no CDN. The API serves the tiles from the release payload; the web app is
+  static files on Firebase Hosting (or any file server) with one rewrite to the API.
 - No copy of `pakemis_query` or of the release. Both are read from where they live.
 - No live model turn has been run in this repository's checks: every agent test drives a
   scripted model; the first live turn needs the key in the API's shell.

@@ -1,0 +1,30 @@
+{
+  "hosting": [
+    {
+      "target": "pakemis",
+      "public": "web/out",
+      "trailingSlash": true,
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "tiles/**"],
+      "rewrites": [
+        {
+          "source": "/api/v1/emissions/**",
+          "run": { "serviceId": "pakemis", "region": "asia-south1" }
+        }
+      ],
+      "headers": [
+        {
+          "source": "/_next/static/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        },
+        {
+          "source": "**/*.@(js|css|png|jpg|svg|woff2)",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        },
+        {
+          "source": "/api/v1/emissions/**",
+          "headers": [{ "key": "Vary", "value": "Accept-Encoding" }]
+        }
+      ]
+    }
+  ]
+}

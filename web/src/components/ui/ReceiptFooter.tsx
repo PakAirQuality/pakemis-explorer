@@ -1,7 +1,8 @@
 "use client";
 /**
  * The receipt, demoted: one muted mono line (first 8 hex, full on hover) and a kebab menu with
- * Copy, Replay (/r/<receipt>), Evidence, Calculation, CSV, RECEIPT.json, Cite. The menu's
+ * Copy, Replay (/data?receipt=<receipt>, the receipt's URL), Evidence, Calculation, CSV,
+ * RECEIPT.json, Cite. The menu's
  * Evidence / Calculation / Cite open the EnvelopeDrawer over the envelope itself.
  */
 import { useEffect, useRef, useState } from "react";
@@ -14,8 +15,13 @@ import { EnvelopeDrawer, type DrawerTab } from "./EnvelopeDrawer";
 /**
  * `env` is the envelope in hand; a consumer that holds only a receipt (the Ask dock's tool
  * results carry the receipt and the cells, not the envelope) passes `receipt`, and the drawer
- * replays it through GET /v1/receipt/{r} when opened.
+ * replays it through GET {API_BASE}/receipt/{r} when opened.
  */
+/** The URL of a receipt: the /data page replays it (static export has no dynamic /r/<receipt> route). */
+export function receiptHref(receipt: string): string {
+  return `/data?receipt=${encodeURIComponent(receipt)}`;
+}
+
 export function ReceiptFooter({ env = null, receipt, className = "" }: { env?: Envelope | null; receipt?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const [drawer, setDrawer] = useState<DrawerTab | null>(null);
@@ -53,7 +59,7 @@ export function ReceiptFooter({ env = null, receipt, className = "" }: { env?: E
   const item = "block w-full px-3 py-1.5 text-left text-xs hover:bg-canvas";
   return (
     <div ref={ref} className={`relative flex items-center justify-between gap-2 text-micro normal-case tracking-normal ${className}`} data-testid="receipt-footer">
-      <span className="mono truncate text-muted" title={`receipt ${id} · replayable at /v1/receipt/${id}`}>
+      <span className="mono truncate text-muted" title={`receipt ${id} · replayable at /data?receipt=${id}`}>
         receipt <span data-receipt={id}>{id.slice(0, 8)}</span>
         {copied ? " · copied" : ""}
       </span>
@@ -63,7 +69,7 @@ export function ReceiptFooter({ env = null, receipt, className = "" }: { env?: E
       {open && (
         <div className="card absolute bottom-6 right-0 z-30 w-44 py-1" role="menu">
           <button className={item} onClick={copy}>Copy receipt</button>
-          <Link className={item} href={`/r/${id}`} onClick={() => setOpen(false)}>Replay /r/{id.slice(0, 8)}</Link>
+          <Link className={item} href={receiptHref(id)} onClick={() => setOpen(false)}>Replay {id.slice(0, 8)}</Link>
           <button className={item} onClick={() => openDrawer("evidence")}>Evidence</button>
           <button className={item} onClick={() => openDrawer("calculation")}>Calculation</button>
           <a className={item} href={api.downloadCsvUrl(id)} onClick={() => setOpen(false)}>CSV</a>
