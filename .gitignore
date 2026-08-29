@@ -1,0 +1,21 @@
+# release payloads are fetched, never committed; FETCH.json is the record
+data/releases/*/*
+!data/releases/*/FETCH.json
+data/receipts.json
+
+# tiles are built from the fetched geometry
+tiles/out/
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# node
+web/node_modules/
+web/.next/
+web/out/
+web/public/tiles/
+*.log
+.DS_Store
