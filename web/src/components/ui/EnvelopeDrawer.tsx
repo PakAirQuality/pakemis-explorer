@@ -16,7 +16,7 @@ import { absoluteApiBase, api, receiptHref } from "@/lib/api";
 import { cellLabel, shown, type Envelope } from "@/lib/envelope";
 import { apiCallOf, curlLine } from "@/lib/requests";
 import { releaseLabels, type Labels } from "@/lib/release";
-import { configLabel, geographyName, periodShort, viewLabel } from "@/lib/labels";
+import { cellUnit, configLabel, geographyName, gwpLabel, lulucfShort, periodShort, viewLabel } from "@/lib/labels";
 
 export type DrawerTab = "sources" | "filters" | "calculation" | "request" | "download" | "cite";
 export const DRAWER_TABS: [DrawerTab, string][] = [["sources", "Sources"], ["filters", "Filters"], ["calculation", "Calculation"], ["request", "API request"], ["download", "Download"], ["cite", "Cite"]];
@@ -48,7 +48,7 @@ export function filterRows(env: Envelope, labels: Labels = NO_LABELS): { name: s
   const rows: { name: string; value: string; id?: string }[] = [];
   rows.push({ name: periods.length === 1 ? "Period" : "Periods", value: periods.map((p) => periodShort(labels, p)).join(", ") || "not set" });
   if (c.configuration_id) rows.push({ name: "Configuration", value: configLabel(labels, c.configuration_id), id: c.configuration_id });
-  if (c.gwp_basis) rows.push({ name: "GWP basis", value: c.gwp_basis });
+  if (c.gwp_basis) rows.push({ name: "Warming potentials", value: gwpLabel(labels, c.gwp_basis), id: c.gwp_basis });
   rows.push({ name: "Geography", value: [c.geography_level || "not set", ids.map((g) => geographyName(labels, g)).join(", ")].filter(Boolean).join(": "), id: ids.length ? ids.join(", ") : undefined });
   if (c.spatial_view) rows.push({ name: "Spatial view", value: viewLabel(labels, c.spatial_view).split(":")[0], id: c.spatial_view });
   if (c.basis) rows.push({ name: "Basis", value: c.basis });
@@ -67,7 +67,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
   const prov = env.provenance as Prov;
   const unalloc = env.unallocated as Unalloc;
   const calc = env.calculation as { sql?: string; kind?: string; [k: string]: unknown };
-  const unit = env.values[0]?.unit ?? "";
+  const unit = cellUnit(env.values[0]);
   const call = apiCallOf(env.request_type, env.request, env.receipt);
   const copy = async () => {
     try {
@@ -212,7 +212,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
           {tab === "cite" && (
             <div className="space-y-2">
               <p className="mono text-xs break-words">{env.citation}</p>
-              <p className="text-xs text-muted">{env.context.release} · {env.context.basis} · {env.context.configuration_id} · {env.context.gwp_basis} · LULUCF {env.context.lulucf.status} ({env.context.lulucf.notation_key})</p>
+              <p className="text-xs text-muted">{[env.context.release, env.context.configuration_id ? configLabel(labels ?? NO_LABELS, env.context.configuration_id) : "", env.context.gwp_basis ? gwpLabel(labels ?? NO_LABELS, env.context.gwp_basis) : "", lulucfShort(labels ?? NO_LABELS) || (env.context.lulucf.status ? `land use ${env.context.lulucf.status}` : "")].filter(Boolean).join(" · ")}</p>
             </div>
           )}
         </div>

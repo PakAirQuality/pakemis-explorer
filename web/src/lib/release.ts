@@ -11,7 +11,12 @@ import type { ReleaseInfo } from "./envelope";
 export type Adm2Row = { geography_id: string; name: string; shape_id: string; shape_name: string; parent_id: string; has_polygon: "yes" | "no"; status: string; unit_kind: string };
 export type Adm1Row = { geography_id: string; name: string; shape_id: string; has_polygon: "yes" | "no" };
 export type PeriodRow = { period_id: string; basis: string; is_reference: string; availability: string };
-export type ConfigLabel = { label: string; letter: string; kind: string; display_name: string; queryable: boolean; axis: string; module: string; note: string };
+/** `label` is what a reader sees ("Reference estimate", "Survey-based estimate"); `letter` and the id stay for URLs and receipts; `tooltip` is the dim row's note. */
+export type ConfigLabel = { label: string; letter: string; kind: string; display_name: string; queryable: boolean; axis: string; module: string; note: string; tooltip?: string };
+/** A GWP basis worded: `label` "IPCC 2013 (AR5)", `short` "AR5", `compact` "IPCC AR5", `tooltip` the sentence quoting the release's factors, `is_default` from the release's defaults. */
+export type GwpLabel = { label: string; short: string; compact: string; tooltip: string; is_default: boolean };
+/** The LULUCF status worded: `short` "excludes land use and forestry", `compact` "land use excluded", `tooltip` the release's note. */
+export type LulucfLabel = { short: string; compact: string; status: string; notation_key: string; tooltip: string };
 /** `short` is what a chip, rail or axis prints ("2023–24"); `label` spells the months out ("July 2023 – June 2024"), the tooltip; `basis_note` says once what the basis means. */
 export type PeriodLabel = { label: string; short: string; start: string; end: string; basis: string; availability: string; is_reference: boolean; note: string; basis_note?: string };
 export type Labels = {
@@ -23,6 +28,8 @@ export type Labels = {
   gases: Record<string, string>;
   sectors: Record<string, string>;
   geographies: Record<string, string>;
+  gwp: Record<string, GwpLabel>;
+  lulucf: LulucfLabel;
 };
 export type Defaults = { basis: string; configuration_id: string; gwp_basis: string; period_id: string; spatial_view: string; geography_id: string };
 
@@ -59,6 +66,8 @@ export function releaseLabels(r: ReleaseInfo | undefined): Labels {
     gases: l.gases ?? {},
     sectors: l.sectors ?? {},
     geographies: l.geographies ?? {},
+    gwp: l.gwp ?? {},
+    lulucf: l.lulucf ?? { short: "", compact: "", status: "", notation_key: "", tooltip: "" },
   };
 }
 

@@ -19,8 +19,10 @@ export const CellSchema = z
     exactness: z.string().optional(),
     /** The server's reading-precision rendering (release.rounding.presentation), beside `display`, never in its place. */
     display_short: z.string().optional(),
-    /** The unit as words, per cell ("million tonnes CO₂e (AR5)"). */
+    /** The unit as words, per cell ("million tonnes CO₂e"; no GWP basis token). */
     unit_words: z.string().optional(),
+    /** The unit as a reader sees it beside the number ("Mt CO₂e"; no GWP basis token). */
+    unit_short: z.string().optional(),
   })
   .passthrough();
 
@@ -96,6 +98,10 @@ export const ReleaseSchema = z
       geography_id: z.string(),
       reporting_period: z.object({ label: z.string(), start: z.string(), end: z.string() }).nullable(),
       lulucf: z.object({ status: z.string(), notation_key: z.string(), note: z.string() }),
+      /** The same ids worded for a reader ("July–June years", "Reference estimate", "IPCC 2013 (AR5)"). */
+      basis_label: z.string().optional(),
+      configuration_label: z.string().optional(),
+      gwp_label: z.string().optional(),
     }),
     dims: z.record(z.string(), z.unknown()),
     digests: z.object({

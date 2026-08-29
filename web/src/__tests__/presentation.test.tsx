@@ -57,8 +57,8 @@ describe("presentation precision", () => {
     expect(table).toHaveTextContent("452.34662");
   });
   it("the unit line prefers the server's unit_words", () => {
-    expect(envelopeUnitLine(envelope([{ display: "1.0", unit_words: "million tonnes CO₂e (AR5), served" }]) as unknown as Envelope)).toBe("million tonnes CO₂e (AR5), served");
-    expect(envelopeUnitLine(envelope([{ display: "1.0" }]) as unknown as Envelope)).toBe("million tonnes CO₂e (AR5)");
+    expect(envelopeUnitLine(envelope([{ display: "1.0", unit_words: "million tonnes CO₂e (AR5), served" }]) as unknown as Envelope)).toBe("Million tonnes CO₂e (AR5), served"); // the server's words pass through, initial capitalised for the frame
+    expect(envelopeUnitLine(envelope([{ display: "1.0" }]) as unknown as Envelope)).toBe("Million tonnes CO₂e");
     expect(envelopeUnitLine(null)).toBe("");
   });
 });

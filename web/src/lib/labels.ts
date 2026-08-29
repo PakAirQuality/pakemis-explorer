@@ -77,28 +77,41 @@ export function periodRange(dims: { fiscalPeriods: string[] }, labels: Labels): 
 
 const MAGNITUDE_WORDS: Record<string, string> = { Mt: "million tonnes", Gg: "thousand tonnes", kt: "thousand tonnes", t: "tonnes" };
 const SUBSCRIPT_DIGITS: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+const GWP_TOKEN = /^AR\d$/;
+/** The species tokens of a unit with digits subscripted and the GWP basis token dropped. */
+function speciesTokens(tokens: string[]): string[] {
+  return tokens.filter((t) => !GWP_TOKEN.test(t)).map((t) => t.replace(/\d/g, (d) => SUBSCRIPT_DIGITS[d] ?? d));
+}
 /**
- * An envelope's unit as words for a figure subtitle: "Mt CO2e AR5" -> "million tonnes CO₂e
- * (AR5)", "Gg" -> "thousand tonnes", "Gg CO2e AR6" -> "thousand tonnes CO₂e (AR6)". The
- * magnitude word comes from a four-entry map; the species keeps its letters with digits
- * subscripted; a GWP basis token goes in parentheses. A unit outside that shape is returned as
- * it is: this names the contract's units, it never changes a value.
+ * An envelope's unit as words for a figure subtitle: "Mt CO2e AR5" -> "million tonnes CO₂e",
+ * "Gg" -> "thousand tonnes", "Gg CO2e AR6" -> "thousand tonnes CO₂e". The magnitude word comes
+ * from a four-entry map; the species keeps its letters with digits subscripted; the GWP basis
+ * token is dropped (the basis is named once, by the release's labels.gwp, never inside a unit).
+ * A unit outside that shape is returned as it is: this names the contract's units, it never
+ * changes a value. Mirrors the server's presentation.unit_words.
  */
 export function unitWords(unit: string): string {
   const tokens = unit.trim().split(/\s+/).filter(Boolean);
   if (!tokens.length || !(tokens[0] in MAGNITUDE_WORDS)) return unit;
-  const out = [MAGNITUDE_WORDS[tokens[0]]];
-  for (const t of tokens.slice(1)) {
-    if (/^AR\d$/.test(t)) out.push(`(${t})`);
-    else out.push(t.replace(/\d/g, (d) => SUBSCRIPT_DIGITS[d] ?? d));
-  }
-  return out.join(" ");
+  return [MAGNITUDE_WORDS[tokens[0]], ...speciesTokens(tokens.slice(1))].join(" ");
 }
-/** The unit line of a frame: the envelope's first cell's `unit_words` (the server's), else its unit through unitWords; "" while there is no envelope. */
+/** The unit as a reader sees it beside a number: "Mt CO2e AR5" -> "Mt CO₂e", "t CH4" -> "t CH₄", "Gg" -> "Gg"; mirrors the server's presentation.unit_short. */
+export function unitShort(unit: string): string {
+  const tokens = unit.trim().split(/\s+/).filter(Boolean);
+  if (!tokens.length || !(tokens[0] in MAGNITUDE_WORDS)) return unit;
+  return [tokens[0], ...speciesTokens(tokens.slice(1))].join(" ");
+}
+/** A cell's unit for the screen: the server's `unit_short` when it came, else its unit through unitShort. */
+export function cellUnit(cell: { unit?: string | null; unit_short?: string } | null | undefined): string {
+  if (!cell) return "";
+  return cell.unit_short || (cell.unit ? unitShort(cell.unit) : "");
+}
+/** The unit line of a frame ("Million tonnes CO₂e"): the envelope's first cell's `unit_words` (the server's), else its unit through unitWords, capitalised; "" while there is no envelope. */
 export function envelopeUnitLine(env: { values: { unit: string; unit_words?: string }[] } | null | undefined): string {
   const first = env?.values[0];
   if (!first) return "";
-  return first.unit_words || (first.unit ? unitWords(first.unit) : "");
+  const words = first.unit_words || (first.unit ? unitWords(first.unit) : "");
+  return words.replace(/^\w/, (c) => c.toUpperCase());
 }
 export function monthLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "Annual";
@@ -111,11 +124,78 @@ export function monthTiny(labels: Labels, id: string): string {
   const [mon, year] = full.split(" ");
   return `${mon} ${year?.slice(2) ?? ""}`.trim();
 }
+/** "Reference estimate" / "Survey-based estimate" (the server's label), else the id. */
 export function configLabel(labels: Labels, id: string): string {
   return labels.configurations[id]?.label ?? id;
 }
+/** The configuration in running text: "reference estimate" (the label with its initial lowered). */
+export function configWords(labels: Labels, id: string): string {
+  return lowerInitial(configLabel(labels, id));
+}
+/** The configuration's note as a tooltip, else its label. */
+export function configTooltip(labels: Labels, id: string): string {
+  const c = labels.configurations[id];
+  return c?.tooltip || c?.note || configLabel(labels, id);
+}
 export function configLetter(labels: Labels, id: string): string {
   return labels.configurations[id]?.letter || labels.configurations[id]?.label || id;
+}
+/**
+ * The context pill (bottom right of the map): "July–June years · reference estimate · IPCC AR5 ·
+ * land use excluded", and its tooltip with the long forms and the LULUCF note. No version and
+ * no commit: the release identity lives on /data and under About's "Release".
+ */
+export function contextPill(labels: Labels, cb: { basis: string; basis_label?: string }, s: { config: string; gwp: string }): { words: string; title: string } {
+  const basis = cb.basis_label ?? cb.basis;
+  const words = [basis, configWords(labels, s.config), gwpCompact(labels, s.gwp), lulucfCompact(labels)].filter(Boolean).join(" · ");
+  const lulucf = lulucfTooltip(labels) ? `${lulucfShort(labels)}: ${lulucfTooltip(labels)}` : lulucfShort(labels);
+  const title = [basis, configLabel(labels, s.config), gwpLabel(labels, s.gwp), lulucf].filter(Boolean).join(" · ");
+  return { words, title };
+}
+/** "IPCC 2013 (AR5)": the GWP basis as a reader sees it, else the id. */
+export function gwpLabel(labels: Labels, id: string): string {
+  return labels.gwp[id]?.label ?? id;
+}
+/** "IPCC AR5": the GWP basis for a pill. */
+export function gwpCompact(labels: Labels, id: string): string {
+  return labels.gwp[id]?.compact ?? id;
+}
+/** The sentence saying what the basis means, quoting the release's own factors; "" when the release has no such label. */
+export function gwpTooltip(labels: Labels, id: string): string {
+  return labels.gwp[id]?.tooltip ?? "";
+}
+/** Whether a GWP basis is the release's default (the one every scope line leaves unsaid); the caller's default decides when the labels are silent. */
+export function gwpIsDefault(labels: Labels, id: string, fallbackDefault?: string): boolean {
+  const entry = labels.gwp[id];
+  return entry ? entry.is_default : id === fallbackDefault;
+}
+/** "excludes land use and forestry". */
+export function lulucfShort(labels: Labels): string {
+  return labels.lulucf.short;
+}
+/** "land use excluded", for a pill. */
+export function lulucfCompact(labels: Labels): string {
+  return labels.lulucf.compact;
+}
+export function lulucfTooltip(labels: Labels): string {
+  return labels.lulucf.tooltip;
+}
+/** The sector in running text: "all sectors" when none is chosen. */
+export function sectorWords(labels: Labels, id: string | null | undefined): string {
+  return id ? sectorLabel(labels, id) : "all sectors";
+}
+function lowerInitial(text: string): string {
+  return text.replace(/^[A-Z](?=[a-z])/, (c) => c.toLowerCase());
+}
+/**
+ * The scope of a figure or legend as words: "2023–24 · reference estimate", then the GWP basis
+ * ("IPCC 2021 (AR6)") ONLY when it is not the release's default, then whatever the caller adds
+ * (a sector, a gas, a month). Every phrase comes from the release's labels.
+ */
+export function scopeWords(labels: Labels, s: { period: string; config: string; gwp: string }, defaultGwp?: string, ...more: (string | null | undefined)[]): string {
+  const parts: (string | null | undefined)[] = [periodShort(labels, s.period), configWords(labels, s.config)];
+  if (!gwpIsDefault(labels, s.gwp, defaultGwp)) parts.push(gwpLabel(labels, s.gwp));
+  return [...parts, ...more].filter((p): p is string => !!p).join(" · ");
 }
 export function sectorLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "All sectors";

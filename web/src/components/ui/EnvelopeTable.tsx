@@ -8,8 +8,8 @@
  */
 import { useState } from "react";
 import { cellLabel, shown, type Envelope, type Cell } from "@/lib/envelope";
-import { columnLabel, groupValueLabel, type Dims } from "@/lib/labels";
-import type { Labels } from "@/lib/release";
+import { cellUnit, columnLabel, groupValueLabel, type Dims } from "@/lib/labels";
+import { releaseLabels, type Labels } from "@/lib/release";
 import { IntervalBadge, isBounded } from "./IntervalBadge";
 
 function fmt(v: unknown): string {
@@ -17,7 +17,7 @@ function fmt(v: unknown): string {
   return typeof v === "object" ? JSON.stringify(v) : String(v);
 }
 
-const EMPTY_LABELS: Labels = { configurations: {}, periods: {}, months: {}, views: {}, limitations: {}, gases: {}, sectors: {}, geographies: {} };
+const EMPTY_LABELS: Labels = releaseLabels(undefined);
 const EMPTY_DIMS: Dims = { adm1: [], adm2: [] };
 
 export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMPTY_LABELS, dims = EMPTY_DIMS, maxRows, dense = false }: { env: Envelope; extra?: string[]; showExact?: boolean; labels?: Labels; dims?: Dims; maxRows?: number; dense?: boolean }) {
@@ -78,7 +78,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
                       {isBounded(v) && <IntervalBadge cell={v} title={String((v as Record<string, unknown>).interpretation ?? "")} />}
                     </td>
                   )}
-                  {hasDisplay && <td className={`${cellPad} whitespace-nowrap text-muted`}>{v.unit}</td>}
+                  {hasDisplay && <td className={`${cellPad} whitespace-nowrap text-muted`} title={v.unit}>{cellUnit(v)}</td>}
                   {exact && <td className={`${cellPad} mono`}>{v.exact}{v.exact_high && v.exact_high !== v.exact ? ` .. ${v.exact_high}` : ""}</td>}
                   {exact && <td className={`${cellPad} num text-right`}>{v.n_rows ?? v.result_row_ids.length}</td>}
                 </tr>

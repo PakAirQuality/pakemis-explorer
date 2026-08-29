@@ -175,7 +175,7 @@ describe("AskDock", () => {
     expect(cards[0]).toHaveTextContent("Query emissions");
     expect(within(cards[0]).getByText("Agriculture")).toBeTruthy();
     const cell = within(cards[0]).getByTestId("result-cell");
-    expect(cell).toHaveTextContent(`${SHORT} ${UNIT}`); // the card shows display_short; the display is its title
+    expect(cell).toHaveTextContent(`${SHORT} Mt CO₂e`); // the card shows display_short with the unit as a reader sees it (no basis token); the display is its title
     expect(cell.textContent).not.toContain(DISPLAY);
     expect(cell).toHaveTextContent("Punjab");
     expect(within(cards[0]).getByText("LULUCF is excluded")).toBeTruthy();

@@ -61,7 +61,7 @@ function Data() {
           <div>
             <Link href="/" className="inline-flex items-center gap-1 text-xs text-accent"><ArrowLeft size={14} /> Back to the map</Link>
             <h1 className="mt-1 text-xl font-semibold">Data &amp; API</h1>
-            <p className="text-xs text-muted">{rel ? `${rel.release_id} · commit ${rel.commit ?? "?"}` : "Loading release…"}</p>
+            <p className="text-xs text-muted">Replay a receipt, download a table, read the release identity and its digests.</p>
           </div>
           <p className="max-w-md text-xs text-muted">A download is addressed by its receipt: <code>GET {API_BASE}/download/&lt;receipt&gt;.csv</code> replays the stored request and serves the canonical CSV; <code>.receipt.json</code> restates the request, the context, every provenance digest and the licence note.</p>
         </header>

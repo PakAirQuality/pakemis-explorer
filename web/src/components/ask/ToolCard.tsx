@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, MapPin } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { functionLabel, groupText, inputChips, limitationText } from "@/lib/labels";
+import { cellUnit, functionLabel, groupText, inputChips, limitationText } from "@/lib/labels";
 import { stateFromRequest } from "@/lib/requests";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
@@ -90,7 +90,7 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
                             {g && attrs ? <span className="mono ml-1 text-micro normal-case tracking-normal">{attrs}</span> : null}
                           </td>
                           <td className="num whitespace-nowrap py-0.5 text-right align-top">
-                            <span className="font-semibold text-ink" title={c.display ? `${c.display} (contract precision)` : undefined}>{c.display_short ?? c.display ?? ""}</span> <span className="text-muted">{c.unit ?? ""}</span>
+                            <span className="font-semibold text-ink" title={c.display ? `${c.display} (contract precision)` : undefined}>{c.display_short ?? c.display ?? ""}</span> <span className="text-muted">{cellUnit(c)}</span>
                             {isBounded(c) && <span className="ml-1"><IntervalBadge cell={c} title={c.interpretation ?? c.exactness} /></span>}
                           </td>
                         </tr>

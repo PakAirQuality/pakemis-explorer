@@ -4,13 +4,13 @@ import { useMemo } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { contextBodies, scopeBody } from "@/lib/requests";
 import { useCompare, useEmissions, useTimeseries } from "@/lib/queries";
-import { configLetter, envelopeUnitLine, gasLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { configLabel, configWords, envelopeUnitLine, gasLabel, gwpTooltip, scopeWords, sectorLabel } from "@/lib/labels";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
 import { useSurveyPair } from "./ContextPanel";
 
 export function InventoryPanel() {
-  const { state, setState, labels, dims } = useExplorer();
+  const { state, setState, labels, dims, defaults } = useExplorer();
   const pair = useSurveyPair();
   const geo = state.level !== "grid" && state.geo ? { geography_level: state.level, geography_ids: [state.geo], spatial_view: state.view } : {};
   const scoped = useMemo(() => ({ ...scopeBody(state), ...geo }), [state]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -20,7 +20,8 @@ export function InventoryPanel() {
   const compare = useCompare(bodies.compareSL, !!bodies.compareSL);
   const series = useTimeseries(bodies.series);
   const where = state.geo ?? "Pakistan";
-  const scope = `${where} · ${periodShort(labels, state.period)} · ${configLetter(labels, state.config)} · ${state.gwp}${state.sector ? ` · ${sectorLabel(labels, state.sector)}` : ""}${state.gas ? ` · ${gasLabel(labels, state.gas)}` : ""}`;
+  const scope = `${where} · ${scopeWords(labels, state, defaults.gwp_basis, state.sector ? sectorLabel(labels, state.sector) : null, state.gas ? gasLabel(labels, state.gas) : null)}`;
+  const unitTitle = gwpTooltip(labels, state.gwp);
   return (
     <div className="space-y-3 p-3" data-testid="inventory-panel">
       <p className="text-xs text-muted">{scope}</p>
@@ -31,11 +32,11 @@ export function InventoryPanel() {
         {byCatGas.data && <BarChart env={byCatGas.data} horizontal height={Math.max(240, Math.min(byCatGas.data.values.length, 40) * 18)} labels={labels} dims={dims} compact />}
       </Frame>
       {bodies.compareSL && (
-        <Frame title="S minus L by sector" unitLine={envelopeUnitLine(compare.data)} scope={`national · ${periodShort(labels, state.period)}`} env={compare.data} error={compare.error} isLoading={compare.isLoading} labels={labels} dims={dims}>
+        <Frame title={`${configLabel(labels, pair!.survey)} minus ${configWords(labels, pair!.reference)}, by sector`} unitLine={envelopeUnitLine(compare.data)} unitTitle={unitTitle} scope={`national · ${scopeWords(labels, state, defaults.gwp_basis)}`} env={compare.data} error={compare.error} isLoading={compare.isLoading} labels={labels} dims={dims}>
           {compare.data && <BarChart env={compare.data} horizontal height={Math.max(160, compare.data.values.length * 20)} labels={labels} dims={dims} compact />}
         </Frame>
       )}
-      <Frame title="Fiscal years" unitLine={envelopeUnitLine(series.data)} scope="national series · click a bar" env={series.data} error={series.error} isLoading={series.isLoading} labels={labels} dims={dims}>
+      <Frame title="Fiscal years" unitLine={envelopeUnitLine(series.data)} unitTitle={unitTitle} scope="national series · click a bar" env={series.data} error={series.error} isLoading={series.isLoading} labels={labels} dims={dims}>
         {series.data && <BarChart env={series.data} height={200} labels={labels} dims={dims} colorBy="accent" onClick={(c) => c.group?.period_id && setState({ period: c.group.period_id })} selectedIndex={series.data.values.findIndex((c) => c.group?.period_id === state.period)} />}
       </Frame>
     </div>

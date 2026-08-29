@@ -9,7 +9,7 @@
 import { shown } from "@/lib/envelope";
 import type { Cell } from "@/lib/envelope";
 import { joinNames, type Residual } from "@/lib/geography";
-import { adm2RowsForShape } from "@/lib/labels";
+import { adm2RowsForShape, cellUnit } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import type { Dims } from "@/components/ExplorerContext";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
@@ -45,7 +45,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
       ) : cell ? (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
           <span className="num text-md font-semibold text-ink" data-testid="hover-display" title={`${cell.display} (contract precision)`}>{shown(cell)}</span>
-          <span className="text-muted">{cell.unit}</span>
+          <span className="text-muted">{cellUnit(cell)}</span>
           {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           {isBounded(cell) && <div className="w-full text-muted">{String((cell as Record<string, unknown>).interpretation ?? "")}</div>}
           {shared && <div className="w-full text-muted" data-testid="hover-shared">one cell for the whole unit; coverage differs by sector for these territories — see About</div>}

@@ -14,7 +14,7 @@ import { Layers, Locate } from "lucide-react";
 import type { Map as MBMap } from "mapbox-gl";
 import { api } from "@/lib/api";
 import { mapBody, parseCell } from "@/lib/requests";
-import { configLetter, gasLabel, monthLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
+import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap } from "./basemap";
 import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setSelected, setView3d } from "./layers";
@@ -33,7 +33,7 @@ import { ScopeChips } from "./ScopeChips";
 const LEVEL_WORD = { adm1: "Provinces", adm2: "Districts", grid: "Grid" } as const;
 
 export function ExplorerMap() {
-  const { state, setState, labels, dims, release, isMobile } = useExplorer();
+  const { state, setState, labels, dims, release, defaults, isMobile } = useExplorer();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MBMap | null>(null);
   const [map, setMap] = useState<MBMap | null>(null);
@@ -195,10 +195,9 @@ export function ExplorerMap() {
   const legendShared = sharedCell && residual ? { ...residual, cell: sharedCell } : null;
   const anyNoCell = !!index && anyWithoutCell(index, state.level, ids, residual);
 
-  const scope = [LEVEL_WORD[state.level], periodShort(labels, state.period), configLetter(labels, state.config), state.gwp, sectorLabel(labels, state.sector), state.gas || state.level === "grid" ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null]
-    .filter(Boolean)
-    .join(" · ");
-  const cb = release.context_bar;
+  const scope = [LEVEL_WORD[state.level], scopeWords(labels, state, defaults.gwp_basis, sectorWords(labels, state.sector), state.gas || state.level === "grid" ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null)].join(" · ");
+  // the context pill: the year basis, the configuration, the GWP basis and the LULUCF status as words; no version (the release identity lives on /data)
+  const pill = contextPill(labels, release.context_bar, state);
   const fitAll = () => {
     const u = bboxes.data ? unionBbox(bboxes.data.adm1) : null;
     if (u && map) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: 40, duration: 500 });
@@ -240,8 +239,8 @@ export function ExplorerMap() {
         <TimeRail compact={isMobile} />
       </div>
       {!isMobile && (
-        <div className="glass pill absolute bottom-8 right-3 z-20 max-w-[280px] truncate px-3 py-1 text-micro normal-case tracking-normal text-muted" data-testid="context-pill" title={`${cb.release} · ${cb.basis} · ${configLetter(labels, state.config)} · ${state.gwp} · LULUCF ${cb.lulucf.status} (${cb.lulucf.notation_key}) · commit ${release.commit ?? "?"}`}>
-          {cb.release} · {cb.basis} · {configLetter(labels, state.config)} · {state.gwp} · LULUCF {cb.lulucf.status} ({cb.lulucf.notation_key})
+        <div className="glass pill absolute bottom-8 right-3 z-20 max-w-[420px] truncate px-3 py-1 text-micro normal-case tracking-normal text-muted" data-testid="context-pill" title={pill.title}>
+          {pill.words}
         </div>
       )}
     </div>

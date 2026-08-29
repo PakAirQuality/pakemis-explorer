@@ -115,7 +115,7 @@ describe("WelcomeModal", () => {
     expect(screen.getByTestId("intro-skip")).toHaveTextContent("Skip");
     const chart = await screen.findByTestId("trend-chart");
     expect(screen.getByTestId("trend-title")).toHaveTextContent("Pakistan greenhouse-gas emissions");
-    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e (AR5), excluding land use");
+    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e, excluding land use");
     expect(chart).toHaveAttribute("data-receipt-shown", "false");
     expect(screen.queryByTestId("receipt-footer")).toBeNull();
     const text = modal.textContent ?? "";
@@ -140,7 +140,7 @@ describe("WelcomeModal", () => {
     }
     expect(screen.getByTestId("intro-sectors-title")).toHaveTextContent("Emissions by sector, 2023–24");
     await screen.findByTestId("bar-chart");
-    expect(screen.getByTestId("intro-sectors-unit")).toHaveTextContent("Million tonnes CO₂e (AR5)");
+    expect(screen.getByTestId("intro-sectors-unit")).toHaveTextContent("Million tonnes CO₂e");
     expect(screen.getByTestId("intro-sectors-unit")).not.toHaveTextContent("land use");
     expect(screen.getByTestId("bar-chart")).toHaveTextContent(SECTORS[0].display_short);
     expect(screen.getByTestId("bar-chart")).not.toHaveTextContent(SECTORS[0].display);
@@ -156,7 +156,7 @@ describe("WelcomeModal", () => {
     const transport = await screen.findByTestId("trend-chart");
     expect(screen.getByTestId("intro-transport")).toContainElement(transport);
     expect(screen.getByTestId("trend-title")).toHaveTextContent("Transport emissions by year");
-    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e (AR5)");
+    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e");
     expect(transport).toHaveAttribute("data-receipt-shown", "false");
     expect(screen.getByTestId("intro-query-closing")).toHaveTextContent(QUERY_CLOSING);
     expect(decimals(modal).sort()).toEqual([...TRANSPORT_SHORT].sort());
@@ -272,8 +272,8 @@ describe("WelcomeModal", () => {
   });
   it("figureUnitLine: the unit as words, capitalised, with the land-use clause only when asked", () => {
     const env = envelope([{ display: "1.0" }]) as unknown as Envelope;
-    expect(figureUnitLine(env, true)).toBe("Million tonnes CO₂e (AR5), excluding land use");
-    expect(figureUnitLine(env)).toBe("Million tonnes CO₂e (AR5)");
+    expect(figureUnitLine(env, true)).toBe("Million tonnes CO₂e, excluding land use");
+    expect(figureUnitLine(env)).toBe("Million tonnes CO₂e");
     expect(figureUnitLine(null, true)).toBe("");
     expect(figureUnitLine(envelope([{ display: "1.0", unit: "Gg" }]) as unknown as Envelope, true)).toBe("Thousand tonnes, excluding land use");
   });

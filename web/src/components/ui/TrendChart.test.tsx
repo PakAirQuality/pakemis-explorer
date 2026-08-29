@@ -64,7 +64,7 @@ describe("TrendChart", () => {
   it("frames the figure: title, subtitle from the envelope, the years on the axis, displays at the ends and the reference, the receipt line", async () => {
     const { chart, env } = await mount({ referencePeriod: "FY2019-20" }); // the reference in the middle: three labelled points
     expect(screen.getByTestId("trend-title")).toHaveTextContent("Pakistan's greenhouse-gas emissions, by year");
-    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("million tonnes CO₂e (AR5) · all sectors, land use excluded · years run July–June");
+    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("million tonnes CO₂e · all sectors, land use excluded · years run July–June");
     const texts = svgTexts(chart);
     for (const id of Object.keys(SHORT)) expect(texts).toContain(SHORT[id]);
     for (const c of CELLS) expect(texts).toContain(c.display_short); // the shown string, never the contract display
@@ -74,9 +74,9 @@ describe("TrendChart", () => {
     expect(chart.textContent).not.toContain("FY");
   });
   it("a written subtitle replaces the built one, and showReceipt={false} drops the Result details line", async () => {
-    await mount({ title: "Pakistan greenhouse-gas emissions", subtitle: "Million tonnes CO₂e (AR5), excluding land use", showReceipt: false });
+    await mount({ title: "Pakistan greenhouse-gas emissions", subtitle: "Million tonnes CO₂e, excluding land use", showReceipt: false });
     expect(screen.getByTestId("trend-title")).toHaveTextContent("Pakistan greenhouse-gas emissions");
-    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e (AR5), excluding land use");
+    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("Million tonnes CO₂e, excluding land use");
     expect(screen.getByTestId("trend-subtitle")).not.toHaveTextContent("years run");
     expect(screen.queryByTestId("receipt-footer")).toBeNull();
     expect(screen.getByTestId("trend-figure").textContent).not.toContain("receipt");
@@ -95,17 +95,17 @@ describe("TrendChart", () => {
   });
   it("the tooltip formatter prints the cell's display and unit as words (never the axis value); the subtitle names a sector filter", async () => {
     const env = series();
-    expect(trendSubtitle(env)).toBe("million tonnes CO₂e (AR5) · all sectors, land use excluded");
-    expect(trendSubtitle(env, undefined, "years run July–June")).toBe("million tonnes CO₂e (AR5) · all sectors, land use excluded · years run July–June");
+    expect(trendSubtitle(env)).toBe("million tonnes CO₂e · all sectors, land use excluded");
+    expect(trendSubtitle(env, undefined, "years run July–June")).toBe("million tonnes CO₂e · all sectors, land use excluded · years run July–June");
     const filtered = { ...env, request: JSON.stringify({ query: { sectors: ["power"] } }) } as Envelope;
-    expect(trendSubtitle(filtered)).toBe("million tonnes CO₂e (AR5) · power, land use excluded");
-    expect(trendSubtitle(env, "national total")).toBe("million tonnes CO₂e (AR5) · national total, land use excluded");
+    expect(trendSubtitle(filtered)).toBe("million tonnes CO₂e · power, land use excluded");
+    expect(trendSubtitle(env, "national total")).toBe("million tonnes CO₂e · national total, land use excluded");
     const echarts = await import("echarts");
     const { chart: el } = await mount();
     const chart = echarts.getInstanceByDom(el)!;
     const formatter = (chart.getOption() as unknown as { tooltip: { formatter: (p: { dataIndex: number }) => string }[] }).tooltip[0].formatter;
-    expect(formatter({ dataIndex: 1 })).toBe("2019–20 · 404.20 million tonnes CO₂e (AR5)");
-    expect(formatter({ dataIndex: 2 })).toBe("2023–24 · 452.35 million tonnes CO₂e (AR5)");
+    expect(formatter({ dataIndex: 1 })).toBe("2019–20 · 404.20 million tonnes CO₂e");
+    expect(formatter({ dataIndex: 2 })).toBe("2023–24 · 452.35 million tonnes CO₂e");
   });
   it("a cell without display_short is labelled with its display; a cell with unit_words speaks the server's words", async () => {
     const echarts = await import("echarts");

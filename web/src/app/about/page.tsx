@@ -10,7 +10,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api, API_BASE } from "@/lib/api";
 import { releaseAgent, releaseDims, releaseFacts, releaseLabels, useRelease } from "@/lib/release";
-import { configLabel, gasLabel, limitationText, periodLabel, periodShort } from "@/lib/labels";
+import { configLabel, gasLabel, gwpLabel, gwpTooltip, limitationText, periodLabel, periodShort } from "@/lib/labels";
 import { joinNames, residualUnit } from "@/lib/geography";
 import { useBboxes } from "@/components/map/tiles";
 import { ASK_SENTENCES, SHORT_SUMMARY, forgetIntro } from "@/components/shell/WelcomeModal";
@@ -49,15 +49,14 @@ function About() {
         <header className="mb-6">
           <Link href="/" className="inline-flex items-center gap-1 text-xs text-accent"><ArrowLeft size={14} /> Back to the map</Link>
           <h1 className="mt-1 text-xl font-semibold">About PakEmis Explorer</h1>
-          <p className="text-xs text-muted">{rel ? `${rel.release_id} · commit ${rel.commit ?? "?"}` : "Loading release…"}</p>
+          <p className="text-xs text-muted">A window onto one release of a public-data reconstruction of Pakistan&apos;s greenhouse-gas emissions.</p>
         </header>
 
         <section className="card mb-5 p-4 text-sm" data-testid="about-what">
           <h2 className="text-md font-semibold">What this is</h2>
           <p className="mt-2 leading-relaxed">{SHORT_SUMMARY}</p>
           <p className="mt-2 leading-relaxed">
-            The Explorer is a window onto one release of that dataset{rel ? <>, <span className="mono">{rel.release_id}</span></> : null}
-            {rp ? <>, whose reporting period is {rpShort} ({rp.start} to {rp.end})</> : null}. It shows nothing it computed itself: every number on the map, in a panel or in an answer is a string the API returned from a query, together with a receipt that replays the query. The browser shades polygons and sizes bars; it never adds, divides or rounds.
+            The Explorer is a window onto one release of that dataset{rp ? <>, whose reporting period is {rpShort} ({rp.start} to {rp.end})</> : null}; the release is named under &ldquo;Release&rdquo; below. It shows nothing it computed itself: every number on the map, in a panel or in an answer is a string the API returned from a query, together with a receipt that replays the query. The browser shades polygons and sizes bars; it never adds, divides or rounds.
           </p>
           <p className="mt-2 text-xs text-muted">
             <Link href="/" onClick={forgetIntro} className="text-accent underline" data-testid="about-intro">Show the introduction again</Link> · the four short panels that open on a first visit.
@@ -73,9 +72,20 @@ function About() {
           </p>
           {gases.length > 0 && (
             <p className="mt-2 leading-relaxed">
-              The gases are {joinNames(gases)}, reported together as CO₂-equivalent{facts.gwp.reported ? <> on {facts.gwp.reported}</> : null}
-              {facts.gwp.secondary ? <>, with {facts.gwp.secondary} carried as a secondary basis wherever the release can serve it</> : null}.
+              The gases are {joinNames(gases)}, reported together as CO₂-equivalent{facts.gwp.reported ? <> on {gwpLabel(labels, facts.gwp.reported)}</> : null}
+              {facts.gwp.secondary ? <>, with {gwpLabel(labels, facts.gwp.secondary)} carried as a secondary basis wherever the release can serve it</> : null}.
             </p>
+          )}
+          {Object.keys(labels.gwp).length > 0 && (
+            <div className="mt-3" data-testid="about-gwp">
+              <h3 className="text-sm font-semibold">CO₂-equivalent and warming potentials</h3>
+              <p className="mt-1 leading-relaxed">
+                A total in CO₂-equivalent weighs each gas by a warming potential the IPCC publishes; the release carries the weights of two assessment reports and every number names the one it uses.
+                {Object.entries(labels.gwp).map(([id, g]) => (
+                  <span key={id}> {g.label}{g.is_default ? " (the default)" : ""}: {gwpTooltip(labels, id) || g.label}.</span>
+                ))}
+              </p>
+            </div>
           )}
           {facts.lulucf.status && (
             <p className="mt-2 leading-relaxed">
@@ -83,8 +93,9 @@ function About() {
             </p>
           )}
           {dims.configurations.length > 0 && (
-            <>
-              <p className="mt-2 leading-relaxed">The release can be queried under these configurations:</p>
+            <div className="mt-3" data-testid="about-estimates">
+              <h3 className="text-sm font-semibold">Two estimates</h3>
+              <p className="mt-1 leading-relaxed">The release can be queried under two estimates; the map and every panel name the one they show:</p>
               <ul className="mt-1 list-disc space-y-1 pl-5 text-xs">
                 {dims.configurations.map((id) => (
                   <li key={id}>
@@ -94,7 +105,7 @@ function About() {
                 ))}
               </ul>
               {lim("config_S_residential_only") && <p className="mt-1 text-xs text-muted">{lim("config_S_residential_only")}</p>}
-            </>
+            </div>
           )}
           <p className="mt-2 leading-relaxed">Where nothing is estimated, the cell says so with a notation key rather than a value: NE (not estimated), NO (not occurring) or IE (included elsewhere). A blank is not a zero, and a refusal is not an error.</p>
           <p className="mt-2 leading-relaxed">Every number is graded by the evidence behind it, traceable to the document and the code that produced it, and carries a receipt: a hash of the request, the release and the result that anyone can replay through the API to get the same envelope.</p>
@@ -142,6 +153,14 @@ function About() {
           )}
           <p className="mt-2 text-xs text-muted">
             Status: {agent.enabled ? <>enabled{agent.model ? <> · model <span className="mono">{agent.model}</span></> : null}</> : <>not enabled — <span className="mono">{agent.reason}</span></>}. No SQL, no Python, no shell, no internet: the agent&apos;s only reach is the typed functions above, against the same release this map reads.
+          </p>
+        </section>
+
+        <section className="card mb-5 p-4 text-sm" data-testid="about-release">
+          <h2 className="text-md font-semibold">Release</h2>
+          <p className="mt-2 leading-relaxed">
+            {rel ? <>This Explorer reads <span className="mono">{rel.release_id}</span>{rel.commit ? <> at commit <span className="mono">{rel.commit}</span></> : null}. </> : <>Loading release… </>}
+            Releases are versioned so that a published result can be reproduced: the <Link href="/data" className="text-accent underline">Data &amp; API</Link> page lists the release identity with the digest of every table it serves.
           </p>
         </section>
 

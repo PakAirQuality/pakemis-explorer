@@ -34,12 +34,22 @@ describe("/about", () => {
       </Providers>,
     );
     expect(await screen.findByText("About PakEmis Explorer")).toBeInTheDocument();
-    expect(await screen.findByText(/PakEmis 1\.0\.0rc42 · commit/)).toBeInTheDocument();
+    // the version is printed once, under "Release"; nowhere else on the page
+    expect(await screen.findByTestId("about-release")).toHaveTextContent("This Explorer reads PakEmis 1.0.0rc42 at commit bc1716d6");
+    expect(screen.getAllByText(/1\.0\.0rc42/).length).toBe(1);
     const what = await screen.findByTestId("about-what");
     expect(what).toHaveTextContent("rebuilt from public documents");
     const data = screen.getByTestId("about-data");
     expect(data).toHaveTextContent("every sector reports the same twelve months");
-    expect(data).toHaveTextContent("on AR5, with AR6 carried as a secondary basis");
+    expect(data).toHaveTextContent("on IPCC 2013 (AR5), with IPCC 2021 (AR6) carried as a secondary basis");
+    const gwp = screen.getByTestId("about-gwp");
+    expect(gwp).toHaveTextContent("CO₂-equivalent and warming potentials");
+    expect(gwp).toHaveTextContent("IPCC 2013 (AR5) (the default): CO₂-equivalent using the IPCC Fifth Assessment Report's 100-year warming potentials (CH₄ × 28, fossil CH₄ × 30, N₂O × 265).");
+    expect(gwp).toHaveTextContent("IPCC 2021 (AR6): CO₂-equivalent using the IPCC Sixth Assessment Report's");
+    const est = screen.getByTestId("about-estimates");
+    expect(est).toHaveTextContent("Two estimates");
+    expect(est).toHaveTextContent("Reference estimate — every axis at its reference setting");
+    expect(est).toHaveTextContent("Survey-based estimate — the residential module re-run on observed household demand");
     expect(data).toHaveTextContent("excluded (NE): an exploratory Tier-1 module");
     expect(data).toHaveTextContent("configuration S substitutes the residential module");
     const map = screen.getByTestId("about-map");

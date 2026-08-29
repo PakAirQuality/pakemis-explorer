@@ -5,7 +5,7 @@
  * A chip opens the Explore panel where the choice is made.
  */
 import { useExplorer } from "@/components/ExplorerContext";
-import { configLetter, gasLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
+import { configLabel, configTooltip, gasLabel, gwpLabel, gwpTooltip, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
 import type { Level } from "@/lib/urlState";
 
 const LEVEL_LABELS: Record<Level, string> = { adm1: "Provinces", adm2: "Districts", grid: "Grid" };
@@ -27,8 +27,8 @@ export function ScopeChips() {
         ))}
       </div>
       {chip(periodShort(labels, state.period), labels.periods[state.period]?.label, "period")}
-      {chip(configLetter(labels, state.config), labels.configurations[state.config]?.label ?? state.config, "config")}
-      {chip(state.gwp, "GWP basis", "gwp")}
+      {chip(configLabel(labels, state.config), configTooltip(labels, state.config), "config")}
+      {chip(gwpLabel(labels, state.gwp), gwpTooltip(labels, state.gwp) || "GWP basis", "gwp")}
       {chip(sectorLabel(labels, state.sector), state.sector ?? "all sectors", "sector")}
       {state.gas || state.level === "grid" ? chip(gasLabel(labels, state.gas), state.gas ?? "", "gas") : null}
       {state.view !== "all" && chip(viewLabel(labels, state.view).split(":")[0], viewLabel(labels, state.view), "view")}

@@ -10,7 +10,7 @@ import { X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { detailBodies, type DetailBodies } from "@/lib/requests";
 import { useEmissions, useGridCell, useLineage } from "@/lib/queries";
-import { adm2RowsForShape, configLetter, envelopeUnitLine, gasLabel, monthLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { adm2RowsForShape, cellUnit, configWords, envelopeUnitLine, gasLabel, monthLabel, periodShort, scopeWords, sectorLabel } from "@/lib/labels";
 import { type Envelope, shown } from "@/lib/envelope";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
@@ -74,7 +74,7 @@ function Headline({ q, what }: { q: { data?: Envelope; error?: unknown; isLoadin
     <div className="my-2" data-testid="headline">
       <div className="flex flex-wrap items-baseline gap-x-2">
         <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
-        <span className="text-sm text-muted">{cell.unit}</span>
+        <span className="text-sm text-muted">{cellUnit(cell)}</span>
         {bounded && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
       </div>
       {bounded && <div className="mt-0.5 text-xs text-muted">{String((cell as Record<string, unknown>).interpretation ?? "")}</div>}
@@ -104,7 +104,7 @@ function UnallocatedLine({ env, province }: { env: Envelope | undefined; provinc
   if (!row) return null;
   return (
     <p className="mt-2 text-xs text-muted" data-testid="unallocated-line">
-      Unallocated, retained at ADM1: <span className="mono text-ink">{row.exact}</span> {env?.values[0]?.unit} (exact, {row.n_rows} rows) — {u?.note}
+      Unallocated, retained at ADM1: <span className="mono text-ink">{row.exact}</span> {cellUnit(env?.values[0])} (exact, {row.n_rows} rows) — {u?.note}
     </p>
   );
 }
@@ -126,12 +126,12 @@ function GasChips({ q }: { q: { data?: Envelope; error?: unknown; isLoading: boo
   );
 }
 
-function scopeLine(state: ReturnType<typeof useExplorer>["state"], labels: ReturnType<typeof useExplorer>["labels"]): string {
-  return [periodShort(labels, state.period), configLetter(labels, state.config), state.gwp, state.sector ? sectorLabel(labels, state.sector) : null, state.gas ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null].filter(Boolean).join(" · ");
+function scopeLine(state: ReturnType<typeof useExplorer>["state"], labels: ReturnType<typeof useExplorer>["labels"], defaultGwp?: string): string {
+  return scopeWords(labels, state, defaultGwp, state.sector ? sectorLabel(labels, state.sector) : null, state.gas ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null);
 }
 
 function ProvinceCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "province" }> }) {
-  const { state, setState, labels, dims } = useExplorer();
+  const { state, setState, labels, dims, defaults } = useExplorer();
   const bboxes = useBboxes();
   const residual = useMemo(() => residualUnit(dims, bboxes.data), [dims, bboxes.data]);
   const total = useEmissions(bodies.total);
@@ -139,7 +139,7 @@ function ProvinceCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "provi
   const byGas = useEmissions(bodies.byGas);
   const byMonth = useEmissions(bodies.byMonth);
   const lineage = useLineage(bodies.lineage);
-  const scope = scopeLine(state, labels);
+  const scope = scopeLine(state, labels, defaults.gwp_basis);
   const u = lineage.data?.unallocated as Unalloc | undefined;
   return (
     <div>
@@ -184,14 +184,14 @@ function ProvinceCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "provi
 }
 
 function DistrictCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "district" }> }) {
-  const { state, setState, labels, dims } = useExplorer();
+  const { state, setState, labels, dims, defaults } = useExplorer();
   const rows = adm2RowsForShape(dims, bodies.id);
   const total = useEmissions(bodies.total);
   const byModule = useEmissions(bodies.byModule);
   const byGas = useEmissions(bodies.byGas);
   const byMonth = useEmissions(bodies.byMonth);
   const lineage = useLineage(bodies.lineage);
-  const scope = scopeLine(state, labels);
+  const scope = scopeLine(state, labels, defaults.gwp_basis);
   const u = lineage.data?.unallocated as Unalloc | undefined;
   const name = rows[0]?.shape_name || bodies.id;
   const province = rows[0]?.parent_id.replace(/^ADM1:/, "") ?? "";
@@ -231,7 +231,7 @@ function DistrictCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "distr
                 {sectorLabel(labels, r.module)} {gasLabel(labels, r.gas)} <span className="mono text-ink">{r.exact}</span>
               </span>
             ))}
-            {" "}{lineage.data?.values[0]?.unit} (exact)
+            {" "}{cellUnit(lineage.data?.values[0])} (exact)
           </p>
         ) : null}
       </div>
@@ -245,14 +245,14 @@ function CellCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "cell" }> 
   const cell = q.data?.values[0] as (Envelope["values"][number] & { lat?: number; lon?: number; row?: number; col?: number; month?: string }) | undefined;
   return (
     <div>
-      <Header kicker="Grid cell" title={`${gasLabel(labels, state.gas)} · ${monthLabel(labels, state.month)}`} sub={`${configLetter(labels, state.config)} · get_grid_cell`} />
+      <Header kicker="Grid cell" title={`${gasLabel(labels, state.gas)} · ${monthLabel(labels, state.month)}`} sub={`${configWords(labels, state.config)} · get_grid_cell`} />
       {q.error ? (
         <div className="my-2"><RefusalCard error={q.error} compact /></div>
       ) : cell ? (
         <div className="my-2" data-testid="headline">
           <div className="flex items-baseline gap-2">
             <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
-            <span className="text-sm text-muted">{cell.unit}</span>
+            <span className="text-sm text-muted">{cellUnit(cell)}</span>
           </div>
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
             <dt className="text-muted">lat</dt><dd className="mono num">{String(cell.lat ?? "")}</dd>

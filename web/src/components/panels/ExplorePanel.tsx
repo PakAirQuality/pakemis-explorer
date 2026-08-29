@@ -1,7 +1,7 @@
 "use client";
-/** The controls: level, period, month, configuration, GWP, sector, gas, view, raster. Every list comes from the dims / labels / openapi contract; every select shows the raw id as secondary text. */
+/** The controls: level, period, month, configuration, GWP, sector, gas, view, raster. Every list comes from the dims / labels / openapi contract; every select shows the release's label with the raw id as secondary text. */
 import { useExplorer } from "@/components/ExplorerContext";
-import { configLabel, gasLabel, monthLabel, periodBasisNote, periodLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
+import { configLabel, configTooltip, gasLabel, gwpLabel, gwpTooltip, monthLabel, periodBasisNote, periodLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
 import type { Level } from "@/lib/urlState";
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
@@ -43,16 +43,17 @@ export function ExplorePanel() {
           {months.map((m) => <option key={m} value={m}>{monthLabel(labels, m)}</option>)}
         </select>
       </Field>
-      <Field label="Configuration" hint={state.config}>
-        <select className={SEL} value={state.config} onChange={(e) => setState({ config: e.target.value })}>
-          {configs.map((c) => <option key={c} value={c}>{configLabel(labels, c)}</option>)}
+      <Field label="Estimate" hint={state.config}>
+        <select className={SEL} value={state.config} onChange={(e) => setState({ config: e.target.value })} title={configTooltip(labels, state.config)} data-testid="config-select">
+          {configs.map((c) => <option key={c} value={c}>{configLabel(labels, c)} · {c}</option>)}
         </select>
         {labels.configurations[state.config]?.note && <p className="mt-1 text-xs text-muted">{labels.configurations[state.config].note}</p>}
       </Field>
-      <Field label="GWP basis" hint={state.gwp}>
-        <div className="pill flex overflow-hidden border border-line bg-white p-0.5">
-          {gwps.map((g) => <button key={g} onClick={() => setState({ gwp: g })} className={`pill flex-1 py-1 text-xs ${state.gwp === g ? "bg-ink text-white" : "text-muted"}`}>{g}</button>)}
+      <Field label="Warming potentials" hint={state.gwp}>
+        <div className="pill flex overflow-hidden border border-line bg-white p-0.5" data-testid="gwp-select">
+          {gwps.map((g) => <button key={g} onClick={() => setState({ gwp: g })} title={gwpTooltip(labels, g)} className={`pill flex-1 py-1 text-xs ${state.gwp === g ? "bg-ink text-white" : "text-muted"}`}>{gwpLabel(labels, g)}</button>)}
         </div>
+        {gwpTooltip(labels, state.gwp) && <p className="mt-1 text-xs text-muted">{gwpTooltip(labels, state.gwp)}.</p>}
         {labels.limitations.ar6_adm2_ne && <p className="mt-1 text-xs text-muted">{labels.limitations.ar6_adm2_ne}</p>}
       </Field>
       <Field label="Sector" hint={state.sector ?? "all"}>

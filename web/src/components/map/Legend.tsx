@@ -17,6 +17,7 @@ import { gridCellBody } from "@/lib/requests";
 import type { ExplorerState } from "@/lib/urlState";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
 import { shown } from "@/lib/envelope";
+import { cellUnit, unitShort } from "@/lib/labels";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import type { CellIndex } from "./paint";
 import type { RasterInfo } from "./tiles";
@@ -70,7 +71,7 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
               </li>
             )}
           </ul>
-          <div className="mt-1 text-muted">{index.unit}</div>
+          <div className="mt-1 text-muted">{unitShort(index.unit)}</div>
         </div>
       ) : isLoading ? (
         <div className="px-3 pb-2 pt-1"><Loading what="the map envelope" /></div>
@@ -110,7 +111,7 @@ function AnchorRow({ label, q }: { label: string; q: { data?: Envelope; error?: 
       <div className="text-muted">{label}</div>
       {cell ? (
         <div className="flex items-baseline justify-between gap-2">
-          <span className="num text-ink" data-testid="raster-anchor" title={`${cell.display} (contract precision)`}>{shown(cell)} {cell.unit}</span>
+          <span className="num text-ink" data-testid="raster-anchor" title={`${cell.display} (contract precision)`}>{shown(cell)} {cellUnit(cell)}</span>
           <span className="mono text-muted" title={q.data!.receipt}>{q.data!.receipt.slice(0, 8)}</span>
         </div>
       ) : q.error ? (

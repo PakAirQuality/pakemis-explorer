@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { compareBody } from "@/lib/requests";
 import { useCompare } from "@/lib/queries";
-import { configLabel, periodShort } from "@/lib/labels";
+import { configLabel, configWords, gwpLabel, gwpTooltip, periodShort } from "@/lib/labels";
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
 
@@ -20,7 +20,7 @@ export function ComparePanel() {
   const totals = mode === "periods" ? compareBody(state, { periods: [left], configuration_id: state.config }, { periods: [state.period], configuration_id: state.config }, diff) : compareBody(state, { periods: [state.period], configuration_id: state.config }, { periods: [state.period], configuration_id: rightCfg }, diff);
   const bySector = useCompare(periods);
   const total = useCompare(totals);
-  const title = mode === "periods" ? `${periodShort(labels, state.period)} minus ${periodShort(labels, left)}` : `${configLabel(labels, rightCfg)} minus ${configLabel(labels, state.config)}`;
+  const title = mode === "periods" ? `${periodShort(labels, state.period)} minus ${periodShort(labels, left)}` : `${configLabel(labels, rightCfg)} minus ${configWords(labels, state.config)}`;
   return (
     <div className="space-y-3 p-3" data-testid="compare-panel">
       <div className="pill flex overflow-hidden border border-line bg-white p-0.5">
@@ -49,8 +49,8 @@ export function ComparePanel() {
           <option value="relative">relative (percent of left)</option>
         </select>
       </label>
-      <Frame title={`${title}, total`} scope={state.gwp} env={total.data} error={total.error} isLoading={total.isLoading} labels={labels} dims={dims} />
-      <Frame title={`${title}, by sector`} scope={state.gwp} env={bySector.data} error={bySector.error} isLoading={bySector.isLoading} labels={labels} dims={dims}>
+      <Frame title={`${title}, total`} scope={<span title={gwpTooltip(labels, state.gwp)}>{gwpLabel(labels, state.gwp)}</span>} env={total.data} error={total.error} isLoading={total.isLoading} labels={labels} dims={dims} />
+      <Frame title={`${title}, by sector`} scope={<span title={gwpTooltip(labels, state.gwp)}>{gwpLabel(labels, state.gwp)}</span>} env={bySector.data} error={bySector.error} isLoading={bySector.isLoading} labels={labels} dims={dims}>
         {bySector.data && <BarChart env={bySector.data} horizontal height={Math.max(200, bySector.data.values.length * 24)} labels={labels} dims={dims} />}
       </Frame>
     </div>

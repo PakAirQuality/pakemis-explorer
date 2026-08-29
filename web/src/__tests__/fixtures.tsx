@@ -15,6 +15,9 @@ export const RELEASE = {
     geography_id: "PK",
     reporting_period: { label: "FY2023-24", start: "2023-07-01", end: "2024-06-30" },
     lulucf: { status: "excluded", notation_key: "NE", note: "" },
+    basis_label: "July–June years",
+    configuration_label: "Reference estimate",
+    gwp_label: "IPCC 2013 (AR5)",
   },
   dims: {
     dim_period: { values: [{ period_id: "FY2020-21", basis: "fiscal", is_reference: "False", availability: "all_sectors" }, { period_id: "FY2023-24", basis: "fiscal", is_reference: "True", availability: "all_sectors" }] },
@@ -37,7 +40,15 @@ export const RELEASE = {
     sectors: ["agriculture", "power", "residential"],
   },
   labels: {
-    configurations: { REF_2023_24: { label: "Inventory reference (L)", letter: "L", kind: "reference", display_name: "inventory_reference", queryable: true, axis: "", module: "", note: "" }, S_2023_24: { label: "Observed household demand (S)", letter: "S", kind: "survey", display_name: "observed_household_demand", queryable: true, axis: "", module: "residential", note: "" } },
+    configurations: {
+      REF_2023_24: { label: "Reference estimate", letter: "L", kind: "reference", display_name: "inventory_reference", queryable: true, axis: "", module: "", note: "every axis at its reference setting; residential dung on the ledger basis (L)", tooltip: "every axis at its reference setting; residential dung on the ledger basis (L)" },
+      S_2023_24: { label: "Survey-based estimate", letter: "S", kind: "survey", display_name: "observed_household_demand", queryable: true, axis: "", module: "residential", note: "the residential module re-run on observed household demand", tooltip: "the residential module re-run on observed household demand" },
+    },
+    gwp: {
+      AR5: { label: "IPCC 2013 (AR5)", short: "AR5", compact: "IPCC AR5", tooltip: "CO₂-equivalent using the IPCC Fifth Assessment Report's 100-year warming potentials (CH₄ × 28, fossil CH₄ × 30, N₂O × 265)", is_default: true },
+      AR6: { label: "IPCC 2021 (AR6)", short: "AR6", compact: "IPCC AR6", tooltip: "CO₂-equivalent using the IPCC Sixth Assessment Report's 100-year warming potentials (CH₄ × 27, fossil CH₄ × 29.8, N₂O × 273)", is_default: false },
+    },
+    lulucf: { short: "excludes land use and forestry", compact: "land use excluded", status: "excluded", notation_key: "NE", tooltip: "an exploratory Tier-1 module publishes a provisional sink outside every total" },
     periods: {
       "FY2023-24": { label: "July 2023 – June 2024", short: "2023–24", basis_note: "a fiscal year runs from July to June", start: "2023-07-01", end: "2024-06-30", basis: "fiscal", availability: "all_sectors", is_reference: true, note: "" },
       "FY2020-21": { label: "July 2020 – June 2021", short: "2020–21", basis_note: "a fiscal year runs from July to June", start: "2020-07-01", end: "2021-06-30", basis: "fiscal", availability: "all_sectors", is_reference: false, note: "" },
@@ -72,7 +83,7 @@ export const RELEASE = {
   placeholders: { auth: "none" },
 };
 
-export type MockCell = { display: string; display_short?: string; unit_words?: string; group?: Record<string, string>; exactness?: string; exact_high?: string; unit?: string; extra?: Record<string, unknown>; value?: number };
+export type MockCell = { display: string; display_short?: string; unit_words?: string; unit_short?: string; group?: Record<string, string>; exactness?: string; exact_high?: string; unit?: string; extra?: Record<string, unknown>; value?: number };
 
 let counter = 0;
 export function envelope(cells: MockCell[], overrides: Record<string, unknown> = {}) {
@@ -92,6 +103,7 @@ export function envelope(cells: MockCell[], overrides: Record<string, unknown> =
       group: c.group ?? {},
       ...(c.display_short ? { display_short: c.display_short } : {}),
       ...(c.unit_words ? { unit_words: c.unit_words } : {}),
+      ...(c.unit_short ? { unit_short: c.unit_short } : {}),
       ...(c.exactness ? { exactness: c.exactness } : {}),
       ...(c.exact_high ? { exact_high: c.exact_high } : {}),
       ...(c.extra ?? {}),

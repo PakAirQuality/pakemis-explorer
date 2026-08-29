@@ -67,14 +67,14 @@ describe("ReceiptFooter", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Filters" }));
     const table = screen.getByTestId("filters-table");
     expect(table).toHaveTextContent("Period2023–24");
-    expect(table).toHaveTextContent("ConfigurationInventory reference (L)");
-    expect(table).toHaveTextContent("GWP basisAR5");
+    expect(table).toHaveTextContent("ConfigurationReference estimate");
+    expect(table).toHaveTextContent("Warming potentialsIPCC 2013 (AR5)");
     expect(table).toHaveTextContent("Geographyadm1: Punjab");
     expect(table).toHaveTextContent("Spatial viewall three views");
     expect(table).toHaveTextContent("Basisfiscal");
     expect(table).toHaveTextContent("Defaults appliedgwp_basis");
     expect(table.textContent).not.toContain("FY");
-    expect(filterRows(e).map((r) => r.name)).toEqual(["Period", "Configuration", "GWP basis", "Geography", "Spatial view", "Basis", "Defaults applied"]);
+    expect(filterRows(e).map((r) => r.name)).toEqual(["Period", "Configuration", "Warming potentials", "Geography", "Spatial view", "Basis", "Defaults applied"]);
     expect(filterRows(e)[0].value).toBe("FY2023-24"); // without labels the id stands
   });
   it("API request prints the canonical JSON and a curl line against the prefixed API, and nothing key-like", () => {
