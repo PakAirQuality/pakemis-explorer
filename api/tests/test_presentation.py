@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from pakemis_api.ask.render import BareNumberError, render_multi
-from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate, short_display, unit_kind, unit_words
+from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate, is_count, short_display, unit_words
 from test_ask import FakeModel, ask, only, stop, text, tool_use
 from test_goldens import GOLDENS, post_golden
 
@@ -19,77 +19,58 @@ MT = "Mt CO2e AR5"
 # --- the rule ----------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("exact,expected", [
-    ("452.34662", "452.3"),       # >= 100: 1 decimal
-    ("63.370", "63.4"),           # 10..100: 1 decimal
-    ("228.7168", "228.7"),
-    ("9.010", "9.01"),            # 1..10: 2 decimals, trailing zero kept
+    ("452.34662", "452.35"),
+    ("63.370", "63.37"),
+    ("9.010", "9.01"),
+    ("0.394", "0.39"),
+    ("0.30", "0.30"),             # trailing zero kept
+    ("0.35006860", "0.35"),
+    ("248.7468", "248.75"),
+    ("228.7168", "228.72"),
     ("1.9972", "2.00"),
-    ("0.394", "0.394"),           # < 1: three significant figures
-    ("0.35006860", "0.350"),
-    ("0.00602831", "0.00603"),
-    ("0.0589", "0.0589"),
-    ("0.000602", "0.000602"),
-    ("1.234e-05", "0.0000123"),   # plain notation, never an exponent
-    ("0", "0"),
-    ("0E-7", "0"),
-    ("0.0000", "0"),
-    ("-3.4567", "-3.46"),         # a signed difference keeps its sign
-    ("-0.0004", "-0.000400"),
-    ("0.9996", "1.00"),           # rounding that crosses a band lands in the band's precision
-    ("9.996", "10.0"),
-    ("99.96", "100.0"),
+    ("1.234e-05", "<0.01"),       # non-zero below the precision, never 0.00 and never an exponent
+    ("0.004", "<0.01"),
+    ("-0.004", ">-0.01"),         # its negative twin: -0.00 is never printed
+    ("0.005", "<0.01"),           # half to even: 0.005 -> 0.00 -> below precision
+    ("0.015", "0.02"),
+    ("0", "0.00"),
+    ("0E-7", "0.00"),
+    ("0.0000", "0.00"),
+    ("-5.13", "-5.13"),           # a signed difference keeps its sign
+    ("-5.125", "-5.12"),
+    ("-5.135", "-5.14"),
+    ("99.996", "100.00"),
 ])
-def test_mass_rule(exact, expected):
-    assert short_display(exact, MT) == expected
-    assert short_display(exact, "Gg") == expected
-    assert short_display(exact, "t CO2") == expected
+def test_two_decimals_every_numeric_unit(exact, expected):
+    for unit in ("Mt CO2e AR5", "Gg", "t CO2", "percent", "pct", "%", "share", "ratio", "", "kg"):
+        assert short_display(exact, unit) == expected, unit
 
 
 def test_half_even():
-    assert short_display("0.125", "percent") == "0.1"
-    assert short_display("0.135", "percent") == "0.1"    # binary-free: Decimal half-even on the string
-    assert short_display("0.145", "percent") == "0.1"
-    assert short_display("0.155", "percent") == "0.2"
-    assert short_display("2.345", MT) == "2.34"
-    assert short_display("2.355", MT) == "2.36"
+    assert short_display("2.345", "Mt") == "2.34"
+    assert short_display("2.355", "Mt") == "2.36"
+    assert short_display("0.125", "percent") == "0.12"
+    assert short_display("0.135", "percent") == "0.14"    # binary-free: Decimal half-even on the string
 
 
-def test_percent_share_count_other():
-    assert short_display("13.79", "percent") == "13.8"
-    assert short_display("-12.3456", "percent") == "-12.3"
-    assert short_display("0", "percent") == "0.0"
-    assert short_display("100.04", "pct") == "100.0"
-    assert short_display("5.45", "%") == "5.4" and short_display("5.55", "%") == "5.6"
-    assert short_display("0.123456", "share") == "0.123"
-    assert short_display("0.5", "") == "0.500"
-    assert short_display("12.3456", "ratio") == "12.3"
-    assert short_display("0", "share") == "0"
+def test_counts_and_non_numeric_unchanged():
     assert short_display("12", "rows", display="12") == "12"
     assert short_display("1234.5", "count", display="1234.5") == "1234.5"
     assert short_display("", "notation_key", display="NE") == "NE"
     assert short_display("", "evidence", display="E2 / TE3 / S1") == "E2 / TE3 / S1"
-    assert short_display("1.23456", "kg", display="1.23") == "1.23"        # another unit: the display itself
-    assert short_display("abc", MT, display="abc") == "abc"                # unparsable: the display itself
-    assert [unit_kind(u) for u in (MT, "Gg", "percent", "", "share", "rows", "notation_key")] == \
-        ["mass", "mass", "percent", "share", "share", "count", "other"]
+    assert short_display("abc", "Mt", display="abc") == "abc"                # unparsable: the display itself
+    assert short_display("", "Mt") == ""
+    assert [is_count(u) for u in ("rows", "count", "Mt CO2e AR5", "", "percent")] == [True, True, False, False, False]
 
 
 def test_bounded_cells():
-    # the spec's interval: both ends round to 12.3, widened to two decimals until they differ
-    assert short_display("12.2565", MT, "12.2769", "[12.2565, 12.2769]") == "[12.26, 12.28]"
-    # ends that differ under the rule need no widening
-    assert short_display("12.2565", MT, "13.9", "[12.2565, 13.9000]") == "[12.3, 13.9]"
-    # each end under the rule of its own band
-    assert short_display("0.9", MT, "1.2", "[0.9000, 1.2000]") == "[0.900, 1.20]"
-    # ends that coincide at the contract's own precision: the single value, approximately
-    assert short_display("12.25651", MT, "12.25652", "[12.2565, 12.2565]") == "≈12.2565"
-    # two exactly equal ends are one value, exactly: no bracket, no prefix ([0.0000, 0.0000] -> 0)
-    assert short_display("0.0000", MT, "0.0000", "[0.0000, 0.0000]") == "0"
-    assert short_display("4.5", MT, "4.5", "[4.5000, 4.5000]") == "4.50"
-    # without a contract display the exacts' own precision is the widening limit
-    assert short_display("12.2565", MT, "12.2769") == "[12.26, 12.28]"
-    assert short_display("12.25651", MT, "12.25652") == "[12.25651, 12.25652]"
-    assert short_display("12.256512", MT, "12.256513", "[12.2565, 12.2565]") == "≈12.2565"
+    assert short_display("12.2565", "Mt CO2e AR5", "12.2769", "[12.2565, 12.2769]") == "[12.26, 12.28]"
+    assert short_display("12.2565", "Mt CO2e AR5", "13.9") == "[12.26, 13.90]"
+    # ends that round equal print the single value: no bracket
+    assert short_display("12.251", "Mt CO2e AR5", "12.254", "[12.2510, 12.2540]") == "12.25"
+    assert short_display("0.0000", "Mt CO2e AR5", "0.0000", "[0.0000, 0.0000]") == "0.00"
+    assert short_display("0.001", "Mt CO2e AR5", "0.002") == "<0.01"
+    assert short_display("0.001", "Mt CO2e AR5", "0.02") == "[<0.01, 0.02]"
 
 
 def test_unit_words_matches_the_web():
@@ -114,11 +95,11 @@ def test_decorate_reaches_nested_cells_and_quantiles():
     out = decorate(env, in_place=False)
     assert json.dumps(env, sort_keys=True) == before                  # a copy on request
     v = out["values"]
-    assert v[0]["display_short"] == "452.3" and v[0]["unit_words"] == "million tonnes CO₂e (AR5)"
+    assert v[0]["display_short"] == "452.35" and v[0]["unit_words"] == "million tonnes CO₂e (AR5)"
     assert v[0]["display"] == "452.34662" and v[0]["exact"] == "452.34662"
-    assert v[1]["display_short"] == "-3.1" and v[1]["left"]["display_short"] == "10.5" and v[1]["right"]["display_short"] == "10.2"
+    assert v[1]["display_short"] == "-3.12" and v[1]["left"]["display_short"] == "10.50" and v[1]["right"]["display_short"] == "10.17"
     assert v[1]["left"]["unit_words"] == "million tonnes CO₂e (AR5)"
-    assert v[2]["quantiles_short"] == {"P2.5": "420.1", "P97.5": "471.0"} and v[2]["quantiles"] == {"P2.5": "420.1234", "P97.5": "470.9876"}
+    assert v[2]["quantiles_short"] == {"P2.5": "420.12", "P97.5": "470.99"} and v[2]["quantiles"] == {"P2.5": "420.1234", "P97.5": "470.9876"}
     assert v[3]["display_short"] == "[12.26, 12.28]" and v[3]["display"] == "[12.2565, 12.2769]"
     assert out["receipt"] == "abc" and out["result_sha256"] == "d"
     assert decorate(env) is env                                        # in place by default
@@ -130,8 +111,9 @@ def _check_cell(cell):
     assert "display_short" in cell and "unit_words" in cell, cell
     assert cell["display_short"] == short_display(cell.get("exact"), cell.get("unit"), cell.get("exact_high"), cell.get("display"))
     assert cell["unit_words"] == unit_words(cell.get("unit"))
-    if cell.get("exact") not in ("", None) and unit_kind(cell.get("unit")) in ("mass", "percent", "share"):
-        assert re.match(r"^(≈)?-?\d+(\.\d+)?$|^\[-?\d+(\.\d+)?, -?\d+(\.\d+)?\]$", cell["display_short"]), cell["display_short"]
+    if cell.get("exact") not in ("", None) and not is_count(cell.get("unit")):
+        num = r"(-?\d+\.\d\d|<0\.01|>-0\.01)"
+        assert re.match(r"^%s$|^\[%s, %s\]$" % (num, num, num), cell["display_short"]), cell["display_short"]
     for side in ("left", "right"):
         if isinstance(cell.get(side), dict):
             _check_cell(cell[side])
@@ -168,14 +150,14 @@ def test_release_declares_the_presentation_rule(client):
     assert "rule" in rounding and "co2e_Mt" in rounding                 # the contract's block is intact
     p = rounding["presentation"]
     assert p == PRESENTATION_ROUNDING
-    assert p["id"] == "PRESENTATION_ROUNDING" and p["field"] == "display_short" and p["mode"] == "ROUND_HALF_EVEN"
-    assert "one decimal" in p["sentence"] and "three significant figures" in p["sentence"]
+    assert p["id"] == "PRESENTATION_ROUNDING" and p["field"] == "display_short" and p["mode"] == "ROUND_HALF_EVEN" and p["decimals"] == 2
+    assert "two decimal places" in p["sentence"] and "<0.01" in p["sentence"]
 
 
-def test_national_total_short_is_one_decimal(client):
+def test_national_total_short_is_two_decimals(client):
     env = client.post("/api/v1/emissions/query/emissions", json={"periods": ["FY2023-24"]}).json()
     cell = env["values"][0]
-    assert re.match(r"^\d+\.\d$", cell["display_short"]) and cell["display"].startswith(cell["display_short"][:-1])
+    assert re.match(r"^\d+\.\d\d$", cell["display_short"]) and cell["display_short"] == "452.35"
     assert cell["unit_words"] == "million tonnes CO₂e (AR5)"
 
 

@@ -124,7 +124,7 @@ _ID_KEYS = ("month", "period_id")           # digit-shaped identifiers the model
 def compact_cells(values, cap):
     cells = []
     for i, v in enumerate(values[:cap]):
-        # display_short is the server's reading-precision rendering (presentation.py); the model may
+        # display_short is the server's two-decimal rendering (presentation.py); the model may
         # print it through {{result_k_cell_n.short}} and is asked to prefer it in prose
         cell = {"i": i, "display": v.get("display"), "display_short": v.get("display_short", v.get("display")), "unit": v.get("unit")}
         if v.get("group"):

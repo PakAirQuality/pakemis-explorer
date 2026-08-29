@@ -2,9 +2,9 @@
 
 The web computes nothing, so the number a screen prints at reading precision is minted here,
 beside the contract's `display` and the `exact` decimal, never in place of them.  `display_short`
-is derived from the cell's `exact` (Decimal, ROUND_HALF_EVEN, the contract's own rounding mode)
-by the one rule declared below, and `/release` publishes the rule as `rounding.presentation`
-with a sentence a person can read.  `unit_words` is the unit as words, the same mapping the web's
+is the cell's `exact` at two decimal places (Decimal, ROUND_HALF_EVEN, the contract's own
+rounding mode) for every numeric cell whatever its unit; `/release` publishes the rule as
+`rounding.presentation` with a sentence a person can read.  `unit_words` is the unit as words, the same mapping the web's
 `unitWords` uses, so a caption and a sentence agree.
 
 The decoration runs after the query core has minted `result_sha256` and the receipt, so neither
@@ -14,37 +14,35 @@ not a screen) is served undecorated.
 import copy
 from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN
 
-APPROX = "≈"          # the prefix of a bounded cell whose ends coincide at the contract's precision
-MASS_PREFIXES = ("Mt", "Gg", "kt", "t")
-PERCENT_MARKS = ("%", "pct", "percent")
-SHARE_UNITS = ("", "ratio", "share")
 COUNT_UNITS = ("rows", "count")
+DECIMALS = 2
+Q = Decimal("0.01")
+BELOW = "<0.01"          # a non-zero value that would print as 0.00
+ABOVE = ">-0.01"         # its negative twin (-0.00 is never printed)
 
 PRESENTATION_ROUNDING = {
     "id": "PRESENTATION_ROUNDING",
     "field": "display_short",
     "derived_from": "exact",
     "mode": "ROUND_HALF_EVEN",
+    "decimals": DECIMALS,
     "sentence": (
-        "display_short is a reading-precision rendering of the exact decimal, rounded half to even: "
-        "a mass (Mt, Gg, t) at or above 10 keeps one decimal, between 1 and 10 two decimals, below 1 three "
-        "significant figures, and a zero prints as 0; a percentage keeps one decimal; a share or ratio keeps "
-        "three significant figures; a count is printed as it is; any other unit prints the contract display. "
-        "A bounded cell rounds both ends by the same rule and, when they coincide, adds decimals up to the "
-        "contract display's precision until they differ, else prints the single value with an "
-        "approximately-equal prefix. display and exact are unchanged beside it."
+        "display_short is the exact decimal rounded half to even to two decimal places, in plain notation with "
+        "trailing zeros kept (452.35, 9.01, 0.30), for every numeric cell whatever its unit; a zero prints as 0.00; "
+        "a non-zero value that would print as 0.00 prints as <0.01 (>-0.01 when negative, so -0.00 never appears); "
+        "a negative keeps its sign; a bounded cell prints both ends at two decimals as [low, high], or the single "
+        "value when the two ends round equal; a count and a non-numeric cell print their display unchanged. "
+        "display and exact are unchanged beside it."
     ),
     "rules": {
-        "mass": {"units": "unit starts with Mt, Gg, kt or t",
-                 "abs_ge_10": "1 decimal", "abs_1_to_10": "2 decimals", "abs_lt_1": "3 significant figures", "zero": "0"},
-        "percent": {"units": "unit contains %, pct or percent", "decimals": 1, "zero": "0.0"},
-        "share": {"units": "unit empty, ratio or share", "significant_figures": 3, "zero": "0"},
+        "numeric": {"units": "every unit except a count (rows, count)", "decimals": DECIMALS, "zero": "0.00",
+                    "below_precision": "<0.01 (>-0.01 when negative)", "negative": "sign kept (-5.13)"},
         "count": {"units": "rows, count", "rendering": "display unchanged"},
-        "other": {"rendering": "display unchanged"},
-        "bounded": {"rendering": "[low, high] by the same rule; equal ends widen up to the contract display's precision, "
-                                 "else ≈value; two exactly equal ends print the single value"},
+        "non_numeric": {"rendering": "display unchanged"},
+        "bounded": {"rendering": "[low, high] at two decimals; ends that round equal print the single value"},
+        "quantiles": {"field": "quantiles_short", "decimals": DECIMALS},
     },
-    "trailing_zeros": "kept (452.3, 63.4, 9.01, 0.394, 0.350)",
+    "trailing_zeros": "kept (452.35, 63.37, 9.01, 0.39, 0.30, 248.75)",
 }
 
 # the web's unitWords: a four-entry magnitude map, digits subscripted in the species, a GWP basis
@@ -69,109 +67,45 @@ def unit_words(unit):
 
 # --- the rule ---------------------------------------------------------------------------------
 
-def unit_kind(unit):
-    """mass | percent | share | count | other."""
-    u = str(unit or "").strip()
-    if u in COUNT_UNITS:
-        return "count"
-    if u in SHARE_UNITS:
-        return "share"
-    first = u.split()[0] if u.split() else ""
-    if first in MASS_PREFIXES:
-        return "mass"
-    if any(m in u for m in PERCENT_MARKS):
-        return "percent"
-    return "other"
+def is_count(unit):
+    return str(unit or "").strip() in COUNT_UNITS
 
 
-def _decimals(x, kind):
-    """The rule's number of decimals for a non-zero Decimal x of the given kind."""
-    a = abs(x)
-    if kind == "percent":
-        return 1
-    if kind == "share":
-        return max(0, 2 - a.adjusted())            # three significant figures
-    if a >= 10:
-        return 1
-    if a >= 1:
-        return 2
-    return 2 - a.adjusted()                        # three significant figures below 1
+def _decimal(text):
+    if text in ("", None):
+        return None
+    try:
+        return Decimal(str(text))
+    except InvalidOperation:
+        return None
 
 
-def _plain(q):
-    """A Decimal in plain notation (no exponent), '-0.0' normalised to '0.0'."""
-    text = format(q, "f")
-    return text[1:] if text.startswith("-") and not any(c not in "0." for c in text[1:]) else text
-
-
-def _quantize(x, decimals):
-    return x.quantize(Decimal(1).scaleb(-decimals), rounding=ROUND_HALF_EVEN)
-
-
-def _zero(kind):
-    return "0.0" if kind == "percent" else "0"
-
-
-def round_value(x, kind):
-    """One Decimal under the rule -> (text, decimals used)."""
+def round_value(x):
+    """One Decimal at two decimals, half to even, plain notation; the sub-precision forms for a
+    non-zero value that would print as 0.00."""
     if x == 0:
-        return _zero(kind), 0
-    decimals = _decimals(x, kind)
-    q = _quantize(x, decimals)
-    # rounding can cross a band (0.9996 -> 1.000): the band of the rounded value decides once more
-    if q != 0 and _decimals(q, kind) != decimals:
-        decimals = _decimals(q, kind)
-        q = _quantize(x, decimals)
+        return "0.00"
+    q = x.quantize(Q, rounding=ROUND_HALF_EVEN)
     if q == 0:
-        return _zero(kind), decimals
-    return _plain(q), decimals
-
-
-def _display_precision(display, exact, exact_high):
-    """The contract display's decimals (the low end of an interval), else the exacts' own."""
-    text = str(display or "")
-    if text.startswith("["):
-        text = text[1:].split(",")[0]
-    if text and "." in text and text.replace("-", "").replace(".", "").isdigit():
-        return len(text.split(".")[1])
-    best = 0
-    for e in (exact, exact_high):
-        try:
-            best = max(best, -Decimal(str(e)).as_tuple().exponent)
-        except (InvalidOperation, TypeError):
-            pass
-    return best
+        return BELOW if x > 0 else ABOVE
+    return format(q, "f")
 
 
 def short_display(exact, unit, exact_high=None, display=""):
-    """The reading-precision rendering of a cell (see PRESENTATION_ROUNDING)."""
-    kind = unit_kind(unit)
-    if kind in ("count", "other") or exact in ("", None):
-        return display if display not in ("", None) else str(exact or "")
-    try:
-        low = Decimal(str(exact))
-    except InvalidOperation:
-        return display if display else str(exact)
-    if exact_high in ("", None):
-        return round_value(low, kind)[0]
-    try:
-        high = Decimal(str(exact_high))
-    except InvalidOperation:
-        return round_value(low, kind)[0]
-    if low == high:                                   # a degenerate interval is one value, exactly
-        return round_value(low, kind)[0]
-    lo_text, lo_dec = round_value(low, kind)
-    hi_text, hi_dec = round_value(high, kind)
-    if lo_text != hi_text:
-        return "[%s, %s]" % (lo_text, hi_text)
-    limit = _display_precision(display, exact, exact_high)
-    decimals = max(lo_dec, hi_dec)
-    while decimals < limit:
-        decimals += 1
-        lo_text, hi_text = _plain(_quantize(low, decimals)), _plain(_quantize(high, decimals))
-        if lo_text != hi_text:
-            return "[%s, %s]" % (lo_text, hi_text)
-    return APPROX + lo_text
+    """The two-decimal rendering of a cell (see PRESENTATION_ROUNDING): a count or a non-numeric
+    cell gives its display; a bounded cell gives [low, high], or the one value when both ends
+    round to it."""
+    fallback = display if display not in ("", None) else str(exact or "")
+    if is_count(unit):
+        return fallback
+    low = _decimal(exact)
+    if low is None:
+        return fallback
+    high = _decimal(exact_high)
+    if high is None:
+        return round_value(low)
+    lo_text, hi_text = round_value(low), round_value(high)
+    return lo_text if lo_text == hi_text else "[%s, %s]" % (lo_text, hi_text)
 
 
 # --- the envelope -----------------------------------------------------------------------------

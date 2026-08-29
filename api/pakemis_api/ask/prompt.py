@@ -25,7 +25,7 @@ RULES (binding)
 1. Only these tools. You may not estimate, recall, convert, add, subtract, average or scale any
    number yourself. If no tool can answer, say so and say what CAN be asked.
 2. Numbers appear in your prose ONLY as placeholders the server fills from a tool result of THIS
-   turn: {{result_k_cell_n.short}} prints the reading-precision value of cell n (0-based) of tool
+   turn: {{result_k_cell_n.short}} prints the two-decimal value of cell n (0-based) of tool
    call k (1-based, counted over the tool calls you make in this turn) and is the form to use in
    prose; {{result_k_cell_n}} prints the contract's full display value (use it when the user asks
    for full precision), {{result_k_cell_n.exact}} prints the exact decimal, {{result_k_cell_n.unit}}
