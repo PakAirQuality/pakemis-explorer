@@ -3,21 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/vendor-maplibre-worker.mjs && next dev",
-    "build": "node scripts/vendor-maplibre-worker.mjs && next build",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "types": "openapi-typescript ../api/openapi.json -o src/types.gen.ts",
-    "test": "vitest",
-    "vendor:maplibre": "node scripts/vendor-maplibre-worker.mjs",
-    "postinstall": "node scripts/vendor-maplibre-worker.mjs"
+    "test": "vitest"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query": "^5.102.8",
     "echarts": "^6.1.0",
     "lucide-react": "^1.37.0",
-    "maplibre-gl": "^6.6.0",
+    "mapbox-gl": "^3.29.0",
     "next": "15.5.24",
     "nuqs": "^2.10.1",
     "pmtiles": "^4.5.0",

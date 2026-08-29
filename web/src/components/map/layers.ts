@@ -1,14 +1,19 @@
 /**
- * The layer stack (bottom -> top): basemap · grid-raster (image) · grid-fill (hit-test only) +
- * grid-line + grid-selected · adm2-fill + adm2-hatch · adm1-fill · adm2-line · adm1-line ·
- * selected outlines. adm1 keyed by `name`, adm2 by `shape_id`, grid by `cell_id` (promoteId).
- * Visibility follows the URL `level`. Tiles carry geometry and ids only.
+ * The layer stack (bottom -> top): basemap fills · grid-raster (image) · grid-fill (hit-test
+ * only) + grid-line + grid-selected · adm2-fill + adm2-hatch · adm1-fill · adm2-line · adm1-line
+ * · selected outlines · the basemap's symbol (label) layers. Everything of ours is inserted
+ * before the style's first symbol layer so place names stay readable. adm1 keyed by `name`,
+ * adm2 by `shape_id`, grid by `cell_id` (promoteId). Visibility follows the URL `level`. Tiles
+ * carry geometry and ids only; they reach Mapbox GL as TileJSON from app/tiles/[name].
  */
-import type { Map as MLMap, LayerSpecification, FilterSpecification } from "maplibre-gl";
+import type { Map as MBMap, LayerSpecification, FilterSpecification } from "mapbox-gl";
 import { NO_CELL, ACCENT, AMBER } from "@/lib/palette";
 import type { Level } from "@/lib/urlState";
 
+/** Static tile files (TILES.json, bboxes.json, raster PNGs). */
 export const TILES = process.env.NEXT_PUBLIC_TILES_BASE ?? "/tiles";
+/** The TileJSON route handlers (app/tiles/[name]), always on this app's origin. */
+export const TILEJSON = "/tiles";
 export const KEYS: Record<Level, string> = { adm1: "name", adm2: "shape_id", grid: "cell_id" };
 export const FILL_LAYER: Record<Level, string> = { adm1: "adm1-fill", adm2: "adm2-fill", grid: "grid-fill" };
 export const HATCH_IMAGE = "pakemis-hatch";
@@ -20,11 +25,18 @@ function origin(): string {
   return typeof window !== "undefined" ? window.location.origin : "";
 }
 
-export function addSources(map: MLMap) {
-  const o = origin();
-  map.addSource("adm1", { type: "vector", url: `pmtiles://${o}${TILES}/adm1.pmtiles`, promoteId: KEYS.adm1 });
-  map.addSource("adm2", { type: "vector", url: `pmtiles://${o}${TILES}/adm2.pmtiles`, promoteId: KEYS.adm2 });
-  map.addSource("grid", { type: "vector", url: `pmtiles://${o}${TILES}/grid.pmtiles`, promoteId: KEYS.grid });
+/** The TileJSON URL of one archive; absolute so Mapbox GL never resolves it against a style URL. */
+export function tileJsonUrl(name: Level): string {
+  return `${origin()}${TILEJSON}/${name}`;
+}
+
+export function addSources(map: MBMap) {
+  for (const name of ["adm1", "adm2", "grid"] as const) if (!map.getSource(name)) map.addSource(name, { type: "vector", url: tileJsonUrl(name), promoteId: KEYS[name] });
+}
+
+/** The id of the style's first symbol layer (labels), or undefined when the style has none. */
+export function firstSymbolLayerId(map: MBMap): string | undefined {
+  return map.getStyle()?.layers?.find((l) => l.type === "symbol")?.id;
 }
 
 /** The 8x8 diagonal hatch drawn over bounded ADM2 cells (colour = low; the hatch says "interval"). */
@@ -64,13 +76,14 @@ export function layerSpecs(): LayerSpecification[] {
   ];
 }
 
-export function addLayers(map: MLMap) {
+/** Add the stack, each layer inserted before `before` (the basemap's first symbol layer). */
+export function addLayers(map: MBMap, before?: string) {
   if (!map.hasImage(HATCH_IMAGE)) map.addImage(HATCH_IMAGE, hatchImage(), { pixelRatio: 1 });
-  for (const spec of layerSpecs()) if (!map.getLayer(spec.id)) map.addLayer(spec);
+  for (const spec of layerSpecs()) if (!map.getLayer(spec.id)) map.addLayer(spec, before);
 }
 
 /** Which layers show at each level. Lines of the coarser levels stay as context. */
-export function applyLevel(map: MLMap, level: Level, raster: boolean) {
+export function applyLevel(map: MBMap, level: Level, raster: boolean) {
   const show = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
   show("adm1-fill", level === "adm1");
   show("adm1-selected", level === "adm1");
@@ -86,7 +99,7 @@ export function applyLevel(map: MLMap, level: Level, raster: boolean) {
   if (map.getLayer(RASTER_LAYER)) map.setPaintProperty(RASTER_LAYER, "raster-opacity", raster ? RASTER_OPACITY : 0);
 }
 
-export function setSelected(map: MLMap, level: Level, id: string | null, cell?: { lat: number; lon: number } | null) {
+export function setSelected(map: MBMap, level: Level, id: string | null, cell?: { lat: number; lon: number } | null) {
   const f = (key: string, v: string | null): FilterSpecification => ["==", ["get", key], v ?? ""] as unknown as FilterSpecification;
   if (map.getLayer("adm1-selected")) map.setFilter("adm1-selected", f("name", level === "adm1" ? id : null));
   if (map.getLayer("adm2-selected")) map.setFilter("adm2-selected", f("shape_id", level === "adm2" ? id : null));
@@ -97,15 +110,42 @@ export function setSelected(map: MLMap, level: Level, id: string | null, cell?: 
   }
 }
 
-/** The grid raster image source; mounted once, updated per frame, opacity 0 when off. */
-export function ensureRaster(map: MLMap, url: string, coordinates: [[number, number], [number, number], [number, number], [number, number]], opacity: number) {
+/**
+ * The grid raster image source; mounted once (just below grid-fill, itself below the labels),
+ * updated per frame, opacity 0 when off. `before` is the fallback insertion point when the
+ * vector layers are not mounted yet.
+ */
+export function ensureRaster(map: MBMap, url: string, coordinates: [[number, number], [number, number], [number, number], [number, number]], opacity: number, before?: string) {
   const src = map.getSource(RASTER_SOURCE) as { updateImage?: (o: { url: string; coordinates: typeof coordinates }) => void } | undefined;
   if (!src) {
     map.addSource(RASTER_SOURCE, { type: "image", url, coordinates });
-    const before = map.getLayer("grid-fill") ? "grid-fill" : undefined;
-    map.addLayer({ id: RASTER_LAYER, type: "raster", source: RASTER_SOURCE, paint: { "raster-opacity": opacity, "raster-resampling": "nearest", "raster-fade-duration": 0 } }, before);
+    const at = map.getLayer("grid-fill") ? "grid-fill" : before;
+    map.addLayer({ id: RASTER_LAYER, type: "raster", source: RASTER_SOURCE, paint: { "raster-opacity": opacity, "raster-resampling": "nearest", "raster-fade-duration": 0 } }, at);
   } else {
     src.updateImage?.({ url, coordinates });
     map.setPaintProperty(RASTER_LAYER, "raster-opacity", opacity);
+  }
+}
+
+/** The ops dashboard's atmosphere (the globe's halo at low zoom, the horizon haze when tilted). */
+export const ATMOSPHERE = { range: [0.5, 10] as [number, number], color: "#ffffff", "high-color": "#b8d4e8", "space-color": "#d8f2ff", "horizon-blend": 0.08, "star-intensity": 0 };
+
+/** streets-v12 declares no fog, so v3's globe would show a bare edge; the atmosphere is set once unless the style has its own. */
+export function ensureAtmosphere(map: MBMap) {
+  if (!map.getFog()) map.setFog(ATMOSPHERE);
+}
+
+/** The ops dashboard's 3D recipe: Mapbox terrain, the atmosphere and a tilted camera; off keeps the atmosphere. */
+export const DEM_SOURCE = "mapbox-dem";
+export function setView3d(map: MBMap, on: boolean) {
+  if (on) {
+    if (!map.getSource(DEM_SOURCE)) map.addSource(DEM_SOURCE, { type: "raster-dem", url: "mapbox://mapbox.mapbox-terrain-dem-v1", tileSize: 512, maxzoom: 14 });
+    map.setTerrain({ source: DEM_SOURCE, exaggeration: ["interpolate", ["linear"], ["zoom"], 0, 1.5, 15, 1.0] });
+    map.setFog(ATMOSPHERE);
+    map.easeTo({ pitch: 30, bearing: -10, duration: 700 });
+  } else {
+    map.easeTo({ pitch: 0, bearing: 0, duration: 500 });
+    if (map.getTerrain()) map.setTerrain(null);
+    ensureAtmosphere(map);
   }
 }

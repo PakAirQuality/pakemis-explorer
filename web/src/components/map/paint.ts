@@ -4,7 +4,7 @@
  * max value), `display` is the only thing ever printed. The id set comes from bboxes.json so
  * no-cell polygons are marked without waiting for tiles to load.
  */
-import type { Map as MLMap, ExpressionSpecification } from "maplibre-gl";
+import type { Map as MLMap, ExpressionSpecification } from "mapbox-gl";
 import type { Cell, Envelope } from "@/lib/envelope";
 import { NO_CELL, rampStops, RAMP } from "@/lib/palette";
 import type { Level } from "@/lib/urlState";

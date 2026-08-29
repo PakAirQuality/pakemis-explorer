@@ -1,25 +1,29 @@
 "use client";
 /**
- * The map: MapLibre + pmtiles over the basemap (basemap.ts), the layer stack (layers.ts), the
- * envelope painted through feature-state (paint.ts), hover and click (useMapInteractions),
- * the floating chrome (ScopeChips, layers control, TimeRail, Legend, context pill) and the
- * camera written to `cam`. The choropleth's request is mapBody(state); a refused request
- * leaves outlines and puts the refusal in the legend.
+ * The map: Mapbox GL JS v3 over the basemap (basemap.ts; hawanama.org's streets-v12 with v3's
+ * globe and atmosphere when the token exists), the layer stack inserted below the basemap's
+ * labels (layers.ts), the PMTiles served as TileJSON by app/tiles/[name], the envelope painted
+ * through feature-state (paint.ts), hover and click (useMapInteractions), the floating chrome
+ * (ScopeChips + the Ask hint, Ask pill, raster / 3D / frame buttons, TimeRail, Legend, context
+ * pill) and the camera written to `cam`. The choropleth's request is mapBody(state); a refused
+ * request leaves outlines and puts the refusal in the legend.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layers, Locate } from "lucide-react";
-import type { Map as MLMap } from "maplibre-gl";
+import type { Map as MBMap } from "mapbox-gl";
 import { api } from "@/lib/api";
 import { mapBody, parseCell } from "@/lib/requests";
 import { configLetter, gasLabel, monthLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap } from "./basemap";
-import { addLayers, addSources, applyLevel, ensureRaster, RASTER_OPACITY, setSelected, TILES } from "./layers";
+import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setSelected, setView3d, TILES } from "./layers";
 import { clearPaint, indexCells, paintEnvelope } from "./paint";
 import { rasterFile, unionBbox, useBboxes, useTilesInfo } from "./tiles";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
+import { AskHint, AskPill } from "@/components/ask/AskEntry";
+import { View3dToggle } from "./View3dToggle";
 import { HoverTip } from "./HoverTip";
 import { Legend } from "./Legend";
 import { TimeRail } from "./TimeRail";
@@ -30,8 +34,9 @@ const LEVEL_WORD = { adm1: "Provinces", adm2: "Districts", grid: "Grid" } as con
 export function ExplorerMap() {
   const { state, setState, labels, dims, release, isMobile } = useExplorer();
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MLMap | null>(null);
-  const [map, setMap] = useState<MLMap | null>(null);
+  const mapRef = useRef<MBMap | null>(null);
+  const [map, setMap] = useState<MBMap | null>(null);
+  const beforeRef = useRef<string | undefined>(undefined); // the basemap's first symbol layer
   const [mapError, setMapError] = useState("");
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [legendOpen, setLegendOpen] = useState(true);
@@ -51,47 +56,53 @@ export function ExplorerMap() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const maplibre = await import("maplibre-gl");
-      const { Protocol } = await import("pmtiles");
-      // Development aid: a hidden document never fires requestAnimationFrame, so MapLibre
+      const mapboxgl = (await import("mapbox-gl")).default;
+      // Development aid: a hidden document never fires requestAnimationFrame, so Mapbox GL
       // neither loads tiles nor paints there (browser automation windows are hidden). With
       // `?hidden=render` the frame callback runs on a timer instead; nothing else changes.
       if (new URLSearchParams(window.location.search).get("hidden") === "render") {
         window.requestAnimationFrame = ((cb: FrameRequestCallback) =>
           window.setTimeout(() => cb(performance.now()), 16)) as typeof window.requestAnimationFrame;
         window.cancelAnimationFrame = ((id: number) => window.clearTimeout(id)) as typeof window.cancelAnimationFrame;
-        // MapLibre also pauses tile requests while the document reports itself hidden.
+        // Mapbox GL also pauses while the document reports itself hidden.
         Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
         Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
       }
-      if (cancelled || !containerRef.current) return;
-      // MapLibre 6 ships its worker as a separate module and locates it relative to
-      // import.meta.url, which the bundler rewrites; serve it as a static file instead
-      // (scripts/vendor-maplibre-worker.mjs copies it into public/vendor on install/dev/build).
-      maplibre.setWorkerUrl("/vendor/maplibre-gl-worker.mjs");
-      const protocol = new Protocol();
-      maplibre.addProtocol("pmtiles", protocol.tile);
+      if (cancelled || !containerRef.current || !bm.token) return; // no token: no map (basemap.ts)
+      // The token is assigned here and nowhere else; it leaves the page only as the query
+      // parameter of Mapbox's own requests.
+      mapboxgl.accessToken = bm.token;
       const initial = stateRef.current.cam?.split(",").map(Number);
-      const m = new maplibre.Map({
+      const m = new mapboxgl.Map({
         container: containerRef.current,
         style: bm.style,
         center: initial && initial.length === 3 && initial.every(Number.isFinite) ? [initial[0], initial[1]] : [69.5, 30.2],
         zoom: initial && initial.length === 3 && Number.isFinite(initial[2]) ? initial[2] : 4.8,
-        attributionControl: false,
-        maxZoom: 12,
         minZoom: 3.5,
+        maxZoom: 12,
+        // hawanama.org's flags; no `projection`, so v3's globe and atmosphere apply to streets-v12
+        attributionControl: false,
+        logoPosition: "bottom-left",
+        maxPitch: 45,
+        dragRotate: false,
+        touchPitch: false,
+        pitchWithRotate: false,
+        renderWorldCopies: false,
+        antialias: false,
       });
       mapRef.current = m;
-      if (new URLSearchParams(window.location.search).get("hidden") === "render") (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = m;
       (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = m; // inspection aid: the map holds no numbers
-      m.addControl(new maplibre.AttributionControl({ compact: true, customAttribution: bm.kind === "mapbox" ? "Boundaries: geoBoundaries gbOpen · values: PakEmis API envelopes" : bm.attribution }), "bottom-right");
+      // Mapbox's own control (their terms want the attribution and wordmark), plus ours.
+      m.addControl(new mapboxgl.AttributionControl({ compact: true, customAttribution: bm.attribution }), "bottom-right");
       m.on("error", (e) => {
         const msg = (e as { error?: { message?: string } }).error?.message ?? "";
         if (msg) setMapError(msg);
       });
       m.on("load", () => {
+        ensureAtmosphere(m);
+        beforeRef.current = firstSymbolLayerId(m);
         addSources(m);
-        addLayers(m);
+        addLayers(m, beforeRef.current);
         applyLevel(m, stateRef.current.level, stateRef.current.raster);
         setMap(m);
       });
@@ -128,6 +139,11 @@ export function ExplorerMap() {
     if (map) applyLevel(map, state.level, state.raster);
   }, [map, state.level, state.raster]);
 
+  // --- the 3D view: terrain, atmosphere and the tilted camera
+  useEffect(() => {
+    if (map) setView3d(map, state.view3d);
+  }, [map, state.view3d]);
+
   // --- paint the envelope (or clear on refusal)
   useEffect(() => {
     if (!map || state.level === "grid") return;
@@ -157,7 +173,7 @@ export function ExplorerMap() {
   const rasterName = rasterFile(raster, state.config, state.gas ?? "", state.month);
   useEffect(() => {
     if (!map || !raster || !rasterName) return;
-    ensureRaster(map, `${TILES}/raster/${rasterName}`, raster.image_coordinates, state.raster ? RASTER_OPACITY : 0);
+    ensureRaster(map, `${TILES}/raster/${rasterName}`, raster.image_coordinates, state.raster ? RASTER_OPACITY : 0, beforeRef.current);
   }, [map, raster, rasterName, state.raster]);
 
   // --- interactions
@@ -180,20 +196,23 @@ export function ExplorerMap() {
 
   return (
     <div className="absolute inset-0" data-testid="explorer-map">
-      {/* maplibre-gl.css (imported after Tailwind) sets .maplibregl-map { position: relative },
+      {/* mapbox-gl.css (imported after Tailwind) sets .mapboxgl-map { position: relative },
           which beats `absolute`; the explicit height keeps the container full-size either way. */}
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
-      {bm.notice && <div className="absolute inset-x-0 top-0 z-20 bg-refusal px-3 py-1 text-center text-micro normal-case tracking-normal text-warn">{bm.notice}</div>}
+      {bm.notice && <div className="absolute inset-x-0 top-0 z-20 bg-refusal px-3 py-1 text-center text-micro normal-case tracking-normal text-warn" data-testid="basemap-notice">{bm.notice}</div>}
       {mapError && <div className="absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded bg-refusal px-3 py-1 text-xs text-warn" data-testid="map-error">Map: {mapError}</div>}
       <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} />
 
-      <div className="absolute left-3 top-3 z-20">
+      <div className={`absolute left-3 z-20 ${bm.notice ? "top-8" : "top-3"}`}>
         <ScopeChips />
+        <AskHint />
       </div>
-      <div className="absolute right-3 top-3 z-20 flex flex-col gap-1.5">
+      <div className={`absolute right-3 z-20 flex flex-col items-end gap-1.5 ${bm.notice ? "top-8" : "top-3"}`}>
+        <AskPill />
         <button title={state.raster ? "Hide the grid raster (visual only)" : "Show the grid raster (visual only)"} aria-pressed={state.raster} onClick={() => setState({ raster: !state.raster })} className={`glass flex h-9 w-9 items-center justify-center rounded-xl ${state.raster ? "text-accent" : "text-muted"}`} data-testid="raster-toggle">
           <Layers size={16} />
         </button>
+        <View3dToggle />
         <button title="Frame Pakistan" onClick={fitAll} className="glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-ink">
           <Locate size={16} />
         </button>

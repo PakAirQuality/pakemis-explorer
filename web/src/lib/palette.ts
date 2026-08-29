@@ -31,7 +31,7 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-/** The ramp colour of `value` between `min` and `max`, linear in sRGB like MapLibre's `interpolate`. */
+/** The ramp colour of `value` between `min` and `max`, linear in sRGB like Mapbox GL's `interpolate`. */
 export function rampColor(value: number, min: number, max: number): string {
   if (!(max > min)) return RAMP[RAMP.length - 1];
   const t = Math.min(1, Math.max(0, (value - min) / (max - min))) * (RAMP.length - 1);
@@ -43,7 +43,7 @@ export function rampColor(value: number, min: number, max: number): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
-/** The stops of a MapLibre `interpolate` expression for one envelope's own min and max `value`. */
+/** The stops of a Mapbox GL `interpolate` expression for one envelope's own min and max `value`. */
 export function rampStops(min: number, max: number): (number | string)[] {
   const out: (number | string)[] = [];
   RAMP.forEach((c, i) => out.push(i === RAMP.length - 1 ? max : i === 0 ? min : min + ((max - min) * i) / (RAMP.length - 1), c));

@@ -1,48 +1,26 @@
 /**
- * The basemap. Primary: Mapbox's light style tiles through MapLibre as a raster source, from
- * NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN (web/.env.local, gitignored; never printed). Fallback:
- * NEXT_PUBLIC_BASEMAP_STYLE, a vector style URL (an OpenFreeMap style, keyless). Otherwise a
- * neutral background and a one-line notice. The token is only ever interpolated into the tile
- * URL the browser requests.
+ * The basemap. hawanama.org's look: Mapbox GL JS v3 rendering `mapbox://styles/mapbox/streets-v12`
+ * (v3's default globe projection and atmosphere at low zoom) with the token from
+ * NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN (web/.env.local, gitignored; only ever assigned to
+ * mapboxgl.accessToken, never printed). NEXT_PUBLIC_BASEMAP_STYLE overrides the style URL (a
+ * Mapbox Studio style or any v8 style URL; the projection is then the style's own).
+ *
+ * Mapbox GL JS v2+ authenticates every map load and renders nothing at all without a valid
+ * token, whatever the style (Map#_revokeAuth clears the canvas), so there is no keyless map:
+ * without the token no map is created and a one-line notice says so. The choropleth's numbers
+ * live in the legend and the panels either way.
  */
-import type { StyleSpecification } from "maplibre-gl";
+export type BasemapKind = "mapbox-streets" | "style-url" | "none";
+export type Basemap = { style: string; kind: BasemapKind; token: string | null; notice: string; attribution: string };
 
-export type Basemap = { style: string | StyleSpecification; kind: "mapbox" | "style-url" | "none"; notice: string; attribution: string };
-
-export const BOUNDARY_ATTRIBUTION = "Boundaries: geoBoundaries gbOpen · Values: PakEmis API envelopes (tiles carry none)";
+export const BOUNDARY_ATTRIBUTION = "Boundaries: geoBoundaries gbOpen · values: PakEmis API envelopes (tiles carry none)";
+export const STREETS_STYLE = "mapbox://styles/mapbox/streets-v12";
+export const NO_TOKEN_NOTICE = "No map: Mapbox GL JS renders nothing without a token. Put NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (gitignored) and restart the web server.";
 
 export function basemap(): Basemap {
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
   const styleUrl = process.env.NEXT_PUBLIC_BASEMAP_STYLE;
-  if (token) {
-    const attribution = '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-    return {
-      kind: "mapbox",
-      notice: "",
-      attribution,
-      style: {
-        version: 8,
-        sources: {
-          "mapbox-light": {
-            type: "raster",
-            tiles: [`https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${encodeURIComponent(token)}`],
-            tileSize: 512,
-            attribution,
-            maxzoom: 20,
-          },
-        },
-        layers: [
-          { id: "background", type: "background", paint: { "background-color": "#eef2f5" } },
-          { id: "basemap", type: "raster", source: "mapbox-light", paint: { "raster-opacity": 1 } },
-        ],
-      },
-    };
-  }
-  if (styleUrl) return { kind: "style-url", notice: "", attribution: BOUNDARY_ATTRIBUTION, style: styleUrl };
-  return {
-    kind: "none",
-    notice: "No basemap: set NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (or NEXT_PUBLIC_BASEMAP_STYLE for a keyless style).",
-    attribution: BOUNDARY_ATTRIBUTION,
-    style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2f5" } }] },
-  };
+  if (!token) return { kind: "none", token: null, notice: NO_TOKEN_NOTICE, attribution: BOUNDARY_ATTRIBUTION, style: STREETS_STYLE };
+  if (styleUrl) return { kind: "style-url", token, notice: "", attribution: BOUNDARY_ATTRIBUTION, style: styleUrl };
+  return { kind: "mapbox-streets", token, notice: "", attribution: BOUNDARY_ATTRIBUTION, style: STREETS_STYLE };
 }

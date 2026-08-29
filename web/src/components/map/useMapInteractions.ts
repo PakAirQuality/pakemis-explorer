@@ -5,7 +5,10 @@
  * (province name / shape_id) or, at grid level, `cell=lat,lon` from the tile's cell centre.
  */
 import { useEffect, useRef, useState } from "react";
-import type { Map as MLMap, MapMouseEvent, MapGeoJSONFeature } from "maplibre-gl";
+import type { Map as MLMap, MapMouseEvent } from "mapbox-gl";
+
+/** What a layer-scoped mouse event carries: the rendered features under the pointer. */
+type MapGeoJSONFeature = { properties?: Record<string, unknown> | null };
 import type { Level } from "@/lib/urlState";
 import { KEYS } from "./layers";
 
