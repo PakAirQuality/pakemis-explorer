@@ -19,3 +19,4 @@ web/out/
 web/public/tiles/
 *.log
 .DS_Store
+/api/.env

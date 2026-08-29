@@ -12,7 +12,8 @@ fetch:              ## copy a semantic release out of the emissions checkout at 
 verify:             ## prove data/releases/$(VERSION) against the contract, the manifest, FETCH.json and RELEASES.md
 	python3 data/verify_release.py $(VERSION)
 
-api: verify         ## serve the API on :8000 (one process, one DuckDB engine, threads=1)
+api: verify         ## serve the API on :8000 (one process, one DuckDB engine, threads=1); api/.env (gitignored) is sourced for the agent's key
+	set -a; [ -f api/.env ] && . api/.env; set +a; \
 	cd api && python3 -m uvicorn pakemis_api.app:app --host 0.0.0.0 --port 8000 --workers 1
 
 openapi:            ## regenerate api/openapi.json from the app

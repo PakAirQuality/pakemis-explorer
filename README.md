@@ -122,11 +122,27 @@ anthropic>=0.93 sse-starlette>=3.3` (`api/requirements.txt`).
 
 Open `/?ask=1`, click the accent **Ask PakEmis** pill at the map's top-right, the Ask button
 at the bottom of the rail, or the one-time hint under the scope chips (dismissed once, kept
-in `localStorage`). The dock needs a **valid** `ANTHROPIC_API_KEY` exported in the shell that
-starts the API (`export ANTHROPIC_API_KEY=...; make api`); the web app never sees it. Without
-it `/v1/release.agent.enabled` is false and the dock shows the disabled card with the reason.
-With an invalid key the provider's answer (a 401 "API key is invalid") is shown verbatim in
-the dock as a model-error card; nothing is retried or hidden.
+in `localStorage`). The agent runs on one of two providers behind the same loop, tools and
+rendering gate:
+
+- **Gemini** (the default when only a Gemini key is present; the way hawanama's copilot runs):
+  `GEMINI_API_KEY` (or `GOOGLE_API_KEY`), model `gemini-3.1-pro-preview` falling back to
+  `gemini-2.5-pro` then `gemini-2.5-flash` when the key cannot use a model (a 429 or 404
+  before the first token; a begun stream is never restarted). `/v1/release.agent.model`
+  names the model actually answering.
+- **Anthropic**: `ANTHROPIC_API_KEY`, model `claude-sonnet-5`.
+
+`PAKEMIS_ASK_PROVIDER=auto|anthropic|gemini` (default `auto`: Gemini when `PAKEMIS_ASK_MODEL`
+starts with `gemini` or when only the Gemini key is set, Anthropic otherwise) and
+`PAKEMIS_ASK_MODEL` override the choice. The keys are read by the provider SDKs from the API
+process's environment and nowhere else: `make api` sources `api/.env` (gitignored; write it
+with `python3 scripts/copy_gemini_key.py /path/to/other/.env`, which copies the one
+`GEMINI_API_KEY=` line by name and prints only the value's length) and still honours a key
+exported in the shell. No key is ever printed, logged, put in a response or committed; the
+test suite greps the tree for key prefixes. The web app never sees a key. Without one
+`/v1/release.agent.enabled` is false and the dock shows the disabled card with the reason
+(the name of the missing variable). With an invalid key the provider's answer is shown
+verbatim in the dock as a model-error card; nothing is retried or hidden.
 
 ## The API
 
