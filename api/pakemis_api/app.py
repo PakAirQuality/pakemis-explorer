@@ -312,12 +312,21 @@ class Service:
         months = {}
         for r in self.release.dim("dim_month"):
             months[r["month"]] = "%s %s" % (MONTH_ABBR[int(r["calendar_month"]) - 1], r["calendar_year"])
+        # a limitation message that names a period by its id ("... for FY2023-24 only") is worded
+        # here with the period's short label; the contract's own text stays verbatim in known_limitations
+        id_to_short = sorted(((pid, e["short"]) for pid, e in periods.items()), key=lambda kv: -len(kv[0]))
+
+        def worded(message):
+            for pid, short in id_to_short:
+                message = message.replace(pid, short)
+            return message
+
         return {
             "configurations": configurations,
             "periods": periods,
             "months": months,
             "views": dict(VIEW_MEANINGS),
-            "limitations": {l["id"]: l["message"] for l in c["known_limitations"]},
+            "limitations": {l["id"]: worded(l["message"]) for l in c["known_limitations"]},
             "gases": {g: g.translate(SUBSCRIPT_DIGITS) for g in sorted(self.release.dim_values("dim_gas", "gas"))},
             "sectors": {m: ACRONYMS.get(m, humanise(m)) for m in sorted(self.release.dim_values("dim_stream", "module"))},
             "geographies": {r["geography_id"]: r["name"] for r in self.release.dim("dim_geography")},

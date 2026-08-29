@@ -131,3 +131,17 @@ def test_period_label_helpers():
     assert period_short("FY2023-24") == "2023–24" and period_short("CY1990") == "1990" and period_short("2001") == "2001"
     other = period_labels({"basis": "other", "label": "X1", "period_start": "2001-01-01", "period_end": "2001-03-31"})
     assert other == {"label": "X1 (1 Jan 2001 – 31 Mar 2001)", "short": "X1", "basis_note": ""}
+
+
+def test_limitation_labels_name_periods_by_their_short_label(release):
+    """labels.limitations is the wording a person reads: a period id inside a message becomes the
+    short label; the contract's known_limitations keep the message verbatim."""
+    labels = release["labels"]
+    raw = {l["id"]: l["message"] for l in release["known_limitations"]}
+    assert set(labels["limitations"]) == set(raw)
+    ids = set(labels["periods"])
+    for lid, message in labels["limitations"].items():
+        assert not any(pid in message for pid in ids), (lid, message)
+    assert "FY2023-24" in raw["config_S_residential_only"]
+    assert "2023–24" in labels["limitations"]["config_S_residential_only"] and "FY" not in labels["limitations"]["config_S_residential_only"]
+    assert labels["limitations"]["config_S_residential_only"] == raw["config_S_residential_only"].replace("FY2023-24", "2023–24")

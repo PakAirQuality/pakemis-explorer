@@ -240,14 +240,14 @@ function SectorFigure() {
   const period = periodShort(labels, env?.context.periods?.[0] ?? state.period);
   const unit = env?.values[0]?.unit ? unitWords(env.values[0].unit) : "";
   return (
-    <figure className="m-0 mt-8" data-testid="intro-sectors">
+    <figure className="m-0 mt-6" data-testid="intro-sectors">
       <figcaption>
         <div className="text-sm font-semibold text-ink" data-testid="intro-sectors-title">Where {period}&rsquo;s emissions came from</div>
         <div className="mt-0.5 text-xs text-muted">{unit ? `${unit}, reference configuration` : "reference configuration"}</div>
       </figcaption>
       {env ? (
         <>
-          <BarChart env={env} horizontal height={Math.max(120, env.values.length * 22)} labels={labels} dims={dims} compact={false} />
+          <BarChart env={env} horizontal height={Math.max(110, env.values.length * 17 + 8)} labels={labels} dims={dims} compact={false} />
           <ReceiptFooter env={env} className="mt-1" />
         </>
       ) : bySector.error ? (
