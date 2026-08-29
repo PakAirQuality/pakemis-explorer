@@ -1,5 +1,5 @@
 /**
- * The /v1/ask event payloads as api/pakemis_api/ask/router.py documents them. Every string a
+ * The /ask event payloads as api/pakemis_api/ask/router.py documents them. Every string a
  * card prints (display, unit, exactness, message, receipt) is taken from these as received.
  */
 export type StatusEvent = { phase: string; turn?: number; k?: number; name?: string; reason?: string };

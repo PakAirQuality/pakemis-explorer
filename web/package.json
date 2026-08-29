@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "export": "next build",
     "start": "next start",
     "lint": "eslint",
     "types": "openapi-typescript ../api/openapi.json -o src/types.gen.ts",
@@ -18,7 +19,6 @@
     "mapbox-gl": "^3.29.0",
     "next": "15.5.24",
     "nuqs": "^2.10.1",
-    "pmtiles": "^4.5.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "tailwindcss": "^4.3.3",

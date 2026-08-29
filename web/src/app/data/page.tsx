@@ -63,7 +63,7 @@ function Data() {
             <h1 className="mt-1 text-xl font-semibold">Data &amp; API</h1>
             <p className="text-xs text-muted">{rel ? `${rel.release_id} · commit ${rel.commit ?? "?"}` : "Loading release…"}</p>
           </div>
-          <p className="max-w-md text-xs text-muted">A download is addressed by its receipt: <code>GET /v1/download/&lt;receipt&gt;.csv</code> replays the stored request and serves the canonical CSV; <code>.receipt.json</code> restates the request, the context, every provenance digest and the licence note.</p>
+          <p className="max-w-md text-xs text-muted">A download is addressed by its receipt: <code>GET {API_BASE}/download/&lt;receipt&gt;.csv</code> replays the stored request and serves the canonical CSV; <code>.receipt.json</code> restates the request, the context, every provenance digest and the licence note.</p>
         </header>
 
         <section className="card mb-5 p-4">
@@ -126,7 +126,7 @@ function Data() {
         <section className="card mb-5 p-4">
           <h2 className="text-md font-semibold">API</h2>
           <p className="mt-1 text-xs">
-            <a className="text-accent underline" href={`${API_BASE}/docs`}>{API_BASE}/docs</a> · <a className="text-accent underline" href={`${API_BASE}/openapi.json`}>openapi.json</a> · <a className="text-accent underline" href={`${API_BASE}/v1/release`}>/v1/release</a>
+            <a className="text-accent underline" href={api.docsUrl()}>{api.docsUrl()}</a> · <a className="text-accent underline" href={api.openapiUrl()}>openapi.json</a> · <a className="text-accent underline" href={`${API_BASE}/release`}>/release</a>
           </p>
           <ul className="mono mt-2 grid grid-cols-1 gap-0.5 text-xs md:grid-cols-2">
             {(contract.data?.routes ?? []).map((r) => <li key={r}>{r}</li>)}

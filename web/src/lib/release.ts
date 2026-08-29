@@ -1,6 +1,6 @@
 "use client";
 /**
- * GET /v1/release, read once and shared: the dims (periods, months by period, geography rows,
+ * GET /release, read once and shared: the dims (periods, months by period, geography rows,
  * sectors, gases), the humanised labels the server built from the dims, the defaults and the
  * agent block. Every list a control shows comes from here; nothing is typed in the client.
  */
@@ -77,7 +77,7 @@ export type ReleaseFacts = {
 /**
  * The release's own statements the explainer quotes: the reporting period and its note, the
  * LULUCF status and note, the GWP bases (reported / secondary) and the licences. All from the
- * nested `release` block of /v1/release (the semantic release), with the context bar as the
+ * nested `release` block of /release (the semantic release), with the context bar as the
  * fallback for the period and LULUCF; nothing here is typed in the client.
  */
 export function releaseFacts(r: ReleaseInfo | undefined): ReleaseFacts {

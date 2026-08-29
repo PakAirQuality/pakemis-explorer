@@ -39,7 +39,7 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     mockFetch((url, body) => {
-      if (url.includes("/v1/spatial/lineage/")) {
+      if (url.includes("/spatial/lineage/")) {
         return envelope(
           [
             { display: DISPLAYS.lineage[0], extra: { module: "agriculture", gas: "CH4", month: "202307", spatial_view: "physical", allocation_status: "one_to_one" } },
@@ -48,7 +48,7 @@ beforeEach(() => {
           { request_type: "get_spatial_lineage", unallocated: { by_module_gas: [{ module: "industry", gas: "CO2", exact: EXACTS.unallocModuleGas }] } },
         );
       }
-      if (url.includes("/v1/spatial/grid")) {
+      if (url.includes("/spatial/grid")) {
         return envelope([{ display: DISPLAYS.cell, unit: "Gg", extra: { lat: 24.925000000000004, lon: 67.075, row: 242, col: 124, month: "202401", exact: EXACTS.cellExact, formula: "cell value read from the cube" } }], { request_type: "get_grid_cell", limitations_hit: [{ id: "grid_not_tabular", message: "grid cells stay in the cube" }] });
       }
       const g = body?.group_by ?? [];

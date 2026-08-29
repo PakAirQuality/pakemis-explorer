@@ -5,7 +5,7 @@
  * descriptions (harvested from the pakemis_query dataclass comments) so the UI never types them.
  */
 import { useQuery } from "@tanstack/react-query";
-import { API_BASE } from "./api";
+import { api } from "./api";
 
 export type ContractOptions = { gwp: string[]; geographyLevel: string[]; spatialView: string[]; basis: string[]; configuration: string[]; routes: string[]; gridGas: string; gridAnnual: string };
 
@@ -19,8 +19,12 @@ function parseOptions(description: string | undefined): string[] {
 }
 
 export async function fetchContractOptions(): Promise<ContractOptions> {
-  const res = await fetch(`${API_BASE}/openapi.json`);
-  if (!res.ok) throw new Error(`${res.status} for openapi.json`);
+  let res: Response | null = null;
+  for (const url of api.openapiUrls()) {
+    res = await fetch(url);
+    if (res.ok) break;
+  }
+  if (!res?.ok) throw new Error(`${res?.status ?? "no response"} for openapi.json`);
   const doc = (await res.json()) as { paths?: Record<string, unknown>; components?: { schemas?: Record<string, { properties?: Record<string, { description?: string }> }> } };
   const p = doc.components?.schemas?.QueryEmissions?.properties ?? {};
   const g = (doc.components?.schemas?.GridCellRequest?.properties ?? {}) as Record<string, { description?: string; default?: string }>;

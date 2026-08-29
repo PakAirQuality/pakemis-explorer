@@ -1,7 +1,7 @@
 "use client";
 /**
  * The one screen's state lives in the URL (nuqs). `useExplorerState()` resolves the raw
- * parameters against the release's defaults (/v1/release.defaults: period, configuration, GWP,
+ * parameters against the release's defaults (/release.defaults: period, configuration, GWP,
  * spatial view) so a bare `/` and `/?period=FY2023-24&config=REF_2023_24` are the same state and
  * produce the same request bodies (lib/requests.ts) and therefore the same receipts.
  */

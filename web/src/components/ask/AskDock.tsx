@@ -1,7 +1,7 @@
 "use client";
 /**
  * The right column when `ask=1`: header (model, New conversation), the turns (ReasoningTimeline
- * each), the Composer. Disabled (no key: /v1/release.agent.enabled false, or a 503 on send)
+ * each), the Composer. Disabled (no key: /release.agent.enabled false, or a 503 on send)
  * shows the DisabledCard with the API's reason and the contract's functions. `map_action`
  * events are applied to the URL state as they arrive; the conversation id is written to `c`.
  */

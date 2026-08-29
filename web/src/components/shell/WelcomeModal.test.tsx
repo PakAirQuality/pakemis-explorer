@@ -53,7 +53,7 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     mockFetch((url) => {
-      if (url.endsWith("/v1/release")) return RELEASE;
+      if (url.endsWith("/release")) return RELEASE;
       if (url.includes("/timeseries")) return envelope([{ display: SERIES[0], group: { period_id: "FY2020-21" } }, { display: SERIES[1], group: { period_id: "FY2023-24" } }], { request_type: "get_timeseries" });
       return envelope([{ display: NATIONAL }]);
     }),

@@ -1,14 +1,14 @@
 "use client";
 /**
  * About: the introduction's four sections in full prose (the /data page pattern), the
- * territories' sector coverage, what the "Other" unit is, the licences from /v1/release, a
+ * territories' sector coverage, what the "Other" unit is, the licences from /release, a
  * vocabulary note, and links to /data, the API and the repository. No number is printed
  * here: every release fact is the API's own text, and the explainer can be re-opened.
  */
 import { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { API_BASE } from "@/lib/api";
+import { api, API_BASE } from "@/lib/api";
 import { releaseAgent, releaseDims, releaseFacts, releaseLabels, useRelease } from "@/lib/release";
 import { configLabel, gasLabel, limitationText } from "@/lib/labels";
 import { joinNames, residualUnit } from "@/lib/geography";
@@ -166,7 +166,7 @@ function About() {
           <h2 className="text-md font-semibold">Further</h2>
           <ul className="mt-2 space-y-1 text-xs">
             <li><Link href="/data" className="text-accent underline">Data &amp; API</Link> — replay a receipt, download the sector × gas table, the release identity and digests, the routes.</li>
-            <li><a href={`${API_BASE}/docs`} className="text-accent underline">{API_BASE}/docs</a> — the API&apos;s interactive documentation; <a href={`${API_BASE}/v1/release`} className="text-accent underline">/v1/release</a> is the release summary this page reads.</li>
+            <li><a href={api.docsUrl()} className="text-accent underline">{api.docsUrl()}</a> — the API&apos;s interactive documentation; <a href={`${API_BASE}/release`} className="text-accent underline">{API_BASE}/release</a> is the release summary this page reads.</li>
             <li>{REPOSITORY_URL ? <a href={REPOSITORY_URL} className="text-accent underline">The repository</a> : <span>The repository</span>} — the Explorer&apos;s code and its README (<span className="mono">README.md</span> at the root of the checkout; the API&apos;s contract in <span className="mono">api/</span>).</li>
           </ul>
         </section>

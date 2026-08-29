@@ -1,4 +1,4 @@
-/** Shared test fixtures: a /v1/release summary and an envelope factory. Displays are arbitrary strings; nothing derives them. */
+/** Shared test fixtures: a /release summary and an envelope factory. Displays are arbitrary strings; nothing derives them. */
 import { vi } from "vitest";
 
 export const RELEASE = {

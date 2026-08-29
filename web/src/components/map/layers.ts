@@ -5,16 +5,14 @@
  * basemap's symbol (label) layers. Everything of ours is inserted
  * before the style's first symbol layer so place names stay readable. adm1 keyed by `name`,
  * adm2 by `shape_id`, grid by `cell_id` (promoteId). Visibility follows the URL `level`. Tiles
- * carry geometry and ids only; they reach Mapbox GL as TileJSON from app/tiles/[name].
+ * carry geometry and ids only; they reach Mapbox GL as TileJSON from the API
+ * (`{API_BASE}/tiles/{name}`, whose `tiles` are the API's own absolute `/{z}/{x}/{y}.mvt` URLs).
  */
 import type { Map as MBMap, LayerSpecification, FilterSpecification } from "mapbox-gl";
 import { NO_CELL, ACCENT, AMBER } from "@/lib/palette";
+import { absoluteApiBase } from "@/lib/api";
 import type { Level } from "@/lib/urlState";
 
-/** Static tile files (TILES.json, bboxes.json, raster PNGs). */
-export const TILES = process.env.NEXT_PUBLIC_TILES_BASE ?? "/tiles";
-/** The TileJSON route handlers (app/tiles/[name]), always on this app's origin. */
-export const TILEJSON = "/tiles";
 export const KEYS: Record<Level, string> = { adm1: "name", adm2: "shape_id", grid: "cell_id" };
 export const FILL_LAYER: Record<Level, string> = { adm1: "adm1-fill", adm2: "adm2-fill", grid: "grid-fill" };
 export const HATCH_IMAGE = "pakemis-hatch";
@@ -22,13 +20,9 @@ export const RASTER_SOURCE = "grid-raster";
 export const RASTER_LAYER = "grid-raster";
 export const RASTER_OPACITY = 0.75;
 
-function origin(): string {
-  return typeof window !== "undefined" ? window.location.origin : "";
-}
-
-/** The TileJSON URL of one archive; absolute so Mapbox GL never resolves it against a style URL. */
-export function tileJsonUrl(name: Level): string {
-  return `${origin()}${TILEJSON}/${name}`;
+/** The TileJSON URL of one archive on the API; absolute so Mapbox GL never resolves it against a style URL. */
+export function tileJsonUrl(name: Level, base: string = absoluteApiBase()): string {
+  return `${base}/tiles/${name}`;
 }
 
 export function addSources(map: MBMap) {

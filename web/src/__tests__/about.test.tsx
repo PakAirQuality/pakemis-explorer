@@ -19,8 +19,8 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     mockFetch((url) => {
-      if (url.endsWith("/v1/release")) return RELEASE;
-      if (url.endsWith("/bboxes.json")) return BBOXES;
+      if (url.endsWith("/release")) return RELEASE;
+      if (url.endsWith("/tiles/bboxes")) return BBOXES;
       return {};
     }),
   );

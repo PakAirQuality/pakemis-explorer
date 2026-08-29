@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * Smoke: the screen renders against a mocked /v1/release and mocked envelopes, and every number
+ * Smoke: the screen renders against a mocked /release and mocked envelopes, and every number
  * on screen is an envelope's display string. The map and charts are stubbed (no WebGL/canvas in jsdom).
  */
 import { render, screen } from "@testing-library/react";
@@ -19,8 +19,8 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     mockFetch((url, body) => {
-      if (url.endsWith("/v1/release")) return RELEASE;
-      if (url.endsWith("/openapi.json")) return { paths: { "/v1/release": {} }, components: { schemas: { QueryEmissions: { properties: { gwp_basis: { description: "AR5 | AR6" }, spatial_view: { description: "all | physical | origin | accounting" } } }, GridCellRequest: { properties: { gas: { default: "CO2" }, month: { description: 'YYYYMM or "annual"' } } } } } };
+      if (url.endsWith("/release")) return RELEASE;
+      if (url.endsWith("/openapi.json")) return { paths: { "/api/v1/emissions/release": {} }, components: { schemas: { QueryEmissions: { properties: { gwp_basis: { description: "AR5 | AR6" }, spatial_view: { description: "all | physical | origin | accounting" } } }, GridCellRequest: { properties: { gas: { default: "CO2" }, month: { description: 'YYYYMM or "annual"' } } } } } };
       if (body?.group_by?.includes("sector_id")) return envelope([{ display: "223.454", group: { sector_id: "agriculture" } }, { display: "57.612", group: { sector_id: "power" } }]);
       if (body?.group_by?.includes("province")) return envelope([{ display: "228.7168", group: { province: "Punjab" } }]);
       if (body?.configuration_id === "S_2023_24") return envelope([{ display: "447.21383" }]);

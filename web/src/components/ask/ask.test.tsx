@@ -157,7 +157,7 @@ describe("AskDock", () => {
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
     // the request carried ui_state = the URL scope and no history on the first turn
     const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url.endsWith("/v1/ask")).toBe(true);
+    expect(url.endsWith("/ask")).toBe(true);
     const body = JSON.parse(String(init.body));
     expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all" });
     expect(body.client_history).toEqual([]);

@@ -14,7 +14,7 @@ import { stateFromRequest } from "@/lib/requests";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
 import { RefusalCard } from "@/components/ui/RefusalCard";
-import { API_BASE } from "@/lib/api";
+import { apiUrl } from "@/lib/api";
 import type { TimelineItem } from "./types";
 
 export type Highlight = { k: number; cell: number | null } | null;
@@ -67,8 +67,8 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
         <div className="border-t border-line px-3 py-2 text-xs" data-testid="tool-result">
           {r.download ? (
             <div className="flex flex-wrap gap-2">
-              <a className="text-accent underline" href={`${API_BASE}${r.download.csv}`}>CSV</a>
-              <a className="text-accent underline" href={`${API_BASE}${r.download.receipt_json}`}>RECEIPT.json</a>
+              <a className="text-accent underline" href={apiUrl(r.download.csv)}>CSV</a>
+              <a className="text-accent underline" href={apiUrl(r.download.receipt_json)}>RECEIPT.json</a>
             </div>
           ) : (
             <>

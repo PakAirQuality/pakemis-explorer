@@ -1,13 +1,13 @@
 "use client";
 /**
- * POST /v1/ask and read the SSE body with a ReadableStream reader. Each event is appended to
+ * POST {API_BASE}/ask and read the SSE body with a ReadableStream reader. Each event is appended to
  * the current turn's log (the timeline is derived from it by timeline.ts); `map_action` is
  * handed to the caller as it arrives; `done` names the conversation, which is then persisted
  * (store.ts) and restored from the `c` URL parameter. A 503 is the disabled state (the API's
  * reason), a 429 the per-address cap; neither is retried.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { api } from "@/lib/api";
 import { createSseParser } from "./sse";
 import { loadConversation, saveConversation } from "./store";
 import { clientHistory } from "./timeline";
@@ -97,7 +97,7 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
       (async () => {
         let res: Response;
         try {
-          res = await fetch(`${API_BASE}/v1/ask`, {
+          res = await fetch(api.askUrl(), {
             method: "POST",
             headers: { "content-type": "application/json", accept: "text/event-stream" },
             body: JSON.stringify({ conversation_id: cid ?? undefined, message: text, ui_state: turn.ui_state, client_history: history }),

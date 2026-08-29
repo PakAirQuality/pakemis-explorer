@@ -2,7 +2,7 @@
 /**
  * The map: Mapbox GL JS v3 over the basemap (basemap.ts; hawanama.org's streets-v12 with v3's
  * globe and atmosphere when the token exists), the layer stack inserted below the basemap's
- * labels (layers.ts), the PMTiles served as TileJSON by app/tiles/[name], the envelope painted
+ * labels (layers.ts), the PMTiles served as TileJSON by the API's /tiles routes, the envelope painted
  * through feature-state (paint.ts), hover and click (useMapInteractions), the floating chrome
  * (ScopeChips + the Ask hint, Ask pill, raster / 3D / frame buttons, TimeRail, Legend, context
  * pill) and the camera written to `cam`. The choropleth's request is mapBody(state); a refused
@@ -17,9 +17,9 @@ import { mapBody, parseCell } from "@/lib/requests";
 import { configLetter, gasLabel, monthLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap } from "./basemap";
-import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setSelected, setView3d, TILES } from "./layers";
+import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setSelected, setView3d } from "./layers";
 import { anyWithoutCell, cellForFeature, clearPaint, indexCells, paintEnvelope } from "./paint";
-import { rasterFile, unionBbox, useBboxes, useTilesInfo } from "./tiles";
+import { rasterFile, rasterUrl, unionBbox, useBboxes, useTilesInfo } from "./tiles";
 import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
@@ -177,7 +177,7 @@ export function ExplorerMap() {
   const rasterName = rasterFile(raster, state.config, state.gas ?? "", state.month);
   useEffect(() => {
     if (!map || !raster || !rasterName) return;
-    ensureRaster(map, `${TILES}/raster/${rasterName}`, raster.image_coordinates, state.raster ? RASTER_OPACITY : 0, beforeRef.current);
+    ensureRaster(map, rasterUrl(rasterName), raster.image_coordinates, state.raster ? RASTER_OPACITY : 0, beforeRef.current);
   }, [map, raster, rasterName, state.raster]);
 
   // --- interactions

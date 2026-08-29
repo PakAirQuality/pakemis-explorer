@@ -15,7 +15,53 @@ export type UncertaintyRequest = DeepPartial<components["schemas"]["UncertaintyR
 export type CompletenessRequest = DeepPartial<components["schemas"]["CompletenessRequest"]>;
 export type GridCellRequest = DeepPartial<components["schemas"]["GridCellRequest"]>;
 
-export const API_BASE = process.env.NEXT_PUBLIC_PAKEMIS_API ?? "http://localhost:8000";
+/** The route prefix every PakEmis route lives under (the same prefix the Firebase rewrite forwards). */
+export const API_PREFIX = "/api/v1/emissions";
+const DEFAULT_API_BASE = `http://localhost:8000${API_PREFIX}`;
+
+/**
+ * The API base URL, prefix included: `NEXT_PUBLIC_API_BASE` (an absolute URL, or a same-origin
+ * path such as `/api/v1/emissions` behind the hosting rewrite); for one release the old
+ * `NEXT_PUBLIC_PAKEMIS_API` (the bare origin of the `/v1/*` era) still resolves, with the
+ * prefix appended; else the local API. Trailing slashes are dropped so `${API_BASE}/release`
+ * is always one path.
+ */
+export function resolveApiBase(env: { NEXT_PUBLIC_API_BASE?: string; NEXT_PUBLIC_PAKEMIS_API?: string }): string {
+  const strip = (s: string) => s.trim().replace(/\/+$/, "");
+  if (env.NEXT_PUBLIC_API_BASE?.trim()) return strip(env.NEXT_PUBLIC_API_BASE);
+  if (env.NEXT_PUBLIC_PAKEMIS_API?.trim()) return `${strip(env.NEXT_PUBLIC_PAKEMIS_API)}${API_PREFIX}`;
+  return DEFAULT_API_BASE;
+}
+
+// Next.js inlines NEXT_PUBLIC_* only when each is read as a literal `process.env.NAME`.
+export const API_BASE = resolveApiBase({ NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE, NEXT_PUBLIC_PAKEMIS_API: process.env.NEXT_PUBLIC_PAKEMIS_API });
+
+const isAbsolute = (s: string) => /^https?:\/\//i.test(s);
+
+/**
+ * The base as an absolute URL: a same-origin base (`/api/v1/emissions`) is resolved against
+ * the page's origin. Mapbox GL is handed absolute source URLs so nothing is resolved against a
+ * style URL; in Node (tests, the export build) a relative base is returned as is.
+ */
+export function absoluteApiBase(base: string = API_BASE): string {
+  if (isAbsolute(base)) return base;
+  return typeof window !== "undefined" ? `${window.location.origin}${base.startsWith("/") ? "" : "/"}${base}` : base;
+}
+
+/**
+ * An API-returned path (the Ask dock's `download.csv`, a link in a payload) as a URL. A path
+ * already under the prefix, or under the one-release `/v1/` alias, is joined to the base's
+ * origin; anything else is taken relative to the base; an absolute URL passes through.
+ */
+export function apiUrl(path: string, base: string = API_BASE): string {
+  if (isAbsolute(path)) return path;
+  const abs = absoluteApiBase(base);
+  const origin = isAbsolute(abs) ? new URL(abs).origin : "";
+  const prefix = (isAbsolute(abs) ? new URL(abs).pathname : abs).replace(/\/+$/, "");
+  if (prefix && path.startsWith(`${prefix}/`)) return `${origin}${path}`;
+  if (path.startsWith("/v1/")) return `${origin}${path}`;
+  return `${abs}${path.startsWith("/") ? "" : "/"}${path}`;
+}
 
 export class RefusalError extends Error {
   refusal: Refusal;
@@ -46,21 +92,32 @@ function post(body: unknown): RequestInit {
 }
 
 export const api = {
-  release: async (): Promise<ReleaseInfo> => ReleaseSchema.parse(await call("/v1/release")),
-  queryEmissions: (body: QueryEmissions) => envelope("/v1/query/emissions", post(body)),
-  compare: (body: CompareRequest) => envelope("/v1/query/compare", post(body)),
-  timeseries: (body: TimeseriesRequest) => envelope("/v1/query/timeseries", post(body)),
-  uncertainty: (body: UncertaintyRequest) => envelope("/v1/query/uncertainty", post(body)),
-  completeness: (body: CompletenessRequest) => envelope("/v1/query/completeness", post(body)),
+  release: async (): Promise<ReleaseInfo> => ReleaseSchema.parse(await call("/release")),
+  queryEmissions: (body: QueryEmissions) => envelope("/query/emissions", post(body)),
+  compare: (body: CompareRequest) => envelope("/query/compare", post(body)),
+  timeseries: (body: TimeseriesRequest) => envelope("/query/timeseries", post(body)),
+  uncertainty: (body: UncertaintyRequest) => envelope("/query/uncertainty", post(body)),
+  completeness: (body: CompletenessRequest) => envelope("/query/completeness", post(body)),
   evidence: (streamId: string, params: { module?: string; category?: string } = {}) =>
-    envelope(`/v1/evidence/${encodeURIComponent(streamId || "_")}?${new URLSearchParams(params as Record<string, string>)}`),
-  method: (methodOrCategory: string) => envelope(`/v1/method/${encodeURIComponent(methodOrCategory)}`),
+    envelope(`/evidence/${encodeURIComponent(streamId || "_")}?${new URLSearchParams(params as Record<string, string>)}`),
+  method: (methodOrCategory: string) => envelope(`/method/${encodeURIComponent(methodOrCategory)}`),
   transfers: (ledgerId: string, configurationId = "") =>
-    envelope(`/v1/transfers?${new URLSearchParams({ ledger_id: ledgerId, configuration_id: configurationId })}`),
+    envelope(`/transfers?${new URLSearchParams({ ledger_id: ledgerId, configuration_id: configurationId })}`),
   lineage: (shapeOrProvince: string, params: { month?: string; gas?: string; configuration_id?: string } = {}) =>
-    envelope(`/v1/spatial/lineage/${encodeURIComponent(shapeOrProvince)}?${new URLSearchParams(params as Record<string, string>)}`),
-  gridCell: (body: GridCellRequest) => envelope("/v1/spatial/grid", post(body)),
-  receipt: (receipt: string) => envelope(`/v1/receipt/${receipt}`),
-  downloadCsvUrl: (receipt: string) => `${API_BASE}/v1/download/${receipt}.csv`,
-  downloadReceiptUrl: (receipt: string) => `${API_BASE}/v1/download/${receipt}.receipt.json`,
+    envelope(`/spatial/lineage/${encodeURIComponent(shapeOrProvince)}?${new URLSearchParams(params as Record<string, string>)}`),
+  gridCell: (body: GridCellRequest) => envelope("/spatial/grid", post(body)),
+  receipt: (receipt: string) => envelope(`/receipt/${receipt}`),
+  downloadCsvUrl: (receipt: string) => `${API_BASE}/download/${receipt}.csv`,
+  downloadReceiptUrl: (receipt: string) => `${API_BASE}/download/${receipt}.receipt.json`,
+  /** The SSE endpoint of Ask PakEmis (POST). */
+  askUrl: () => `${API_BASE}/ask`,
+  /**
+   * The schema and the interactive docs. FastAPI serves them at the app root (`/openapi.json`,
+   * `/docs`), which only a direct base reaches; behind the hosting rewrite only the prefix is
+   * forwarded, so a same-origin base links under the prefix. `openapiUrls` lists both candidates
+   * in that order for the contract fetch, which takes the first that answers.
+   */
+  openapiUrls: () => (isAbsolute(API_BASE) ? [`${new URL(API_BASE).origin}/openapi.json`, `${API_BASE}/openapi.json`] : [`${API_BASE}/openapi.json`]),
+  openapiUrl: () => api.openapiUrls()[0],
+  docsUrl: () => (isAbsolute(API_BASE) ? `${new URL(API_BASE).origin}/docs` : `${API_BASE}/docs`),
 };

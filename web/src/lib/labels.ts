@@ -1,5 +1,5 @@
 /**
- * Humanised labels. Every wording comes from /v1/release.labels (built server-side from the
+ * Humanised labels. Every wording comes from /release.labels (built server-side from the
  * dims) or from a dim row; this module only looks ids up and formats compound ids. The one
  * hand-written map is the column-name dictionary (envelope group keys -> column headings),
  * which names fields of the contract, never ids or values.

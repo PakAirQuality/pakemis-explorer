@@ -1,4 +1,4 @@
-/** Ask PakEmis when the agent is not mounted: the reason from /v1/release.agent (or the 503 body) and the typed-function rule. */
+/** Ask PakEmis when the agent is not mounted: the reason from /release.agent (or the 503 body) and the typed-function rule. */
 export function DisabledCard({ reason, model, functions, rule }: { reason: string; model: string; functions: string[]; rule: string }) {
   return (
     <div className="card m-3 p-4 text-sm" data-testid="disabled-card">
