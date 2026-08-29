@@ -7,6 +7,7 @@ data/verify_release.py passes for the pinned version AND Release.open(verify=Tru
 table digest; the mismatch is logged by file name.
 """
 import csv
+import datetime
 import json
 import logging
 import os
@@ -43,11 +44,54 @@ def _verify_module():
     return mod
 
 
+# --- humanised labels, built from the dims (never a hard-coded list) --------------------------
+MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+SUBSCRIPT_DIGITS = str.maketrans("0123456789", "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089")
+ACRONYMS = {"ippu": "IPPU"}   # the one sector id that is an acronym; every other label is title-cased
+# the three placements, worded as the release's spatial products contract words them
+# (docs/spatial_products_contract.md, "what a placement claims to be"); "all" adds the three
+VIEW_MEANINGS = {
+    "all": "all three views",
+    "physical": "physical: where it is emitted",
+    "origin": "origin: where the generating activity originates (waste at the people, not at the landfill)",
+    "accounting": "accounting: where the statistic is booked (road and industrial fuel at the province of sale)",
+}
+
+
+def humanise(token):
+    """'observed_household_demand' -> 'Observed household demand'."""
+    text = str(token).replace("_", " ").replace("-", " ").strip()
+    return text[:1].upper() + text[1:]
+
+
+def date_label(iso):
+    """'2023-07-01' -> '1 Jul 2023'; an unparsable string is returned as it is."""
+    try:
+        d = datetime.date.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return iso
+    return "%d %s %d" % (d.day, MONTH_ABBR[d.month - 1], d.year)
+
+
+def configuration_label(row, baseline_letter):
+    """display_name humanised, with the configuration's letter: the baseline letter for the
+    reference row, else the single-letter prefix of the id ('S_2023_24' -> 'S') when there is one."""
+    prefix = row["configuration_id"].split("_", 1)[0]
+    letter = baseline_letter if row["kind"] == "reference" else (prefix if len(prefix) == 1 else "")
+    base = humanise(row["display_name"])
+    return "%s (%s)" % (base, letter) if letter else base, letter
+
+
 class Service:
     """The verified release, the engine, the method registry, the cube paths, the receipts."""
 
+    # an `ask` module sets this when it mounts ({"enabled", "model", "reason"}, never a key);
+    # release_summary() reports it, or the "not mounted" block when nothing has set it
+    agent_status: "dict | None" = None
+
     def __init__(self, settings):
         self.settings = settings
+        self.agent_status = None
         verify = _verify_module()
         try:
             self.verification = verify.verify(settings.version, settings.releases_root, settings.releases_md, log=log.info)
@@ -154,6 +198,15 @@ class Service:
         dims["dim_geography"]["adm1"] = [{"geography_id": r["geography_id"], "name": r["name"], "shape_id": r["shape_id"], "has_polygon": r["has_polygon"]}
                                          for r in self.release.dim("dim_geography") if r["level"] == "adm1"]
         dims["dim_month"]["values"] = [r["month"] for r in self.release.dim("dim_month")]
+        # --- the map's additions: every value below is read from a dim row, none is typed here
+        dims["dim_geography"]["adm2"] = [
+            {k: r[k] for k in ("geography_id", "name", "shape_id", "shape_name", "parent_id", "has_polygon", "status", "unit_kind")}
+            for r in self.release.dim("dim_geography") if r["level"] == "adm2"]
+        dims["sectors"] = sorted(self.release.dim_values("dim_stream", "module"))
+        by_period = {}
+        for r in self.release.dim("dim_month"):
+            by_period.setdefault(r["period_id"], []).append(r["month"])
+        dims["dim_month"]["by_period"] = {k: sorted(v) for k, v in sorted(by_period.items())}
         defaults = self.release.defaults
         return {
             "api_version": API_VERSION,
@@ -171,6 +224,8 @@ class Service:
             "rounding": c["rounding"],
             "query_contract": c["query_contract"],
             "known_limitations": c["known_limitations"],
+            "labels": self.labels(),
+            "agent": dict(self.agent_status) if self.agent_status else {"enabled": False, "model": "", "reason": "not mounted"},
             "digests": {"semantic_release_json": self.verification["semantic_release_sha256"],
                         "release_manifest_json": self.verification["release_manifest_sha256"],
                         "tables": {name: t["sha256_csv"] for name, t in self.release.tables.items()},
@@ -180,6 +235,37 @@ class Service:
             "placeholders": {"auth": "none (declared placeholder)", "postgresql": "none; receipts are an in-memory map mirrored to JSON",
                              "agent": "Ask PakEmis is disabled; it may only call the typed functions listed in query_contract.functions",
                              "object_storage": "none; tiles are built locally and served as static files"},
+        }
+
+    def labels(self):
+        """Humanised labels for every id the dims carry, built server-side so the web client and
+        the agent share one wording; the ids stay the keys."""
+        c = self.release.contract
+        baseline = c["release"].get("baseline_configuration", "")
+        configurations = {}
+        for r in self.release.dim("dim_configuration"):
+            label, letter = configuration_label(r, baseline)
+            configurations[r["configuration_id"]] = {
+                "label": label, "letter": letter, "kind": r["kind"], "display_name": r["display_name"],
+                "queryable": r["queryable"] == "yes", "axis": r["axis"], "module": r["module"], "note": r["note"]}
+        periods = {}
+        for r in self.release.dim("dim_period"):
+            periods[r["period_id"]] = {
+                "label": "%s (%s \u2013 %s)" % (r["label"], date_label(r["period_start"]), date_label(r["period_end"])),
+                "short": r["label"], "start": r["period_start"], "end": r["period_end"], "basis": r["basis"],
+                "availability": r["availability"], "is_reference": r["is_reference"] == "True", "note": r["note"]}
+        months = {}
+        for r in self.release.dim("dim_month"):
+            months[r["month"]] = "%s %s" % (MONTH_ABBR[int(r["calendar_month"]) - 1], r["calendar_year"])
+        return {
+            "configurations": configurations,
+            "periods": periods,
+            "months": months,
+            "views": dict(VIEW_MEANINGS),
+            "limitations": {l["id"]: l["message"] for l in c["known_limitations"]},
+            "gases": {g: g.translate(SUBSCRIPT_DIGITS) for g in sorted(self.release.dim_values("dim_gas", "gas"))},
+            "sectors": {m: ACRONYMS.get(m, humanise(m)) for m in sorted(self.release.dim_values("dim_stream", "module"))},
+            "geographies": {r["geography_id"]: r["name"] for r in self.release.dim("dim_geography")},
         }
 
 
