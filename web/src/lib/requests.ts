@@ -118,6 +118,155 @@ export function transportSeriesBody(s: Pick<ExplorerState, "config" | "gwp">): T
   return sectorSeriesBody(s, "transport");
 }
 
+/**
+ * What is selected, from the URL state alone: Pakistan when nothing is, else the province
+ * (`adm1`), the district shape (`adm2`) or the grid cell. The selection drawer's own function,
+ * lifted here on 2026-08-30 when the drawer was absorbed into the deck's cards, so the request
+ * map has one home and one copy.
+ */
+export type Selection = { kind: "national" } | { kind: "province"; id: string } | { kind: "district"; id: string } | { kind: "cell"; id: string };
+
+export function selectionOf(s: ExplorerState): Selection {
+  if (s.level === "grid") return s.cell ? { kind: "cell", id: s.cell } : { kind: "national" };
+  if (!s.geo) return { kind: "national" };
+  return s.level === "adm1" ? { kind: "province", id: s.geo } : { kind: "district", id: s.geo };
+}
+
+export type DrawerBodies = {
+  selection: Selection;
+  total: QueryEmissions;
+  bySector: QueryEmissions;
+  sectorKey: "sector_id" | "module";
+  byView: QueryEmissions | null;
+  series: TimeseriesRequest;
+  lineage: LineageRequest | null;
+  /** The province envelope (every province) whose `unallocated` and `derived` blocks the placement card quotes; the map's own request at ADM1. */
+  provinces: QueryEmissions;
+  cell: GridCellRequest | null;
+};
+
+/**
+ * The selected geography's requests, a pure function of the URL state: the total, the one-key
+ * sector breakdown (`sector_id` at national grain, `module` at ADM grain — the release carries
+ * `sector_id` nationally only), the spatial-view breakdown at ADM grain, the annual series
+ * (refused by the release off the national scope, shown by name), the lineage at ADM grain and
+ * the province envelope whose `derived` carries the placed / unallocated strings.
+ */
+export function drawerBodies(s: ExplorerState, months: string[]): DrawerBodies {
+  const selection = selectionOf(s);
+  const provinces = adm1Body(s);
+  if (selection.kind === "province" || selection.kind === "district") {
+    const d = detailBodies({ ...s, cell: null }, months);
+    if (d.kind === "province" || d.kind === "district") {
+      return {
+        selection,
+        total: d.total,
+        bySector: d.byModule,
+        sectorKey: "module",
+        byView: { ...d.total, group_by: ["spatial_view"] },
+        series: { query: { configuration_id: s.config, gwp_basis: s.gwp, ...(s.sector ? { sectors: [s.sector] } : {}), ...(s.gas ? { gases: [s.gas] } : {}), geography_level: s.level, geography_ids: [selection.id], spatial_view: s.view }, step: "annual" },
+        lineage: d.lineage,
+        provinces,
+        cell: null,
+      };
+    }
+  }
+  const national = scopeBody(s);
+  return {
+    selection,
+    total: national,
+    bySector: { ...national, group_by: ["sector_id"], order_by: "value desc" },
+    sectorKey: "sector_id",
+    byView: null,
+    series: seriesBody(s),
+    lineage: null,
+    provinces,
+    cell: selection.kind === "cell" ? gridCellBody(s) : null,
+  };
+}
+
+/**
+ * What the deck needs beyond the URL state to build its bodies: the period's month list
+ * (`dims.dim_month.by_period`, from which the lineage request takes one month, since a whole
+ * province's lineage runs to ~10,000 rows) and the ADM2 shape ids that partition the selected
+ * district's own province — the peers card's partition, so the share and the order the server
+ * returns are those of the province, not of the country.
+ */
+export type DeckDefaults = { months: string[]; peers: string[] };
+
+/** The partition whose cells carry the snapshot's `share_pct_short` and `rank`, and the id to find in it. */
+export type RankedIn = { body: QueryEmissions; key: "sector_id" | "gas" | "province" | "shape_id"; id: string };
+/** The composition breakdown: one group key, chosen by the scope, never silently swapped for another. */
+export type DeckBreakdown = { body: QueryEmissions; key: "sector_id" | "module" | "category" };
+
+export type DeckBodies = {
+  selection: Selection;
+  /** The selected thing's own total: the country, the sector, the gas, the province or the district. */
+  total: QueryEmissions;
+  /**
+   * The partition the snapshot quotes its share and rank from — the national sectors, the
+   * national gases, the five provinces or the district's peers. Never a browser subtraction:
+   * when the server attaches no `share_pct_short` or `rank` to those cells (an ADM2 partition
+   * whose cells are bounded intervals), the snapshot prints neither.
+   */
+  ranked: RankedIn | null;
+  /**
+   * What the selection is made of. The key is the scope's, not the grain's: a chosen sector asks
+   * for its IPCC `category` rows, and at ADM grain the release refuses that key by name — the
+   * card shows the refusal rather than falling back to `module` behind the reader's back.
+   */
+  breakdown: DeckBreakdown;
+  /** Every province in the current scope, ordered by value: the places card, and the province partition. */
+  provinces: QueryEmissions;
+  /** The districts of the selected district's province, ordered by value. */
+  peers: QueryEmissions | null;
+  /** The annual series in the current scope (the release refuses it off national grain, by name). */
+  series: TimeseriesRequest;
+  /** The selected geography's lineage rows (the evidence and sources cards). */
+  lineage: LineageRequest | null;
+};
+
+/**
+ * The deck's whole data plan for a state: one body per envelope the cards can ask for, built
+ * from the same primitives the map and the old drawer use, so the same URL produces the same
+ * bodies and therefore the same receipts. Which of them are actually fetched is the deck's
+ * business (a collapsed card asks for nothing); which cards are shown is cards.ts's.
+ */
+export function deckBodies(s: ExplorerState, defaults: DeckDefaults): DeckBodies {
+  const d = drawerBodies(s, defaults.months);
+  const selection = d.selection;
+  const placed = selection.kind === "province" || selection.kind === "district";
+  const geography = placed ? { geography_level: s.level, geography_ids: [selection.id], spatial_view: s.view } : {};
+  const key: DeckBreakdown["key"] = s.sector ? "category" : placed ? "module" : "sector_id";
+  const provinces = compact({ ...adm1Body(s), order_by: "value desc" });
+  const peers =
+    selection.kind === "district" && defaults.peers.length
+      ? compact({ ...scopeBody(s), geography_level: "adm2", geography_ids: defaults.peers, spatial_view: s.view, group_by: ["shape_id"], order_by: "value desc" })
+      : null;
+  const ranked: RankedIn | null =
+    selection.kind === "province"
+      ? { body: provinces, key: "province", id: selection.id }
+      : selection.kind === "district"
+        ? peers
+          ? { body: peers, key: "shape_id", id: selection.id }
+          : null
+        : s.sector
+          ? { body: compact({ ...scopeBody({ ...s, sector: null }), group_by: ["sector_id"], order_by: "value desc" }), key: "sector_id", id: s.sector }
+          : s.gas
+            ? { body: compact({ ...scopeBody({ ...s, gas: null }), group_by: ["gas"], order_by: "value desc" }), key: "gas", id: s.gas }
+            : null;
+  return {
+    selection,
+    total: d.total,
+    ranked,
+    breakdown: { body: compact({ ...scopeBody(s), ...geography, group_by: [key], order_by: "value desc" }), key },
+    provinces,
+    peers,
+    series: d.series,
+    lineage: d.lineage,
+  };
+}
+
 export type ContextBodies = { national: QueryEmissions; bySector: QueryEmissions; byGas: QueryEmissions; series: TimeseriesRequest; compareSL: CompareRequest | null };
 
 /** The right column's requests for the scope. `survey` is the other queryable configuration (S) when it covers the period. */

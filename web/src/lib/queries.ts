@@ -3,7 +3,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type CompareRequest, type GridCellRequest, type QueryEmissions, type TimeseriesRequest, type UncertaintyRequest, type CompletenessRequest } from "./api";
-import { briefingBodies, sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
+import { briefingBodies, deckBodies, sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
+import { provinceOfShape } from "./labels";
+import type { ExplorerState } from "./urlState";
 import { useExplorer } from "@/components/ExplorerContext";
 
 const opts = { retry: false as const, staleTime: 5 * 60 * 1000 };
@@ -102,3 +104,43 @@ export function useBriefing(geo: string | null) {
   };
 }
 export type Briefing = ReturnType<typeof useBriefing>;
+
+/**
+ * Which of the deck's envelopes are wanted right now. A collapsed card renders nothing and must
+ * ask for nothing, so the deck passes what its open cards need and every other query stays
+ * disabled. An absent flag means "wanted": a caller that does not gate gets the whole plan.
+ */
+export type DeckWants = { total?: boolean; ranked?: boolean; breakdown?: boolean; provinces?: boolean; peers?: boolean; series?: boolean };
+
+const wanted = (w: DeckWants, k: keyof DeckWants) => w[k] !== false;
+
+/**
+ * The insight deck's envelopes for a state: the selected thing's total, the partition its share
+ * and rank come from, what it is made of, the provinces, the district's peers and the annual
+ * series — every body from lib/requests.ts `deckBodies`, nothing computed here. The two
+ * district-only cards ask for their lineage themselves (`useLineage`, off `bodies.lineage`).
+ *
+ * The peer partition is read from the release's own dims: the ADM2 shapes whose parent is the
+ * selected district's province, so the server ranks the district against its own province.
+ */
+export function useDeck(state: ExplorerState, wants: DeckWants = {}) {
+  const { dims } = useExplorer();
+  const months = dims.monthsByPeriod[state.period];
+  const peers = useMemo(() => {
+    if (state.level !== "adm2" || !state.geo) return [];
+    const province = provinceOfShape(dims, state.geo);
+    if (!province) return [];
+    return Array.from(new Set(dims.adm2.filter((r) => r.parent_id === `ADM1:${province}`).map((r) => r.shape_id).filter(Boolean)));
+  }, [dims, state.level, state.geo]);
+  const bodies = useMemo(() => deckBodies(state, { months: months ?? [], peers }), [state, months, peers]);
+  return {
+    bodies,
+    total: useEmissions(bodies.total, wanted(wants, "total")),
+    ranked: useEmissions(bodies.ranked?.body, wanted(wants, "ranked") && !!bodies.ranked),
+    breakdown: useEmissions(bodies.breakdown.body, wanted(wants, "breakdown")),
+    provinces: useEmissions(bodies.provinces, wanted(wants, "provinces")),
+    peers: useEmissions(bodies.peers, wanted(wants, "peers") && !!bodies.peers),
+    series: useTimeseries(bodies.series, wanted(wants, "series")),
+  };
+}
+export type Deck = ReturnType<typeof useDeck>;
