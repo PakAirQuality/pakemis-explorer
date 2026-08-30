@@ -16,7 +16,9 @@ envelope grouped by exactly one key partitions a total; the envelope names the p
 from `quantiles_short`, with `scenario_label` naming the draw scenario in words).  A spatial envelope
 whose `unallocated` block carries per-province exacts gains `unallocated_total_short` (their sum) and
 `placed_short` (the sum of the cells minus that), on the block and under `env.derived`, for the
-map's one sentence.
+map's one sentence, and each province row (and the cell that names the province) `unallocated_short`.
+The map's evidence layers read `spatial_class` and its companions on every adm2 cell (the rule is
+declared here as DERIVED["spatial_class"]; spatial_fields.py applies it with the release's tables).
 
 Three more serve the briefing's widgets: `axis_ticks_short` (an envelope whose cells all carry a
 number in one unit gains `axis`: four to six round tick labels from 0 to at least the largest cell,
@@ -127,6 +129,39 @@ DERIVED = {
     },
 }
 
+PROVINCE_UNALLOCATED_FIELD = "unallocated_short"
+PROVINCE_UNALLOCATED_RULE = (
+    "unallocated_short is one province's unallocated.by_province[].exact rounded half to even to two decimal places "
+    "(4.84), written on that province row and, when a cell's group names the province, on the cell, with "
+    "derived.unallocated_by_province_short mapping each province to it; added wherever unallocated_total_short is "
+    "(a query_emissions envelope at adm1 or adm2 grain whose unallocated block lists provinces with numeric exacts), "
+    "and never to a download."
+)
+SPATIAL_CLASS_FIELD = "spatial_class"
+SPATIAL_COMPANIONS = ["allocation_status", "placement_class", "allocation_surface", "dominant_module", "dominant_stream", "spatial_class_basis"]
+SPATIAL_CLASS_RULE = (
+    "spatial_class is the spatial_class_measured (fact_evidence) of the cell's dominant stream, placement_class and "
+    "allocation_surface that stream's, on every cell of a query_emissions envelope at adm2 grain. The cell's module is "
+    "the module its group names, else the one sector the request filters, else the module whose rows sum to the largest "
+    "co2e_Mt_AR5_low among the rows the cell sums (a server-side sum used only to choose, never printed); the module's "
+    "dominant stream is the stream (of the cell's gas when the cell names one) with the largest fact_annual co2e_Mt_AR5 "
+    "at the reference period and configuration, compared as decimals, ties broken by source_stream_id. allocation_status "
+    "is the distinct allocation_status values of the cell's rows joined by ';'. dominant_module, dominant_stream and "
+    "spatial_class_basis say which stream the class came from and why. These are labels about the evidence behind an "
+    "allocation, not observations of the district; a cell that sums several modules carries the class of one of them. "
+    "Never added to a download."
+)
+DERIVED_SPATIAL_CLASS = {
+    "field": SPATIAL_CLASS_FIELD,
+    "companion_fields": SPATIAL_COMPANIONS,
+    "derived_from": "fact_evidence.spatial_class_measured / placement_class / allocation_surface of the dominant stream; "
+                    "fact_adm2_month.allocation_status of the cell's rows",
+    "applies_to": "every cell of a query_emissions envelope at adm2 grain; the envelope carries spatial_fields {rule, reference}",
+    "values": "S1 | S2 | S3 | S4 | NA (dim_evidence_class, axis S)",
+    "sentence": SPATIAL_CLASS_RULE,
+}
+
+
 AXIS_FIELD = "axis_ticks_short"
 CHANGE_FIELD = "change_short"
 CHANGE_PCT_FIELD = "change_pct_short"
@@ -191,6 +226,17 @@ def _band_rows():
     return [{"from": format(lo, "f"), "phrase": phrase} for lo, phrase in SHARE_BANDS]
 
 
+DERIVED[PROVINCE_UNALLOCATED_FIELD] = {
+    "field": PROVINCE_UNALLOCATED_FIELD,
+    "derived_from": "unallocated.by_province[].exact",
+    "mode": "ROUND_HALF_EVEN",
+    "decimals": DECIMALS,
+    "unit": "Mt CO2e (the unit of fact_unallocated)",
+    "applies_to": "each unallocated.by_province row (and the cell whose group names that province) of the envelopes that "
+                  "carry unallocated_total_short; derived.unallocated_by_province_short maps province -> value",
+    "sentence": PROVINCE_UNALLOCATED_RULE,
+}
+DERIVED[SPATIAL_CLASS_FIELD] = DERIVED_SPATIAL_CLASS
 DERIVED[AXIS_FIELD] = {
     "field": AXIS_FIELD,
     "derived_from": "exact (and exact_high or quantiles when a cell carries them)",
@@ -446,6 +492,15 @@ def decorate_unallocated(env):
     cells = _exact_cells(env)
     if cells is not None:
         derived[PLACED_FIELD] = round_value(sum(cells) - unallocated_total)
+    by_province = {}
+    for row, x in zip(block["by_province"], exacts):
+        row[PROVINCE_UNALLOCATED_FIELD] = round_value(x)
+        by_province[row.get("province")] = row[PROVINCE_UNALLOCATED_FIELD]
+    derived["unallocated_by_province_short"] = by_province
+    for c in env.get("values") or ():
+        province = (c.get("group") or {}).get("province") if isinstance(c, dict) and isinstance(c.get("group"), dict) else None
+        if province in by_province:
+            c[PROVINCE_UNALLOCATED_FIELD] = by_province[province]
     block["total_short"] = derived[UNALLOCATED_FIELD]
     if PLACED_FIELD in derived:
         block["placed_short"] = derived[PLACED_FIELD]

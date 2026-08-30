@@ -44,6 +44,7 @@ from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate
 from pakemis_api.products import ProductCatalog, router as products_router
 from pakemis_api.receipts import ReceiptStore
 from pakemis_api.settings import API_PREFIX, LEGACY_PREFIX, Settings, import_query_core
+from pakemis_api.spatial_fields import SpatialFields
 from pakemis_api.tiles import TileStore, router as tiles_router
 
 log = logging.getLogger("pakemis_api")
@@ -243,6 +244,8 @@ class Service:
         # the claim record's joins: the registries under data/registries and the fact tables in a
         # private read-only DuckDB session (never the engine's connection)
         self.claims = ClaimStore(self.release, settings.registries_dir, self.fetch.get("files") or {}, self.method_rows, self.labels(), settings.manifest_path)
+        # the map's per-cell evidence fields on adm2 envelopes (the dominant stream per module, from the same session)
+        self.spatial_fields = SpatialFields(self.claims)
         # the map's tiles: one reader per archive, the outputs proven against TILES.json's digests
         self.tiles = TileStore(settings.tiles_dir, settings.version)
         if self.tiles.available:
@@ -277,7 +280,9 @@ class Service:
                 env = self._run(request, method_rows)
             except (duckdb.BinderException, duckdb.CatalogException) as exc:
                 raise self.grain_refusal(exc, request) from exc
-        return decorate(env) if decorate_cells else env
+        if not decorate_cells:
+            return env
+        return self.spatial_fields.decorate(decorate(env))
 
     @staticmethod
     def category_grain_guard(request):

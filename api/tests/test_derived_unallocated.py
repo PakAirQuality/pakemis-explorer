@@ -18,7 +18,7 @@ def adm1(client):
 
 
 def test_adm1_by_province(adm1):
-    assert adm1["derived"] == {"unallocated_total_short": "9.01", "placed_short": "443.34"}
+    assert {k: v for k, v in adm1["derived"].items() if k != "unallocated_by_province_short"} == {"unallocated_total_short": "9.01", "placed_short": "443.34"}
     assert adm1["unallocated"]["total_short"] == "9.01" and adm1["unallocated"]["placed_short"] == "443.34"
     cells = sum(Decimal(c["exact"]) for c in adm1["values"])
     unallocated = sum(Decimal(r["exact"]) for r in adm1["unallocated"]["by_province"])
@@ -37,7 +37,7 @@ def test_adm1_by_view_and_sector(client):
     assert env["derived"]["unallocated_total_short"] == "9.01" and env["derived"]["placed_short"] == "443.34"
     # fact_unallocated holds industry rows only: a sector with rows gets both fields, one without gets neither
     env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "sectors": ["industry"]}).json()
-    assert set(env["derived"]) == {UNALLOCATED_FIELD, PLACED_FIELD}
+    assert set(env["derived"]) == {UNALLOCATED_FIELD, PLACED_FIELD, "unallocated_by_province_short"}
     unallocated = sum(Decimal(r["exact"]) for r in env["unallocated"]["by_province"])
     assert env["derived"][UNALLOCATED_FIELD] == str(unallocated.quantize(Decimal("0.01"))) == "9.01"
     env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "sectors": ["power"]}).json()
@@ -47,7 +47,7 @@ def test_adm1_by_view_and_sector(client):
 def test_adm2_bounded_cells_get_the_total_only(client):
     env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm2", "group_by": ["module"]}).json()
     assert any(c.get("exact_high") for c in env["values"]), "adm2 power/residential cells are bounded"
-    assert set(env["derived"]) == {UNALLOCATED_FIELD} and env["unallocated"]["total_short"] == env["derived"][UNALLOCATED_FIELD]
+    assert set(env["derived"]) == {UNALLOCATED_FIELD, "unallocated_by_province_short"} and env["unallocated"]["total_short"] == env["derived"][UNALLOCATED_FIELD]
     assert "placed_short" not in env["unallocated"]
 
 
@@ -56,11 +56,11 @@ def test_limit_withholds_placed():
            "values": [{"exact": "10", "unit": "Mt CO2e AR5"}, {"exact": "5", "unit": "Mt CO2e AR5"}],
            "unallocated": {"by_province": [{"province": "A", "exact": "1"}, {"province": "B", "exact": "0.004"}]}}
     decorate_unallocated(env)
-    assert env["derived"] == {UNALLOCATED_FIELD: "1.00"}
+    assert env["derived"] == {UNALLOCATED_FIELD: "1.00", "unallocated_by_province_short": {"A": "1.00", "B": "<0.01"}}
     env["request"] = "{}"
     del env["derived"]
     decorate_unallocated(env)
-    assert env["derived"] == {UNALLOCATED_FIELD: "1.00", PLACED_FIELD: "14.00"}   # 15 - 1.004 = 13.996 -> 14.00
+    assert env["derived"] == {UNALLOCATED_FIELD: "1.00", PLACED_FIELD: "14.00", "unallocated_by_province_short": {"A": "1.00", "B": "<0.01"}}   # 15 - 1.004 = 13.996 -> 14.00
 
 
 def test_other_envelopes_untouched(client):
