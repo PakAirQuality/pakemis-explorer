@@ -4,8 +4,9 @@
  * parameters against the release's defaults (/release.defaults: period, configuration, GWP,
  * spatial view) so a bare `/` and `/?period=FY2023-24&config=REF_2023_24` are the same state and
  * produce the same request bodies (lib/requests.ts) and therefore the same receipts. The Map
- * page adds `layer` (its layer switch) and `tab` (its drawer's tab); the old `panel` and `ask`
- * keys are retired (the Ask drawer lives outside the URL; the filter panel is not state).
+ * page adds `layer` (its layer switch), `scale` (Map settings' scale mode) and `tab` (its
+ * drawer's tab); the old `panel` and `ask` keys are retired (the Ask drawer lives outside the
+ * URL; the filter panel is not state).
  */
 import { useCallback, useMemo } from "react";
 import { createParser, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
@@ -24,6 +25,16 @@ export type MapTab = (typeof MAP_TABS)[number];
 /** The Map page's layer switch (URL `layer`; absent = magnitude). */
 export const MAP_LAYERS = ["magnitude", "evidence", "method", "unallocated", "exceptions"] as const;
 export type MapLayer = (typeof MAP_LAYERS)[number];
+/**
+ * How the magnitude layer's colour is scaled (URL `scale`; absent = relative), the three modes
+ * Map settings offers. `relative` shades by the cell's quantile rank inside the envelope now on
+ * screen and prints nothing; `fixed` locks the domain to the level's all-sector, all-gas
+ * envelope for the reference year, so choosing a sector or a gas no longer rescales the map;
+ * `absolute` scales the value against the current envelope and lets the legend list the
+ * server's own break strings. A rank is a colour, never a label (components/map/paint.ts).
+ */
+export const SCALE_MODES = ["relative", "fixed", "absolute"] as const;
+export type ScaleMode = (typeof SCALE_MODES)[number];
 
 export type ExplorerState = {
   level: Level;
@@ -38,6 +49,7 @@ export type ExplorerState = {
   cell: string | null;
   tab: MapTab;
   layer: MapLayer;
+  scale: ScaleMode;
   c: string | null;
   cam: string | null;
   raster: boolean;
@@ -59,6 +71,7 @@ export const parsers = {
   cell: parseAsString,
   tab: parseAsStringLiteral(MAP_TABS),
   layer: parseAsStringLiteral(MAP_LAYERS),
+  scale: parseAsStringLiteral(SCALE_MODES),
   c: parseAsString,
   cam: parseAsString.withOptions({ history: "replace", throttleMs: 400 }),
   raster: parseAsFlag,
@@ -82,6 +95,7 @@ export function resolveState(raw: Partial<RawState>, d: StateDefaults): Explorer
     cell: raw.cell ?? null,
     tab: raw.tab ?? "summary",
     layer: raw.layer ?? "magnitude",
+    scale: raw.scale ?? "relative",
     c: raw.c ?? null,
     cam: raw.cam ?? null,
     raster: raw.raster ?? level === "grid",
@@ -104,6 +118,7 @@ export function rawFromState(s: ExplorerState, d: StateDefaults): RawState {
     cell: s.cell,
     tab: s.tab === "summary" ? null : s.tab,
     layer: s.layer === "magnitude" ? null : s.layer,
+    scale: s.scale === "relative" ? null : s.scale,
     c: s.c,
     cam: s.cam,
     raster: s.raster === (s.level === "grid") ? null : s.raster,

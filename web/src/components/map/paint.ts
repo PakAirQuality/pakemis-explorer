@@ -1,7 +1,15 @@
 /**
  * Painting an envelope onto the tiles through feature-state: {value, display, unit, has_cell,
- * bounded}. `value` shades (the interpolate stops are rebuilt from the envelope's own min and
- * max value), `display` is the only thing ever printed. The id set comes from bboxes.json so
+ * bounded, rank}. `value` shades (the interpolate stops are rebuilt from the envelope's own min
+ * and max value) and `rank` — the cell's quantile band among the cells now on screen — shades in
+ * the default RELATIVE mode; `display` is the only thing ever printed.
+ *
+ * The three scale modes (URL `scale`, Map settings) differ only in the fill expression:
+ * `relative` matches the ramp against feature-state `rank`, so the browser ranks and shades and
+ * prints no number at all; `fixed` interpolates `value` over a domain handed in from the level's
+ * all-sector, all-gas envelope for the reference year, so choosing a sector or a gas no longer
+ * rescales the map; `absolute` interpolates `value` over the current envelope's own min and max,
+ * the behaviour the legend's break strings describe. A rank is a colour and never a label. The id set comes from bboxes.json so
  * no-cell polygons are marked without waiting for tiles to load. At ADM1 the release's residual
  * unit (lib/geography.ts: one row, several polygons) paints its one cell on every member
  * polygon verbatim with `shared: true` and `shared_with: <row name>`; nothing is divided.
@@ -9,7 +17,7 @@
 import type { Map as MLMap, ExpressionSpecification } from "mapbox-gl";
 import type { Cell, Envelope } from "@/lib/envelope";
 import { NO_CELL, rampStops, RAMP } from "@/lib/palette";
-import type { Level, MapLayer } from "@/lib/urlState";
+import type { Level, MapLayer, ScaleMode } from "@/lib/urlState";
 import type { Residual } from "@/lib/geography";
 import { KEYS, FILL_LAYER } from "./layers";
 import { categoriesOf, categoryOf, diffusePlacement, EXCEPTION_KINDS, NOT_SERVED, PLAIN_FILL } from "./layerModes";
@@ -45,6 +53,57 @@ export function indexCells(env: Envelope, level: Level): CellIndex {
   return { byId, min, max, unit: env.values[0]?.unit ?? "", anyBounded };
 }
 
+/** The number of quantile bands the relative mode shades with: the ramp's own stops. */
+export const RANK_BANDS = RAMP.length;
+
+/**
+ * The band (0 = palest, RANK_BANDS-1 = darkest) of the cell at position `i` among `n` cells
+ * sorted by value ascending: its quantile rank, banded. A visual encoding only — no band, no
+ * position and no count is ever printed.
+ */
+export function rankBand(i: number, n: number): number {
+  if (n <= 1) return RANK_BANDS - 1;
+  return Math.min(RANK_BANDS - 1, Math.max(0, Math.floor(((i + 0.5) / n) * RANK_BANDS)));
+}
+
+/**
+ * Every cell's quantile band, keyed by feature id. Cells sharing a value share a band (the
+ * position of the first equal cell), so two identical values never take two colours.
+ */
+export function rankBands(index: CellIndex): Map<string, number> {
+  const withValue = [...index.byId.entries()].filter(([, c]) => typeof c.value === "number") as [string, Cell & { value: number }][];
+  const sorted = withValue.map(([, c]) => c.value).sort((a, b) => a - b);
+  const firstAt = new Map<number, number>();
+  sorted.forEach((v, i) => {
+    if (!firstAt.has(v)) firstAt.set(v, i);
+  });
+  const out = new Map<string, number>();
+  for (const [id, c] of withValue) out.set(id, rankBand(firstAt.get(c.value)!, sorted.length));
+  return out;
+}
+
+/** The relative mode's fill: the ramp matched against feature-state `rank`; a polygon without a cell stays NO_CELL. */
+export function rankFillExpression(): ExpressionSpecification {
+  const pairs: (number | string)[] = [];
+  RAMP.forEach((c, i) => pairs.push(i, c));
+  const match = ["match", ["coalesce", ["feature-state", "rank"], 0], ...pairs, RAMP[0]] as unknown as ExpressionSpecification;
+  return ["case", ["!", ["to-boolean", ["feature-state", "has_cell"]]], NO_CELL, match] as unknown as ExpressionSpecification;
+}
+
+/** The scale Map settings asks for: the mode and, in `fixed`, the reference year's all-sector domain (null while it is still being fetched). */
+export type ScalePaint = { mode: ScaleMode; domain?: { min: number; max: number } | null };
+
+/**
+ * The magnitude layer's fill for a scale mode: the rank match in `relative`, the fixed domain's
+ * interpolate in `fixed` (the envelope's own while that domain is still unknown), the current
+ * envelope's interpolate in `absolute` and when no mode is given.
+ */
+export function magnitudeFillExpression(index: CellIndex, scale?: ScalePaint | null): ExpressionSpecification {
+  if (scale?.mode === "relative") return rankFillExpression();
+  const d = scale?.mode === "fixed" ? scale.domain : null;
+  return fillColorExpression(d ? d.min : index.min, d ? d.max : index.max);
+}
+
 export function fillColorExpression(min: number, max: number): ExpressionSpecification {
   const shade: ExpressionSpecification = max > min ? (["interpolate", ["linear"], ["coalesce", ["feature-state", "value"], min], ...rampStops(min, max)] as unknown as ExpressionSpecification) : (RAMP[RAMP.length - 1] as unknown as ExpressionSpecification);
   return ["case", ["!", ["to-boolean", ["feature-state", "has_cell"]]], NO_CELL, shade] as unknown as ExpressionSpecification;
@@ -67,24 +126,30 @@ export function anyWithoutCell(index: CellIndex, level: Level, ids: string[], re
  * Set feature-state for every id of the level (cells and no-cell polygons) and rebuild the fill
  * expression. `residual` (ADM1 only) names the row without a polygon and its member polygons.
  */
-export function paintEnvelope(map: MLMap, level: Level, index: CellIndex, ids: string[], residual?: Residual | null) {
+export function paintEnvelope(map: MLMap, level: Level, index: CellIndex, ids: string[], residual?: Residual | null, scale?: ScalePaint | null) {
   if (level === "grid") return;
   const source = level;
   map.removeFeatureState({ source, sourceLayer: source });
+  // the quantile band of every cell, written whatever the mode: the relative fill reads it and
+  // the other two ignore it, so switching mode never needs a repaint of the feature state
+  const bands = rankBands(index);
   const seen = new Set<string>();
   for (const id of ids) {
     seen.add(id);
     const { cell: c, shared } = cellForFeature(index, level, id, residual);
-    const state: Record<string, unknown> = { value: typeof c?.value === "number" ? c.value : null, display: c?.display ?? null, unit: c?.unit ?? null, has_cell: !!c, bounded: c ? isBoundedCell(c) : false, hatch: c ? isBoundedCell(c) : false, cat: "none", outline: null };
+    // a member of the residual unit takes that unit's band, as it takes its cell
+    const rank = c ? (bands.get(shared ? residual!.name : id) ?? null) : null;
+    const state: Record<string, unknown> = { value: typeof c?.value === "number" ? c.value : null, display: c?.display ?? null, unit: c?.unit ?? null, has_cell: !!c, bounded: c ? isBoundedCell(c) : false, hatch: c ? isBoundedCell(c) : false, rank, cat: "none", outline: null };
     if (shared) {
       state.shared = true;
       state.shared_with = residual!.name;
     }
     map.setFeatureState({ source, sourceLayer: source, id }, state);
   }
-  for (const [id, c] of index.byId) if (!seen.has(id)) map.setFeatureState({ source, sourceLayer: source, id }, { value: typeof c.value === "number" ? c.value : null, display: c.display, unit: c.unit, has_cell: true, bounded: isBoundedCell(c), hatch: isBoundedCell(c), cat: "none", outline: null });
-  map.setPaintProperty(FILL_LAYER[level], "fill-color", fillColorExpression(index.min, index.max));
+  for (const [id, c] of index.byId) if (!seen.has(id)) map.setFeatureState({ source, sourceLayer: source, id }, { value: typeof c.value === "number" ? c.value : null, display: c.display, unit: c.unit, has_cell: true, bounded: isBoundedCell(c), hatch: isBoundedCell(c), rank: bands.get(id) ?? null, cat: "none", outline: null });
+  map.setPaintProperty(FILL_LAYER[level], "fill-color", magnitudeFillExpression(index, scale));
 }
+
 
 /** Clear every value from the level (a refused request paints nothing: outlines only). */
 export function clearPaint(map: MLMap, level: Level) {
@@ -117,8 +182,8 @@ export function unallocatedFillExpression(min: number, max: number): ExpressionS
 }
 
 /** The fill expression of a layer at a level: the choropleth ramp, a categorical match, a flat grey (districts under the unallocated layer) or the province shade. */
-export function fillExpressionFor(layer: MapLayer, level: Level, index: CellIndex | null, unallocated?: UnallocatedIndex | null): ExpressionSpecification | string {
-  if (layer === "magnitude") return index ? fillColorExpression(index.min, index.max) : NO_CELL;
+export function fillExpressionFor(layer: MapLayer, level: Level, index: CellIndex | null, unallocated?: UnallocatedIndex | null, scale?: ScalePaint | null): ExpressionSpecification | string {
+  if (layer === "magnitude") return index ? magnitudeFillExpression(index, scale) : NO_CELL;
   if (layer === "unallocated") return level === "adm1" ? (unallocated ? unallocatedFillExpression(unallocated.min, unallocated.max) : NO_CELL) : NO_CELL;
   return categoricalFillExpression(layer);
 }
@@ -158,7 +223,7 @@ export function exceptionKindOf(level: Level, id: string, cell: Cell | undefined
 
 const OUTLINE: Record<string, string> = { other_unit: "#242128", shared_shape: "#8a5a0c", no_cell: "#c04a3a" };
 
-export type LayerPaint = { layer: MapLayer; index: CellIndex | null; ids: string[]; residual?: Residual | null; exceptions?: ExceptionIndex | null; unallocated?: UnallocatedIndex | null; adm1Ids?: string[] };
+export type LayerPaint = { layer: MapLayer; index: CellIndex | null; ids: string[]; residual?: Residual | null; exceptions?: ExceptionIndex | null; unallocated?: UnallocatedIndex | null; adm1Ids?: string[]; scale?: ScalePaint | null };
 
 /**
  * Paint a layer at a level: every polygon's feature-state carries its cell (value, display,
@@ -172,7 +237,7 @@ export function paintLayer(map: MLMap, level: Level, p: LayerPaint) {
   const source = level;
   map.removeFeatureState({ source, sourceLayer: source });
   if (layer === "magnitude") {
-    if (index) paintEnvelope(map, level, index, ids, residual);
+    if (index) paintEnvelope(map, level, index, ids, residual, p.scale);
     else clearPaint(map, level);
     return;
   }
@@ -220,7 +285,7 @@ export function paintLayer(map: MLMap, level: Level, p: LayerPaint) {
     }
     for (const [id, c] of index.byId) if (!seen.has(id)) map.setFeatureState({ source, sourceLayer: source, id }, stateFor(id, c, false));
   }
-  map.setPaintProperty(FILL_LAYER[level], "fill-color", index ? fillExpressionFor(layer, level, index) : NO_CELL);
+  map.setPaintProperty(FILL_LAYER[level], "fill-color", index ? fillExpressionFor(layer, level, index, null, p.scale) : NO_CELL);
 }
 
 /** The exception kinds present on a level, for the legend (a bounded cell is hatched, not filled). */

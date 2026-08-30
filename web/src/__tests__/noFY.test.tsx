@@ -19,7 +19,7 @@ import { RELEASE, envelope, mockFetch } from "./fixtures";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
-const state: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", c: null, cam: null, raster: false, view3d: false };
+const state: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", c: null, cam: null, raster: false, view3d: false };
 
 function ctx(): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;

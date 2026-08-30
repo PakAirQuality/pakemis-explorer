@@ -10,7 +10,7 @@ import { adm1Body, adm2Body, detailBodies, gridCellBody, requestFromState, state
 
 const D: StateDefaults = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", c: null, cam: null, raster: false, view3d: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", c: null, cam: null, raster: false, view3d: false };
 
 const CASES: ExplorerState[] = [
   base,
@@ -67,7 +67,7 @@ describe("request bodies", () => {
 describe("resolve / raw / patch", () => {
   it("defaults are absent from the URL and restored on read", () => {
     expect(resolveState({}, D)).toEqual({ ...base });
-    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, tab: null, layer: null, c: null, cam: null, raster: null, view3d: null });
+    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, tab: null, layer: null, scale: null, c: null, cam: null, raster: null, view3d: null });
     const grid = resolveState({ level: "grid" }, D);
     expect(grid.gas).toBe("CO2");
     expect(grid.raster).toBe(true);
@@ -86,6 +86,20 @@ describe("resolve / raw / patch", () => {
     expect(applyPatch(s, { level: "adm1" })).toMatchObject({ level: "adm1", geo: null, layer: "exceptions", tab: "evidence" });
     expect(Object.keys(rawFromState(base, D))).not.toContain("panel");
     expect(Object.keys(rawFromState(base, D))).not.toContain("ask");
+  });
+  it("the map's `scale` round-trips: relative by default and absent from the URL, written when Map settings changes it, and kept across a level change", () => {
+    expect(resolveState({}, D).scale).toBe("relative");
+    expect(rawFromState(base, D).scale).toBeNull();
+    for (const mode of ["fixed", "absolute"] as const) {
+      const s = { ...base, scale: mode };
+      expect(resolveState({ scale: mode }, D).scale).toBe(mode);
+      expect(rawFromState(s, D).scale).toBe(mode);
+      expect(resolveState(rawFromState(s, D), D)).toEqual(s);
+      expect(hrefForState(s, D)).toBe(`/?scale=${mode}`);
+      expect(applyPatch(s, { level: "adm2" }).scale).toBe(mode);
+    }
+    // an unknown mode is not a mode: the parser drops it and the default stands
+    expect(resolveState({ scale: null }, D).scale).toBe("relative");
   });
   it("view3d is a flag: absent when off, `1` when on, and survives a level change", () => {
     expect(resolveState({ view3d: true }, D).view3d).toBe(true);
