@@ -2,53 +2,63 @@
 @import "mapbox-gl/dist/mapbox-gl.css";
 
 /*
- * Design tokens: the PAQI house style (2026-08-30), the palette of emissions.web.app read off
- * the deployed app. Semantic names only; every component reads these and none carries a literal
- * colour. The names the components already use are kept so a theme is a value change: `surface`
- * is the cool grey page ground (#f9fafb), `surface-2` the card (white), `surface-3` the input
- * ground (#f3f3f5); `ground` and `card` are the same two values under the plan's names. `fg` is
- * their near-black with a blue cast, `muted` their muted foreground, `line` their rgba(0,0,0,.1)
- * on white, `accent` blue-600 (hover blue-700), `accent-soft` blue at 8 %, and `brand-gold` the
- * logo's gold, used sparingly (the active nav underline, a small tick). The map's light
- * basemap (Mapbox light-v11: grey land, white water) sits in a 1 px frame; the outline / halo / hover / selected colours drawn
- * ON the basemap are the `map-*` tokens (dark slate, legible on the YlOrRd ramp), read at layer
- * construction (lib/theme.ts). lib/theme.ts's FALLBACK mirrors every value here; theme.test.ts
- * holds the two in step.
+ * Design tokens: PAQI's warm civic identity (2026-08-30). Semantic names only; every component
+ * reads these and none carries a literal colour. The names the components already use are kept
+ * so a re-palette is a value change: `surface`/`ground` is the warm page canvas (#f6f4f1),
+ * `surface-2`/`card` the white card, `surface-3` the input ground (#efece7); `fg` is the warm
+ * charcoal, `muted` the secondary text, `line` the warm hairline. The oxblood #462e32 is the
+ * PRIMARY role — links, the filled button, the FAB, selected marks — and it carries white text;
+ * it is served under the `accent*` names the components already read, and under `--color-primary*`
+ * as well. The saffron #ffb313 is the ACCENT proper — the active-nav underline, chips, the
+ * reference-year marker — carries charcoal text and is never a page-sized field; it is served as
+ * `--color-brand-gold` and `--color-accent-2`, and the `amber*` pair is its family. The map's
+ * light basemap (Mapbox light-v11) sits in a 1 px frame; the outline / halo / hover / selected
+ * colours drawn ON the basemap are the `map-*` tokens (warm greys and the oxblood, legible over
+ * the PAQI ramp), read at layer construction (lib/theme.ts). lib/theme.ts's FALLBACK mirrors
+ * every colour token here; theme.test.ts holds the two in step, in both directions.
  */
 @theme {
-  --color-ground: #f9fafb;
+  --color-ground: #f6f4f1;
   --color-card: #ffffff;
-  --color-surface: #f9fafb;
+  --color-surface: #f6f4f1;
   --color-surface-2: #ffffff;
-  --color-surface-3: #f3f3f5;
-  --color-fg: #030213;
-  --color-muted: #717182;
-  --color-line: #e5e7eb;
-  --color-line-strong: #d1d5db;
-  /* the blue family: links and text, the chart stroke, the filled button and the FAB (one blue on light) */
-  --color-accent: #2563eb;
-  --color-accent-bright: #1d4ed8;
-  --color-accent-fill: #2563eb;
+  --color-surface-3: #efece7;
+  --color-fg: #242128;
+  --color-muted: #666677;
+  --color-line: #e5e1da;
+  --color-line-strong: #d7d5d1;
+  /* the oxblood: the primary role under its own name */
+  --color-primary: #462e32;
+  --color-primary-bright: #5a3c40;
+  --color-primary-soft: rgba(70, 46, 50, 0.08);
+  /* the same oxblood under the names the components already read: links and text, the chart stroke, the filled button and the FAB */
+  --color-accent: #462e32;
+  --color-accent-bright: #5a3c40;
+  --color-accent-fill: #462e32;
   --color-on-accent: #ffffff;
-  --color-accent-soft: rgba(59, 130, 246, 0.08);
-  /* the logo's gold: the active nav underline and small accents only */
-  --color-brand-gold: #ffbb12;
-  /* the amber note box and the refusal tint */
-  --color-note-bg: #fff8e6;
+  --color-accent-soft: rgba(70, 46, 50, 0.08);
+  /* the saffron: the true accent (the active nav underline, chips, small marks), charcoal on it */
+  --color-brand-gold: #ffb313;
+  --color-accent-2: #ffb313;
+  --color-on-accent-2: #242128;
+  /* a polygon the release has no row for */
+  --color-no-data: #d7d5d1;
+  /* the warm note box and the refusal tint */
+  --color-note-bg: #fff6e2;
   --color-note-border: #f0c36d;
-  --color-note-text: #7a4b00;
-  --color-refusal: #fff1ec;
-  --color-warn: #9a4a0c;
-  /* the reference-year marker on charts and the rail's thumb */
-  --color-amber: #d97706;
-  --color-amber-soft: #b45309;
-  --color-panel: rgba(255, 255, 255, 0.9);
-  /* drawn on the light basemap: outlines and the hover / selected strokes in dark slate, legible on the ramp */
-  --color-map-outline: #1e293b;
+  --color-note-text: #6b4a12;
+  --color-refusal: #fdefe9;
+  --color-warn: #8a3b12;
+  /* the reference-year marker on charts and the rail's thumb: the saffron and its darker text */
+  --color-amber: #ffb313;
+  --color-amber-soft: #8a5a0c;
+  --color-panel: rgba(255, 255, 255, 0.92);
+  /* drawn on the light basemap: the outline a warm grey, the hover and selected strokes the oxblood and the charcoal, legible over the ramp */
+  --color-map-outline: #6b5b57;
   --color-map-halo: #ffffff;
-  --color-map-hatch: rgba(30, 41, 59, 0.55);
-  --color-map-hover: #334155;
-  --color-map-selected: #0f172a;
+  --color-map-hatch: rgba(70, 46, 50, 0.5);
+  --color-map-hover: #462e32;
+  --color-map-selected: #242128;
   --font-sans: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-card: 0.625rem;
@@ -89,14 +99,14 @@
   b, strong { font-weight: 600; }
 }
 
-/* the white glass pill of emissions.web.app: bg-white/90, backdrop-blur (8 px), shadow-md, a hairline at gray-200/50; the radius is the caller's (pill, rounded-card, rounded-xl) */
-@utility glass { background: var(--color-panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(229, 231, 235, 0.5); box-shadow: var(--shadow-pill); }
-/* the white card on the grey ground: a hairline border, the card radius, a small shadow */
+/* the white glass pill: bg-white/92, backdrop-blur (8 px), shadow-md, a warm hairline; the radius is the caller's (pill, rounded-card, rounded-xl) */
+@utility glass { background: var(--color-panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(229, 225, 218, 0.6); box-shadow: var(--shadow-pill); }
+/* the white card on the warm ground: a hairline border, the card radius, a small shadow */
 @utility card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 @utility micro { font-size: var(--text-micro); line-height: var(--text-micro--line-height); letter-spacing: var(--text-micro--letter-spacing); text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
 /* a widget's small-caps title */
 @utility widget-title { font-size: 11px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-fg); font-weight: 600; }
-/* the amber note box */
+/* the warm note box */
 @utility note { background: var(--color-note-bg); border: 1px solid var(--color-note-border); color: var(--color-note-text); border-radius: 0.375rem; }
 /* a widget's caption line */
 @utility caption { font-size: var(--text-xs); line-height: var(--text-xs--line-height); color: var(--color-muted); }
@@ -105,7 +115,7 @@
 @utility pill { border-radius: 9999px; }
 @utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
 /* the Overview deck's thin scrollbar on its right edge, over the map */
-@utility scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgba(3, 2, 19, 0.28) transparent; &::-webkit-scrollbar { width: 6px; } &::-webkit-scrollbar-thumb { background: rgba(3, 2, 19, 0.28); border-radius: 9999px; } }
+@utility scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgba(36, 33, 40, 0.28) transparent; &::-webkit-scrollbar { width: 6px; } &::-webkit-scrollbar-thumb { background: rgba(36, 33, 40, 0.28); border-radius: 9999px; } }
 /* the framed map viewport: a 1 px line and the card radius around the basemap */
 @utility map-frame { border: 1px solid var(--color-line-strong); border-radius: var(--radius-card); overflow: hidden; background: var(--color-card); }
 

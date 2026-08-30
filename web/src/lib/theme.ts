@@ -6,27 +6,40 @@
  * without a stylesheet (tests, the export build). Colours size nothing and print nothing.
  */
 export const FALLBACK: Record<string, string> = {
-  "--color-ground": "#f9fafb",
+  "--color-ground": "#f6f4f1",
   "--color-card": "#ffffff",
-  "--color-surface": "#f9fafb",
+  "--color-surface": "#f6f4f1",
   "--color-surface-2": "#ffffff",
-  "--color-surface-3": "#f3f3f5",
-  "--color-fg": "#030213",
-  "--color-muted": "#717182",
-  "--color-line": "#e5e7eb",
-  "--color-line-strong": "#d1d5db",
-  "--color-accent": "#2563eb",
-  "--color-accent-bright": "#1d4ed8",
-  "--color-accent-fill": "#2563eb",
-  "--color-accent-soft": "rgba(59, 130, 246, 0.08)",
-  "--color-brand-gold": "#ffbb12",
-  "--color-amber": "#d97706",
-  "--color-amber-soft": "#b45309",
-  "--color-map-outline": "#1e293b",
+  "--color-surface-3": "#efece7",
+  "--color-fg": "#242128",
+  "--color-muted": "#666677",
+  "--color-line": "#e5e1da",
+  "--color-line-strong": "#d7d5d1",
+  "--color-primary": "#462e32",
+  "--color-primary-bright": "#5a3c40",
+  "--color-primary-soft": "rgba(70, 46, 50, 0.08)",
+  "--color-accent": "#462e32",
+  "--color-accent-bright": "#5a3c40",
+  "--color-accent-fill": "#462e32",
+  "--color-on-accent": "#ffffff",
+  "--color-accent-soft": "rgba(70, 46, 50, 0.08)",
+  "--color-brand-gold": "#ffb313",
+  "--color-accent-2": "#ffb313",
+  "--color-on-accent-2": "#242128",
+  "--color-no-data": "#d7d5d1",
+  "--color-note-bg": "#fff6e2",
+  "--color-note-border": "#f0c36d",
+  "--color-note-text": "#6b4a12",
+  "--color-refusal": "#fdefe9",
+  "--color-warn": "#8a3b12",
+  "--color-amber": "#ffb313",
+  "--color-amber-soft": "#8a5a0c",
+  "--color-panel": "rgba(255, 255, 255, 0.92)",
+  "--color-map-outline": "#6b5b57",
   "--color-map-halo": "#ffffff",
-  "--color-map-hatch": "rgba(30, 41, 59, 0.55)",
-  "--color-map-hover": "#334155",
-  "--color-map-selected": "#0f172a",
+  "--color-map-hatch": "rgba(70, 46, 50, 0.5)",
+  "--color-map-hover": "#462e32",
+  "--color-map-selected": "#242128",
 };
 
 /** The UI type: the system stack of globals.css (`--font-sans`), read by ECharts, which takes a font-family string, not a class. */
@@ -45,7 +58,7 @@ export function cssVar(name: string): string {
   return FALLBACK[name] ?? "";
 }
 
-/** `#2563eb` at an alpha, for an area fill (the accent at 18 %); a non-hex colour is returned as it is. */
+/** `#462e32` at an alpha, for an area fill (the accent at 18 %); a non-hex colour is returned as it is. */
 export function withAlpha(color: string, alpha: number): string {
   const m = /^#([0-9a-f]{6})$/i.exec(color.trim());
   if (!m) return color;
@@ -53,7 +66,7 @@ export function withAlpha(color: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-/** The colours a chart needs, read once per render: gridlines on the line token (drawn dashed), axis text muted, the area fill the accent at 18 %. */
+/** The colours a chart needs, read once per render: gridlines on the line token (drawn dashed), axis text muted, the area fill the oxblood at 18 %, the reference mark the saffron. */
 export function chartTheme() {
   const accent = cssVar("--color-accent");
   return {
@@ -71,7 +84,7 @@ export function chartTheme() {
   };
 }
 
-/** The colours drawn on the light basemap (map/layers.ts): dark slate strokes, legible on the YlOrRd ramp. */
+/** The colours drawn on the light basemap (map/layers.ts): a warm-grey outline and the oxblood / charcoal strokes, legible over the PAQI ramp. */
 export function mapTheme() {
   return {
     outline: cssVar("--color-map-outline"),
