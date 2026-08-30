@@ -1,17 +1,20 @@
 "use client";
 /**
- * The top navigation every page carries: the brand, the five sections (Overview, Explore data,
+ * The top navigation every page carries: the PAQI logo, a hairline and the "PakEmis" wordmark,
+ * the five sections (Overview, Explore data,
  * Map, Methods & evidence, Downloads) with the current one highlighted, and the green Ask
  * PakEmis button: it toggles the AskDrawer (lib/askBus.ts; mounted once in the layout) on every
  * page, or calls `onAsk` when a page supplies its own toggle (the Map page's right column).
  * Under 768 px the sections fold into a menu. `children` is a slot for a page's own controls
- * (the Map page's tabs). Nothing here prints a number or a version.
+ * (the Map page's tabs); the current section carries the brand-gold underline. Nothing here
+ * prints a number or a version.
  */
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Sparkles, X } from "lucide-react";
 import { toggleAsk } from "@/lib/askBus";
+import { BrandLogo } from "./BrandLogo";
 
 export const NAV_LINKS = [
   { href: "/", label: "Overview" },
@@ -40,10 +43,11 @@ export function TopNav({ compact = false, onAsk, children }: { compact?: boolean
         href={href}
         aria-current={active ? "page" : undefined}
         onClick={() => setOpen(false)}
-        className={`${block ? "block" : ""} rounded-md px-2.5 py-1.5 text-sm transition-colors ${active ? "bg-surface-3 text-fg" : "text-muted hover:bg-surface-3 hover:text-fg"}`}
+        className={`${block ? "block" : "relative"} rounded-md px-2.5 py-1.5 text-sm transition-colors ${active ? "bg-surface-3 text-fg" : "text-muted hover:bg-surface-3 hover:text-fg"}`}
         data-testid="nav-link"
       >
         {label}
+        {active && !block && <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full" style={{ background: "var(--color-brand-gold, #ffbb12)" }} aria-hidden="true" data-testid="nav-underline" />}
       </Link>
     );
   };
@@ -55,8 +59,9 @@ export function TopNav({ compact = false, onAsk, children }: { compact?: boolean
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-card/90 backdrop-blur" data-testid="top-nav">
       <div className={`flex h-14 items-center gap-3 px-4 ${compact ? "" : "mx-auto max-w-[1500px] md:px-6"}`}>
-        <Link href="/" className="mr-2 flex shrink-0 items-center gap-2 text-sm font-semibold text-fg" data-testid="brand" title="PakEmis">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent-fill text-[11px] font-bold text-on-accent">PE</span>
+        <Link href="/" className="mr-2 flex shrink-0 items-center gap-2.5 text-sm font-semibold text-fg" data-testid="brand" title="PakEmis">
+          <BrandLogo className="h-8 object-contain" />
+          <span className="h-5 w-px border-l border-line" aria-hidden="true" />
           <span>PakEmis</span>
         </Link>
         <nav className="hidden items-center gap-0.5 md:flex" aria-label="Sections">

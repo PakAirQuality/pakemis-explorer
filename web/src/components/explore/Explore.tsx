@@ -9,10 +9,11 @@
  * permalink); then one expandable "Reading this result" line. Every number is a server
  * string; the page computes nothing.
  */
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Download, Link2, ScrollText, Sparkles } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
+import { markStage } from "@/components/shell/bootstrap";
 import { api } from "@/lib/api";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
 import { cellUnit, configLabel, configWords, envelopeUnitLine, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
@@ -64,6 +65,10 @@ export function Explore() {
   const compare = useCompare(plan.kind === "compare" ? plan.body : null, plan.kind === "compare");
   const active = plan.kind === "timeseries" ? series : plan.kind === "compare" ? compare : emissions;
   const raw = plan.kind === "refused" ? null : active.data;
+  // the loading screen's last stage on this page: the canvas's first envelope answered (or refused)
+  useEffect(() => {
+    if (raw || plan.kind === "refused" || active.isError) markStage("envelope");
+  }, [raw, plan.kind, active.isError]);
   const env = useMemo(() => visibleEnvelope(raw, plan), [raw, plan]);
   // the sector's categories for the Category control: the same body as the category breakdown, so one request serves both
   const categoriesBody = useMemo(() => (state.sector && state.level === "national" ? { periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp, sectors: [state.sector], group_by: ["category"], order_by: "value desc" } : null), [state.sector, state.level, state.period, state.config, state.gwp]);

@@ -11,6 +11,7 @@ import { Download, Link2 } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { ACTION_CLASS } from "@/components/shell/PageHeader";
+import { BrandLogo } from "@/components/shell/BrandLogo";
 import { HEADER } from "./copy";
 
 export function HeaderBlock({ geo, place, onGeo }: { geo: string | null; place: string; onGeo: (name: string | null) => void }) {
@@ -27,6 +28,7 @@ export function HeaderBlock({ geo, place, onGeo }: { geo: string | null; place: 
   };
   return (
     <header data-testid="header-block">
+      <BrandLogo className="mb-3 h-10 object-contain" />
       <div className="micro text-accent" data-testid="eyebrow">{HEADER.eyebrow}</div>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>

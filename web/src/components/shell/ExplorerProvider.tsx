@@ -3,9 +3,11 @@
  * The bootstrap every route shares (mounted in app/layout.tsx): GET /release and the OpenAPI
  * contract, then the dims, labels, defaults and agent block, the URL state resolved against
  * the release's defaults (lib/urlState.ts) and the one ExplorerContext. While the release
- * loads nothing numerical is shown; an unreachable API is a card, not a number.
+ * loads nothing numerical is shown; an unreachable API is a card, not a number. The loading
+ * screen's first two stages are marked here (shell/bootstrap.ts): `release` when GET /release
+ * resolves, `labels` when the release's dims and labels are applied.
  */
-import { Suspense, useMemo, type ReactNode } from "react";
+import { Suspense, useEffect, useMemo, type ReactNode } from "react";
 import { API_BASE } from "@/lib/api";
 import { useContractOptions } from "@/lib/contract";
 import { releaseAgent, releaseDefaults, releaseDims, releaseLabels, useRelease } from "@/lib/release";
@@ -13,6 +15,9 @@ import { useExplorerState, type StateDefaults } from "@/lib/urlState";
 import type { ReleaseInfo } from "@/lib/envelope";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
+import { markStage } from "@/components/shell/bootstrap";
+
+export { useBootstrap, markStage } from "@/components/shell/bootstrap";
 
 export function ExplorerProvider({ children }: { children: ReactNode }) {
   return (
@@ -25,6 +30,9 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
 function Bootstrap({ children }: { children: ReactNode }) {
   const release = useRelease();
   const contract = useContractOptions();
+  useEffect(() => {
+    if (release.data) markStage("release");
+  }, [release.data]);
   if (release.error)
     return (
       <div className="flex h-dvh items-center justify-center p-6">
@@ -48,6 +56,9 @@ function Bootstrap({ children }: { children: ReactNode }) {
 function Loaded({ release, contract, children }: { release: ReleaseInfo; contract: ReturnType<typeof useContractOptions>["data"]; children: ReactNode }) {
   const dims = useMemo(() => releaseDims(release), [release]);
   const labels = useMemo(() => releaseLabels(release), [release]);
+  useEffect(() => {
+    markStage("labels");
+  }, [labels]);
   const agent = releaseAgent(release);
   const d = releaseDefaults(release);
   const defaults = useMemo<StateDefaults>(

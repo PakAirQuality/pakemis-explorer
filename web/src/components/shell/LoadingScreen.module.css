@@ -1,0 +1,19 @@
+/* The loading screen's motion (the keyframes emissions.web.app uses): the logo floats, the
+   title and subtitle slide up once, each status line slides up as it is re-keyed. Under
+   prefers-reduced-motion nothing moves. */
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.float { animation: float 3s ease-in-out infinite; }
+.title { animation: fadeSlideUp 0.8s ease forwards; }
+.subtitle { animation: fadeSlideUp 0.8s ease 0.2s both; }
+.line { animation: fadeSlideUp 0.5s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .float, .title, .subtitle, .line { animation: none; }
+}

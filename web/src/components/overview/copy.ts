@@ -99,4 +99,4 @@ export const ROUTES = [
   { href: "/downloads", title: "Downloads releases", text: "Every table with its digest, the citation and the API that answers with receipts." },
 ] as const;
 
-export const FOOTER = { repository: "Repository", methods: "Methods & evidence", downloads: "Downloads", api: "API" } as const;
+export const FOOTER = { product: "A Pakistan Air Quality Initiative product", repository: "Repository", methods: "Methods & evidence", downloads: "Downloads", api: "API" } as const;

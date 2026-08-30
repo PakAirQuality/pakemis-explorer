@@ -18,6 +18,8 @@ import { geographyName } from "@/lib/labels";
 import { releaseCitation, releaseFacts } from "@/lib/release";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/shell/TopNav";
+import { BrandLogo } from "@/components/shell/BrandLogo";
+import { markStage } from "@/components/shell/bootstrap";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { HeaderBlock } from "./HeaderBlock";
 import { OpeningStatement } from "./OpeningStatement";
@@ -37,6 +39,10 @@ export function Overview() {
   const geo = state.geo && dims.adm1.some((r) => r.name === state.geo) ? state.geo : null;
   const place = geo ? geographyName(labels, geo) : HEADER.country;
   const data = useBriefing(geo);
+  // the loading screen's third stage: the briefing's first envelope answered (or refused)
+  useEffect(() => {
+    if (data.total.data || data.total.isError) markStage("envelope");
+  }, [data.total.data, data.total.isError]);
   const [active, setActive] = useState<TabId>("summary");
   const [hovered, setHovered] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
@@ -102,9 +108,15 @@ export function Overview() {
       </div>
       <footer className="border-t border-line bg-card" data-testid="footer">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-2 px-4 py-5 text-xs text-muted md:flex-row md:items-center md:justify-between md:px-8">
-          <span>
-            {licences || "Licences as the release states them"}. {INDEPENDENT_LINE}
-          </span>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+            <span className="flex shrink-0 items-center gap-2 text-fg" data-testid="footer-brand">
+              <BrandLogo className="h-6 object-contain" />
+              {FOOTER.product}
+            </span>
+            <span>
+              {licences || "Licences as the release states them"}. {INDEPENDENT_LINE}
+            </span>
+          </div>
           <span className="flex flex-wrap gap-4">
             {citation?.repository && <a href={citation.repository} className="hover:text-fg" data-testid="footer-repository">{FOOTER.repository}</a>}
             <Link href="/methods" className="hover:text-fg">{FOOTER.methods}</Link>

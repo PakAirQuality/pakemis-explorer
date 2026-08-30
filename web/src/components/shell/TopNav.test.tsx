@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-/** The TopNav: the five sections in order, the current one marked, the Ask button as a link or the Map page's toggle, the mobile menu. */
+/** The TopNav: the PAQI logo and the wordmark, the five sections in order, the current one marked and underlined, the Ask button as a link or the Map page's toggle, the mobile menu. */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { resetAskBus, subscribeAsk } from "@/lib/askBus";
@@ -23,7 +23,16 @@ describe("TopNav", () => {
     expect(screen.getByTestId("nav-ask").tagName).toBe("BUTTON");
     fireEvent.click(screen.getByTestId("nav-ask"));
     expect(bus).toHaveBeenCalledWith({ type: "toggle" });
-    expect(screen.getByTestId("brand")).toHaveTextContent("PEPakEmis");
+    expect(screen.getByTestId("brand")).toHaveTextContent("PakEmis");
+    expect(screen.getByTestId("brand").textContent).not.toContain("PE" + "PakEmis");
+    const logo = screen.getByAltText("Pakistan Air Quality Initiative");
+    expect(logo).toHaveAttribute("src", "/brand/paqi-logo.png");
+    expect(logo.className).toContain("h-8");
+    expect(screen.getByTestId("brand")).toContainElement(logo);
+    const underlines = screen.getAllByTestId("nav-underline");
+    expect(underlines).toHaveLength(1);
+    expect(links[0]).toContainElement(underlines[0]);
+    expect(underlines[0].style.background).toContain("#ffbb12");
     expect(document.body.textContent).not.toContain("1.0.0rc");
   });
   it("marks the current page with or without the export's trailing slash", () => {
@@ -34,7 +43,9 @@ describe("TopNav", () => {
     expect(isActive(null, "/")).toBe(true);
     pathname.value = "/methods/";
     render(<TopNav />);
-    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods & evidence")).toHaveAttribute("aria-current", "page");
+    const methods = screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods & evidence")!;
+    expect(methods).toHaveAttribute("aria-current", "page");
+    expect(methods).toContainElement(screen.getByTestId("nav-underline"));
   });
   it("on the Map page the Ask button is the drawer toggle, and the slot carries the page's controls", () => {
     const onAsk = vi.fn();
