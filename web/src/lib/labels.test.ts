@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { releaseLabels } from "./release";
 import type { ReleaseInfo } from "./envelope";
 import { RELEASE } from "@/__tests__/fixtures";
-import { cellUnit, configLabel, configTooltip, configWords, contextPill, envelopeUnitLine, gwpCompact, gwpIsDefault, gwpLabel, gwpTooltip, lulucfCompact, lulucfShort, lulucfTooltip, scopeWords, sectorWords, unitShort, unitWords } from "./labels";
+import { cellUnit, configLabel, configTooltip, configWords, contextPill, envelopeUnitLine, gwpCompact, gwpIsDefault, gwpLabel, gwpTooltip, scopeWords, sectorWords, unitShort, unitWords } from "./labels";
 
 const labels = releaseLabels(RELEASE as unknown as ReleaseInfo);
 const bare = releaseLabels(undefined);
@@ -42,14 +42,6 @@ describe("configuration labels", () => {
   });
 });
 
-describe("LULUCF labels", () => {
-  it("short, compact and tooltip come from the release; empty without it", () => {
-    expect(lulucfShort(labels)).toBe("excludes land use and forestry");
-    expect(lulucfCompact(labels)).toBe("land use excluded");
-    expect(lulucfTooltip(labels)).toBe("an exploratory Tier-1 module publishes a provisional sink outside every total");
-    expect(lulucfShort(bare)).toBe("");
-  });
-});
 
 describe("units", () => {
   it("unitWords and unitShort drop the GWP basis token and subscript the species", () => {
@@ -88,11 +80,11 @@ describe("scope lines", () => {
     expect(sectorWords(labels, null)).toBe("all sectors");
     expect(sectorWords(labels, "agriculture")).toBe("Agriculture");
   });
-  it("contextPill: basis · configuration · IPCC ARn · land use, with the long forms as the title and no version anywhere", () => {
+  it("contextPill: basis · configuration · IPCC ARn, with the long forms as the title and no version anywhere", () => {
     const pill = contextPill(labels, RELEASE.context_bar, { config: "REF_2023_24", gwp: "AR5" });
-    expect(pill.words).toBe("July–June years · reference estimate · IPCC AR5 · land use excluded");
-    expect(pill.title).toBe("July–June years · Reference estimate · IPCC 2013 (AR5) · excludes land use and forestry: an exploratory Tier-1 module publishes a provisional sink outside every total");
+    expect(pill.words).toBe("July–June years · reference estimate · IPCC AR5");
+    expect(pill.title).toBe("July–June years · Reference estimate · IPCC 2013 (AR5)");
     expect(pill.words + pill.title).not.toContain("1.0.0rc");
-    expect(contextPill(labels, { basis: "fiscal" }, { config: "S_2023_24", gwp: "AR6" }).words).toBe("fiscal · survey-based estimate · IPCC AR6 · land use excluded");
+    expect(contextPill(labels, { basis: "fiscal" }, { config: "S_2023_24", gwp: "AR6" }).words).toBe("fiscal · survey-based estimate · IPCC AR6");
   });
 });

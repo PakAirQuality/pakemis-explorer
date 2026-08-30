@@ -1,16 +1,16 @@
 "use client";
 /**
- * "Current view: 2023–24 · Pakistan · Reference estimate · excludes land use and forestry":
+ * "Current view: 2023–24 · Pakistan · Reference estimate":
  * the scope every page's numbers share, in the release's own words (the period's short label,
  * the geography by its name, the configuration's label, the warming-potential basis only when
- * it is not the release's default, the LULUCF status, then a sector, gas or month when one is
- * chosen). The IPCC basis and the LULUCF note are the line's tooltip. "Change view" opens a
+ * it is not the release's default, then a sector, gas or month when one is chosen). The IPCC
+ * basis is the line's tooltip. "Change view" opens a
  * popover with the ExplorePanel's controls, which write the same URL state.
  */
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { configLabel, configTooltip, districtName, gasLabel, geographyName, gwpIsDefault, gwpLabel, gwpTooltip, lulucfShort, lulucfTooltip, monthLabel, periodLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { configLabel, configTooltip, districtName, gasLabel, geographyName, gwpIsDefault, gwpLabel, gwpTooltip, monthLabel, periodLabel, periodShort, sectorLabel } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import type { ExplorerState, StateDefaults } from "@/lib/urlState";
 import type { Dims } from "@/components/ExplorerContext";
@@ -26,12 +26,11 @@ export function viewPlace(labels: Labels, dims: Dims, s: Pick<ExplorerState, "le
 export function currentViewWords(labels: Labels, dims: Dims, s: ExplorerState, d: StateDefaults): { words: string; title: string } {
   const parts = [periodShort(labels, s.period), viewPlace(labels, dims, s), configLabel(labels, s.config)];
   if (!gwpIsDefault(labels, s.gwp, d.gwp_basis)) parts.push(gwpLabel(labels, s.gwp));
-  parts.push(lulucfShort(labels));
   if (s.sector) parts.push(sectorLabel(labels, s.sector));
   if (s.gas) parts.push(gasLabel(labels, s.gas));
   if (s.month) parts.push(monthLabel(labels, s.month));
   const basis = gwpTooltip(labels, s.gwp) ? `${gwpLabel(labels, s.gwp)}: ${gwpTooltip(labels, s.gwp)}` : gwpLabel(labels, s.gwp);
-  const title = [periodLabel(labels, s.period), configTooltip(labels, s.config), basis, lulucfTooltip(labels) ? `${lulucfShort(labels)}: ${lulucfTooltip(labels)}` : lulucfShort(labels)].filter(Boolean).join(" · ");
+  const title = [periodLabel(labels, s.period), configTooltip(labels, s.config), basis].filter(Boolean).join(" · ");
   return { words: parts.filter(Boolean).join(" · "), title };
 }
 

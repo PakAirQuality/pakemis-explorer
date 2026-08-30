@@ -15,7 +15,7 @@
 import { ChevronsLeft, ChevronsRight, Factory, MapPin, RotateCcw, Wind, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Level } from "@/lib/urlState";
-import { districtName, gasLabel, gwpIsDefault, gwpLabel, lulucfCompact, periodShort, sectorLabel } from "@/lib/labels";
+import { districtName, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabel } from "@/lib/labels";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { YearSlider } from "./YearSlider";
 import { FILTERS } from "./copy";
@@ -113,7 +113,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false }: FilterPan
       )}
       <p className="border-t border-line pt-3 text-xs text-muted" data-testid="active-view">
         <span className="micro mr-1.5">{FILTERS.showing}</span>
-        {summaryLine(labels, state, place, defaults.gwp_basis)} · {lulucfCompact(labels)}
+        {summaryLine(labels, state, place, defaults.gwp_basis)}
       </p>
       <button type="button" onClick={reset} className="flex items-center gap-1.5 self-start text-xs font-semibold text-accent hover:underline" data-testid="reset-filters">
         <RotateCcw size={13} aria-hidden="true" /> {FILTERS.reset}

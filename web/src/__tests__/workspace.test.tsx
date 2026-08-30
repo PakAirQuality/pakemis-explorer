@@ -248,7 +248,7 @@ describe("the workspace's state", () => {
     expect(screen.getByTestId("year-last")).toHaveTextContent("2023–24");
     await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21"));
     // the active view line reads the same scope back in words
-    expect(screen.getByTestId("active-view")).toHaveTextContent("Pakistan · Power · CH₄ · 2020–21 · land use excluded");
+    expect(screen.getByTestId("active-view")).toHaveTextContent("Pakistan · Power · CH₄ · 2020–21");
   });
   it("a scope read from the URL becomes the chips, and each chip clears back to its default", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
@@ -342,7 +342,7 @@ describe("the deck's cards", () => {
   it("each card's sentence is built from the envelope's server strings, and the charts' ticks are the envelopes' own", async () => {
     mount();
     await loaded();
-    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory, which excludes land use and forestry.");
+    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory.");
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("49.4 % from agriculture");
     expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
     expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest at 223.45 Mt (49.4 %), followed by power (63.37 Mt, 14.0 %) and transport (41.93 Mt, 9.3 %).");
@@ -374,6 +374,11 @@ describe("the workspace's audits", () => {
     expect(text).not.toMatch(/(^|[^A-Z0-9(])AR5(?![)\w])/);
     expect(text).not.toContain("(NE)");
     expect(text).not.toContain("LULUCF");
+    // the land-use exclusion left the exploring surfaces on 2026-08-31: it documents the dataset
+    // on /methods and in the citation, and it no longer follows every figure around the workspace
+    expect(text).not.toContain("land use");
+    expect(text).not.toContain("land-use");
+    for (const el of Array.from(document.body.querySelectorAll("[title]"))) expect(el.getAttribute("title") ?? "").not.toContain("land use");
     expect(text).not.toContain("1.0.0rc");
     expect(text).not.toContain("REF_2023_24");
     expect(text).not.toContain("Mt CO2e");

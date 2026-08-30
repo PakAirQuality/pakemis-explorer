@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
 import { shown, type Cell } from "@/lib/envelope";
-import { configLabel, gasLabel, gwpLabel, gwpTooltip, lulucfCompact, periodShort, sectorLabel } from "@/lib/labels";
+import { configLabel, gasLabel, gwpLabel, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
 import { rampByRank } from "@/lib/palette";
 import { hrefForState } from "@/lib/urlState";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
@@ -60,7 +60,7 @@ export function BreakdownCard({ id, scope, deck, title, open, onToggle, onSector
     const gid = x.group?.[key] ?? "";
     return { id: gid, name: nameOf(labels, key, gid), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: rampByRank(i, cells.length), dim: !!selected && selected !== gid };
   });
-  const caption = [configLabel(labels, state.config), `${gwpLabel(labels, state.gwp)} warming potentials`, lulucfCompact(labels)].filter(Boolean).join(" · ");
+  const caption = [configLabel(labels, state.config), `${gwpLabel(labels, state.gwp)} warming potentials`].filter(Boolean).join(" · ");
   const sectorBars = key === "sector_id" || key === "module";
   return (
     <DeckCard id={id} title={title} env={env} open={open} onToggle={onToggle} sentence={sentence} caption={<span title={gwpTooltip(labels, state.gwp)}>{caption}</span>}>

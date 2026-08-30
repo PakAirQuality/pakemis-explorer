@@ -1,7 +1,7 @@
 "use client";
 /**
  * A framed figure of a timeseries envelope (the explainer's visual): an in-figure title, a
- * subtitle that says what is drawn (the unit as words, the sector scope with the LULUCF
+ * subtitle that says what is drawn (the unit as words, the sector scope
  * status, the year basis), an x-axis carrying every period's short label, the first and last
  * points (and the reference year, in amber) labelled with the cells' shown strings
  * (`display_short`, else `display`), a hover tooltip of the same and the unit, a faint baseline at zero, and the envelope's
@@ -48,12 +48,10 @@ function scopeOf(env: Envelope): string {
   return "all sectors";
 }
 
-/** The subtitle: unit as words · scope, LULUCF status · year basis. Every phrase is read from the envelope or the release's labels. */
+/** The subtitle: unit as words · scope · year basis. Every phrase is read from the envelope or the release's labels. */
 export function trendSubtitle(env: Envelope, scopeWords?: string, basisWords?: string): string {
   const unit = env.values[0]?.unit ? unitWords(env.values[0].unit) : "";
-  const status = env.context.lulucf.status;
-  const lulucf = status === "excluded" ? "land use excluded" : status ? `land use ${status}` : "";
-  const scope = [scopeWords ?? scopeOf(env), lulucf].filter(Boolean).join(", ");
+  const scope = scopeWords ?? scopeOf(env);
   return [unit, scope, basisWords].filter(Boolean).join(" · ");
 }
 

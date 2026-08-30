@@ -66,7 +66,7 @@ describe("TrendChart", () => {
   it("frames the figure: title, subtitle from the envelope, the years on the axis, displays at the ends and the reference, the receipt line", async () => {
     const { chart, env } = await mount({ referencePeriod: "FY2019-20" }); // the reference in the middle: three labelled points
     expect(screen.getByTestId("trend-title")).toHaveTextContent("Pakistan's greenhouse-gas emissions, by year");
-    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("million tonnes CO₂e · all sectors, land use excluded · years run July–June");
+    expect(screen.getByTestId("trend-subtitle")).toHaveTextContent("million tonnes CO₂e · all sectors · years run July–June");
     const texts = svgTexts(chart);
     for (const id of Object.keys(SHORT)) expect(texts).toContain(SHORT[id]);
     for (const c of CELLS) expect(texts).toContain(c.display_short); // the shown string, never the contract display
@@ -97,11 +97,11 @@ describe("TrendChart", () => {
   });
   it("the tooltip formatter prints the cell's display and unit as words (never the axis value); the subtitle names a sector filter", async () => {
     const env = series();
-    expect(trendSubtitle(env)).toBe("million tonnes CO₂e · all sectors, land use excluded");
-    expect(trendSubtitle(env, undefined, "years run July–June")).toBe("million tonnes CO₂e · all sectors, land use excluded · years run July–June");
+    expect(trendSubtitle(env)).toBe("million tonnes CO₂e · all sectors");
+    expect(trendSubtitle(env, undefined, "years run July–June")).toBe("million tonnes CO₂e · all sectors · years run July–June");
     const filtered = { ...env, request: JSON.stringify({ query: { sectors: ["power"] } }) } as Envelope;
-    expect(trendSubtitle(filtered)).toBe("million tonnes CO₂e · power, land use excluded");
-    expect(trendSubtitle(env, "national total")).toBe("million tonnes CO₂e · national total, land use excluded");
+    expect(trendSubtitle(filtered)).toBe("million tonnes CO₂e · power");
+    expect(trendSubtitle(env, "national total")).toBe("million tonnes CO₂e · national total");
     const echarts = await import("echarts");
     const { chart: el } = await mount();
     const chart = echarts.getInstanceByDom(el)!;

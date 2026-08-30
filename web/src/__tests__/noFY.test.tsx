@@ -58,7 +58,7 @@ describe("no FY anywhere", () => {
     expect(screen.getByTestId("year-value")).toHaveTextContent("2023–24");
     expect(screen.getByTestId("year-value")).toHaveAttribute("title", "July 2023 – June 2024");
     expect(screen.getByTestId("year-range")).toHaveAttribute("title", "a fiscal year runs from July to June");
-    expect(screen.getByTestId("current-view-line")).toHaveTextContent("2023–24 · Pakistan · Reference estimate · excludes land use and forestry");
+    expect(screen.getByTestId("current-view-line")).toHaveTextContent("2023–24 · Pakistan · Reference estimate");
     expect(screen.getByTestId("current-view-line")).toHaveAttribute("title", expect.stringContaining("July 2023 – June 2024"));
     // nothing in any title attribute either
     for (const el of Array.from(document.body.querySelectorAll("[title]"))) expect(el.getAttribute("title")).not.toContain("FY");

@@ -18,7 +18,7 @@ import type { ReactNode } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
 import { shown } from "@/lib/envelope";
-import { cellUnit, gasLabel, geographyName, lulucfShort, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, gasLabel, geographyName, periodShort, sectorLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { SNAPSHOT } from "@/components/overview/copy";
@@ -86,7 +86,7 @@ function whatWords(scope: Scope, place: string): string {
 /**
  * The opening sentence, in the release's own words and the server's own strings: "In 2023–24,
  * Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %,
- * nearly half — of the reconstructed inventory, which excludes land use and forestry."
+ * nearly half — of the reconstructed inventory."
  */
 function sentenceOf({ scope, place, period, cell, top, topName, labels }: { scope: Scope; place: string; period: string; cell: NonNullable<ReturnType<typeof rankedCells>>[number]; top: ReturnType<typeof rankedCells>[number] | null; topName: string; labels: Parameters<typeof sectorLabel>[0] }): ReactNode {
   const figure = (
@@ -126,7 +126,7 @@ function sentenceOf({ scope, place, period, cell, top, topName, labels }: { scop
               {top.share_phrase ? `, ${top.share_phrase}` : ""} —
             </>
           ) : null}{" "}
-          of the reconstructed inventory, which {lulucfShort(labels)}.
+          of the reconstructed inventory.
         </>
       ) : null}
     </>

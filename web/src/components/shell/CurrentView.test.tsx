@@ -23,16 +23,16 @@ function ctx(state = base): ExplorerContextValue {
 }
 
 describe("CurrentView", () => {
-  it("reads '2023–24 · Pakistan · Reference estimate · excludes land use and forestry' with the basis as its tooltip and no raw id", () => {
+  it("reads '2023–24 · Pakistan · Reference estimate' with the basis as its tooltip and no raw id", () => {
     render(
       <ExplorerContext.Provider value={ctx()}>
         <CurrentView />
       </ExplorerContext.Provider>,
     );
     const line = screen.getByTestId("current-view-line");
-    expect(line).toHaveTextContent("2023–24 · Pakistan · Reference estimate · excludes land use and forestry");
+    expect(line).toHaveTextContent("2023–24 · Pakistan · Reference estimate");
     expect(line.getAttribute("title")).toContain("IPCC 2013 (AR5): CO₂-equivalent using the IPCC Fifth Assessment Report");
-    expect(line.getAttribute("title")).toContain("provisional sink outside every total");
+    expect(line.getAttribute("title")).not.toContain("land use");   // the exclusion left the chrome on 2026-08-31
     const text = screen.getByTestId("current-view").textContent ?? "";
     expect(text).not.toContain("FY");
     expect(text).not.toMatch(/(^|[^A-Z0-9(])AR5(?![)\w])/);
@@ -41,7 +41,7 @@ describe("CurrentView", () => {
   it("names the place, the basis when it is not the default, and a chosen sector, gas and month", () => {
     const c = ctx();
     const { words } = currentViewWords(c.labels, c.dims, { ...base, geo: "Punjab", gwp: "AR6", sector: "power", gas: "CH4", month: "202307" }, defaults);
-    expect(words).toBe("2023–24 · Punjab · Reference estimate · IPCC 2021 (AR6) · excludes land use and forestry · Power · CH₄ · Jul 2023");
+    expect(words).toBe("2023–24 · Punjab · Reference estimate · IPCC 2021 (AR6) · Power · CH₄ · Jul 2023");
     const district = currentViewWords(c.labels, c.dims, { ...base, level: "adm2", geo: "60131773B12131197496886" }, defaults);
     expect(district.words).toContain("· Lahore ·");
   });

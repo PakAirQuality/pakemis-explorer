@@ -20,7 +20,7 @@ import { cellLabel, shown, type Envelope } from "@/lib/envelope";
 import { ClaimPanel } from "@/components/claim/ClaimDrawer";
 import { apiCallOf, curlLine } from "@/lib/requests";
 import { releaseLabels, type Labels } from "@/lib/release";
-import { cellUnit, configLabel, geographyName, groupValueLabel, gwpLabel, lulucfShort, periodShort, viewLabel } from "@/lib/labels";
+import { cellUnit, configLabel, geographyName, groupValueLabel, gwpLabel, periodShort, viewLabel } from "@/lib/labels";
 
 export type DrawerTab = "evidence" | "sources" | "filters" | "calculation" | "request" | "download" | "cite";
 export const DRAWER_TABS: [DrawerTab, string][] = [["evidence", "Evidence"], ["sources", "Sources"], ["filters", "Filters"], ["calculation", "Calculation"], ["request", "API request"], ["download", "Download"], ["cite", "Cite"]];
@@ -260,7 +260,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
           {tab === "cite" && (
             <div className="space-y-2">
               <p className="mono text-xs break-words">{env.citation}</p>
-              <p className="text-xs text-muted">{[env.context.release, env.context.configuration_id ? configLabel(labels ?? NO_LABELS, env.context.configuration_id) : "", env.context.gwp_basis ? gwpLabel(labels ?? NO_LABELS, env.context.gwp_basis) : "", lulucfShort(labels ?? NO_LABELS) || (env.context.lulucf.status ? `land use ${env.context.lulucf.status}` : "")].filter(Boolean).join(" · ")}</p>
+              <p className="text-xs text-muted">{[env.context.release, env.context.configuration_id ? configLabel(labels ?? NO_LABELS, env.context.configuration_id) : "", env.context.gwp_basis ? gwpLabel(labels ?? NO_LABELS, env.context.gwp_basis) : ""].filter(Boolean).join(" · ")}</p>
             </div>
           )}
         </div>
