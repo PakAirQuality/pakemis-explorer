@@ -390,3 +390,58 @@ def test_anthropic_model_builds_without_a_key(monkeypatch):
     from pakemis_api.ask.loop import AnthropicModel
     m = AnthropicModel("claude-sonnet-5", max_tokens=8000, effort="medium")
     assert m.model_id == "claude-sonnet-5" and m._thinking == {"type": "adaptive", "display": "summarized"}
+
+
+# --- the answer card's additions: answer.scope, tool_result.uncertainty and n_rows -------------
+
+def test_answer_scope_and_tool_result_additions(ask_client, fake):
+    fake.load([tool_use("query_emissions", {"group_by": ["sector_id"]}), stop("tool_use")],
+              [text("Agriculture is {{result_1_cell_0.short}} of the total."), stop()])
+    events = ask(ask_client, "what makes up the total?")
+    results = only(events, "tool_result")
+    assert len(results) == 1
+    tr = results[0]
+    unc = tr["uncertainty"]
+    assert unc["source"] == "fact_uncertainty" and unc["resolution"] == "annual_national" and unc["rows"] and unc["interpretation"]
+    assert all(r["resolution"] == "annual_national" for r in unc["rows"]) and len(unc["rows"]) == 20
+    row = unc["rows"][0]
+    assert {"category", "module", "resolution", "envelope_low_pct", "envelope_high_pct", "envelope_kind", "aggregation_rule"} <= set(row)
+    assert all(isinstance(v, str) for v in row.values())
+    assert all(isinstance(c["n_rows"], int) and c["n_rows"] > 0 for c in tr["cells"])
+    assert sum(c["n_rows"] for c in tr["cells"]) == sum(len(v["result_row_ids"]) for v in ask_client.get("/api/v1/emissions/receipt/%s" % tr["receipt"]).json()["values"])
+    answer = only(events, "answer")[0]
+    assert answer["scope"]["k"] == 1 and answer["scope"]["request_type"] == "query_emissions" and answer["scope"]["receipt"] == tr["receipt"]
+    assert answer["scope"]["name"] == "query_emissions"
+    assert {k: v for k, v in answer["scope"].items() if k in tr["context"]} == tr["context"]
+    assert answer["scope"]["configuration_id"] == "REF_2023_24" and answer["scope"]["geography_level"] == "national"
+    # the model's view of the tool result is unchanged: no uncertainty block, no n_rows
+    seen = fake.calls[1]["messages"][-1]["content"][0]["content"]
+    assert '"uncertainty"' not in seen and '"n_rows"' not in seen
+    assert json.loads(seen)["k"] == 1
+
+
+def test_answer_scope_is_the_last_result(ask_client, fake):
+    fake.load([tool_use("query_emissions", {}), stop("tool_use")],
+              [tool_use("query_emissions", {"geography_level": "adm1", "group_by": ["province"]}), stop("tool_use")],
+              [text("Punjab leads with {{result_2_cell_0.short}}."), stop()])
+    events = ask(ask_client, "which province leads?")
+    results = only(events, "tool_result")
+    assert [r["k"] for r in results] == [1, 2]
+    scope = only(events, "answer")[0]["scope"]
+    assert scope["k"] == 2 and scope["geography_level"] == "adm1" and scope["receipt"] == results[1]["receipt"]
+    assert results[0]["uncertainty"]["rows"] and results[1]["cells"][0]["n_rows"] > 100
+    assert results[1]["uncertainty"]["resolution"] is None and "no adm1 resolution" in results[1]["uncertainty"]["interpretation"]
+    # a category query narrows the rows to the category; a get_uncertainty result carries none (its cells are the uncertainty)
+    fake.load([tool_use("query_emissions", {"categories": ["Enteric fermentation"]}), stop("tool_use")],
+              [tool_use("get_uncertainty", {"scope": "category", "category": "Enteric fermentation"}), stop("tool_use")],
+              [text("Enteric fermentation is {{result_1_cell_0.short}}."), stop()])
+    events = ask(ask_client, "how uncertain is enteric fermentation?")
+    results = only(events, "tool_result")
+    assert [r["category"] for r in results[0]["uncertainty"]["rows"]] == ["Enteric fermentation"] and results[0]["uncertainty"]["rows"][0]["parametric_low_pct"] == "-22.22"
+    assert results[1]["uncertainty"] is None and results[1]["cells"][0]["n_rows"] == 1
+
+
+def test_answer_scope_is_null_without_a_result(ask_client, fake):
+    fake.load([text("Ask me for a number and I will look it up."), stop()])
+    events = ask(ask_client, "hello")
+    assert only(events, "answer")[0]["scope"] is None

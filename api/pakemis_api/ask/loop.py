@@ -145,6 +145,61 @@ def compact_cells(values, cap):
     return cells
 
 
+# the request's grain -> the fact_uncertainty resolution its rows are read at (adm1 has no row of
+# its own: every resolution is listed, and the block says so)
+RESOLUTIONS = {("national", False): "annual_national", ("national", True): "monthly_national",
+               ("adm2", False): "annual_adm2", ("adm2", True): "monthly_adm2"}
+
+
+def _rows_as_strings(rows):
+    return [{k: (str(v) if v is not None else "") for k, v in r.items()} for r in rows if isinstance(r, dict)]
+
+
+def compact_uncertainty(env, claims=None):
+    """The uncertainty block for the answer card: the envelope's own per-category rows when it
+    carries any (every field a string as the table carries it) and the interpretation; for a
+    query_emissions envelope whose block is empty (the core lists no row at the grains it names -
+    a named follow-up), the fact_uncertainty rows for the request's categories or sectors at the
+    request's resolution, read from the claim store and marked source: fact_uncertainty; None for
+    any other envelope (a get_uncertainty result carries its uncertainty in the cells)."""
+    block = env.get("uncertainty")
+    if isinstance(block, dict) and block.get("rows"):
+        return {"rows": _rows_as_strings(block["rows"]), "interpretation": block.get("interpretation", ""), "source": "envelope"}
+    if env.get("request_type") != "query_emissions" or claims is None:
+        return None
+    try:
+        req = json.loads(env.get("request") or "")
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(req, dict):
+        return None
+    where = []
+    if req.get("categories"):
+        where.append("category IN (%s)" % ", ".join("'%s'" % c.replace("'", "''") for c in req["categories"]))
+    elif req.get("sectors"):
+        where.append("module IN (%s)" % ", ".join("'%s'" % m.replace("'", "''") for m in req["sectors"]))
+    level = req.get("geography_level") or "national"
+    resolution = RESOLUTIONS.get((level, bool(req.get("months"))))
+    if resolution:
+        where.append("resolution = '%s'" % resolution)
+    rows = claims._fetch("SELECT * FROM fact_uncertainty%s ORDER BY category, resolution" % ((" WHERE " + " AND ".join(where)) if where else ""))
+    if not rows:
+        return None
+    note = ("per-category envelopes (structural, no probability) at resolution %s; they are never combined in quadrature across categories - see aggregation_rule" % resolution
+            if resolution else "per-category envelopes at every resolution (the release carries no adm1 resolution); never combined in quadrature across categories - see aggregation_rule")
+    return {"rows": _rows_as_strings(rows), "interpretation": note, "source": "fact_uncertainty", "resolution": resolution}
+
+
+def event_payload(result, env, cap, claims=None):
+    """The tool_result SSE event: the model's payload plus `uncertainty` (compact_uncertainty) and
+    `n_rows` per cell (the count of result_row_ids), which the model does not see (its view is unchanged)."""
+    values = env.get("values") or []
+    out = dict(result)
+    out["cells"] = [dict(cell, n_rows=len(values[cell["i"]].get("result_row_ids") or ())) for cell in result.get("cells") or []]
+    out["uncertainty"] = compact_uncertainty(env, claims)
+    return out
+
+
 def tool_result_payload(k, call_id, name, env, cap):
     values = env.get("values") or []
     payload = {
@@ -180,6 +235,7 @@ class Turn:
         self.conv, self.message, self.ui_state, self.limits, self.budget = conversation, message, ui_state or {}, limits, budget
         self.results = []          # envelope per tool call k (None when the call returned no envelope)
         self.receipts = []
+        self.scope = None          # the last tool result's compact context (the answer's `scope`)
         self.usage = {k: 0 for k in USAGE_KEYS}
         self.rejected_drafts = []
 
@@ -218,7 +274,8 @@ class Turn:
         self.receipts.append(env["receipt"])
         self.conv.receipts.add(env["receipt"])
         result = tool_result_payload(k, call.id, name, env, self.limits.max_cells_for_model)
-        return json.dumps(result, sort_keys=True), False, [("tool_result", result)]
+        self.scope = dict(result["context"], k=k, request_type=env.get("request_type"), receipt=env.get("receipt"), name=name)
+        return json.dumps(result, sort_keys=True), False, [("tool_result", event_payload(result, env, self.limits.max_cells_for_model, getattr(self.service, "claims", None)))]
 
     def _download(self, k, call, body):
         self.results.append(None)
@@ -342,6 +399,6 @@ class Turn:
             self.conv.append("user", user_text)
             self.conv.append("assistant", rendered)
             yield "answer", {"text": rendered, "receipts": list(dict.fromkeys(self.receipts)), "citations": citations,
-                             "elapsed_s": round(time.time() - started, 3)}
+                             "scope": self.scope, "elapsed_s": round(time.time() - started, 3)}
             break
         yield self._done()

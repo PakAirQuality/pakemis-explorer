@@ -4,10 +4,12 @@ Events (name: data), in the order a turn emits them:
     status        {phase: model|tool|correction|tool_limit, turn?, k?, name?, reason?}
     thinking      {text}                                  summarised reasoning deltas
     tool_call     {k, id, name, input}
-    tool_result   {k, id, name, receipt, request_type, context, n_values, cells: [{i, display, unit, group?, exactness?, attrs?}], limitations_hit, unallocated?, truncated?, download?}
+    tool_result   {k, id, name, receipt, request_type, context, n_values, cells: [{i, display, display_short, unit, n_rows, group?, exactness?, attrs?}], limitations_hit, uncertainty ({rows, interpretation, source: envelope|fact_uncertainty, resolution?} or null), unallocated?, truncated?, download?}
+                  (uncertainty and n_rows are on the event only; the model's tool_result content is unchanged)
     refusal       {k, id, name, error, error_class, limitation_id, message, detail}
     map_action    {level?, geo?, period?, month?, sector?, gas?, config?, gwp?, view?}
-    answer        {text, receipts, citations, elapsed_s}   text carries <cite k cell receipt> tags
+    answer        {text, receipts, citations, scope, elapsed_s}   text carries <cite k cell receipt> tags; scope is the last
+                  tool result's compact context {basis, periods, configuration_id, gwp_basis, geography_level, ..., k, request_type, receipt, name} or null
     error         {code, message}                          bare_numbers | placeholder_error | empty_answer | turn_limit | budget_exhausted | model_error | model_refusal | agent_disabled
     done          {conversation_id, usage, cost_estimate_usd}
 No model client (no provider key and nothing injected) -> HTTP 503 {"error": "agent_disabled"}.
