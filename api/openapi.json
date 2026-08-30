@@ -529,16 +529,17 @@
     ]
    }
   },
-  "/api/v1/emissions/method/{method_or_category}": {
+  "/api/v1/emissions/method/{method_or_category_or_sector}": {
    "get": {
-    "operationId": "method_api_v1_emissions_method__method_or_category__get",
+    "description": "get_method by method_id or category (the core's two filters), or every rule of one sector\nwhen the path names a sector of the registry (agriculture, power, ...).",
+    "operationId": "method_api_v1_emissions_method__method_or_category_or_sector__get",
     "parameters": [
      {
       "in": "path",
-      "name": "method_or_category",
+      "name": "method_or_category_or_sector",
       "required": true,
       "schema": {
-       "title": "Method Or Category",
+       "title": "Method Or Category Or Sector",
        "type": "string"
       }
      }
@@ -566,6 +567,65 @@
     "summary": "Method",
     "tags": [
      "lineage"
+    ]
+   }
+  },
+  "/api/v1/emissions/products": {
+   "get": {
+    "operationId": "products_api_v1_emissions_products_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Every downloadable product of the served release, with digests, schema and families",
+    "tags": [
+     "products"
+    ]
+   }
+  },
+  "/api/v1/emissions/products/{filename}": {
+   "get": {
+    "operationId": "product_file_api_v1_emissions_products__filename__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "filename",
+      "required": true,
+      "schema": {
+       "title": "Filename",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "One product file from the release payload (attachment; ETag = sha256; immutable; ranges)",
+    "tags": [
+     "products"
     ]
    }
   },

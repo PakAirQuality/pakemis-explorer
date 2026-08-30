@@ -14,6 +14,11 @@ rewrites to the Cloud Run service; the same router is mounted a second time unde
 /v1 prefix, out of the schema, answered with `Deprecation: true`, for one release.  The schema
 and the Swagger docs are served under the prefix ({prefix}/openapi.json, {prefix}/docs) and,
 for a direct base and `make openapi`, at the root (/openapi.json, /docs).
+
+Three additions sit beside the query surface: the products catalogue and file route
+(pakemis_api.products), the citation and identity line on /release, and a typed refusal where the
+release has no column for a group_by key at the request's grain (a DuckDB binder error becomes the
+core's GrainUnavailable, HTTP 422, naming the grains that carry the key).
 """
 import csv
 import datetime
@@ -24,6 +29,7 @@ import re
 import threading
 from contextlib import asynccontextmanager
 
+import duckdb
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -34,6 +40,7 @@ from pakemis_api import models_gen as G
 from pakemis_api.ask.router import install_ask, router as ask_router
 from pakemis_api.middleware import HeadAsGetMiddleware, ResponseHeadersMiddleware
 from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate
+from pakemis_api.products import ProductCatalog, router as products_router
 from pakemis_api.receipts import ReceiptStore
 from pakemis_api.settings import API_PREFIX, LEGACY_PREFIX, Settings, import_query_core
 from pakemis_api.tiles import TileStore, router as tiles_router
@@ -48,6 +55,16 @@ from pakemis_query.models import canonical_json  # noqa: E402
 # OSM-derived allocation surfaces: a table extracted over them is a database under ODbL.
 ODBL_SURFACE_MARKERS = ("rail", "road", "osm", "landfill")
 SPATIAL_TABLES = ("fact_adm1_month", "fact_adm2_month", "fact_unallocated")
+# the tables query_emissions reads, by the grain that reads them: a group_by key the release has no
+# column for at the request's grain is refused with the grains whose table carries it
+GRAIN_TABLES = (("fact_annual", "national", ""), ("fact_monthly", "national", "with months set"),
+                ("fact_adm1_month", "adm1", ""), ("fact_adm2_month", "adm2", ""))
+BINDER_COLUMN = re.compile(r'Referenced column "([^"]+)"')
+CITATION_AUTHOR = "Ahmad, R."
+CITATION_YEAR = "2026"
+DOI_NOTE = "DOI to be inserted at release freeze"
+SCOPE_WORDS = "public-data reconstruction of Pakistan's non-LULUCF emissions"
+MIDDLE_DOT = " \u00b7 "
 
 
 def _verify_module():
@@ -213,6 +230,10 @@ class Service:
             self.manifest = json.load(handle)
         with open(os.path.join(settings.release_dir, "FETCH.json"), encoding="utf-8") as handle:
             self.fetch = json.load(handle)
+        # the downloadable products: an allowlist built from the contract, the manifest and the verification
+        self.products = ProductCatalog(self.release, self.manifest, self.verification, settings.release_dir)
+        # the registry's sector column: /method/{sector} pre-filters the rows by it
+        self.method_sectors = sorted({r["sector"] for r in self.method_rows if r.get("sector")})
         # the map's tiles: one reader per archive, the outputs proven against TILES.json's digests
         self.tiles = TileStore(settings.tiles_dir, settings.version)
         if self.tiles.available:
@@ -234,16 +255,45 @@ class Service:
 
     # --- dispatch ---------------------------------------------------------------------------
 
-    def run(self, request, decorate_cells=True):
+    def run(self, request, decorate_cells=True, method_rows=None):
         """One typed request -> one envelope; the receipt is remembered for replay. The envelope
         leaves with display_short and unit_words on every cell (added after the core minted the
         receipt and result_sha256, so both stand); decorate_cells=False hands out the core's
-        envelope untouched, for the downloads."""
+        envelope untouched, for the downloads. `method_rows` (a MethodRequest only) hands
+        get_method a pre-filtered registry (/method/{sector}); such an envelope's receipt is the
+        core's for the unfiltered request and is not stored for replay."""
         with self._lock:
-            env = self._run(request)
+            try:
+                env = self._run(request, method_rows)
+            except (duckdb.BinderException, duckdb.CatalogException) as exc:
+                raise self.grain_refusal(exc, request) from exc
         return decorate(env) if decorate_cells else env
 
-    def _run(self, request):
+    def grain_refusal(self, exc, request):
+        """A DuckDB binder or catalog error under a request is the release having no column for a
+        key at the request's grain: the core's GrainUnavailable, naming the key, the grain asked
+        for and the grains whose table carries the key (read from the contract's columns)."""
+        level = getattr(request, "geography_level", "") or "national"
+        months = getattr(request, "months", None)
+        asked = "%s grain%s" % (level, " with months set" if months else "")
+        match = BINDER_COLUMN.search(str(exc))
+        if not match:
+            first = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
+            return E.GrainUnavailable("the release cannot answer this request at %s: %s" % (asked, first), "grain_unavailable", grain=level)
+        key = match.group(1)
+        carriers = [(lvl, note) for table, lvl, note in GRAIN_TABLES if key in (self.release.tables.get(table) or {}).get("columns", ())]
+        parts = []
+        national = [note for lvl, note in carriers if lvl == "national"]
+        if national:
+            parts.append("national grain" + ("" if "" in national else " " + national[0]))
+        adm = [lvl for lvl, _ in carriers if lvl != "national"]
+        if adm:
+            parts.append("/".join(adm) + " grain")
+        available = " or ".join(parts) if parts else "no grain of this release"
+        return E.GrainUnavailable("%r is not a column the release carries at %s; available at %s" % (key, asked, available),
+                                  "grain_unavailable", key=key, grain=level, available_at=[lvl for lvl, _ in carriers])
+
+    def _run(self, request, method_rows=None):
         name = type(request).__name__
         if name == "QueryEmissions":
             env = self.engine.query_emissions(request)
@@ -258,7 +308,7 @@ class Service:
         elif name == "EvidenceRequest":
             env = F.get_evidence(self.engine, request)
         elif name == "MethodRequest":
-            env = F.get_method(self.engine, request, self.method_rows)
+            env = F.get_method(self.engine, request, self.method_rows if method_rows is None else method_rows)
         elif name == "SpatialLineageRequest":
             env = F.get_spatial_lineage(self.engine, request)
         elif name == "TransferRequest":
@@ -272,7 +322,18 @@ class Service:
             raise E.QueryError("no function for %s" % name)
         # the CALLER's request is stored (before the engine fills defaults): replaying it
         # re-derives the filled request, and with it the same receipt
-        self.receipts.remember(env["receipt"], canonical_json(request))
+        if method_rows is None:
+            self.receipts.remember(env["receipt"], canonical_json(request))
+        return env
+
+    def method_by_sector(self, sector):
+        """/method/{sector}: the registry rows of one sector through get_method with an empty
+        request (the core filters on method_id and category only); the context names the sector."""
+        rows = [r for r in self.method_rows if r.get("sector") == sector]
+        env = self.run(G.to_request(G.MethodRequestModel()), method_rows=rows)
+        env["context"]["sector"] = sector
+        env["context"]["sector_filter"] = ("the %d registry rows with sector = %s, selected by the service before get_method ran; "
+                                           "the receipt is the core's for an unfiltered method request and is not stored for replay" % (len(rows), sector))
         return env
 
     def replay(self, receipt, decorate_cells=True):
@@ -348,10 +409,68 @@ class Service:
                         "products": {p["path"]: p["sha256"] for p in self.manifest["products"] if p["path"].endswith(".nc")}},
             "licences": rel["licences"],
             "doi": self.manifest.get("doi"),
+            "citation": self.citation(),
+            "identity_line": self.identity_line(),
             "placeholders": {"auth": "none (declared placeholder)", "postgresql": "none; receipts are an in-memory map mirrored to JSON",
                              "agent": "Ask PakEmis is disabled; it may only call the typed functions listed in query_contract.functions",
                              "object_storage": "none; tiles are built locally into the release payload and served by this API"},
         }
+
+    def period_span(self):
+        """'2015–24' as the dims carry it: the first and last fiscal period's short labels,
+        joined by 'to' ('2015–16 to 2023–24')."""
+        fiscal = sorted((r for r in self.release.dim("dim_period") if r["basis"] == "fiscal"), key=lambda r: r["period_start"])
+        if not fiscal:
+            return ""
+        first, last = period_short(fiscal[0]["label"]), period_short(fiscal[-1]["label"])
+        return first if first == last else "%s to %s" % (first, last)
+
+    def identity_line(self):
+        """'PakEmis · public-data reconstruction of Pakistan's non-LULUCF emissions · 2015–16 to
+        2023–24': the product's name, the scope in words, the reporting window from the dims; no
+        version string (the web's sub-header)."""
+        product = self.manifest.get("product") or {}
+        return MIDDLE_DOT.join(p for p in (product.get("name") or "PakEmis", SCOPE_WORDS, self.period_span()) if p)
+
+    def citation(self):
+        """APA and BibTeX for the served release, from the manifest's product.cite_as, version,
+        product.repository and git.describes_commit, the reporting window from the dims, the year
+        and the author. A data DOI in the manifest is cited; while the slots are empty the strings
+        carry no DOI and doi_note says so."""
+        product = self.manifest.get("product") or {}
+        git = self.manifest.get("git") or {}
+        doi = str(((self.manifest.get("doi") or {}).get("data") or "")).strip()
+        version = self.release.version
+        commit = git.get("describes_commit") or ""
+        repository = product.get("repository") or ""
+        name = product.get("name") or "PakEmis"
+        span = self.period_span()
+        title = "%s: %s, %s" % (name, SCOPE_WORDS, span) if span else "%s: %s" % (name, SCOPE_WORDS)
+        locator = "https://doi.org/%s" % doi if doi else repository
+        apa = "%s (%s). %s (Version %s) [Data set]. %s" % (CITATION_AUTHOR, CITATION_YEAR, title, version, locator)
+        if commit and not doi:
+            apa += " (commit %s)" % commit[:12]
+        note = ("commit %s" % commit[:12]) if commit else ""
+        if not doi:
+            note = "; ".join(n for n in (note, DOI_NOTE) if n)
+        key = "%s%s%s" % (CITATION_AUTHOR.split(",")[0].lower(), CITATION_YEAR, name.lower())
+        lines = ["@dataset{%s," % key,
+                 "  author  = {%s}," % CITATION_AUTHOR,
+                 "  title   = {%s}," % title.replace(EN_DASH, "--"),
+                 "  year    = {%s}," % CITATION_YEAR,
+                 "  version = {%s}," % version]
+        if doi:
+            lines.append("  doi     = {%s}," % doi)
+        if repository:
+            lines.append("  url     = {%s}," % repository)
+        if note:
+            lines.append("  note    = {%s}," % note)
+        lines[-1] = lines[-1].rstrip(",")
+        lines.append("}")
+        return {"apa": apa, "bibtex": "\n".join(lines), "doi": doi, "doi_note": "" if doi else DOI_NOTE,
+                "cite_as": product.get("cite_as") or "%s %s" % (name, version), "version": version,
+                "author": CITATION_AUTHOR, "year": CITATION_YEAR, "title": title, "repository": repository,
+                "commit": commit, "period_span": span}
 
     def labels(self):
         """Humanised labels for every id the dims carry, built server-side so the web client and
@@ -431,6 +550,7 @@ def create_app(settings=None, model_client=None):
     api = APIRouter()
     api.include_router(ask_router)                                    # ask: POST {prefix}/ask (SSE)
     api.include_router(tiles_router)                                  # tiles: GET {prefix}/tiles/*
+    api.include_router(products_router)                               # products: GET {prefix}/products, {prefix}/products/{name}.{ext}
 
     def svc() -> Service:
         return app.state.service
@@ -464,12 +584,18 @@ def create_app(settings=None, model_client=None):
         req = G.to_request(G.EvidenceRequestModel(source_stream_id="" if stream_id == "_" else stream_id, category=category, module=module))
         return svc().run(req)
 
-    @api.get("/method/{method_or_category}", tags=["lineage"])
-    def method(method_or_category: str):
+    @api.get("/method/{method_or_category_or_sector}", tags=["lineage"])
+    def method(method_or_category_or_sector: str):
+        """get_method by method_id or category (the core's two filters), or every rule of one sector
+        when the path names a sector of the registry (agriculture, power, ...)."""
         s = svc()
+        x = method_or_category_or_sector
         ids = {r["method_id"] for r in s.method_rows}
-        body = G.MethodRequestModel(method_id=method_or_category) if method_or_category in ids else G.MethodRequestModel(category=method_or_category)
-        return s.run(G.to_request(body))
+        if x in ids:
+            return s.run(G.to_request(G.MethodRequestModel(method_id=x)))
+        if x in s.method_sectors:
+            return s.method_by_sector(x)
+        return s.run(G.to_request(G.MethodRequestModel(category=x)))
 
     @api.get("/transfers", tags=["lineage"])
     def transfers(ledger_id: str = "", configuration_id: str = ""):

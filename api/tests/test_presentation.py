@@ -364,7 +364,7 @@ def test_series_uncertainty_cells_carry_the_interval(client):
 def test_release_declares_the_derived_fields(client):
     p = client.get("/api/v1/emissions/release").json()["rounding"]["presentation"]
     d = p["derived"]
-    assert d == DERIVED and set(d) == {"share_pct_short", "interval_short"}
+    assert d == DERIVED and set(d) == {"share_pct_short", "interval_short", "unallocated_total_short", "placed_short"}
     assert d["share_pct_short"]["decimals"] == 1 and d["share_pct_short"]["mode"] == "ROUND_HALF_EVEN"
     assert d["share_pct_short"]["sentence"] == PARTITION_RULE and "exactly one key" in PARTITION_RULE and "<0.1" in PARTITION_RULE
     assert "applies_to" in d["share_pct_short"] and "applies_to" in d["interval_short"]

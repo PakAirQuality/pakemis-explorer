@@ -13,7 +13,10 @@ Two derived presentation fields sit beside it, declared under `rounding.presenta
 `share_pct_short` (a cell's share of the sum of the cells, one decimal, only when a query_emissions
 envelope grouped by exactly one key partitions a total; the envelope names the partition in
 `partition`) and `interval_short` (the P2.5–P97.5 interval of an uncertainty cell as one string,
-from `quantiles_short`, with `scenario_label` naming the draw scenario in words).
+from `quantiles_short`, with `scenario_label` naming the draw scenario in words).  A spatial envelope
+whose `unallocated` block carries per-province exacts gains `unallocated_total_short` (their sum) and
+`placed_short` (the sum of the cells minus that), on the block and under `env.derived`, for the
+map's one sentence.
 
 The decoration runs after the query core has minted `result_sha256` and the receipt, so neither
 moves: a decorated envelope replays to the same receipt, and the CSV download (a data product,
@@ -35,6 +38,8 @@ SHARE_BELOW = "<0.1"     # a non-zero share that would print as 0.0
 SHARE_ABOVE = ">-0.1"
 SHARE_FIELD = "share_pct_short"
 INTERVAL_FIELD = "interval_short"
+UNALLOCATED_FIELD = "unallocated_total_short"
+PLACED_FIELD = "placed_short"
 EN_DASH = "\u2013"
 
 # the draw scenarios of fact_uncertainty_series in words (an unknown scenario prints as itself)
@@ -81,6 +86,35 @@ DERIVED = {
             "(time_correlated -> time-correlated draws), or the scenario id itself when it has no words." % EN_DASH
         ),
         "scenario_labels": dict(SCENARIO_LABELS),
+    },
+    UNALLOCATED_FIELD: {
+        "field": UNALLOCATED_FIELD,
+        "derived_from": "unallocated.by_province[].exact",
+        "mode": "ROUND_HALF_EVEN",
+        "decimals": DECIMALS,
+        "unit": "Mt CO2e (the unit of fact_unallocated)",
+        "applies_to": "a query_emissions envelope whose unallocated block lists provinces with a numeric exact each "
+                      "(adm1 and adm2 grain); written on unallocated.total_short and derived.unallocated_total_short",
+        "sentence": (
+            "unallocated_total_short is the sum of exact over unallocated.by_province (the mass retained at ADM1 and "
+            "placed no finer, within the request's configuration, months and sectors), rounded half to even to two "
+            "decimal places (9.01); it is added only when every province row carries a numeric exact, and never to a download."
+        ),
+    },
+    PLACED_FIELD: {
+        "field": PLACED_FIELD,
+        "derived_from": "values[].exact and unallocated.by_province[].exact",
+        "mode": "ROUND_HALF_EVEN",
+        "decimals": DECIMALS,
+        "unit": "Mt CO2e",
+        "applies_to": "the same envelopes, when every cell is exact (a numeric exact, no bounded interval, no left/right) "
+                      "and the request carries no limit, so the cells sum to the scope's total; written on "
+                      "unallocated.placed_short and derived.placed_short",
+        "sentence": (
+            "placed_short is the sum of exact over the cells minus the sum of exact over unallocated.by_province, rounded "
+            "half to even to two decimal places (443.34): the mass the release places at the request's grain. It is "
+            "added only beside unallocated_total_short, when every cell is exact and the request has no limit, and never to a download."
+        ),
     },
 }
 
@@ -258,6 +292,53 @@ def decorate_partition(env):
     return env
 
 
+def _exact_cells(env):
+    """The exact decimals of the cells when every cell is numeric and exact (no bounded interval,
+    no left/right) and the request truncates nothing; None otherwise."""
+    cells = env.get("values") or []
+    if not cells or not all(isinstance(c, dict) for c in cells):
+        return None
+    try:
+        req = json.loads(env.get("request") or "")
+    except (TypeError, ValueError):
+        req = {}
+    if isinstance(req, dict) and req.get("limit"):
+        return None
+    out = []
+    for c in cells:
+        if c.get("exact_high") not in ("", None) or "left" in c or "right" in c or is_count(c.get("unit")):
+            return None
+        x = _decimal(c.get("exact"))
+        if x is None:
+            return None
+        out.append(x)
+    return out
+
+
+def decorate_unallocated(env):
+    """Adds unallocated_total_short (and placed_short when the cells are all exact) to a
+    query_emissions envelope whose unallocated block lists provinces with numeric exacts: on the
+    block as total_short / placed_short and under env.derived; leaves every other envelope alone."""
+    if env.get("request_type") != "query_emissions":
+        return env
+    block = env.get("unallocated")
+    if not isinstance(block, dict) or not isinstance(block.get("by_province"), list) or not block["by_province"]:
+        return env
+    exacts = [_decimal(r.get("exact")) if isinstance(r, dict) else None for r in block["by_province"]]
+    if any(x is None for x in exacts):
+        return env
+    unallocated_total = sum(exacts)
+    derived = {UNALLOCATED_FIELD: round_value(unallocated_total)}
+    cells = _exact_cells(env)
+    if cells is not None:
+        derived[PLACED_FIELD] = round_value(sum(cells) - unallocated_total)
+    block["total_short"] = derived[UNALLOCATED_FIELD]
+    if PLACED_FIELD in derived:
+        block["placed_short"] = derived[PLACED_FIELD]
+    env["derived"] = dict(env.get("derived") or {}, **derived)
+    return env
+
+
 # --- the envelope -----------------------------------------------------------------------------
 
 def decorate_cell(cell):
@@ -286,11 +367,13 @@ def decorate_cell(cell):
 def decorate(envelope, in_place=True):
     """Every cell of `values` gains display_short, unit_words and unit_short (an uncertainty cell
     interval_short and scenario_label too); a one-key partition gains share_pct_short per cell and
-    `partition` on the envelope. The envelope's receipt and result_sha256 were minted by the core
+    `partition` on the envelope; a spatial envelope with per-province unallocated exacts gains
+    unallocated_total_short and placed_short (see decorate_unallocated). The envelope's receipt and result_sha256 were minted by the core
     before this runs and are not touched; pass in_place=False to keep the caller's envelope as the
     core returned it."""
     env = envelope if in_place else copy.deepcopy(envelope)
     for cell in env.get("values") or ():
         decorate_cell(cell)
     decorate_partition(env)
+    decorate_unallocated(env)
     return env

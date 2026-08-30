@@ -239,7 +239,7 @@ answer under the legacy `/v1` prefix for one more release, out of the schema, wi
 | `POST /query/uncertainty` | `get_uncertainty` |
 | `POST /query/completeness` | `get_completeness` |
 | `GET /evidence/{stream_id}` | `get_evidence` (`_` for every stream; `?module=` `?category=`) |
-| `GET /method/{method_id_or_category}` | `get_method` |
+| `GET /method/{method_id_or_category_or_sector}` | `get_method`; a sector name (`agriculture`, `power`, ...) answers with every rule of that sector |
 | `GET /transfers?ledger_id=` | `get_cross_sector_transfer` |
 | `GET /spatial/lineage/{shape_id_or_province}` | `get_spatial_lineage` |
 | `POST /spatial/grid` | `get_grid_cell` (reads the NetCDF cube) |
@@ -250,6 +250,8 @@ answer under the legacy `/v1` prefix for one more release, out of the schema, wi
 | `GET /tiles/{adm1\|adm2\|grid}` | TileJSON 3.0.0 from the archive's header and metadata, absolute tile URLs on the request's (forwarded) origin |
 | `GET /tiles/{name}/{z}/{x}/{y}.mvt` | one vector tile as stored (`Content-Encoding: gzip` passed through, `Cache-Control: immutable`; 204 when the archive holds none, 404 for an unknown name) |
 | `GET /tiles/raster/{config}/{gas}/{frame}.png` | one visual-only grid shading PNG |
+| `GET /products` | every downloadable file of the release with digests, schema and the four families |
+| `GET /products/{name}.{ext}` | one product file from the release payload (attachment; `ETag` = sha256; immutable; ranges) |
 | `GET /healthz` (also at the root) | liveness: the release id and the receipt count |
 
 The tiles come from `data/releases/<v>/tiles/` (`tiles/build_tiles.py`); the service refuses to
@@ -261,6 +263,40 @@ tiles are not touched); every response carries `Strict-Transport-Security`,
 
 Request bodies are pydantic models generated at import time from the `pakemis_query.models`
 dataclasses (`api/pakemis_api/models_gen.py`); a test asserts they mirror the dataclass fields.
+
+### Products and citation
+
+`GET /products` is the Downloads page's catalogue: `{release, version, count, products, families,
+note}`. Each product is `{name, kind: table|cube|metadata, formats: [{ext, filename, bytes,
+sha256, identity, url}]}`, a table adding `table_kind`, `rows`, `columns`, `primary_key`,
+`aggregation_rule` and `closure` from `semantic_release.json`; the 22 semantic tables come as CSV
+and Parquet, the two grid cubes as NetCDF, and `semantic_release.json` and `release_manifest.json`
+as themselves. Every digest is the release's own (`identity`: the contract's `sha256_csv` for a
+CSV, the manifest's for a cube, the verified digest for a metadata file); the Parquet twins, which
+the contract leaves unhashed because the CSV is the identity, are hashed once at startup
+(`identity: computed`). `families` groups the names into `annual`, `monthly`, `spatial` and
+`uncertainty` with a title, a description and the formats offered. `GET /products/{name}.{ext}`
+streams the file from the payload with `Content-Disposition: attachment`, `ETag` equal to the
+sha256, `Cache-Control: public, max-age=31536000, immutable` and range requests; the filename is
+looked up in that catalogue and nothing else is served (a 404 for every other path).
+
+`/release` carries `identity_line` ("PakEmis · public-data reconstruction of Pakistan's
+non-LULUCF emissions · 2015–16 to 2023–24", no version: the web's sub-header) and `citation`
+`{apa, bibtex, doi, doi_note, cite_as, version, author, year, title, repository, commit,
+period_span}` built from the manifest's `product.cite_as`, `product.repository` and
+`git.describes_commit`, the release version and the reporting window read from the dims. While
+the manifest's DOI slots are empty the strings carry no DOI and `doi_note` reads "DOI to be
+inserted at release freeze"; a data DOI, once present, is cited in both.
+
+Two further things live beside the query surface. A spatial `query_emissions` envelope whose
+`unallocated` block lists provinces (adm1 and adm2 grain) gains the declared derived fields
+`unallocated_total_short` (the sum of the provinces' exacts, two decimals: 9.01) and
+`placed_short` (the cells' sum minus that, when every cell is exact: 443.34), on the block as
+`total_short` / `placed_short` and under `derived`; never on a download. And a `group_by` key the
+release has no column for at the request's grain (`spatial_view`, `province`, `module`,
+`shape_id`, `month` at national grain) is a typed 422 `grain_unavailable` / `GrainUnavailable`
+naming the grains that carry it ("available at adm1/adm2 grain"), where DuckDB's binder error
+used to surface as a 500.
 
 ### Presentation rounding
 
