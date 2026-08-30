@@ -52,14 +52,15 @@ function MapScreen() {
           </div>
           <TimelineBar compact={isMobile} />
         </main>
+        {/* the drawer re-declares text-fg and bg-surface-2 so its inherited colour resolves against the light tokens, not the dark wrapper's computed value */}
         {!isMobile && (
-          <aside className="relative z-40 h-full shrink-0 border-l border-line bg-surface-2" style={{ width: DRAWER_WIDTH, ...LIGHT_CHROME }} data-testid="right-column">
+          <aside className="relative z-40 h-full shrink-0 border-l border-line bg-surface-2 text-fg" style={{ width: DRAWER_WIDTH, ...LIGHT_CHROME }} data-testid="right-column">
             <SelectionDrawer />
           </aside>
         )}
       </div>
       {isMobile && (
-        <div style={LIGHT_CHROME}>
+        <div className="text-fg" style={LIGHT_CHROME}>
           <SelectionDrawer mobile />
         </div>
       )}

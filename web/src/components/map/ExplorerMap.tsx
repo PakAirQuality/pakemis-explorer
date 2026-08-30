@@ -273,7 +273,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
 
       {full && (
         <div className={`absolute left-3 z-20 max-w-[calc(100%-140px)] ${bm.notice ? "top-8" : "top-3"}`}>
-          <LayerSwitch compact={isMobile} />
+          <LayerSwitch compact={isMobile || (size.width > 0 && size.width < 980)} />
         </div>
       )}
       <div className={`absolute right-3 z-20 flex flex-col items-end gap-1.5 ${bm.notice ? "top-8" : "top-3"}`}>

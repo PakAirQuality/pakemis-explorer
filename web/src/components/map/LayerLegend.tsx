@@ -51,7 +51,7 @@ export function LayerLegend(p: LayerLegendProps) {
     );
   }
   return (
-    <div className="glass w-[300px] rounded-card text-xs" data-testid="layer-legend" data-layer={layer}>
+    <div className="glass w-[300px] max-h-[calc(100vh-280px)] overflow-y-auto rounded-card text-xs" data-testid="layer-legend" data-layer={layer}>
       <div className="px-3 pt-2">
         <div className="micro">{LAYERS[layer].label}</div>
         <div className="truncate text-xs text-fg" title={p.scope}>{p.scope}</div>
@@ -159,7 +159,7 @@ function ExceptionRows({ present, items }: { present: Set<string>; items: Except
         {items.length} named exceptions {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
       </button>
       {open && (
-        <ol className="mt-1 max-h-[38vh] space-y-1.5 overflow-y-auto pr-1" data-testid="exceptions-list">
+        <ol className="mt-1 max-h-[26vh] space-y-1.5 overflow-y-auto pr-1" data-testid="exceptions-list">
           {items.map((it, i) => (
             <li key={i} className="border-l-2 border-line-strong pl-2" data-kind={it.kind}>
               <div className="font-semibold text-fg">{it.title}</div>

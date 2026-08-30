@@ -48,7 +48,7 @@ function route(url: string, body: Record<string, unknown> | undefined) {
     if (q.geography_level) return refusal("grain_unavailable", "GrainUnavailable", "spatial products exist for the reference year only", "grid_not_tabular");
     return envelope([{ display: "372.397", display_short: D.series[0], group: { period_id: "FY2020-21" } }, { display: "452.347", display_short: D.series[1], group: { period_id: "FY2023-24" } }], { request_type: "get_timeseries", change: { from_period: "FY2020-21", to_period: "FY2023-24", from_short: D.series[0], to_short: D.series[1], change_short: D.change, change_pct_short: D.changePct, unit_short: "Mt CO₂e" } });
   }
-  if (body?.periods?.[0] === "FY2020-21" && body?.geography_level) return refusal("grain_unavailable", "GrainUnavailable", "spatial products exist for FY2023-24 only", "grid_not_tabular");
+  if ((body?.periods as string[] | undefined)?.[0] === "FY2020-21" && body?.geography_level) return refusal("grain_unavailable", "GrainUnavailable", "spatial products exist for FY2023-24 only", "grid_not_tabular");
   const g = (body?.group_by ?? []) as string[];
   if (g.includes("sector_id")) return envelope([{ display: "223.454", display_short: D.sectors[0], group: { sector_id: "agriculture" }, extra: { share_pct_short: D.shares[0] } }, { display: "63.371", display_short: D.sectors[1], group: { sector_id: "power" }, extra: { share_pct_short: D.shares[1] } }]);
   if (g.includes("module")) return envelope([{ display: "223.454", display_short: D.sectors[0], group: { module: "agriculture" }, extra: { share_pct_short: D.shares[0] } }, { display: "63.371", display_short: D.sectors[1], group: { module: "power" }, extra: { share_pct_short: D.shares[1] } }]);
