@@ -8,7 +8,9 @@
  * from their sub-categories, the registry's rules from get_method(sector), the result as the
  * sector envelope's display_short), the Evidence dimensions rows worded verbatim from
  * dim_evidence_class, the module's not-estimated categories, and View equations / Inspect
- * sources / Open data rows. The methodology prose sits under it with id="methodology".
+ * sources / Open data rows. Under the card, the claim-record browser (ClaimBrowser: Sector →
+ * Category → Gas → Place → Period, one query, the record inline, `?claim=` as the permalink).
+ * The methodology prose sits under it with id="methodology".
  */
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -29,6 +31,7 @@ import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
 import { AXIS_LABEL, evidenceClassText, EVIDENCE_CLASS_TEXT } from "./evidenceClassText";
 import { sectorText, sourceWords, statusBadge } from "./sectorText";
 import { Methodology } from "./Methodology";
+import { ClaimBrowser } from "./ClaimBrowser";
 
 export const METHODS = {
   title: "Methods & evidence",
@@ -270,6 +273,8 @@ export function Methods() {
             </div>
           </div>
         </Widget>
+
+        <ClaimBrowser />
 
         <div className="mt-10 border-t border-line pt-8">
           <Methodology />

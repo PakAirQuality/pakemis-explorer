@@ -96,8 +96,48 @@ export function receiptHref(receipt: string): string {
   return `/downloads?receipt=${encodeURIComponent(receipt)}`;
 }
 
+/**
+ * The claim record behind one number: `GET /claim?receipt=<r>&cell=<n>` (or `?row_ids=a,b,c`).
+ * A typed 4xx (`no_rows` for a compare difference cell, `unknown_cell`, `unknown_receipt`,
+ * `GrainUnavailable`) becomes a thrown `RefusalError`; the route's own 422 shape
+ * (`{detail: {error, message}}`) is read into the same Refusal, its error id kept and the
+ * class spelled from it. The record is returned as received: every field a string from the
+ * release's tables; nothing here computes.
+ */
+export type ClaimSelector = { receipt: string; cell: number } | { row_ids: string[] };
+
+export function claimPath(selector: ClaimSelector): string {
+  const params = "row_ids" in selector ? new URLSearchParams({ row_ids: selector.row_ids.join(",") }) : new URLSearchParams({ receipt: selector.receipt, cell: String(selector.cell) });
+  return `/claim?${params}`;
+}
+
+function refusalFromDetail(body: unknown): Refusal | null {
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (!detail || typeof detail !== "object") return null;
+  const d = detail as { error?: unknown; error_class?: unknown; message?: unknown; limitation_id?: unknown };
+  if (typeof d.error !== "string" || typeof d.message !== "string") return null;
+  const spelled = d.error.split("_").map((w) => w.replace(/^\w/, (c) => c.toUpperCase())).join("");
+  return { error: d.error, error_class: typeof d.error_class === "string" ? d.error_class : spelled, message: d.message, limitation_id: typeof d.limitation_id === "string" ? d.limitation_id : null, detail: {} };
+}
+
+export async function fetchClaim(selector: ClaimSelector): Promise<unknown> {
+  const path = claimPath(selector);
+  const res = await fetch(`${API_BASE}${path}`, { headers: { accept: "application/json" } });
+  if (res.status >= 400 && res.status < 500) {
+    const body = await res.json().catch(() => null);
+    const refusal = RefusalSchema.safeParse(body);
+    if (refusal.success) throw new RefusalError(refusal.data);
+    const fromDetail = refusalFromDetail(body);
+    if (fromDetail) throw new RefusalError(fromDetail);
+    throw new Error(`${res.status}: ${JSON.stringify(body)}`);
+  }
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${path}`);
+  return res.json();
+}
+
 export const api = {
   release: async (): Promise<ReleaseInfo> => ReleaseSchema.parse(await call("/release")),
+  claim: fetchClaim,
   queryEmissions: (body: QueryEmissions) => envelope("/query/emissions", post(body)),
   compare: (body: CompareRequest) => envelope("/query/compare", post(body)),
   timeseries: (body: TimeseriesRequest) => envelope("/query/timeseries", post(body)),

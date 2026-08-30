@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * Result details: the collapsed footer prints no hex (only the "Result details" button with its
- * title); the drawer shows the six tabs in order, the full Result ID at its foot with Copy and
+ * title); the drawer shows the seven tabs in order, the full Result ID at its foot with Copy and
  * the replay link; the Filters tab names the context through the labels; the API request tab
  * prints the canonical request JSON and a curl line against the prefixed API and contains no
  * key-like string; a receipt-only footer replays the receipt when opened.
@@ -44,13 +44,13 @@ describe("ReceiptFooter", () => {
     expect(screen.getByTestId("result-details")).toHaveAttribute("title", RESULT_DETAILS_TITLE);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
-  it("opens the drawer: six tabs in order, the full Result ID at the foot, Copy and the replay link", () => {
+  it("opens the drawer: seven tabs in order, the full Result ID at the foot, Copy and the replay link", () => {
     const e = env();
     render(<ReceiptFooter env={e} labels={labels} />);
     fireEvent.click(screen.getByTestId("result-details"));
     const drawer = screen.getByRole("dialog", { name: "Result details" });
-    expect(within(drawer).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Sources", "Filters", "Calculation", "API request", "Download", "Cite"]);
-    expect(DRAWER_TABS.map(([id]) => id)).toEqual(["sources", "filters", "calculation", "request", "download", "cite"]);
+    expect(within(drawer).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Evidence", "Sources", "Filters", "Calculation", "API request", "Download", "Cite"]);
+    expect(DRAWER_TABS.map(([id]) => id)).toEqual(["evidence", "sources", "filters", "calculation", "request", "download", "cite"]);
     expect(within(drawer).getByTestId("result-id")).toHaveTextContent(e.receipt);
     expect(drawer).toHaveTextContent("Result ID");
     expect(within(drawer).getByLabelText("Copy the Result ID")).toBeInTheDocument();

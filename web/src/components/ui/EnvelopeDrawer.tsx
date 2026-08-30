@@ -1,6 +1,8 @@
 "use client";
 /**
- * Result details: a result's envelope opened as six tabs. Sources (provenance tables,
+ * Result details: a result's envelope opened as seven tabs. Evidence (the claim record of one
+ * cell through GET /claim — a row picker when the envelope has several cells; a typed 4xx is
+ * the RefusalCard), Sources (provenance tables,
  * unallocated mass, limitations hit, uncertainty, completeness), Filters (the request's context
  * as the API returned it: periods, configuration, GWP basis, geography, view, basis, defaults
  * applied), Calculation (SQL in mono, formula, result_sha256), API request (the canonical
@@ -14,12 +16,13 @@ import Link from "next/link";
 import { Copy, X } from "lucide-react";
 import { absoluteApiBase, api, receiptHref } from "@/lib/api";
 import { cellLabel, shown, type Envelope } from "@/lib/envelope";
+import { ClaimPanel } from "@/components/claim/ClaimDrawer";
 import { apiCallOf, curlLine } from "@/lib/requests";
 import { releaseLabels, type Labels } from "@/lib/release";
 import { cellUnit, configLabel, geographyName, gwpLabel, lulucfShort, periodShort, viewLabel } from "@/lib/labels";
 
-export type DrawerTab = "sources" | "filters" | "calculation" | "request" | "download" | "cite";
-export const DRAWER_TABS: [DrawerTab, string][] = [["sources", "Sources"], ["filters", "Filters"], ["calculation", "Calculation"], ["request", "API request"], ["download", "Download"], ["cite", "Cite"]];
+export type DrawerTab = "evidence" | "sources" | "filters" | "calculation" | "request" | "download" | "cite";
+export const DRAWER_TABS: [DrawerTab, string][] = [["evidence", "Evidence"], ["sources", "Sources"], ["filters", "Filters"], ["calculation", "Calculation"], ["request", "API request"], ["download", "Download"], ["cite", "Cite"]];
 
 /** Line breaks before the SQL clauses so the statement reads; no token is changed. */
 export function formatSql(sql: string): string {
@@ -73,6 +76,7 @@ export function useEnvelopeDrawer(labels?: Labels): { open: (env: Envelope, tab?
 export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: Envelope; tab: DrawerTab; onClose: () => void; labels?: Labels }) {
   const [tab, setTab] = useState<DrawerTab>(initial);
   const [copied, setCopied] = useState(false);
+  const [cell, setCell] = useState(0);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -108,6 +112,21 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
           ))}
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-3 text-sm" data-testid={`drawer-${tab}`}>
+          {tab === "evidence" && (
+            <div className="space-y-3">
+              {env.values.length > 1 && (
+                <label className="block text-xs">
+                  <span className="micro mb-1 block">Cell</span>
+                  <select className="w-full rounded-md border border-line bg-surface-3 px-2.5 py-2 text-sm text-fg" value={cell} onChange={(e) => setCell(Number(e.target.value))} aria-label="Cell" data-testid="evidence-cell">
+                    {env.values.map((v, i) => (
+                      <option key={i} value={i}>{cellLabel(v, `cell ${i}`)} · {shown(v)}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <ClaimPanel selector={{ receipt: env.receipt, cell }} labels={labels} />
+            </div>
+          )}
           {tab === "sources" && (
             <div className="space-y-4">
               <section>

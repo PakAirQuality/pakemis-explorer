@@ -6,16 +6,20 @@ import "@testing-library/jest-dom/vitest";
  * display_short, the evidence dimensions worded verbatim from dim_evidence_class, the module's
  * NE categories, View equations, Inspect sources, Open data rows), the search narrowing the
  * grid, a tile switching the card through the URL; the methodology prose still renders its
- * sections from the release (the version printed once, under Release); and the audits
+ * sections from the release (the version printed once, under Release); the claim-record
+ * browser (Sector → Category → Gas → Place → Period issuing one query_emissions and opening
+ * the record of its cell, the URL's ?claim= as the permalink, a category off the national
+ * grain refused by name and shown, a permalink reopening the record); and the audits
  * (decimals are server strings, no FY, no raw id, no avoid-list phrase).
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
+import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import MethodsPage from "@/app/methods/page";
-import { RELEASE, envelope, mockFetch } from "./fixtures";
+import { RELEASE, envelope, mockFetch, refusal } from "./fixtures";
+import { CLAIM } from "./claimFixture";
 import { avoidPhrasesIn } from "./vocabulary";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/methods", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
@@ -59,6 +63,10 @@ beforeEach(() => {
       }
       if (url.includes("/method/")) return envelope(url.endsWith("/agriculture") ? RULES : [], { request_type: "get_method" });
       if (url.includes("/query/completeness")) return envelope(NE, { request_type: "get_completeness" });
+      if (url.includes("/claim?")) return CLAIM;
+      if (body?.group_by?.[0] === "category") return envelope([{ display: "151.658", display_short: "151.66", group: { category: "Enteric fermentation" } }, { display: "16.550", display_short: "16.55", group: { category: "Rice cultivation" } }]);
+      if (body?.categories && body?.geography_level) return refusal("grain_unavailable", "GrainUnavailable", "category filters are national-grain only in this release: the core applies them at national grain only");
+      if (body?.categories) return envelope([{ display: "151.658", display_short: "151.66", unit_short: "Mt CO₂e" }], { receipt: "060bde899b5bb984553b61722584952a" });
       if (body?.sectors?.[0] === "agriculture") return envelope([{ display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e" }]);
       if (body?.sectors?.[0] === "power") return envelope([{ display: "63.370", display_short: "63.37", unit_short: "Mt CO₂e" }]);
       return envelope([{ display: "452.34662", display_short: "452.35", unit_short: "Mt CO₂e" }]);
@@ -66,8 +74,8 @@ beforeEach(() => {
   );
 });
 
-function mount(search = "") {
-  const Wrapper = withNuqsTestingAdapter({ searchParams: search, hasMemory: true });
+function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
+  const Wrapper = withNuqsTestingAdapter({ searchParams: search, onUrlUpdate, hasMemory: true });
   return render(
     <Wrapper>
       <Providers>
@@ -161,6 +169,55 @@ describe("/methods", () => {
     expect(screen.getByTestId("about-licences")).toHaveTextContent("Code MIT; data and text CC-BY-4.0");
     expect(screen.getByTestId("about-licences")).toHaveTextContent("data/gis/rail/pak_rail_network.geojson");
     expect(screen.getByTestId("about-links").querySelector('a[href="/downloads"]')).not.toBeNull();
+  });
+  it("the claim-record browser issues one query for the scope and opens the record of its cell; the URL carries ?claim=", async () => {
+    const onUrlUpdate = vi.fn();
+    mount("", onUrlUpdate);
+    const browser = await screen.findByTestId("claim-browser");
+    expect(browser).toHaveTextContent("Claim-record browser");
+    expect(within(browser).getByTestId("browser-category-select")).toBeDisabled();
+    fireEvent.change(within(browser).getByTestId("browser-sector-select"), { target: { value: "agriculture" } });
+    await waitFor(() => expect(within(within(browser).getByTestId("browser-category-select")).getAllByRole("option").map((o) => o.textContent)).toEqual(["All categories", "Enteric fermentation", "Rice cultivation"]));
+    const categoryCall = fetchSpy.mock.calls.find(([, b]) => b?.group_by?.[0] === "category");
+    expect(categoryCall?.[1]).toMatchObject({ sectors: ["agriculture"], periods: ["FY2023-24"], group_by: ["category"] });
+    fireEvent.change(within(browser).getByTestId("browser-category-select"), { target: { value: "Enteric fermentation" } });
+    fireEvent.change(within(browser).getByTestId("browser-gas-select"), { target: { value: "CH4" } });
+    expect(within(within(browser).getByTestId("browser-place-select")).getAllByRole("option").map((o) => o.textContent).slice(0, 3)).toEqual(["Pakistan", "Balochistan", "Khyber Pakhtunkhwa"]);
+    expect(within(within(browser).getByTestId("browser-period-select")).getAllByRole("option").map((o) => o.textContent)).toEqual(["2020–21", "2023–24"]);
+    fireEvent.click(within(browser).getByTestId("browser-open"));
+    await waitFor(() => expect(fetchSpy.mock.calls.some(([, b]) => b?.categories?.[0] === "Enteric fermentation")).toBe(true));
+    const call = fetchSpy.mock.calls.find(([, b]) => b?.categories?.[0] === "Enteric fermentation");
+    expect(call?.[1]).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", sectors: ["agriculture"], categories: ["Enteric fermentation"], gases: ["CH4"] });
+    const record = await screen.findByTestId("browser-record");
+    await waitFor(() => expect(within(record).getByTestId("claim-breadcrumb")).toHaveAttribute("data-text", "Agriculture → Enteric fermentation → CH₄ → Pakistan → 2023–24"));
+    expect(fetchSpy.mock.calls.some(([u]) => String(u).endsWith("/claim?receipt=060bde899b5bb984553b61722584952a&cell=0"))).toBe(true);
+    expect(within(record).getByTestId("browser-permalink")).toHaveAttribute("href", "/methods?claim=060bde899b5bb984553b61722584952a%3A0");
+    await waitFor(() => expect(onUrlUpdate.mock.calls.some(([u]) => String((u as { queryString: string }).queryString).includes("claim=060bde899b5bb984553b61722584952a"))).toBe(true));
+    expect(within(record).getByTestId("reported-short")).toHaveTextContent("151.66");
+    expect(within(record).getAllByTestId("source-pages")[0]).toHaveTextContent("Not carried by this release");
+  });
+  it("a category with a province is sent as asked and the release's GrainUnavailable refusal is shown by name, with no record", async () => {
+    mount();
+    const browser = await screen.findByTestId("claim-browser");
+    fireEvent.change(within(browser).getByTestId("browser-sector-select"), { target: { value: "agriculture" } });
+    await waitFor(() => expect(within(within(browser).getByTestId("browser-category-select")).getAllByRole("option")).toHaveLength(3));
+    fireEvent.change(within(browser).getByTestId("browser-category-select"), { target: { value: "Enteric fermentation" } });
+    fireEvent.change(within(browser).getByTestId("browser-place-select"), { target: { value: "adm1:Punjab" } });
+    expect(within(browser).getByTestId("browser-category")).toHaveTextContent("Category filters answer at national grain only");
+    fireEvent.click(within(browser).getByTestId("browser-open"));
+    const card = await within(await screen.findByTestId("browser-refusal")).findByTestId("refusal-card");
+    expect(card).toHaveTextContent("Refused: GrainUnavailable");
+    expect(card).toHaveTextContent("category filters are national-grain only in this release");
+    const call = fetchSpy.mock.calls.find(([, b]) => b?.categories && b?.geography_level);
+    expect(call?.[1]).toMatchObject({ geography_level: "adm1", geography_ids: ["Punjab"], categories: ["Enteric fermentation"] });
+    expect(screen.queryByTestId("browser-record")).toBeNull();
+  });
+  it("?claim=<receipt>:<cell> reopens the same record", async () => {
+    mount("?claim=060bde899b5bb984553b61722584952a%3A0");
+    const record = await screen.findByTestId("browser-record");
+    await waitFor(() => expect(within(record).getByTestId("claim-breadcrumb")).toHaveAttribute("data-text", "Agriculture → Enteric fermentation → CH₄ → Pakistan → 2023–24"));
+    expect(fetchSpy.mock.calls.filter(([u]) => String(u).includes("/claim?"))).toHaveLength(1);
+    expect(fetchSpy.mock.calls.some(([, b]) => b?.categories)).toBe(false);
   });
   it("audits: every decimal is a server string; no FY; no raw id outside the Release section; no avoid-list phrase", async () => {
     const { container } = render(
