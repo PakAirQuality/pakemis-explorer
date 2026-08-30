@@ -1,31 +1,54 @@
 "use client";
 /**
  * Map settings: the bottom-right pill (left of the Ask FAB the layout fixes there) and the
- * popover it opens, holding the controls that are
- * about the MAP rather than about the question — the estimate and the warming potentials, the
- * spatial view, the map layer (map/LayerSwitch.tsx), the shading opacity and the grid raster.
- * They left the filter panel with the merge on 2026-08-30, so the panel carries only what
- * drives both the deck and the map. The scale modes (relative / fixed / absolute) join this
- * popover in Wave 4.
+ * popover it opens, holding everything that is about the MAP rather than about the question, in
+ * this order —
  *
- * Every choice but the opacity is written to the URL; the opacity is a display setting the page
- * owns and passes to the map. Every option's word is a release label; nothing here prints a
- * number but the slider's own integer percentage.
+ *   Map layer      the five layers of map/layerModes.ts (URL `layer`)
+ *   Scale          Relative | Fixed | Absolute (URL `scale`), one line of explanation each
+ *   Opacity        the choropleth's fill-opacity; the page owns it, nothing writes it down
+ *   Grid raster    the visual-only raster (URL `raster`)
+ *   Basemap        Light | Streets (map/basemap.ts) — a local display choice, no env var
+ *   Boundaries     the province and district outlines, shown or hidden
+ *   Month          the months of the reference year (URL `month`), where map/TimelineBar.tsx's
+ *                  month row went when the year slider replaced the timeline
+ *   Estimate · Warming potentials · Spatial view   the three that left the filter panel
+ *
+ * Every choice with a URL key writes it, so any view stays a shareable link; the opacity, the
+ * basemap and the boundaries are chrome and stay in the page's own state. Every option's word
+ * is a release label; nothing here prints a number but the opacity slider's own integer.
  */
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Settings2, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { configLabel, configTooltip, gwpLabel, gwpTooltip, viewLabel } from "@/lib/labels";
+import { configLabel, configTooltip, gwpLabel, gwpTooltip, monthLabel, periodLabel, viewLabel } from "@/lib/labels";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { LayerSwitch } from "@/components/map/LayerSwitch";
-import { SETTINGS } from "./copy";
+import { BASEMAP_CHOICES, type BasemapChoice } from "@/components/map/basemap";
+import { mapsPeriod } from "@/components/map/layerModes";
+import { SCALE_MODES, type ScaleMode } from "@/lib/urlState";
+import { SCALE_NOTES, SETTINGS } from "./copy";
 
-export function MapSettings({ open, onToggle, opacity, onOpacity }: { open: boolean; onToggle: (open: boolean) => void; opacity: number; onOpacity: (pct: number) => void }) {
+export type MapSettingsProps = {
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  opacity: number;
+  onOpacity: (pct: number) => void;
+  basemap: BasemapChoice;
+  onBasemap: (choice: BasemapChoice) => void;
+  boundaries: boolean;
+  onBoundaries: (on: boolean) => void;
+};
+
+const GROUP = "pill flex overflow-hidden border border-line bg-surface p-0.5";
+const SEGMENT = (on: boolean) => `pill flex-1 py-1 text-xs ${on ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`;
+
+export function MapSettings({ open, onToggle, opacity, onOpacity, basemap, onBasemap, boundaries, onBoundaries }: MapSettingsProps) {
   const { state, setState, labels, dims, contract } = useExplorer();
   const gwps = contract?.gwp?.length ? contract.gwp : Object.keys(labels.gwp).length ? Object.keys(labels.gwp) : [state.gwp];
   const views = Object.keys(labels.views).length ? Object.keys(labels.views) : [state.view];
   const configs = dims.configurations.length ? dims.configurations : [state.config];
-  const ref = useRef<HTMLDivElement>(null);
+  const months = mapsPeriod(labels, state.period) ? (dims.monthsByPeriod[state.period] ?? []) : [];
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -35,9 +58,9 @@ export function MapSettings({ open, onToggle, opacity, onOpacity }: { open: bool
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onToggle]);
   return (
-    <div className="absolute bottom-5 right-[92px] z-20 flex flex-col items-end gap-2" ref={ref} data-testid="map-settings">
+    <div className="absolute bottom-5 right-[92px] z-20 flex flex-col items-end gap-2" data-testid="map-settings">
       {open && (
-        <div className="card w-[300px] max-w-[calc(100vw-40px)] p-4 shadow-lg" role="dialog" aria-label={SETTINGS.title} data-testid="map-settings-panel">
+        <div className="card max-h-[calc(100dvh-140px)] w-[300px] max-w-[calc(100vw-40px)] overflow-y-auto p-4 shadow-lg" role="dialog" aria-label={SETTINGS.title} data-testid="map-settings-panel">
           <div className="mb-3 flex items-center justify-between">
             <div className="micro">{SETTINGS.title}</div>
             <button type="button" aria-label={SETTINGS.close} onClick={() => onToggle(false)} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg" data-testid="map-settings-close">
@@ -45,6 +68,64 @@ export function MapSettings({ open, onToggle, opacity, onOpacity }: { open: bool
             </button>
           </div>
           <div className="flex flex-col gap-3.5">
+            <div>
+              <div className="micro mb-1.5">{SETTINGS.layer}</div>
+              <LayerSwitch compact />
+            </div>
+            <div>
+              <div className="micro mb-1.5">{SETTINGS.scale}</div>
+              <div className="flex flex-col gap-1" role="radiogroup" aria-label={SETTINGS.scale} data-testid="scale-select">
+                {SCALE_MODES.map((mode: ScaleMode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={state.scale === mode}
+                    onClick={() => setState({ scale: mode })}
+                    title={SCALE_NOTES[mode].note}
+                    className={`rounded-xl border px-2.5 py-1.5 text-left transition-colors ${state.scale === mode ? "border-accent bg-accent-soft" : "border-line hover:bg-surface-3"}`}
+                    data-testid={`scale-${mode}`}
+                  >
+                    <span className={`block text-xs font-semibold ${state.scale === mode ? "text-fg" : "text-muted"}`}>{SCALE_NOTES[mode].label}</span>
+                    <span className="block text-micro normal-case tracking-normal text-muted">{SCALE_NOTES[mode].note}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="flex items-center justify-between gap-2 text-xs text-muted">
+              <span>{SETTINGS.opacity}</span>
+              <span className="flex items-center gap-2">
+                <input type="range" min={0} max={100} step={5} value={opacity} onChange={(e) => onOpacity(Number(e.target.value))} className="h-1 w-24 cursor-pointer accent-accent" aria-label={SETTINGS.opacity} data-testid="opacity-range" />
+                <span className="num w-8 text-right text-fg" data-testid="opacity-value">{Math.round(opacity)}%</span>
+              </span>
+            </label>
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input type="checkbox" checked={state.raster} onChange={(e) => setState({ raster: e.target.checked })} data-testid="raster-toggle" /> {SETTINGS.raster}
+            </label>
+            <div>
+              <div className="micro mb-1.5">{SETTINGS.basemap}</div>
+              <div className={GROUP} role="tablist" aria-label={SETTINGS.basemap} data-testid="basemap-select">
+                {BASEMAP_CHOICES.map((c) => (
+                  <button key={c.id} type="button" role="tab" aria-selected={basemap === c.id} onClick={() => onBasemap(c.id)} className={SEGMENT(basemap === c.id)} data-testid={`basemap-${c.id}`}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted" title={SETTINGS.boundariesNote}>
+              <input type="checkbox" checked={boundaries} onChange={(e) => onBoundaries(e.target.checked)} data-testid="boundaries-toggle" /> {SETTINGS.boundaries}
+            </label>
+            {months.length > 0 && (
+              <div>
+                <div className="micro mb-1.5">{SETTINGS.month}</div>
+                <select className={SELECT_CLASS} value={state.month ?? ""} onChange={(e) => setState({ month: e.target.value || null })} aria-label={SETTINGS.month} title={periodLabel(labels, state.period)} data-testid="month-select">
+                  <option value="">{SETTINGS.monthAll}</option>
+                  {months.map((m) => (
+                    <option key={m} value={m}>{monthLabel(labels, m)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <div className="micro mb-1.5">{SETTINGS.estimate}</div>
               <select className={SELECT_CLASS} value={state.config} onChange={(e) => setState({ config: e.target.value })} title={configTooltip(labels, state.config)} aria-label={SETTINGS.estimate} data-testid="config-select">
@@ -55,9 +136,9 @@ export function MapSettings({ open, onToggle, opacity, onOpacity }: { open: bool
             </div>
             <div>
               <div className="micro mb-1.5">{SETTINGS.gwp}</div>
-              <div className="pill flex overflow-hidden border border-line bg-surface p-0.5" role="tablist" aria-label={SETTINGS.gwp} data-testid="gwp-select">
+              <div className={GROUP} role="tablist" aria-label={SETTINGS.gwp} data-testid="gwp-select">
                 {gwps.map((g) => (
-                  <button key={g} type="button" role="tab" aria-selected={state.gwp === g} onClick={() => setState({ gwp: g })} title={gwpTooltip(labels, g)} className={`pill flex-1 py-1 text-xs ${state.gwp === g ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`}>
+                  <button key={g} type="button" role="tab" aria-selected={state.gwp === g} onClick={() => setState({ gwp: g })} title={gwpTooltip(labels, g)} className={SEGMENT(state.gwp === g)}>
                     {gwpLabel(labels, g)}
                   </button>
                 ))}
@@ -72,20 +153,6 @@ export function MapSettings({ open, onToggle, opacity, onOpacity }: { open: bool
                 ))}
               </select>
             </div>
-            <div>
-              <div className="micro mb-1.5">{SETTINGS.layer}</div>
-              <LayerSwitch compact />
-            </div>
-            <label className="flex items-center justify-between gap-2 text-xs text-muted">
-              <span>{SETTINGS.opacity}</span>
-              <span className="flex items-center gap-2">
-                <input type="range" min={0} max={100} step={5} value={opacity} onChange={(e) => onOpacity(Number(e.target.value))} className="h-1 w-24 cursor-pointer accent-accent" aria-label={SETTINGS.opacity} data-testid="opacity-range" />
-                <span className="num w-8 text-right text-fg" data-testid="opacity-value">{Math.round(opacity)}%</span>
-              </span>
-            </label>
-            <label className="flex items-center gap-2 text-xs text-muted">
-              <input type="checkbox" checked={state.raster} onChange={(e) => setState({ raster: e.target.checked })} data-testid="raster-toggle" /> {SETTINGS.raster}
-            </label>
           </div>
         </div>
       )}

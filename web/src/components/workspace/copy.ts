@@ -33,28 +33,59 @@ export const FILTERS = {
   expand: "Show the filters",
   showing: "Showing",
   open: "Filters",
+  /** A year the release answers nationally but does not map, and which year the map does show. */
+  nationalOnly: "Answered nationally",
+  mappedYear: (reference: string) => `the map shows ${reference}`,
+  asking: "asking the release about this year…",
 } as const;
 
-/** The legend capsule: the default relative face and what its ⓘ says. */
+/**
+ * The legend capsule's faces. Three for the magnitude layer, one per scale mode; one that
+ * names a categorical layer and opens its own panel; and one that carries the release's typed
+ * refusal when the year is not mapped. `bands` counts the legend's own rows, not anything of
+ * the release's; no other number is written here.
+ */
 export const LEGEND = {
-  mode: "Relative",
+  label: "Map shading",
+  relative: "Relative",
+  fixed: "Fixed",
+  absolute: "Absolute",
   lower: "Lower",
   higher: "Higher",
-  note: "Shading ranks the places in view against one another; exact values are in the cards and on hover.",
-  label: "Map shading",
+  bands: (n: number) => `${n} ${n === 1 ? "band" : "bands"}`,
+  relativeNote: "Quantile bands within the current view; exact values on hover and in the cards.",
+  fixedNote: "The scale is locked to the reference year's whole map, so choosing a sector or a gas moves the colours without moving the scale.",
+  absoluteNote: "The scale follows the places now in view; the breaks are the release's own printed values.",
+  notMapped: "Not mapped",
+  asking: "asking the release about this year…",
+  open: "What the colours mean",
+  close: "Close the legend",
 } as const;
 
-/** Map settings: the pill and the sections that left the filter panel. */
+/** Map settings: the pill, the display choices it owns and the sections that left the filter panel. */
 export const SETTINGS = {
   title: "Map settings",
+  layer: "Map layer",
+  scale: "Scale",
+  opacity: "Shading opacity",
+  raster: "Grid raster (visual only)",
+  basemap: "Basemap",
+  boundaries: "Boundaries",
+  boundariesNote: "Show the province and district outlines",
+  month: "Month",
+  monthAll: "The whole year",
   estimate: "Estimate",
   gwp: "Warming potentials",
   view: "Spatial view",
-  layer: "Map layer",
-  opacity: "Shading opacity",
-  raster: "Grid raster (visual only)",
   close: "Close the map settings",
 } as const;
+
+/** One line saying what each scale mode does, under its name in Map settings. */
+export const SCALE_NOTES: Record<"relative" | "fixed" | "absolute", { label: string; note: string }> = {
+  relative: { label: LEGEND.relative, note: "Rank the places now in view against one another." },
+  fixed: { label: LEGEND.fixed, note: "Lock the scale to the reference year's whole map." },
+  absolute: { label: LEGEND.absolute, note: "Scale by value against the places now in view." },
+};
 
 /** The map's own buttons, bottom-right. */
 export const MAP_BUTTONS = {

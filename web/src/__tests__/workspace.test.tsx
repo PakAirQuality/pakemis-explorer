@@ -127,10 +127,9 @@ function serverDecimals(): Set<string> {
 }
 
 async function loaded() {
-  await screen.findByTestId("opening-statement");
-  await screen.findByTestId("sector-widget-sentence");
-  await screen.findByTestId("gas-widget-sentence");
-  await screen.findByTestId("places-widget-sentence");
+  await screen.findByTestId("card-snapshot-sentence");
+  await screen.findByTestId("card-sectors-sentence");
+  await screen.findByTestId("card-places-sentence");
 }
 
 /** The last URL the page wrote once one containing `part` has arrived (nuqs batches its writes). */
@@ -159,16 +158,17 @@ describe("the workspace frame", () => {
     for (const c of ["absolute", "left-5", "top-[84px]", "bottom-5", "w-[420px]", "z-20", "overflow-y-auto", "overscroll-contain", "scrollbar-thin", "pointer-events-none", "flex flex-col gap-3", "pr-2"]) expect(deck.className, c).toContain(c);
     expect(deck.className).not.toMatch(/(^|\s)bg-/); // the map shows between the cards
     const cards = Array.from(deck.children).map((el) => el.getAttribute("data-testid"));
-    expect(cards).toEqual(["header-block", "deck-header", "scope-chips", "opening", "sector-widget", "trend-widget", "gas-widget", "places-widget", "footer"]);
-    for (const id of ["opening", "sector-widget", "trend-widget", "gas-widget", "places-widget", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
+    expect(cards).toEqual(["header-block", "deck-header", "scope-chips", "card-snapshot", "card-sectors", "card-trend", "card-places", "footer"]);
+    for (const id of ["card-snapshot", "card-sectors", "card-trend", "card-places", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PAKISTAN");
     // the filter panel: 340 px, top-right
     const filters = screen.getByTestId("filter-panel");
     for (const c of ["absolute", "right-5", "top-5", "z-20", "w-[340px]", "card", "p-4"]) expect(filters.className, c).toContain(c);
     // the legend capsule: bottom-left of the map, right of the deck, one line and no break numbers
     const legend = screen.getByTestId("legend-capsule");
-    expect(legend.className).toContain("left-[calc(20px+420px+16px)]");
-    expect(legend.className).toContain("bottom-5");
+    const slot = screen.getByTestId("legend-capsule-slot"); // the capsule plus the panel its ⓘ opens above it
+    expect(slot.className).toContain("left-[calc(20px+420px+16px)]");
+    expect(slot.className).toContain("bottom-5");
     expect(legend).toHaveTextContent("Relative");
     expect(legend).toHaveTextContent("Lower");
     expect(legend).toHaveTextContent("Higher");
@@ -207,14 +207,14 @@ describe("the workspace frame", () => {
     fireEvent.click(screen.getByTestId("filters-expand"));
     expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16));
   });
-  it("Map settings carries what left the filter panel: the estimate, the warming potentials, the spatial view, the layer, the opacity and the raster", async () => {
+  it("Map settings carries what left the filter panel plus the map's own display choices: the layer, the scale, the opacity, the raster, the basemap, the boundaries, the month, the estimate, the warming potentials and the spatial view", async () => {
     mount();
     await loaded();
     // none of them is in the panel any more
     for (const id of ["config-select", "gwp-select", "view-select", "layer-switch", "opacity-range", "raster-toggle"]) expect(screen.queryByTestId(id), id).toBeNull();
     fireEvent.click(screen.getByTestId("map-settings-button"));
     const panel = screen.getByTestId("map-settings-panel");
-    for (const id of ["config-select", "gwp-select", "view-select", "layer-switch", "opacity-range", "raster-toggle"]) expect(within(panel).getByTestId(id), id).toBeInTheDocument();
+    for (const id of ["layer-switch", "scale-select", "opacity-range", "raster-toggle", "basemap-select", "boundaries-toggle", "month-select", "config-select", "gwp-select", "view-select"]) expect(within(panel).getByTestId(id), id).toBeInTheDocument();
     expect((within(panel).getByTestId("config-select") as HTMLSelectElement).options[0].textContent).toBe("Reference estimate");
     expect(Array.from(within(panel).getByTestId("gwp-select").querySelectorAll("button")).map((b) => b.textContent)).toEqual(["IPCC 2013 (AR5)", "IPCC 2021 (AR6)"]);
     // the opacity is a display setting the page owns and hands to the map, never the URL
@@ -249,7 +249,7 @@ describe("the workspace's state", () => {
   it("a scope read from the URL becomes the chips, and each chip clears back to its default", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
     mount("?sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
-    await screen.findByTestId("opening-statement");
+    await screen.findByTestId("card-snapshot-sentence");
     const chips = screen.getByTestId("scope-chips");
     expect(within(chips).getByTestId("chip-sector")).toHaveTextContent("Power");
     expect(within(chips).getByTestId("chip-gas")).toHaveTextContent("CH₄");
@@ -273,21 +273,21 @@ describe("the workspace's state", () => {
     mount("", (e) => updates.push(e));
     await loaded();
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
-    const bars = within(screen.getByTestId("bars-with-axis")).getAllByTestId("bar-item");
+    const bars = within(screen.getByTestId("sectors-bars")).getAllByTestId("bar-item");
     fireEvent.click(bars[1]);
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "power");
     expect(updates.some((u) => u.queryString.includes("sector="))).toBe(false); // the hover/pick stays local
     expect(screen.getByTestId("sectors-link")).toHaveAttribute("href", "/data?sector=power");
     fireEvent.click(bars[1]);
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
-    // the province select writes `geo`, and the deck re-scopes to a module breakdown
+    // the province select writes `geo`, and the deck re-writes itself to the province's cards
     fireEvent.change(screen.getByTestId("province-select"), { target: { value: "Punjab" } });
-    await waitFor(() => expect(screen.getByTestId("opening-statement")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
+    await waitFor(() => expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "Punjab");
+    expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "province");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PUNJAB");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Punjab");
-    const trend = await within(screen.getByTestId("trend-widget")).findByTestId("refusal-card");
-    expect(trend).toHaveTextContent("Refused: GrainUnavailable");
+    expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest at 123.30 Mt");
     // Reset view returns the deck and the map to Pakistan
     fireEvent.click(screen.getByTestId("header-reset"));
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan"));
@@ -296,7 +296,7 @@ describe("the workspace's state", () => {
   it("Reset filters clears the level, the place, the sector, the gas and the year at once", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
     mount("?level=adm2&sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
-    await screen.findByTestId("opening-statement");
+    await screen.findByTestId("card-snapshot-sentence");
     fireEvent.click(screen.getByTestId("reset-filters"));
     await waitFor(() => expect(updates[updates.length - 1].queryString).toBe(""));
     expect(screen.getByTestId("chip-sector")).toHaveTextContent("All sectors");
@@ -309,41 +309,42 @@ describe("the deck's cards", () => {
     await loaded();
     const all = screen.getByTestId("deck-collapse-all");
     expect(all).toHaveTextContent("Collapse all");
-    const ids = ["sector-widget", "trend-widget", "gas-widget", "places-widget"];
+    const ids = ["card-snapshot", "card-sectors", "card-trend", "card-places"];
     const switches = ids.map((id) => screen.getByTestId(`${id}-switch`));
     expect(screen.getAllByRole("switch")).toHaveLength(4);
     for (const sw of switches) expect(sw).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(switches[0]);
-    expect(switches[0]).toHaveAttribute("aria-checked", "false");
-    expect(screen.queryByTestId("sector-widget-sentence")).toBeNull();
-    expect(screen.queryByTestId("bars-with-axis")).toBeNull();
-    expect(screen.getByTestId("sector-widget")).toHaveTextContent("Emissions by sector in Pakistan");
-    expect(screen.getByTestId("trend-widget-sentence")).toBeInTheDocument();
-    fireEvent.click(switches[0]);
-    expect(await screen.findByTestId("sector-widget-sentence")).toBeInTheDocument();
+    fireEvent.click(switches[1]);
+    expect(switches[1]).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByTestId("card-sectors-sentence")).toBeNull();
+    expect(screen.queryByTestId("sectors-bars")).toBeNull();
+    expect(screen.getByTestId("card-sectors")).toHaveTextContent("Where emissions come from");
+    expect(screen.getByTestId("card-trend-sentence")).toBeInTheDocument();
+    fireEvent.click(switches[1]);
+    expect(await screen.findByTestId("card-sectors-sentence")).toBeInTheDocument();
     fireEvent.click(all);
     for (const sw of switches) expect(sw).toHaveAttribute("aria-checked", "false");
     for (const id of ids) expect(screen.queryByTestId(`${id}-sentence`), id).toBeNull();
     expect(all).toHaveTextContent("Expand all");
     expect(all).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("opening-statement")).toBeInTheDocument(); // the statement is not a section
     fireEvent.click(all);
     for (const id of ids) expect(await screen.findByTestId(`${id}-sentence`)).toBeInTheDocument();
   });
   it("each card's sentence is built from the envelope's server strings, and the charts' ticks are the envelopes' own", async () => {
     mount();
     await loaded();
-    expect(screen.getByTestId("opening-statement")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory, which excludes land use and forestry.");
-    expect(screen.getByTestId("sector-widget-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source at 223.45 Mt (49.4 %), followed by power (63.37 Mt, 14.0 %) and transport (41.93 Mt, 9.3 %).");
-    expect(screen.getByTestId("trend-widget-sentence")).toHaveTextContent("From 2020–21 to 2023–24, Pakistan's emissions rose from 372.40 Mt to 452.35 Mt CO₂e, a change of +79.95 Mt (+21.5 %).");
-    expect(screen.getByTestId("gas-widget-sentence")).toHaveTextContent("Methane made up 248.75 Mt (55.0 %) of Pakistan's CO₂-equivalent total; carbon dioxide 161.46 Mt (35.7 %).");
-    expect(screen.getByTestId("places-widget-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
-    expect(screen.getByTestId("bars-with-axis")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
+    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory, which excludes land use and forestry.");
+    expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("49.4 % from agriculture");
+    expect(screen.getByTestId("snapshot-meta")).toHaveTextContent("Reference estimate · land use excluded · evidence and uncertainty available");
+    expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest at 223.45 Mt (49.4 %), followed by power (63.37 Mt, 14.0 %) and transport (41.93 Mt, 9.3 %).");
+    expect(screen.getByTestId("card-trend-sentence")).toHaveTextContent("From 2020–21 to 2023–24, Pakistan's emissions rose from 372.40 Mt to 452.35 Mt CO₂e, a change of +79.95 Mt (+21.5 %).");
+    expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
+    expect(screen.getByTestId("sectors-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));
     expect(within(screen.getByTestId("column-chart")).getAllByTestId("column").map((c) => c.textContent)).toEqual(["2020–21 372.40", "2023–24 452.35"]);
-    for (const id of ["sector-widget", "trend-widget", "gas-widget", "places-widget"]) {
+    for (const id of ["card-snapshot", "card-sectors", "card-trend", "card-places"]) {
       expect(screen.getByTestId(`${id}-info`)).toBeInTheDocument();
       expect(screen.getByTestId(`${id}-download`)).toBeInTheDocument();
+      expect(screen.getByTestId(`${id}-claim`)).toBeInTheDocument();
     }
   });
 });

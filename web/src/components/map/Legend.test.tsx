@@ -1,18 +1,19 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * The filter panel's controls, the Map page's legend scope line (Legend, the magnitude panel
- * LayerLegend composes; the Overview's map carries the opacity pill instead) and the Explore
- * panel's selects print the release's labels ("Reference estimate", "IPCC 2013 (AR5)"), never
- * the raw ids; the ids stay as secondary text in the Explore panel only.
+ * LayerLegend composes; the /data canvas's map carries the opacity pill instead) and the
+ * Explore panel's selects print the release's labels ("Reference estimate", "IPCC 2013 (AR5)"),
+ * never the raw ids; the ids stay as secondary text in the Explore panel only. Map settings has
+ * its own file (components/workspace/MapSettings.test.tsx).
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { Providers } from "@/components/Providers";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
 import { releaseDims, releaseLabels } from "@/lib/release";
 import type { ReleaseInfo } from "@/lib/envelope";
 import type { ExplorerState } from "@/lib/urlState";
 import { FilterPanel } from "@/components/workspace/FilterPanel";
-import { MapSettings } from "@/components/workspace/MapSettings";
 import { Legend } from "./Legend";
 import { ExplorePanel } from "@/components/panels/ExplorePanel";
 import { RELEASE } from "@/__tests__/fixtures";
@@ -27,7 +28,11 @@ function ctx(state: ExplorerState): ExplorerContextValue {
   return { state, setState: vi.fn(), release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: { gwp: ["AR5", "AR6"], geographyLevel: [], spatialView: [], basis: [], configuration: [], routes: [], gridGas: "CO2", gridAnnual: "annual" }, agent: { enabled: false, model: "", reason: "not mounted" }, isMobile: false };
 }
 function mount(node: React.ReactNode, state: ExplorerState = base) {
-  return render(<ExplorerContext.Provider value={ctx(state)}>{node}</ExplorerContext.Provider>);
+  return render(
+    <Providers>
+      <ExplorerContext.Provider value={ctx(state)}>{node}</ExplorerContext.Provider>
+    </Providers>,
+  );
 }
 
 describe("FilterPanel", () => {
@@ -54,24 +59,6 @@ describe("FilterPanel", () => {
     expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "0");
     for (const id of ["filters-expand", "rail-level", "rail-sector", "rail-gas"]) expect(screen.getByTestId(id), id).toBeTruthy();
     expect(screen.queryByTestId("year-range")).toBeNull();
-  });
-});
-
-describe("MapSettings", () => {
-  it("the estimate and the warming potentials read their labels, and the survey configuration and AR6 are named by theirs", () => {
-    const { unmount } = mount(<MapSettings open onToggle={() => {}} opacity={80} onOpacity={() => {}} />);
-    const config = screen.getByTestId("config-select") as HTMLSelectElement;
-    expect(config.options[config.selectedIndex].textContent).toBe("Reference estimate");
-    expect(config.getAttribute("title")).toBe("every axis at its reference setting; residential dung on the ledger basis (L)");
-    const buttons = Array.from(screen.getByTestId("gwp-select").querySelectorAll("button"));
-    expect(buttons.map((b) => b.textContent)).toEqual(["IPCC 2013 (AR5)", "IPCC 2021 (AR6)"]);
-    expect(buttons[0].getAttribute("title")).toContain("Fifth Assessment Report");
-    expect(screen.getByTestId("map-settings-panel").textContent).not.toContain("REF_2023_24");
-    unmount();
-    mount(<MapSettings open onToggle={() => {}} opacity={80} onOpacity={() => {}} />, { ...base, config: "S_2023_24", gwp: "AR6" });
-    const survey = screen.getByTestId("config-select") as HTMLSelectElement;
-    expect(survey.options[survey.selectedIndex].textContent).toBe("Survey-based estimate");
-    expect(screen.getByTestId("gwp-select").querySelector('[aria-selected="true"]')).toHaveTextContent("IPCC 2021 (AR6)");
   });
 });
 

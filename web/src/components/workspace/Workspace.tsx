@@ -9,8 +9,10 @@
  *   [legend capsule, bottom left of the map, right of the deck]      [⚙ Map settings]
  *
  * The URL is the single source of truth for level, geo, cell, sector, gas, period, config, gwp,
- * view and layer; a hovered sector stays in React state and never reaches the URL. Whether a
- * panel is open is chrome, not state: it lives in this component and not in the URL.
+ * view, layer and scale; a hovered sector stays in React state and never reaches the URL.
+ * Whether a panel is open is chrome, not state: it lives in this component and not in the URL,
+ * and so do Map settings' three display choices — the shading opacity, the basemap and whether
+ * the boundaries are drawn — which change how the map LOOKS and never what it answers.
  *
  * The camera keeps Pakistan centred in the VISIBLE canvas rather than under a panel: the page
  * computes the chrome's insets from the panels' open / collapsed widths (deck 420 + 20 + 16,
@@ -33,6 +35,7 @@ import { NavCapsule } from "@/components/shell/NavCapsule";
 import { ExplorerMap, type MapPadding } from "@/components/map/ExplorerMap";
 import { unionBbox, useBboxes } from "@/components/map/tiles";
 import { OPACITY_DEFAULT } from "@/components/map/layers";
+import { BASEMAP_DEFAULT, type BasemapChoice } from "@/components/map/basemap";
 import { DECK_INSET_PX, DECK_PX } from "@/components/overview/deck";
 import { HEADER } from "@/components/overview/copy";
 import { Deck, DeckRail } from "./Deck";
@@ -71,7 +74,10 @@ export function Workspace() {
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // three display settings the page owns: they change what the map looks like, never what it answers
   const [opacity, setOpacity] = useState(OPACITY_DEFAULT);
+  const [basemapChoice, setBasemapChoice] = useState<BasemapChoice>(BASEMAP_DEFAULT);
+  const [boundaries, setBoundaries] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   // the map follows a hovered or picked sector without writing the URL (the URL wins; hover stays local)
   const [sector, setSector] = useState<string | null>(null);
@@ -124,7 +130,7 @@ export function Workspace() {
   return (
     <div className="relative h-dvh overflow-hidden bg-surface text-fg" data-testid="workspace" data-scope={geo ?? "PK"}>
       <div className="absolute inset-0" data-testid="map-pane">
-        <ExplorerMap variant="workspace" padding={padding} opacity={opacity} onMap={setMap} override={override} />
+        <ExplorerMap variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} override={override} />
       </div>
 
       <NavCapsule floating />
@@ -164,7 +170,7 @@ export function Workspace() {
         )}
       </div>
 
-      <MapSettings open={settingsOpen} onToggle={setSettingsOpen} opacity={opacity} onOpacity={setOpacity} />
+      <MapSettings open={settingsOpen} onToggle={setSettingsOpen} opacity={opacity} onOpacity={setOpacity} basemap={basemapChoice} onBasemap={setBasemapChoice} boundaries={boundaries} onBoundaries={setBoundaries} />
     </div>
   );
 }
