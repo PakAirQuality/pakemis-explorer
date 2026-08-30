@@ -58,8 +58,10 @@ export function hatchImage(): ImageData {
 
 const NO_FILL_COLOR = NO_CELL;
 
-/** The default choropleth opacity, in percent (the console's fixed value; the briefing's Opacity slider starts at 80). */
+/** The default choropleth opacity, in percent (the console's fixed value; the Opacity slider starts at 80). */
 export const FILL_OPACITY_PCT = 82;
+/** Where the Opacity slider starts (Map settings on the workspace, the briefing map's own pill on /data). */
+export const OPACITY_DEFAULT = 80;
 
 /** The choropleth's fill-opacity for an opacity in percent (0–100): the value, a touch stronger under the hover. A display setting, not a data number. */
 export function fillOpacity(pct: number) {
@@ -105,9 +107,10 @@ export function addLayers(map: MBMap, before?: string) {
 /**
  * Which layers show at each level. Lines of the coarser levels stay as context. The
  * unallocated layer shows the province fill over greyed districts at either level; the
- * outline layers show on the exceptions and method layers only.
+ * outline layers show on the exceptions and method layers only. `boundaries` is Map settings'
+ * show / hide of the district and province outlines — chrome, so it is a prop and not a URL key.
  */
-export function applyLevel(map: MBMap, level: Level, raster: boolean, layer: MapLayer = "magnitude") {
+export function applyLevel(map: MBMap, level: Level, raster: boolean, layer: MapLayer = "magnitude", boundaries: boolean = true) {
   const show = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
   const provinceFill = level === "adm1" || (layer === "unallocated" && level === "adm2");
   show("adm1-fill", provinceFill);
@@ -118,8 +121,8 @@ export function applyLevel(map: MBMap, level: Level, raster: boolean, layer: Map
   show("adm2-hatch", level === "adm2" && layer !== "unallocated");
   show("adm2-outline", level === "adm2" && (layer === "exceptions" || layer === "method"));
   show("adm2-selected", level === "adm2");
-  show("adm2-line", level !== "adm1");
-  show("adm1-line", true);
+  show("adm2-line", boundaries && level !== "adm1");
+  show("adm1-line", boundaries);
   show("grid-fill", level === "grid");
   show("grid-line", level === "grid");
   show("grid-hover", level === "grid");

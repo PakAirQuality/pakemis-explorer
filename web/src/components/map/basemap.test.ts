@@ -1,20 +1,32 @@
 /**
- * The basemap is Mapbox light-v11 (emissions.web.app's grey land and white water); the old
- * STREETS_STYLE name still resolves to the same string; without a token there is no map and
+ * The basemap is Mapbox light-v11 (emissions.web.app's grey land and white water) and Map
+ * settings' second choice is streets-v12; without a token there is no map and
  * the notice says so; the style override wins. The layer helpers cope with a style that has
  * no symbol layer or no fog slot, and the fill-opacity expression is the slider's percent.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BASE_STYLE, basemap, NO_TOKEN_NOTICE, STREETS_STYLE } from "./basemap";
+import { BASEMAP_CHOICES, BASEMAP_DEFAULT, BASE_STYLE, basemap, NO_TOKEN_NOTICE, STREETS_STYLE, styleFor } from "./basemap";
 import { ensureAtmosphere, fillOpacity, firstSymbolLayerId, FILL_OPACITY_PCT, layerSpecs, setFillOpacity } from "./layers";
 import type { Map as MBMap } from "mapbox-gl";
 
 afterEach(() => vi.unstubAllEnvs());
 
 describe("basemap", () => {
-  it("light-v11 by default; STREETS_STYLE is the alias", () => {
+  it("light-v11 by default, streets-v12 as Map settings' other choice", () => {
     expect(BASE_STYLE).toBe("mapbox://styles/mapbox/light-v11");
-    expect(STREETS_STYLE).toBe(BASE_STYLE);
+    expect(STREETS_STYLE).toBe("mapbox://styles/mapbox/streets-v12");
+    expect(BASEMAP_CHOICES.map((c) => c.id)).toEqual(["light", "streets"]);
+    expect(BASEMAP_CHOICES.map((c) => c.label)).toEqual(["Light", "Streets"]);
+    expect(BASEMAP_DEFAULT).toBe("light");
+  });
+  it("the choice picks a style: Light keeps the release's own (env override included), Streets is streets-v12", () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN", "pk.test");
+    vi.stubEnv("NEXT_PUBLIC_BASEMAP_STYLE", "");
+    expect(styleFor(basemap(), "light")).toBe(BASE_STYLE);
+    expect(styleFor(basemap())).toBe(BASE_STYLE);
+    expect(styleFor(basemap(), "streets")).toBe(STREETS_STYLE);
+    vi.stubEnv("NEXT_PUBLIC_BASEMAP_STYLE", "mapbox://styles/x/y");
+    expect(styleFor(basemap(), "light")).toBe("mapbox://styles/x/y");
   });
   it("no token: kind none, the notice, the default style named", () => {
     vi.stubEnv("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN", "");

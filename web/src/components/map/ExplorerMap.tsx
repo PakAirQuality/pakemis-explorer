@@ -23,7 +23,18 @@
  *
  * `variant="workspace"` (components/workspace/Workspace.tsx) is the bare canvas: no chrome of
  * its own — the nav capsule, the deck, the filter panel, the legend capsule, the map buttons
- * and Map settings are the workspace's, and the fill opacity arrives as the `opacity` prop.
+ * and Map settings are the workspace's, and the fill opacity arrives as the `opacity` prop. It
+ * paints the URL's `layer` as the console does, since Map settings holds the layer switch. Map
+ * settings' two other display choices arrive as props, never as URL keys: `basemap` (Light or
+ * Streets — the style is swapped and `style.load` re-inserts our whole stack beneath the new
+ * labels) and `boundaries` (the province and district outlines).
+ *
+ * The scale mode (URL `scale`) reaches the paint as `ScalePaint`: `relative` shades by the
+ * cells' quantile bands, `absolute` by their values against this envelope, and `fixed` by their
+ * values against the level's all-sector, all-gas envelope for the REFERENCE year, which this
+ * component fetches under the map's own query key so a scope that already is that envelope
+ * costs no second request. Off the reference year the release maps nothing: the fills are
+ * cleared to outlines and the legend capsule carries the API's own refusal for the year.
  * `padding` is the chrome the workspace occupies ({top,right,bottom,left} in CSS pixels): it is
  * applied to the initial fitBounds, to `fitAll()` and to every selection flyTo, so the country
  * stays centred in the VISIBLE canvas rather than under a panel, and the bottom-left slot is
@@ -39,9 +50,9 @@ import { api } from "@/lib/api";
 import { adm1Body, mapBody, parseCell } from "@/lib/requests";
 import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
-import { basemap as buildBasemap } from "./basemap";
-import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setFillOpacity, setSelected, setView3d } from "./layers";
-import { anyWithoutCell, cellForFeature, exceptionKindOf, exceptionKindsPresent, indexCells, indexUnallocated, paintLayer } from "./paint";
+import { basemap as buildBasemap, styleFor, type BasemapChoice } from "./basemap";
+import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, OPACITY_DEFAULT, RASTER_OPACITY, setFillOpacity, setSelected, setView3d } from "./layers";
+import { anyWithoutCell, cellForFeature, clearPaint, exceptionKindOf, exceptionKindsPresent, indexCells, indexUnallocated, paintLayer, type ScalePaint } from "./paint";
 import { rasterFile, rasterUrl, unionBbox, useBboxes, useTilesInfo } from "./tiles";
 import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
@@ -49,15 +60,36 @@ import { emitMapPick } from "@/components/ask/mentions";
 import { markStage } from "@/components/shell/bootstrap";
 import { View3dToggle } from "./View3dToggle";
 import { HoverTip } from "./HoverTip";
-import { OpacityPill, OPACITY_DEFAULT } from "./OpacityPill";
 import { LayerLegend } from "./LayerLegend";
 import { RefusalCard } from "@/components/ui/RefusalCard";
 import { LayerSwitch } from "./LayerSwitch";
 import { exceptionIndex, exceptionItems } from "./exceptions";
-import { categoryOf, EXCEPTION_KINDS, SPATIAL_CLASSES, statusWords } from "./layerModes";
+import { categoryOf, EXCEPTION_KINDS, mapsPeriod, SPATIAL_CLASSES, statusWords } from "./layerModes";
+import { RAMP } from "@/lib/palette";
 import type { Cell } from "@/lib/envelope";
 
 const LEVEL_WORD = { adm1: "Provinces", adm2: "Districts", grid: "Grid" } as const;
+
+/**
+ * The briefing map's bottom-left pill (the /data canvas): `Low ▬▬▬ High | Opacity ──●── 80%`.
+ * It absorbed map/OpacityPill.tsx when Map settings took the workspace's own opacity slider.
+ * A pure display setting: the percentage is the input's own integer, never a data number.
+ */
+function BriefingOpacity({ value, onChange }: { value: number; onChange: (pct: number) => void }) {
+  return (
+    <div className="glass flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-xs text-muted" data-testid="opacity-pill">
+      <span>Low</span>
+      <span className="h-2 w-16 rounded-full border border-line" style={{ background: `linear-gradient(90deg, ${RAMP.join(", ")})` }} aria-hidden="true" data-testid="pill-gradient" />
+      <span>High</span>
+      <span className="h-4 w-px bg-line-strong" aria-hidden="true" />
+      <label className="flex items-center gap-2">
+        <span>Opacity</span>
+        <input type="range" min={0} max={100} step={5} value={value} onChange={(e) => onChange(Number(e.target.value))} className="h-1 w-20 cursor-pointer accent-accent" aria-label="Choropleth opacity" data-testid="opacity-range" />
+        <span className="num w-8 text-right text-fg" data-testid="opacity-value">{Math.round(value)}%</span>
+      </label>
+    </div>
+  );
+}
 
 /** The chrome a page puts over the map, in CSS pixels: the camera keeps the country inside it. */
 export type MapPadding = { top: number; right: number; bottom: number; left: number };
@@ -70,6 +102,10 @@ export type ExplorerMapProps = {
   padding?: MapPadding;
   /** The choropleth's fill opacity in percent (the workspace's Map settings owns the slider). */
   opacity?: number;
+  /** Which basemap to render under the layers (Map settings; chrome, never the URL). */
+  basemap?: BasemapChoice;
+  /** Whether the province and district outlines are drawn (Map settings; chrome, never the URL). */
+  boundaries?: boolean;
   /** The map instance as it loads, and null as it is torn down. */
   onMap?: (map: MBMap | null) => void;
 };
@@ -101,12 +137,15 @@ export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell
   return k ? `Exception: ${k.label}` : "no known exception here";
 }
 
-export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, onMap }: ExplorerMapProps = {}) {
+export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap }: ExplorerMapProps = {}) {
   const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
   const state = useMemo(() => (override ? { ...urlState, ...override } : urlState), [urlState, override]);
   const full = variant === "console";
   const briefing = variant === "briefing";
-  const layer = full ? state.layer : "magnitude";
+  // the workspace paints the URL's layer as the console does (Map settings holds its switch);
+  // the briefing map on /data is the magnitude choropleth and nothing else
+  const layered = !briefing;
+  const layer = layered ? state.layer : "magnitude";
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const onMapRef = useRef(onMap);
@@ -114,6 +153,8 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   // the page's chrome, read through a ref so a panel toggling does not re-run the framing effects
   const padRef = useRef<MapPadding | undefined>(padding);
   padRef.current = padding;
+  const boundariesRef = useRef(boundaries);
+  boundariesRef.current = boundaries;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MBMap | null>(null);
   const [map, setMap] = useState<MBMap | null>(null);
@@ -121,6 +162,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   const [mapError, setMapError] = useState("");
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [legendOpen, setLegendOpen] = useState(true);
+  const [styleEpoch, setStyleEpoch] = useState(0); // bumped on every style.load: the layers are re-added and everything repaints
   const [pillOpacity, setPillOpacity] = useState(OPACITY_DEFAULT); // the briefing pill's slider, percent; a display setting
   const opacity = opacityProp ?? pillOpacity;
   const setStateRef = useRef(setState);
@@ -133,17 +175,31 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
 
   const body = useMemo(() => mapBody(state), [state]);
   const mapQ = useQuery({ queryKey: ["map", body], queryFn: () => api.queryEmissions(body!), enabled: !!body, retry: false });
+  // Map settings' FIXED scale: the level's all-sector, all-gas envelope for the reference year
+  // under the same configuration, fetched once and reused, so choosing a sector or a gas moves
+  // the colours within a domain that does not move. Its key is the map's own when the scope is
+  // already that envelope, so the request is not sent twice.
+  const referencePeriod = useMemo(() => dims.periods.find((r) => String(r.is_reference).toLowerCase() === "true")?.period_id ?? state.period, [dims.periods, state.period]);
+  const fixedBody = useMemo(() => (state.scale === "fixed" ? mapBody({ ...state, sector: null, gas: null, month: null, period: referencePeriod }) : null), [state, referencePeriod]);
+  const fixedQ = useQuery({ queryKey: ["map", fixedBody], queryFn: () => api.queryEmissions(fixedBody!), enabled: !!fixedBody, retry: false });
+  const scale: ScalePaint = useMemo(() => {
+    if (state.scale !== "fixed" || !fixedQ.data || state.level === "grid") return { mode: state.scale, domain: null };
+    const i = indexCells(fixedQ.data, state.level);
+    return { mode: "fixed", domain: { min: i.min, max: i.max } };
+  }, [state.scale, state.level, fixedQ.data]);
   const index = useMemo(() => (mapQ.data && state.level !== "grid" ? indexCells(mapQ.data, state.level) : null), [mapQ.data, state.level]);
   // the unallocated layer reads the province envelope at either level (the map's own ADM1 request, so the key is shared)
   const provinceBody = useMemo(() => adm1Body(state), [state]);
-  const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: full && layer === "unallocated", retry: false });
+  const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: layered && layer === "unallocated", retry: false });
   const unallocIdx = useMemo(() => (layer === "unallocated" ? indexUnallocated(provinceQ.data) : null), [layer, provinceQ.data]);
   // the release's residual ADM1 unit ("Other": one cell, several polygons), derived from the dims and the boundary file
   const residual = useMemo(() => residualUnit(dims, bboxes.data), [dims, bboxes.data]);
   const residualRef = useRef(residual);
   residualRef.current = residual;
-  const exIdx = useMemo(() => (full ? exceptionIndex(dims, residual?.name ?? null) : null), [full, dims, residual]);
-  const exItems = useMemo(() => (full && exIdx ? exceptionItems(release, exIdx, residual) : []), [full, exIdx, release, residual]);
+  const exIdx = useMemo(() => (layered ? exceptionIndex(dims, residual?.name ?? null) : null), [layered, dims, residual]);
+  const exItems = useMemo(() => (layered && exIdx ? exceptionItems(release, exIdx, residual) : []), [layered, exIdx, release, residual]);
+  // the release's spatial products exist for the reference year only: off it the map paints nothing
+  const mapped = mapsPeriod(labels, state.period);
   const adm1Ids = useMemo(() => Object.keys(bboxes.data?.adm1 ?? {}), [bboxes.data]);
   const ids = useMemo(() => (state.level === "adm1" ? adm1Ids : state.level === "adm2" ? Object.keys(bboxes.data?.adm2 ?? {}) : []), [state.level, adm1Ids, bboxes.data]);
 
@@ -193,13 +249,18 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
         const msg = (e as { error?: { message?: string } }).error?.message ?? "";
         if (msg) setMapError(msg);
       });
-      m.on("load", () => {
-        markStage("map"); // the loading screen's last stage on the pages with a map
+      // every style load — the first, and each Map settings basemap change — re-inserts our
+      // sources and layers below the new style's labels; the epoch makes the paint effects re-run
+      m.on("style.load", () => {
         ensureAtmosphere(m);
         beforeRef.current = firstSymbolLayerId(m);
         addSources(m);
         addLayers(m, beforeRef.current);
-        applyLevel(m, stateRef.current.level, stateRef.current.raster, full ? stateRef.current.layer : "magnitude");
+        applyLevel(m, stateRef.current.level, stateRef.current.raster, variant !== "briefing" ? stateRef.current.layer : "magnitude", boundariesRef.current);
+        setStyleEpoch((e) => e + 1);
+      });
+      m.on("load", () => {
+        markStage("map"); // the loading screen's last stage on the pages with a map
         setMap(m);
         onMapRef.current?.(m);
       });
@@ -232,32 +293,45 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
     if (u) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: padRef.current ?? (isMobile ? 16 : 40), duration: 0 });
   }, [map, bboxes.data, isMobile]);
 
-  // --- level, layer and raster visibility
+  // --- the basemap Map settings chose: the style is swapped and `style.load` re-adds our stack
+  const appliedStyle = useRef<BasemapChoice | undefined>(basemapChoice);
   useEffect(() => {
-    if (map) applyLevel(map, state.level, state.raster, layer);
-  }, [map, state.level, state.raster, layer]);
+    if (!map || !basemapChoice || appliedStyle.current === basemapChoice) return;
+    appliedStyle.current = basemapChoice;
+    map.setStyle(styleFor(bm, basemapChoice));
+  }, [map, basemapChoice, bm]);
+
+  // --- level, layer, boundary and raster visibility
+  useEffect(() => {
+    if (map) applyLevel(map, state.level, state.raster, layer, boundaries);
+  }, [map, state.level, state.raster, layer, boundaries, styleEpoch]);
 
   // --- the opacity slider (the briefing pill, the workspace's Map settings): the fills' opacity, re-applied when the level's layer changes
   useEffect(() => {
     if (map && !full) setFillOpacity(map, opacity);
-  }, [map, full, opacity, state.level]);
+  }, [map, full, opacity, state.level, styleEpoch]);
 
   // --- the 3D view: terrain, atmosphere and the tilted camera
   useEffect(() => {
     if (map) setView3d(map, state.view3d);
   }, [map, state.view3d]);
 
-  // --- paint the layer (or clear on refusal)
+  // --- paint the layer (or clear: off the reference year the release maps nothing, and the
+  // map greys to outlines while the legend capsule carries the API's own refusal for the year)
   useEffect(() => {
     if (!map || state.level === "grid") return;
-    if (index || mapQ.error || layer === "unallocated") paintLayer(map, state.level, { layer, index, ids, residual, exceptions: exIdx, unallocated: unallocIdx, adm1Ids });
-  }, [map, index, state.level, layer, mapQ.error, ids, residual, exIdx, unallocIdx, adm1Ids]);
+    if (!mapped) {
+      clearPaint(map, state.level);
+      return;
+    }
+    if (index || mapQ.error || layer === "unallocated") paintLayer(map, state.level, { layer, index, ids, residual, exceptions: exIdx, unallocated: unallocIdx, adm1Ids, scale });
+  }, [map, index, state.level, layer, mapped, mapQ.error, ids, residual, exIdx, unallocIdx, adm1Ids, scale, styleEpoch]);
 
   // --- selection outline and flyTo
   useEffect(() => {
     if (!map) return;
     setSelected(map, state.level, state.geo, parseCell(state.cell), residual && state.geo === residual.name ? residual.members : undefined);
-  }, [map, state.level, state.geo, state.cell, residual]);
+  }, [map, state.level, state.geo, state.cell, residual, styleEpoch]);
   const lastFlown = useRef<string | null>(null);
   useEffect(() => {
     if (!map || !bboxes.data || !state.geo) return;
@@ -291,7 +365,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   const hover = useMapInteractions(map, state.level, onSelect);
   const hovered = hover && index ? cellForFeature(index, hover.level, hover.id, residual) : null;
   const hoverCell = hovered?.cell ?? null;
-  const hoverExtra = hover && full ? layerHoverLine(layer, hover.level, hoverCell ?? undefined, hover.id, !!hovered?.shared, exIdx, unallocIdx, residual, (s) => streamLabel(labels, s)) : null;
+  const hoverExtra = hover && layered ? layerHoverLine(layer, hover.level, hoverCell ?? undefined, hover.id, !!hovered?.shared, exIdx, unallocIdx, residual, (s) => streamLabel(labels, s)) : null;
   const sharedCell = index && residual && state.level === "adm1" ? index.byId.get(residual.name) : undefined;
   const legendShared = sharedCell && residual ? { ...residual, cell: sharedCell } : null;
   const anyNoCell = !!index && anyWithoutCell(index, state.level, ids, residual);
@@ -345,7 +419,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
         {legendOpen && full && (
           <LayerLegend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} hasCells={anyNoCell} shared={legendShared} unallocated={{ env: provinceQ.data, index: unallocIdx, error: provinceQ.error, isLoading: provinceQ.isLoading }} exceptions={{ present: exPresent, items: exItems }} />
         )}
-        {briefing && <OpacityPill value={opacity} onChange={setPillOpacity} />}
+        {briefing && <BriefingOpacity value={opacity} onChange={setPillOpacity} />}
         {!full && mapQ.error ? <div className="mt-1 max-w-[272px]" data-testid="briefing-refusal"><RefusalCard error={mapQ.error} compact /></div> : null}
       </div>
       {full && !isMobile && (

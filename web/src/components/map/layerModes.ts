@@ -9,6 +9,7 @@
  * legend only.
  */
 import type { Cell } from "@/lib/envelope";
+import type { Labels } from "@/lib/release";
 import type { Level, MapLayer } from "@/lib/urlState";
 import { NO_CELL, RAMP } from "@/lib/palette";
 import { EVIDENCE_CLASS_TEXT } from "@/components/methods/evidenceClassText";
@@ -26,6 +27,16 @@ export const LAYERS: Record<MapLayer, LayerDef> = {
 };
 
 export const LAYER_ORDER: MapLayer[] = ["magnitude", "evidence", "method", "unallocated", "exceptions"];
+
+/**
+ * Whether the release maps a period at all: its spatial products exist for the reference year
+ * only, so every other year greys the map and the API answers the map's request with its own
+ * typed refusal (the legend capsule prints that refusal, never a reason of ours). A period the
+ * labels do not describe is assumed mapped: the refusal, if there is one, will say otherwise.
+ */
+export function mapsPeriod(labels: Labels, period: string): boolean {
+  return labels.periods[period]?.is_reference ?? true;
+}
 
 /** The level a layer paints when the current one cannot show it (the switch moves the level with the layer). */
 export function levelForLayer(layer: MapLayer, level: Level): Level {

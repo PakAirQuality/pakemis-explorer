@@ -32,7 +32,7 @@ import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { NavCapsule } from "@/components/shell/NavCapsule";
 import { ExplorerMap, type MapPadding } from "@/components/map/ExplorerMap";
 import { unionBbox, useBboxes } from "@/components/map/tiles";
-import { OPACITY_DEFAULT } from "@/components/map/OpacityPill";
+import { OPACITY_DEFAULT } from "@/components/map/layers";
 import { DECK_INSET_PX, DECK_PX } from "@/components/overview/deck";
 import { HEADER } from "@/components/overview/copy";
 import { Deck, DeckRail } from "./Deck";
