@@ -9,9 +9,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from pakemis_api.ask.render import BareNumberError, render_multi
-from pakemis_api.presentation import (DERIVED, EN_DASH, PARTITION_RULE, PRESENTATION_ROUNDING, SCENARIO_LABELS, decorate,
-                                      interval_short, is_count, scenario_label, share_short, short_display, unit_short,
-                                      unit_words)
+from pakemis_api.presentation import (AXIS_RULE, CHANGE_RULE, DERIVED, EN_DASH, PARTITION_RULE, PHRASE_RULE,
+                                      PRESENTATION_ROUNDING, SCENARIO_LABELS, SHARE_BANDS, axis_ticks, decorate,
+                                      decorate_change, interval_short, is_count, ranks, scenario_label, share_phrase,
+                                      share_short, short_display, signed_short, tick_short, unit_short, unit_words)
 from test_ask import FakeModel, ask, only, stop, text, tool_use
 from test_goldens import GOLDENS, post_golden
 
@@ -364,12 +365,195 @@ def test_series_uncertainty_cells_carry_the_interval(client):
 def test_release_declares_the_derived_fields(client):
     p = client.get("/api/v1/emissions/release").json()["rounding"]["presentation"]
     d = p["derived"]
-    assert d == DERIVED and set(d) == {"share_pct_short", "interval_short", "unallocated_total_short", "placed_short"}
+    assert d == DERIVED and set(d) == {"share_pct_short", "interval_short", "unallocated_total_short", "placed_short",
+                                       "axis_ticks_short", "change_short", "share_phrase"}
     assert d["share_pct_short"]["decimals"] == 1 and d["share_pct_short"]["mode"] == "ROUND_HALF_EVEN"
     assert d["share_pct_short"]["sentence"] == PARTITION_RULE and "exactly one key" in PARTITION_RULE and "<0.1" in PARTITION_RULE
     assert "applies_to" in d["share_pct_short"] and "applies_to" in d["interval_short"]
     assert d["interval_short"]["decimals"] == 2 and d["interval_short"]["derived_from"] == "quantiles_short"
     assert EN_DASH in d["interval_short"]["sentence"] and d["interval_short"]["scenario_labels"] == SCENARIO_LABELS
+    # the briefing's three: an axis, a change, a phrase, each with a sentence and its companions named
+    assert d["axis_ticks_short"]["sentence"] == AXIS_RULE and d["axis_ticks_short"]["steps"] == ["1", "2", "2.5", "5"]
+    assert d["axis_ticks_short"]["ticks"] == {"min": 4, "max": 6, "target": 5, "finest_step": "0.01"}
+    assert d["change_short"]["sentence"] == CHANGE_RULE and "endpoints" in CHANGE_RULE
+    assert d["change_short"]["companion_fields"] == ["change_pct_short", "direction"] and d["change_short"]["pct_decimals"] == 1
+    assert d["share_phrase"]["sentence"] == PHRASE_RULE and d["share_phrase"]["companion_fields"] == ["rank"]
+    assert [(b["from"], b["phrase"]) for b in d["share_phrase"]["bands"]] == [(format(lo, "f"), ph) for lo, ph in SHARE_BANDS]
+    assert [b["phrase"] for b in d["share_phrase"]["bands"]] == ["almost all", "most", "over half", "nearly half", "about a third",
+                                                                 "about a quarter", "about a tenth", "a small share", "a marginal share"]
+
+
+# --- the derived fields: an axis, a change, a phrase and a rank --------------------------------
+
+@pytest.mark.parametrize("low,high,expected", [
+    ("0", "452.34662", ["0", "100", "200", "300", "400", "500"]),     # the national total
+    ("0", "223.45", ["0", "50", "100", "150", "200", "250"]),        # the largest sector
+    ("0", "63.37", ["0", "20", "40", "60", "80"]),                    # power
+    ("0", "9.01", ["0", "2.5", "5", "7.5", "10"]),                    # a 2.5 step, rendered without a trailing zero
+    ("0", "0.9", ["0", "0.25", "0.5", "0.75", "1"]),                  # a small range
+    ("0", "1", ["0", "0.25", "0.5", "0.75", "1"]),
+    ("0", "100", ["0", "25", "50", "75", "100"]),
+    ("0", "200", ["0", "50", "100", "150", "200"]),
+    ("0", "0.03", ["0", "0.01", "0.02", "0.03"]),                     # the finest step is the two-decimal rule
+    ("-5.13", "0", ["-6", "-4", "-2", "0"]),                          # a compare: the difference is negative
+    ("-20", "35", ["-20", "0", "20", "40"]),                          # both signs, zero on the axis
+])
+def test_axis_ticks(low, high, expected):
+    from decimal import Decimal
+    ticks = axis_ticks(Decimal(low), Decimal(high))
+    assert [tick_short(t) for t in ticks] == expected
+    assert 4 <= len(ticks) <= 6 and ticks[0] <= min(Decimal(low), 0) and ticks[-1] >= Decimal(high)
+    steps = {ticks[i + 1] - ticks[i] for i in range(len(ticks) - 1)}
+    assert len(steps) == 1                                             # one even step
+    assert all(re.match(r"^-?\d+(\.\d{1,2})?$", t) and not t.endswith("0") or t == "0" or not "." in t for t in expected)
+
+
+def test_axis_ticks_skip_an_empty_or_sub_precision_range():
+    from decimal import Decimal
+    assert axis_ticks(Decimal(0), Decimal(0)) is None
+    assert axis_ticks(Decimal("0"), Decimal("0.004")) is None         # no step at or above 0.01 gives four ticks
+    assert tick_short(Decimal("100.00")) == "100" and tick_short(Decimal("0.250")) == "0.25" and tick_short(Decimal("0E-7")) == "0"
+    assert tick_short(Decimal("-0.004")) == "0"                        # never -0
+
+
+def test_decorate_adds_an_axis_when_every_cell_carries_a_number():
+    env = _query_env(["sector_id"], [_cell("223.45447"), _cell("63.37"), _cell("0.3")])
+    out = decorate(env)
+    assert out["axis"] == {"ticks_short": ["0", "50", "100", "150", "200", "250"], "min_short": "0.30", "max_short": "223.45",
+                           "unit_short": "Mt CO₂e", "note": AXIS_RULE}
+    # a bounded cell's high end and an uncertainty cell's quantiles are inside the range
+    env = _query_env([], [_cell("12.2565", exact_high="12.2769"), _cell("446.5", quantiles={"P2.5": "420.1", "P97.5": "530.9"})])
+    assert decorate(env)["axis"]["ticks_short"] == ["0", "200", "400", "600"] and decorate(env)["axis"]["max_short"] == "530.90"
+    # a compare: one negative cell
+    env = _query_env([], [_cell("-5.132797", left=_cell("452.35"), right=_cell("447.21"))], request_type="compare_emissions",
+                     _type="CompareRequest")
+    assert decorate(env)["axis"]["ticks_short"] == ["-6", "-4", "-2", "0"] and decorate(env)["axis"]["min_short"] == "-5.13"
+    # no axis: a cell without a number, a count, two units, all zeros
+    for cells in ([_cell("", display="NE", unit="notation_key")], [_cell("12", unit="rows")], [_cell("1"), _cell("2", unit="Gg")],
+                  [_cell("0"), _cell("0.000")], [_cell("1"), _cell("abc")]):
+        assert "axis" not in decorate(_query_env([], cells)), cells
+    assert "axis" not in decorate({"values": []})
+
+
+@pytest.mark.parametrize("x,q,expected", [
+    ("79.949848", "0.01", "+79.95"), ("-5.132797", "0.01", "-5.13"), ("0", "0.01", "0.00"), ("0.001", "0.01", "<0.01"),
+    ("-0.001", "0.01", ">-0.01"), ("21.4688", "0.1", "+21.5"), ("-1.05", "0.1", "-1.0"), ("0", "0.1", "0.0"), ("0.04", "0.1", "<0.1"),
+])
+def test_signed_short(x, q, expected):
+    from decimal import Decimal
+    assert signed_short(Decimal(x), Decimal(q)) == expected
+
+
+def _series_env(step, cells):
+    req = {"_type": "TimeseriesRequest", "query": {}, "step": step}
+    return {"receipt": "abc", "result_sha256": "d", "request_type": "get_timeseries",
+            "request": json.dumps(req, sort_keys=True, separators=(",", ":")), "values": cells}
+
+
+def test_decorate_change_on_an_annual_series():
+    cells = [_cell("452.34662438", group={"period_id": "FY2023-24"}), _cell("372.39677601", group={"period_id": "FY2015-16"}),
+             _cell("400", group={"period_id": "FY2019-20"})]
+    out = decorate(_series_env("annual", cells))
+    assert out["change"] == {"from_period": "FY2015-16", "to_period": "FY2023-24", "from_short": "372.40", "to_short": "452.35",
+                             "change_short": "+79.95", "change_pct_short": "+21.5", "direction": "rose", "unit_short": "Mt CO₂e",
+                             "note": "compares the first and last period only"}          # the endpoints by period, whatever the order
+    fell = decorate_change(_series_env("annual", [_cell("10", group={"period_id": "FY2015-16"}), _cell("9", group={"period_id": "FY2016-17"})]))
+    assert fell["change"]["change_short"] == "-1.00" and fell["change"]["change_pct_short"] == "-10.0" and fell["change"]["direction"] == "fell"
+    flat = decorate_change(_series_env("annual", [_cell("10", group={"period_id": "FY2015-16"}), _cell("10.000", group={"period_id": "FY2016-17"})]))
+    assert flat["change"]["change_short"] == "0.00" and flat["change"]["change_pct_short"] == "0.0" and flat["change"]["direction"] == "unchanged"
+    zero = decorate_change(_series_env("annual", [_cell("0", group={"period_id": "FY2015-16"}), _cell("1", group={"period_id": "FY2016-17"})]))
+    assert zero["change"]["change_pct_short"] is None and zero["change"]["change_short"] == "+1.00"
+    # no change: a monthly step, one cell, a cell without a period or a number, two units, not a timeseries
+    assert "change" not in decorate_change(_series_env("monthly", cells))
+    assert "change" not in decorate_change(_series_env("annual", cells[:1]))
+    assert "change" not in decorate_change(_series_env("annual", cells + [_cell("1")]))
+    assert "change" not in decorate_change(_series_env("annual", cells + [_cell("x", group={"period_id": "FY2020-21"})]))
+    assert "change" not in decorate_change(_series_env("annual", cells + [_cell("1", unit="Gg", group={"period_id": "FY2020-21"})]))
+    assert "change" not in decorate(_query_env(["period_id"], cells))
+
+
+def test_national_annual_series_carries_axis_and_change(client):
+    golden = dict(GOLDENS)["timeseries_annual_L.json"]
+    env = post_golden(client, golden).json()
+    assert env["receipt"] == golden["expect_receipt"]                   # the receipt was minted before the decoration
+    assert env["change"] == {"from_period": "FY2015-16", "to_period": "FY2023-24", "from_short": "372.40", "to_short": "452.35",
+                             "change_short": "+79.95", "change_pct_short": "+21.5", "direction": "rose", "unit_short": "Mt CO₂e",
+                             "note": "compares the first and last period only"}
+    assert env["axis"]["ticks_short"] == ["0", "100", "200", "300", "400", "500"] and env["axis"]["unit_short"] == "Mt CO₂e"
+    assert env["axis"]["max_short"] == "452.35" and env["axis"]["min_short"] == min(c["display_short"] for c in env["values"])
+    # the replay carries both; the downloads carry neither
+    again = client.get("/api/v1/emissions/receipt/%s" % env["receipt"]).json()
+    assert again["change"] == env["change"] and again["axis"] == env["axis"] and again["result_sha256"] == env["result_sha256"]
+    for ext in ("csv", "receipt.json"):
+        r = client.get("/api/v1/emissions/download/%s.%s" % (env["receipt"], ext))
+        assert r.status_code == 200 and "ticks_short" not in r.text and "change_short" not in r.text and "change_pct_short" not in r.text
+
+
+def test_compare_carries_a_negative_axis_and_no_change(client):
+    env = post_golden(client, dict(GOLDENS)["compare_S_vs_L.json"]).json()
+    assert env["axis"]["ticks_short"] == ["-6", "-4", "-2", "0"] and env["axis"]["min_short"] == "-5.13" and env["axis"]["max_short"] == "-5.13"
+    assert "change" not in env
+
+
+@pytest.mark.parametrize("share,expected", [
+    ("100", "almost all"), ("90", "almost all"), ("89.99", "most"), ("60", "most"), ("59.99", "over half"), ("55", "over half"),
+    ("54.99", "nearly half"), ("49.4", "nearly half"), ("45", "nearly half"), ("44.99", "about a third"), ("30", "about a third"),
+    ("29.99", "about a quarter"), ("20", "about a quarter"), ("19.99", "about a tenth"), ("10", "about a tenth"),
+    ("9.99", "a small share"), ("5", "a small share"), ("4.99", "a marginal share"), ("0", "a marginal share"), ("-1", None),
+])
+def test_share_phrase_bands(share, expected):
+    from decimal import Decimal
+    assert share_phrase(Decimal(share), Decimal(100)) == expected
+    assert share_phrase(Decimal(share) * 3, Decimal(300)) == expected                   # from the unrounded share
+
+
+def test_ranks():
+    from decimal import Decimal
+    assert ranks([Decimal(3), Decimal(5), Decimal(5), Decimal(1)]) == [3, 1, 2, 4]      # equal exacts keep their order
+    assert ranks([Decimal(1)]) == [1] and ranks([]) == []
+
+
+def test_partition_cells_carry_phrase_and_rank():
+    env = _query_env(["sector_id"], [_cell("10"), _cell("49.4"), _cell("0.6"), _cell("40")])
+    cells = decorate(env)["values"]
+    assert [c["share_phrase"] for c in cells] == ["about a tenth", "nearly half", "a marginal share", "about a third"]
+    assert [c["rank"] for c in cells] == [3, 1, 4, 2]
+    # exactly the cells that carry a share: a two-key breakdown carries neither
+    env = _query_env(["sector_id", "gas"], [_cell("1"), _cell("2")])
+    assert all("share_phrase" not in c and "rank" not in c for c in decorate(env)["values"])
+
+
+def test_sector_breakdown_carries_phrases_and_ranks(client):
+    from decimal import Decimal
+    golden = dict(GOLDENS)["sector_breakdown_L.json"]
+    env = post_golden(client, golden).json()
+    assert env["receipt"] == golden["expect_receipt"]
+    cells = env["values"]
+    assert [c["rank"] for c in cells] == list(range(1, len(cells) + 1)) and len(cells) == 10   # value desc: ranks 1..10 in order
+    assert cells[0]["group"] == {"sector_id": "agriculture"} and cells[0]["share_phrase"] == "nearly half"
+    assert cells[1]["group"] == {"sector_id": "power"} and cells[1]["share_phrase"] == "about a tenth"
+    total = sum(Decimal(c["exact"]) for c in cells)
+    assert all(c["share_phrase"] == share_phrase(Decimal(c["exact"]), total) for c in cells)
+    assert env["axis"]["ticks_short"] == ["0", "50", "100", "150", "200", "250"] and env["axis"]["max_short"] == "223.45"
+    csv = client.get("/api/v1/emissions/download/%s.csv" % env["receipt"])
+    assert csv.status_code == 200 and "share_phrase" not in csv.text and "rank" not in csv.text.splitlines()[0] and "ticks_short" not in csv.text
+    receipt = client.get("/api/v1/emissions/download/%s.receipt.json" % env["receipt"])
+    assert receipt.status_code == 200 and "share_phrase" not in receipt.text and "ticks_short" not in receipt.text
+
+
+@pytest.mark.parametrize("name,golden", GOLDENS, ids=[g[0] for g in GOLDENS])
+def test_phrase_and_rank_only_beside_the_share(client, name, golden):
+    r = post_golden(client, golden)
+    if golden.get("expect_error"):
+        return
+    env = r.json()
+    for c in env["values"]:
+        assert ("share_phrase" in c) == ("share_pct_short" in c) == ("rank" in c), name
+    assert ("change" in env) == (golden["function"] == "get_timeseries" and golden["request"].get("step") == "annual"), name
+    if "axis" in env:
+        assert 4 <= len(env["axis"]["ticks_short"]) <= 6 and set(env["axis"]) == {"ticks_short", "min_short", "max_short", "unit_short", "note"}
+    if golden.get("expect_receipt"):
+        assert env["receipt"] == golden["expect_receipt"]
 
 
 # --- the Ask loop ------------------------------------------------------------------------------

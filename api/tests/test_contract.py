@@ -83,8 +83,12 @@ def test_grid_cell_reads_the_cube(client):
 
 def test_envelope_is_not_reshaped(client):
     env = client.post("/api/v1/emissions/query/emissions", json={"periods": ["FY2023-24"]}).json()
-    assert set(env) == {"request_type", "request", "context", "values", "calculation", "provenance", "uncertainty",
-                        "evidence", "unallocated", "completeness", "limitations_hit", "citation", "result_sha256", "receipt"}
+    core = {"request_type", "request", "context", "values", "calculation", "provenance", "uncertainty",
+            "evidence", "unallocated", "completeness", "limitations_hit", "citation", "result_sha256", "receipt"}
+    # every core key stands; the only additions are the presentation blocks /release declares
+    # (rounding.presentation.derived), never a renamed or reshaped core key
+    assert set(env) >= core and set(env) - core <= {"partition", "derived", "axis", "change"}
+    assert set(env) - core == {"axis"}                                  # a one-cell total: an axis, no partition
     assert set(env["values"][0]) >= {"exact", "value", "display", "unit", "result_row_ids", "formula"}
 
 

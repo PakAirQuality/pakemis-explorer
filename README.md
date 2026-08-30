@@ -339,6 +339,28 @@ differently (parameter-typed `400.27–514.28`, time-correlated `406.52–507.61
 `406.19–506.31`), so a screen that prints one interval names its scenario. Neither derived figure
 reaches the Ask model's compact tool result (no placeholder prints it).
 
+Three more derived fields serve the Overview's widgets, declared the same way. `axis_ticks_short`:
+any envelope whose cells all carry a numeric `exact` in one unit that is not a count (a total, a
+breakdown, a compare, a timeseries, an uncertainty series) gains an envelope-level `axis =
+{ticks_short, min_short, max_short, unit_short, note}`, four to six round tick labels from 0 (or
+the lowest cell when one is negative) to at least the highest number any cell carries (`exact`,
+`exact_high`, the quantiles), at a step of 1, 2, 2.5 or 5 × 10ⁿ never finer than 0.01, the count
+nearest five (and between two as near, the finer step), each tick the two-decimal rendering with
+trailing zeros trimmed: the national series gives `["0", "100", "200", "300", "400", "500"]`, the
+sector breakdown `["0", "50", "100", "150", "200", "250"]`, a 0–0.9 range `["0", "0.25", "0.5",
+"0.75", "1"]`, the S-vs-L compare `["-6", "-4", "-2", "0"]`. The ticks are labels, not data. `change`
+on a `get_timeseries` envelope at the annual step with two or more cells: `{from_period, to_period,
+from_short, to_short, change_short, change_pct_short, direction, unit_short, note}`, the endpoints
+by `period_id`, `last − first` signed at two decimals (`+79.95`), `100 × (last − first) / first`
+signed at one decimal (`+21.5`, `null` when the first value is zero) and `rose` / `fell` /
+`unchanged`; it compares the two endpoints only and says nothing about the years between. And
+beside `share_pct_short`, on exactly the same partition cells, `share_phrase` (the unrounded share
+against bands with an inclusive lower bound: ≥ 90 "almost all", 60–90 "most", 55–60 "over half",
+45–55 "nearly half", 30–45 "about a third", 20–30 "about a quarter", 10–20 "about a tenth", 5–10 "a
+small share", < 5 "a marginal share"; agriculture's 49.4 % is "nearly half") and `rank` (1-based by
+`exact`, largest first; equal exacts keep the envelope's order). None of the three reaches a
+download, and no receipt moves.
+
 ## Ask PakEmis: the contract
 
 `POST /api/v1/emissions/ask` takes `{conversation_id?, message, ui_state, client_history?}` and streams:
