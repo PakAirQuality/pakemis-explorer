@@ -2,7 +2,8 @@
 /**
  * The top navigation every page carries: the brand, the five sections (Overview, Explore data,
  * Map, Methods & evidence, Downloads) with the current one highlighted, and the green Ask
- * PakEmis button (a link to /ask, or the Map page's drawer toggle when `onAsk` is given).
+ * PakEmis button: it toggles the AskDrawer (lib/askBus.ts; mounted once in the layout) on every
+ * page, or calls `onAsk` when a page supplies its own toggle (the Map page's right column).
  * Under 768 px the sections fold into a menu. `children` is a slot for a page's own controls
  * (the Map page's tabs). Nothing here prints a number or a version.
  */
@@ -10,6 +11,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Sparkles, X } from "lucide-react";
+import { toggleAsk } from "@/lib/askBus";
 
 export const NAV_LINKS = [
   { href: "/", label: "Overview" },
@@ -45,14 +47,10 @@ export function TopNav({ compact = false, onAsk, children }: { compact?: boolean
       </Link>
     );
   };
-  const ask = onAsk ? (
-    <button type="button" onClick={onAsk} className={ASK_CLASS} data-testid="nav-ask" title="Ask PakEmis: a question to the inventory, answered from receipts">
+  const ask = (
+    <button type="button" onClick={onAsk ?? toggleAsk} className={ASK_CLASS} data-testid="nav-ask" aria-current={isActive(pathname, "/ask") ? "page" : undefined} title="Ask PakEmis: a question to the inventory, answered from receipts">
       <Sparkles size={15} /> <span>Ask PakEmis</span>
     </button>
-  ) : (
-    <Link href="/ask" className={ASK_CLASS} data-testid="nav-ask" aria-current={isActive(pathname, "/ask") ? "page" : undefined} title="Ask PakEmis: a question to the inventory, answered from receipts">
-      <Sparkles size={15} /> <span>Ask PakEmis</span>
-    </Link>
   );
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-card/90 backdrop-blur" data-testid="top-nav">

@@ -15,7 +15,11 @@ export type ToolResultCell = {
   exactness?: string;
   interpretation?: string;
   attrs?: Record<string, string>;
+  /** The count of the cell's result_row_ids (on the event only; absent from older streams). */
+  n_rows?: number;
 };
+/** The envelope's uncertainty block as the event carries it: the per-category rows, every field a string, and the interpretation; null when the envelope has none. */
+export type UncertaintyBlock = { rows: Record<string, string | null>[]; interpretation?: string } | null;
 export type ToolResultEvent = {
   k: number;
   id: string;
@@ -27,6 +31,7 @@ export type ToolResultEvent = {
   cells: ToolResultCell[];
   limitations_hit: string[];
   unallocated?: Record<string, unknown>;
+  uncertainty?: UncertaintyBlock;
   truncated?: string;
   download?: { csv: string; receipt_json: string };
 };
@@ -34,7 +39,9 @@ export type RefusalEvent = { k: number; id: string; name: string; error: string;
 export type MapActionKey = "level" | "geo" | "period" | "month" | "sector" | "gas" | "config" | "gwp" | "view";
 export type MapActionEvent = Partial<Record<MapActionKey, string>>;
 export type Citation = { k: number; cell: number; attr: string; receipt: string; text: string };
-export type AnswerEvent = { text: string; receipts: string[]; citations: Citation[]; elapsed_s: number };
+/** The last tool result's compact context with the call it came from (k, request_type, receipt, name); null or absent on older streams. */
+export type AnswerScope = (Record<string, unknown> & { k?: number; request_type?: string | null; receipt?: string | null; name?: string }) | null;
+export type AnswerEvent = { text: string; receipts: string[]; citations: Citation[]; elapsed_s: number; scope?: AnswerScope };
 export type ErrorEvent = { code: string; message?: string };
 export type DoneEvent = { conversation_id: string; usage: Record<string, number>; cost_estimate_usd: number | null };
 

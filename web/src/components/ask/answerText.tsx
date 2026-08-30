@@ -1,12 +1,12 @@
 "use client";
 /**
- * The rendered answer. `<cite k cell receipt>display</cite>` tags become underlined number
- * spans; hovering one highlights its tool card and cell, clicking scrolls to it. The text
- * between tags is the model's prose (paragraphs, line breaks, **bold**, `code`); every figure
- * in it arrived inside a cite, and the server withheld any answer that typed one bare.
+ * The answer text rendered (the AnswerCard's first part). `<cite k cell receipt>display</cite>`
+ * tags become underlined number spans; hovering one highlights its tool card and cell, clicking
+ * scrolls to it. The text between tags is the model's prose (paragraphs, line breaks, **bold**,
+ * `code`); every figure in it arrived inside a cite, and the server withheld any answer that
+ * typed one bare.
  */
 import type { ReactNode } from "react";
-import type { AnswerEvent } from "./types";
 import type { Highlight } from "./ToolCard";
 
 const CITE = /<cite k="(\d+)" cell="(\d+)" receipt="([0-9a-f]*)">([^<]*)<\/cite>/g;
@@ -68,17 +68,4 @@ export function renderAnswer(text: string, onCite: { hover: (h: Highlight) => vo
         </p>
       );
     });
-}
-
-export function AnswerBubble({ answer, onCite }: { answer: AnswerEvent; onCite: { hover: (h: Highlight) => void; click: (h: Highlight) => void } }) {
-  return (
-    <div className="rounded-card border border-accent/20 bg-accent-soft/40 px-3 py-2 text-sm leading-relaxed text-fg" data-testid="answer-bubble">
-      {renderAnswer(answer.text, onCite)}
-      {answer.receipts.length > 0 && (
-        <div className="mono mt-2 text-micro normal-case tracking-normal text-muted" title={answer.receipts.join(", ")}>
-          receipts {answer.receipts.map((r) => r.slice(0, 8)).join(" · ")}
-        </div>
-      )}
-    </div>
-  );
 }

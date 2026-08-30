@@ -2,21 +2,27 @@ import "@testing-library/jest-dom/vitest";
 /** The TopNav: the five sections in order, the current one marked, the Ask button as a link or the Map page's toggle, the mobile menu. */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { resetAskBus, subscribeAsk } from "@/lib/askBus";
 import { isActive, NAV_LINKS, TopNav } from "./TopNav";
 
 const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 describe("TopNav", () => {
-  it("lists Overview, Explore data, Map, Methods & evidence, Downloads and links Ask PakEmis to /ask", () => {
+  it("lists Overview, Explore data, Map, Methods & evidence, Downloads; Ask PakEmis toggles the drawer on the bus", () => {
     pathname.value = "/";
+    resetAskBus();
+    const bus = vi.fn();
+    subscribeAsk(bus);
     render(<TopNav />);
     const links = screen.getAllByTestId("nav-link");
     expect(links.map((a) => a.textContent)).toEqual(["Overview", "Explore data", "Map", "Methods & evidence", "Downloads"]);
     expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_LINKS.map((l) => l.href));
     expect(links[0]).toHaveAttribute("aria-current", "page");
     expect(links[2]).not.toHaveAttribute("aria-current");
-    expect(screen.getByTestId("nav-ask")).toHaveAttribute("href", "/ask");
+    expect(screen.getByTestId("nav-ask").tagName).toBe("BUTTON");
+    fireEvent.click(screen.getByTestId("nav-ask"));
+    expect(bus).toHaveBeenCalledWith({ type: "toggle" });
     expect(screen.getByTestId("brand")).toHaveTextContent("PEPakEmis");
     expect(document.body.textContent).not.toContain("1.0.0rc");
   });

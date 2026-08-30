@@ -11,7 +11,7 @@ import { Providers } from "@/components/Providers";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
 import { releaseDims, releaseLabels } from "@/lib/release";
 import type { ReleaseInfo } from "@/lib/envelope";
-import type { ExplorerState } from "@/lib/urlState";
+import { resolveState, type ExplorerState } from "@/lib/urlState";
 import { RELEASE } from "@/__tests__/fixtures";
 import { AskDock } from "./AskDock";
 import { createSseParser, parseSse } from "./useAskStream";
@@ -87,17 +87,29 @@ function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
   });
 }
 
+/** The /ask stream; the answer card's replay of a receipt (GET /receipt/{r}) is answered 404 so only the stream's strings reach the screen. */
+function askFetch(events: [string, unknown][]) {
+  return vi.fn(async (url: string) => {
+    if (String(url).endsWith("/ask")) return sseResponse(sseBody(events));
+    return { ok: false, status: 404, statusText: "Not Found", json: async () => ({ error: "unknown_receipt", error_class: "UnknownReceipt", message: "no such receipt", limitation_id: null, detail: {} }) } as unknown as Response;
+  });
+}
+function askCalls(spy: { mock: { calls: unknown[][] } }) {
+  return spy.mock.calls.filter((c) => String(c[0]).endsWith("/ask"));
+}
+
 function sseResponse(text: string, chunkSize = 37): Response {
   const chunks: string[] = [];
   for (let i = 0; i < text.length; i += chunkSize) chunks.push(text.slice(i, i + chunkSize));
   return { ok: true, status: 200, statusText: "OK", headers: new Headers({ "content-type": "text/event-stream" }), body: streamOf(chunks) } as unknown as Response;
 }
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: true, c: null, cam: null, raster: false, view3d: false };
+const DEFAULTS = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
+const base: ExplorerState = resolveState({}, DEFAULTS);
 
 function ctx(setState = vi.fn(), agent = { enabled: true, model: "claude-sonnet-5", reason: "" }, state = base): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
-  return { state, setState, release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: undefined, agent, isMobile: false };
+  return { state, setState, release, labels: releaseLabels(release), dims: releaseDims(release), defaults: DEFAULTS, contract: undefined, agent, isMobile: false };
 }
 
 function mount(value: ExplorerContextValue) {
@@ -154,7 +166,8 @@ describe("AskDock", () => {
     const setState = vi.fn();
     mount(ctx(setState));
     expect(screen.getAllByTestId("suggestion").length).toBeGreaterThan(2);
-    expect(screen.getByText("What is Pakistan's largest sector in 2023–24?")).toBeTruthy(); // the release's short label, never the id
+    expect(screen.getByText("How have emissions changed since 2020–21?")).toBeTruthy(); // the release's short label, never the id
+    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Scope: Pakistan · 2023–24 · reference estimate");
     await askQuestion("How much did Punjab's agriculture emit in FY2023-24, and show it on the map");
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
     // the request carried ui_state = the URL scope and no history on the first turn
@@ -163,12 +176,14 @@ describe("AskDock", () => {
     const body = JSON.parse(String(init.body));
     expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all" });
     expect(body.client_history).toEqual([]);
-    // arrival order
+    // the reasoning folds under "How this was answered" once the answer is in; opened, the cards are in arrival order before the card
     const turn = screen.getByTestId("turn");
+    expect(turn.querySelector('[data-testid="tool-card"]')).toBeNull();
+    fireEvent.click(screen.getByTestId("how-answered-toggle"));
     const kinds = Array.from(turn.querySelectorAll("[data-testid]"))
       .map((el) => el.getAttribute("data-testid"))
-      .filter((t) => ["thinking-card", "tool-card", "map-action", "refusal-card", "answer-bubble", "usage-line"].includes(t ?? ""));
-    expect(kinds).toEqual(["thinking-card", "tool-card", "tool-card", "map-action", "tool-card", "refusal-card", "answer-bubble", "usage-line"]);
+      .filter((t) => ["thinking-card", "tool-card", "map-action", "refusal-card", "answer-card", "usage-line"].includes(t ?? ""));
+    expect(kinds).toEqual(["thinking-card", "tool-card", "tool-card", "map-action", "tool-card", "refusal-card", "answer-card", "usage-line"]);
     // thinking merged from two deltas, collapsed
     expect(screen.getByTestId("thinking-card")).toHaveTextContent("The user asks for Punjab's agriculture in FY2023-24; query_emissions at adm1 answers it.");
     // the tool card: humanised name, chips through the labels, the result's display and unit verbatim, the Result details line
@@ -213,18 +228,20 @@ describe("AskDock", () => {
     fireEvent.click(within(cards[0]).getByTestId("show-on-map"));
     expect(setState).toHaveBeenLastCalledWith(expect.objectContaining({ level: "adm1", period: "FY2023-24", geo: "Punjab", sector: "agriculture" }));
     // the "moved the map" chip links to /map with the action's state
-    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab&ask=1");
+    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab");
     // every decimal on screen is a string the stream carried
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const tokens: string[] = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
     expect(tokens.length).toBeGreaterThan(0);
     for (const t of tokens) expect([DISPLAY, SHORT, "0.0031", "4.213"]).toContain(t);
+    // the answer card's scope names the call's context through the labels
+    expect(screen.getAllByTestId("scope-row").map((r) => r.textContent)).toContain("Geography Punjab (province)");
   });
 
   it("off the Map page, Show on map and the map chip are links to /map with the state, and ?q= seeds one send", async () => {
     pathname.value = "/ask";
-    const fetchSpy = vi.fn(async () => sseResponse(sseBody(EVENTS)));
+    const fetchSpy = askFetch(EVENTS);
     vi.stubGlobal("fetch", fetchSpy);
     const onSeeded = vi.fn();
     const value = ctx();
@@ -236,8 +253,8 @@ describe("AskDock", () => {
       </Providers>,
     );
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(String((fetchSpy.mock.calls[0] as unknown as [string, RequestInit])[1].body)).message).toBe("What is Punjab's largest sector?");
+    expect(askCalls(fetchSpy)).toHaveLength(1);
+    expect(JSON.parse(String((askCalls(fetchSpy)[0] as unknown as [string, RequestInit])[1].body)).message).toBe("What is Punjab's largest sector?");
     expect(onSeeded).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("user-message")).toHaveTextContent("What is Punjab's largest sector?");
     rerender(
@@ -247,24 +264,25 @@ describe("AskDock", () => {
         </ExplorerContext.Provider>
       </Providers>,
     );
-    expect(fetchSpy).toHaveBeenCalledTimes(1); // sent once, never again
+    expect(askCalls(fetchSpy)).toHaveLength(1); // sent once, never again
+    fireEvent.click(screen.getByTestId("how-answered-toggle"));
     const link = within(screen.getAllByTestId("tool-card")[0]).getByTestId("show-on-map");
     expect(link.tagName).toBe("A");
-    expect(link).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab&ask=1");
-    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab&ask=1");
+    expect(link).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab");
+    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab");
     pathname.value = "/map";
   });
 
   it("restores a conversation from the c parameter and sends it as client_history", async () => {
-    const fetchSpy = vi.fn(async () => sseResponse(sseBody(EVENTS)));
+    const fetchSpy = askFetch(EVENTS);
     vi.stubGlobal("fetch", fetchSpy);
     mount(ctx());
     await askQuestion("first question");
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
     // a fresh mount with ?c=<id> replays the stored log without a request
     const { unmount } = mount(ctx(vi.fn(), undefined, { ...base, c: CID }));
-    expect(screen.getAllByTestId("answer-bubble").length).toBeGreaterThanOrEqual(2);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId("answer-card").length).toBeGreaterThanOrEqual(2);
+    expect(askCalls(fetchSpy)).toHaveLength(1);
     unmount();
   });
 
@@ -305,7 +323,7 @@ describe("AskDock", () => {
     expect(err).toHaveTextContent("Answer withheld: the draft typed a number that was not a placeholder");
     expect(err.getAttribute("data-code")).toBe("bare_numbers");
     expect(screen.getByTestId("correction")).toHaveTextContent("Draft rejected by the server");
-    expect(screen.queryByTestId("answer-bubble")).toBeNull();
+    expect(screen.queryByTestId("answer-card")).toBeNull();
     await waitFor(() => expect(screen.getByTestId("usage-line")).toHaveTextContent("in 300 · out 40"));
   });
 });

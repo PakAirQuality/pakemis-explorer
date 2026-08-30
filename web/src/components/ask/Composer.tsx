@@ -1,30 +1,14 @@
 "use client";
 /**
- * The question box: a textarea (Enter sends, Shift+Enter breaks a line), suggested questions
- * worded from the current URL state and the release's labels, and `@` mentions inserted when a
- * map feature is clicked while the dock is open (mentions.ts). ui_state is sent by the dock.
+ * The question box: a textarea (Enter sends, Shift+Enter breaks a line) and `@` mentions
+ * inserted when a map feature is clicked while the dock is open (mentions.ts). The suggested
+ * questions live in the dock's empty state (suggestions.ts); ui_state is sent by the dock.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SendHorizontal, Square } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { districtName, geographyName, periodShort, sectorLabel } from "@/lib/labels";
+import { districtName } from "@/lib/labels";
 import { subscribeMapPick, type MapPick } from "./mentions";
-
-/**
- * Suggested questions worded from the URL state and the release's labels. The dock's list
- * names the period and the place; the Overview's three chips (the mockup's) name the place.
- */
-export function useSuggestions(variant: "dock" | "overview" = "dock"): string[] {
-  const { state, labels, dims } = useExplorer();
-  const period = periodShort(labels, state.period);
-  const place = state.geo ? (state.level === "adm2" ? districtName(dims, state.geo) : geographyName(labels, state.geo)) : "Pakistan";
-  if (variant === "overview") return [`What is ${place}'s largest source?`, "Have emissions increased?", "How certain is this estimate?"];
-  const out = [`What is ${place}'s largest sector in ${period}?`, "How uncertain is the national total?", "Which categories are not estimated?"];
-  if (state.sector) out.push(`How has ${sectorLabel(labels, state.sector)} changed across the nine years?`);
-  else out.push(`Compare the survey and reference configurations for ${period}.`);
-  if (state.level === "grid") out.push("What does the grid raster show, and what is a cell's value?");
-  return out;
-}
 
 export function pickName(pick: MapPick, dims: { adm2: { shape_id: string; shape_name: string; name: string }[] }): string {
   if (pick.level === "adm2") return districtName(dims as Parameters<typeof districtName>[0], pick.id);
@@ -32,11 +16,10 @@ export function pickName(pick: MapPick, dims: { adm2: { shape_id: string; shape_
   return pick.id;
 }
 
-export function Composer({ onSend, onStop, streaming, disabled, showSuggestions }: { onSend: (text: string) => void; onStop: () => void; streaming: boolean; disabled: boolean; showSuggestions: boolean }) {
+export function Composer({ onSend, onStop, streaming, disabled }: { onSend: (text: string) => void; onStop: () => void; streaming: boolean; disabled: boolean }) {
   const { dims } = useExplorer();
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
-  const suggestions = useSuggestions();
 
   const insert = useCallback((snippet: string) => {
     setText((t) => {
@@ -65,16 +48,7 @@ export function Composer({ onSend, onStop, streaming, disabled, showSuggestions 
     setText("");
   };
   return (
-    <div className="border-t border-line bg-surface-2 px-3 pb-3 pt-2" data-testid="composer">
-      {showSuggestions && (
-        <div className="mb-2 flex flex-wrap gap-1">
-          {suggestions.map((s) => (
-            <button key={s} type="button" onClick={() => insert(s)} className="pill border border-line bg-surface px-2 py-0.5 text-left text-xs text-fg hover:border-accent hover:text-accent" data-testid="suggestion">
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="border-t border-line bg-card px-3 pb-3 pt-2" data-testid="composer">
       <div className="flex items-end gap-2">
         <textarea
           ref={ref}
@@ -87,7 +61,7 @@ export function Composer({ onSend, onStop, streaming, disabled, showSuggestions 
             }
           }}
           rows={2}
-          placeholder={disabled ? "Ask PakEmis is not enabled" : "Ask about a place, a sector, a year… click the map to mention a feature"}
+          placeholder={disabled ? "Ask PakEmis is not enabled" : "Ask about a place, a sector, a year or a method…"}
           disabled={disabled}
           aria-label="Question"
           className="min-h-[2.5rem] flex-1 resize-none rounded-card border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
@@ -103,7 +77,7 @@ export function Composer({ onSend, onStop, streaming, disabled, showSuggestions 
           </button>
         )}
       </div>
-      <div className="mt-1 text-micro normal-case tracking-normal text-muted">Enter sends · Shift+Enter breaks a line · the current map scope is sent with every question</div>
+      <div className="mt-1 text-micro normal-case tracking-normal text-muted">Enter sends · Shift+Enter breaks a line · the current scope is sent with every question</div>
     </div>
   );
 }

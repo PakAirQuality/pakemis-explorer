@@ -4,6 +4,7 @@ import "./globals.css";
 import { inter, jetbrains } from "./fonts";
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
+import { AskDrawer } from "@/components/ask/AskDrawer";
 
 export const metadata: Metadata = {
   title: "PakEmis",
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <NuqsAdapter>
           <Providers>
-            <ExplorerProvider>{children}</ExplorerProvider>
+            <ExplorerProvider>
+              {children}
+              <AskDrawer />
+            </ExplorerProvider>
           </Providers>
         </NuqsAdapter>
       </body>

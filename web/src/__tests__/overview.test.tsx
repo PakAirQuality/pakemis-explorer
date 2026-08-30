@@ -160,7 +160,7 @@ describe("Overview briefing", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan");
     expect(screen.queryByTestId("total-card")).toBeNull();
     expect(screen.queryByTestId("question-input")).toBeNull();
-    expect(screen.getByTestId("nav-ask")).toHaveAttribute("href", "/ask");
+    expect(screen.getByTestId("nav-ask").tagName).toBe("BUTTON"); // toggles the AskDrawer on the bus
     expect(screen.getByTestId("header-download")).toHaveAttribute("href", "/downloads");
     // the national total was asked without a geography; the national interval with scope national only
     const totals = fetchSpy.mock.calls.filter(([u, b]) => String(u).includes("/query/emissions") && !b?.group_by);
