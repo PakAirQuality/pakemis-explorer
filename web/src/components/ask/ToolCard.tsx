@@ -29,7 +29,7 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
   const canShow = item.name !== "set_map_view" && Object.keys(patch).length > 0;
   const r = item.result;
   return (
-    <div className={`rounded-card border bg-white transition-shadow ${hit ? "border-accent shadow-[0_0_0_2px_rgba(42,111,151,0.25)]" : "border-line"}`} data-testid="tool-card" data-tool-k={item.k} data-tool-name={item.name}>
+    <div className={`rounded-card border bg-surface-2 transition-shadow ${hit ? "border-accent shadow-[0_0_0_2px_var(--color-accent-soft)]" : "border-line"}`} data-testid="tool-card" data-tool-k={item.k} data-tool-name={item.name}>
       <div className="flex items-start gap-2 px-3 py-2">
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="mt-0.5 shrink-0 text-muted" aria-label={open ? "Collapse result" : "Expand result"}>
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -44,7 +44,7 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
           {chips.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {chips.map((c) => (
-                <span key={c.key} className="pill border border-line bg-canvas px-2 py-px text-xs" title={`${c.key} = ${c.raw}`}>
+                <span key={c.key} className="pill border border-line bg-surface px-2 py-px text-xs" title={`${c.key} = ${c.raw}`}>
                   <span className="text-muted">{c.label}</span> {c.value}
                 </span>
               ))}
@@ -90,7 +90,7 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
                             {g && attrs ? <span className="mono ml-1 text-micro normal-case tracking-normal">{attrs}</span> : null}
                           </td>
                           <td className="num whitespace-nowrap py-0.5 text-right align-top">
-                            <span className="font-semibold text-ink" title={c.display ? `${c.display} (contract precision)` : undefined}>{c.display_short ?? c.display ?? ""}</span> <span className="text-muted">{cellUnit(c)}</span>
+                            <span className="font-semibold text-fg" title={c.display ? `${c.display} (contract precision)` : undefined}>{c.display_short ?? c.display ?? ""}</span> <span className="text-muted">{cellUnit(c)}</span>
                             {isBounded(c) && <span className="ml-1"><IntervalBadge cell={c} title={c.interpretation ?? c.exactness} /></span>}
                           </td>
                         </tr>

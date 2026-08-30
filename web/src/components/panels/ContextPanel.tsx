@@ -45,7 +45,7 @@ export function ContextPanel() {
         {kpi ? (
           <div className="mt-1">
             <div className="flex items-baseline gap-1.5">
-              <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="national-kpi" title={`${kpi.display} ${kpi.unit} (contract precision) · exact ${kpi.exact}`}>{shown(kpi)}</span>
+              <span className="num text-3xl font-semibold tracking-tight text-fg" data-testid="national-kpi" title={`${kpi.display} ${kpi.unit} (contract precision) · exact ${kpi.exact}`}>{shown(kpi)}</span>
               <span className="text-xs text-muted" title={unitTitle} data-testid="national-kpi-unit">{cellUnit(kpi)}</span>
             </div>
             <div className="text-xs text-muted" data-testid="national-kpi-line">
@@ -63,8 +63,8 @@ export function ContextPanel() {
         <div className="border-b border-line px-4 py-2">
           <div className="flex flex-wrap gap-1.5">
             {byGas.data.values.map((c, i) => (
-              <button key={i} onClick={() => setState({ gas: state.gas === c.group?.gas ? null : c.group?.gas ?? null })} className={`pill border px-2 py-0.5 text-xs ${state.gas === c.group?.gas ? "border-ink bg-ink text-white" : "border-line bg-white"}`}>
-                <span className={state.gas === c.group?.gas ? "text-white/70" : "text-muted"}>{gasLabel(labels, c.group?.gas ?? "")}</span> <span className="num font-semibold">{shown(c)}</span>
+              <button key={i} onClick={() => setState({ gas: state.gas === c.group?.gas ? null : c.group?.gas ?? null })} className={`pill border px-2 py-0.5 text-xs ${state.gas === c.group?.gas ? "border-fg bg-fg text-surface" : "border-line bg-surface-2"}`}>
+                <span className={state.gas === c.group?.gas ? "text-surface/70" : "text-muted"}>{gasLabel(labels, c.group?.gas ?? "")}</span> <span className="num font-semibold">{shown(c)}</span>
               </button>
             ))}
           </div>
@@ -86,7 +86,7 @@ export function ContextPanel() {
         {national.data && national.data.limitations_hit.length > 0 && (
           <div className="flex flex-wrap gap-1 px-1">
             {national.data.limitations_hit.map((l, i) => (
-              <span key={i} className="pill border border-line bg-canvas px-2 py-0.5 text-micro normal-case tracking-normal text-muted" title={String(l.message ?? "")}>{String(l.id)}</span>
+              <span key={i} className="pill border border-line bg-surface px-2 py-0.5 text-micro normal-case tracking-normal text-muted" title={String(l.message ?? "")}>{String(l.id)}</span>
             ))}
           </div>
         )}

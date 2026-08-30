@@ -13,7 +13,7 @@ const LEVEL_LABELS: Record<Level, string> = { adm1: "Provinces", adm2: "District
 export function ScopeChips() {
   const { state, setState, labels } = useExplorer();
   const chip = (label: string, title?: string, key?: string) => (
-    <button key={key ?? label} onClick={() => setState({ panel: "explore" })} title={title} className="glass pill max-w-[180px] truncate px-2.5 py-1 text-xs text-ink hover:bg-white" data-testid="scope-chip">
+    <button key={key ?? label} onClick={() => setState({ panel: "explore" })} title={title} className="glass pill max-w-[180px] truncate px-2.5 py-1 text-xs text-fg hover:bg-surface-3" data-testid="scope-chip">
       {label}
     </button>
   );
@@ -21,7 +21,7 @@ export function ScopeChips() {
     <div className="flex max-w-[calc(100vw-80px)] flex-wrap items-center gap-1.5" data-testid="scope-chips">
       <div className="glass pill flex p-0.5" role="tablist" aria-label="Level">
         {(Object.keys(LEVEL_LABELS) as Level[]).map((l) => (
-          <button key={l} role="tab" aria-selected={state.level === l} onClick={() => setState({ level: l })} className={`pill px-3 py-1 text-xs font-medium transition-colors ${state.level === l ? "bg-ink text-white" : "text-muted hover:text-ink"}`} data-testid={`level-${l}`}>
+          <button key={l} role="tab" aria-selected={state.level === l} onClick={() => setState({ level: l })} className={`pill px-3 py-1 text-xs font-medium transition-colors ${state.level === l ? "bg-fg text-surface" : "text-muted hover:text-fg"}`} data-testid={`level-${l}`}>
             {LEVEL_LABELS[l]}
           </button>
         ))}

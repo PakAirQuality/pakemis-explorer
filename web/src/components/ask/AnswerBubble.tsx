@@ -72,7 +72,7 @@ export function renderAnswer(text: string, onCite: { hover: (h: Highlight) => vo
 
 export function AnswerBubble({ answer, onCite }: { answer: AnswerEvent; onCite: { hover: (h: Highlight) => void; click: (h: Highlight) => void } }) {
   return (
-    <div className="rounded-card border border-accent/20 bg-accent-soft/40 px-3 py-2 text-sm leading-relaxed text-ink" data-testid="answer-bubble">
+    <div className="rounded-card border border-accent/20 bg-accent-soft/40 px-3 py-2 text-sm leading-relaxed text-fg" data-testid="answer-bubble">
       {renderAnswer(answer.text, onCite)}
       {answer.receipts.length > 0 && (
         <div className="mono mt-2 text-micro normal-case tracking-normal text-muted" title={answer.receipts.join(", ")}>

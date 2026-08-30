@@ -43,7 +43,7 @@ function MapActionChip({ action }: { action: MapActionEvent }) {
       <MapPin size={12} className="text-accent" />
       <span>moved the map</span>
       {chips.map((c) => (
-        <span key={c.key} className="pill border border-line bg-canvas px-2 py-px" title={`${c.key} = ${c.raw}`}>
+        <span key={c.key} className="pill border border-line bg-surface px-2 py-px" title={`${c.key} = ${c.raw}`}>
           <span className="text-muted">{c.label}</span> {c.value}
         </span>
       ))}
@@ -68,7 +68,7 @@ export function ReasoningTimeline({ turn }: { turn: Turn }) {
   const live = turn.status === "streaming";
   return (
     <div ref={ref} className="flex flex-col gap-2" data-testid="turn" data-status={turn.status}>
-      <div className="self-end rounded-card bg-rail px-3 py-2 text-sm text-white" data-testid="user-message">
+      <div className="self-end rounded-card bg-accent-fill px-3 py-2 text-sm text-on-accent" data-testid="user-message">
         {turn.message}
       </div>
       {tl.items.map((item, i) => {

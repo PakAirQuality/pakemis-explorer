@@ -113,6 +113,21 @@ export function envelopeUnitLine(env: { values: { unit: string; unit_words?: str
   const words = first.unit_words || (first.unit ? unitWords(first.unit) : "");
   return words.replace(/^\w/, (c) => c.toUpperCase());
 }
+/**
+ * A figure's unit line from the envelope's first cell: "Million tonnes CO₂e" (the cell's
+ * unit_words, else unitWords; capitalised), with ", excluding land use" appended for a
+ * whole-scope figure whose context says LULUCF is excluded (any other status is named as it
+ * is). "" while there is no envelope.
+ */
+export function figureUnitLine(env: { values: { unit: string; unit_words?: string }[]; context: { lulucf: { status: string } } } | null | undefined, withLulucf = false): string {
+  const first = env?.values[0];
+  if (!env || !first?.unit) return "";
+  const words = (first.unit_words || unitWords(first.unit)).replace(/^\w/, (c) => c.toUpperCase());
+  if (!withLulucf) return words;
+  const status = env.context.lulucf.status;
+  const lulucf = status === "excluded" ? "excluding land use" : status ? `land use ${status}` : "";
+  return lulucf ? `${words}, ${lulucf}` : words;
+}
 export function monthLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "Annual";
   return labels.months[id] ?? id;

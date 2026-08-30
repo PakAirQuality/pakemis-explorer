@@ -1,0 +1,54 @@
+import "@testing-library/jest-dom/vitest";
+/** The TopNav: the five sections in order, the current one marked, the Ask button as a link or the Map page's toggle, the mobile menu. */
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { isActive, NAV_LINKS, TopNav } from "./TopNav";
+
+const pathname = vi.hoisted(() => ({ value: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+
+describe("TopNav", () => {
+  it("lists Overview, Explore data, Map, Methods & evidence, Downloads and links Ask PakEmis to /ask", () => {
+    pathname.value = "/";
+    render(<TopNav />);
+    const links = screen.getAllByTestId("nav-link");
+    expect(links.map((a) => a.textContent)).toEqual(["Overview", "Explore data", "Map", "Methods & evidence", "Downloads"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_LINKS.map((l) => l.href));
+    expect(links[0]).toHaveAttribute("aria-current", "page");
+    expect(links[2]).not.toHaveAttribute("aria-current");
+    expect(screen.getByTestId("nav-ask")).toHaveAttribute("href", "/ask");
+    expect(screen.getByTestId("brand")).toHaveTextContent("PEPakEmis");
+    expect(document.body.textContent).not.toContain("1.0.0rc");
+  });
+  it("marks the current page with or without the export's trailing slash", () => {
+    expect(isActive("/map/", "/map")).toBe(true);
+    expect(isActive("/map", "/map")).toBe(true);
+    expect(isActive("/", "/")).toBe(true);
+    expect(isActive("/map", "/")).toBe(false);
+    expect(isActive(null, "/")).toBe(true);
+    pathname.value = "/methods/";
+    render(<TopNav />);
+    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods & evidence")).toHaveAttribute("aria-current", "page");
+  });
+  it("on the Map page the Ask button is the drawer toggle, and the slot carries the page's controls", () => {
+    const onAsk = vi.fn();
+    render(
+      <TopNav compact onAsk={onAsk}>
+        <span data-testid="slot">tabs</span>
+      </TopNav>,
+    );
+    fireEvent.click(screen.getByTestId("nav-ask"));
+    expect(onAsk).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("nav-ask").tagName).toBe("BUTTON");
+    expect(screen.getByTestId("slot")).toBeInTheDocument();
+  });
+  it("the mobile menu opens and lists the same sections", () => {
+    render(<TopNav />);
+    expect(screen.queryByTestId("nav-menu")).toBeNull();
+    fireEvent.click(screen.getByTestId("nav-menu-button"));
+    const menu = screen.getByTestId("nav-menu");
+    expect(Array.from(menu.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Overview", "Explore data", "Map", "Methods & evidence", "Downloads"]);
+    fireEvent.click(menu.querySelector("a")!);
+    expect(screen.queryByTestId("nav-menu")).toBeNull();
+  });
+});

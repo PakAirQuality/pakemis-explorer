@@ -12,12 +12,11 @@
 import { useEffect, useRef } from "react";
 import { shown, type Envelope } from "@/lib/envelope";
 import { unitWords } from "@/lib/labels";
-import { ACCENT, AMBER } from "@/lib/palette";
+import { chartTheme } from "@/lib/theme";
 import { ReceiptFooter } from "./ReceiptFooter";
 
 /** Under this container width the axis shows only the first, the reference and the last year. */
 export const THIN_AXIS_BELOW_PX = 420;
-const FONT = "var(--font-inter), Inter, system-ui, sans-serif";
 
 export type TrendChartProps = {
   env: Envelope | null | undefined;
@@ -74,6 +73,9 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
     const labelled = (i: number) => i === 0 || i === last || isRef(i);
     // the axis label rule: every year when the container is wide enough, else the ends and the reference
     const axisInterval = () => (el.clientWidth && el.clientWidth < THIN_AXIS_BELOW_PX ? (i: number) => labelled(i) : 0);
+    // the theme's colours, read from the CSS variables at render (lib/theme.ts)
+    const t = chartTheme();
+    const FONT = t.font;
     (async () => {
       const echarts = await import("echarts");
       if (disposed) return;
@@ -86,16 +88,18 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
           data: ids.map(short),
           boundaryGap: false,
           // the baseline at zero: yAxis.min is 0, so the category axis line sits on it
-          axisLine: { show: true, lineStyle: { color: "#dfe4ea", width: 1 } },
+          axisLine: { show: true, lineStyle: { color: t.line, width: 1 } },
           axisTick: { show: false },
-          axisLabel: { show: true, interval: axisInterval(), color: "#5c6b7a", fontSize: 11, fontFamily: FONT, margin: 8, hideOverlap: true },
+          axisLabel: { show: true, interval: axisInterval(), color: t.muted, fontSize: 11, fontFamily: FONT, margin: 8, hideOverlap: true },
         },
         // no labels, ticks or split lines: the only numbers on the figure are the envelope's displays
         yAxis: { type: "value", show: false, min: 0, axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false } },
         tooltip: {
           trigger: "item",
           confine: true,
-          textStyle: { fontSize: 12, fontFamily: FONT },
+          backgroundColor: t.surface,
+          borderColor: t.line,
+          textStyle: { fontSize: 12, fontFamily: FONT, color: t.fg },
           // the cell's own display and unit, never the axis value
           formatter: (p: { dataIndex: number }) => `${short(ids[p.dataIndex])} · ${shown(cells[p.dataIndex])} ${unit}`.trim(),
         },
@@ -105,14 +109,14 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
             smooth: 0.35,
             symbol: "circle",
             symbolSize: 7,
-            lineStyle: { color: ACCENT, width: 2 },
-            areaStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "rgba(42,111,151,0.28)" }, { offset: 1, color: "rgba(42,111,151,0.02)" }] } },
+            lineStyle: { color: t.accent, width: 2 },
+            areaStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: t.accentSoft }, { offset: 1, color: "rgba(0,0,0,0)" }] } },
             data: cells.map((c, i) => ({
               value: c.value as number,
-              itemStyle: { color: isRef(i) ? AMBER : ACCENT, opacity: labelled(i) ? 1 : 0, borderColor: "#fff", borderWidth: 1.5 },
+              itemStyle: { color: isRef(i) ? t.amber : t.accent, opacity: labelled(i) ? 1 : 0, borderColor: t.surface, borderWidth: 1.5 },
               // the end labels hang inward from their point so neither is clipped at the edge; the reference point's sits above it
               label: labelled(i)
-                ? { show: true, position: "top", align: i === 0 ? "left" : i === last ? "right" : "center", offset: [i === 0 ? -4 : i === last ? 4 : 0, -2], formatter: () => shown(c), color: isRef(i) ? "#92400e" : "#5c6b7a", fontSize: 11, fontFamily: FONT }
+                ? { show: true, position: "top", align: i === 0 ? "left" : i === last ? "right" : "center", offset: [i === 0 ? -4 : i === last ? 4 : 0, -2], formatter: () => shown(c), color: isRef(i) ? t.amberSoft : t.muted, fontSize: 11, fontFamily: FONT }
                 : { show: false },
             })),
           },
@@ -136,9 +140,9 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
   if (!env) {
     return (
       <div data-testid="trend-skeleton" aria-hidden="true">
-        <div className="h-4 w-2/3 animate-pulse rounded bg-ink/5" />
-        <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-ink/5" />
-        <div className="mt-3 animate-pulse rounded-lg bg-ink/5" style={{ height }} />
+        <div className="h-4 w-2/3 animate-pulse rounded bg-fg/5" />
+        <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-fg/5" />
+        <div className="mt-3 animate-pulse rounded-lg bg-fg/5" style={{ height }} />
       </div>
     );
   }
@@ -146,7 +150,7 @@ export function TrendChart({ env, referencePeriod, height = 160, periodLabel, ti
   return (
     <figure data-testid="trend-figure" className="m-0">
       <figcaption>
-        <div className="text-sm font-semibold text-ink" data-testid="trend-title">{title}</div>
+        <div className="text-sm font-semibold text-fg" data-testid="trend-title">{title}</div>
         <div className="mt-0.5 text-xs text-muted" data-testid="trend-subtitle">{subtitle}</div>
       </figcaption>
       <div ref={ref} className="mt-2" style={{ height, width: "100%" }} data-testid="trend-chart" role="img" aria-label={`${title}: ${subtitle}`} />

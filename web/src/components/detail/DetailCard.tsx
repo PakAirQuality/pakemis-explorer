@@ -34,7 +34,7 @@ export function DetailCard() {
   if (isMobile) {
     const h = snap === "peek" ? "22vh" : snap === "half" ? "52vh" : "88vh";
     return (
-      <div className="fixed inset-x-0 bottom-12 z-[50] flex flex-col rounded-t-2xl bg-white shadow-card transition-[height] duration-250" style={{ height: h }} data-testid="detail-card">
+      <div className="fixed inset-x-0 bottom-12 z-[50] flex flex-col rounded-t-2xl bg-surface-2 shadow-card transition-[height] duration-250" style={{ height: h }} data-testid="detail-card">
         <button className="flex items-center justify-center py-2" aria-label="Resize" onClick={() => setSnap(snap === "peek" ? "half" : snap === "half" ? "full" : "peek")}>
           <span className="h-1 w-10 rounded-full bg-line" />
         </button>
@@ -45,9 +45,9 @@ export function DetailCard() {
   }
   return (
     <div className="absolute bottom-24 right-4 top-[92px] z-[45] w-[380px] max-w-[calc(100%-2rem)] animate-[slide-in_.25s_ease-out]" data-testid="detail-card">
-      <div className="card flex h-full flex-col overflow-hidden bg-white/97">
+      <div className="card flex h-full flex-col overflow-hidden bg-surface-2/97">
         <div className="flex-1 overflow-y-auto px-3 pb-3">{body}</div>
-        <button aria-label="Close" onClick={close} className="absolute right-2 top-2 pill p-1 text-muted hover:bg-canvas hover:text-ink"><X size={16} /></button>
+        <button aria-label="Close" onClick={close} className="absolute right-2 top-2 pill p-1 text-muted hover:bg-surface-3 hover:text-fg"><X size={16} /></button>
       </div>
       <style>{`@keyframes slide-in { from { transform: translateX(24px); opacity: 0 } to { transform: none; opacity: 1 } }`}</style>
     </div>
@@ -58,7 +58,7 @@ function Header({ kicker, title, sub }: { kicker: string; title: ReactNode; sub?
   return (
     <div className="pr-8 pt-3">
       <div className="micro">{kicker}</div>
-      <h2 className="text-xl font-semibold leading-tight text-ink">{title}</h2>
+      <h2 className="text-xl font-semibold leading-tight text-fg">{title}</h2>
       {sub && <div className="mt-0.5 text-xs text-muted">{sub}</div>}
     </div>
   );
@@ -73,7 +73,7 @@ function Headline({ q, what }: { q: { data?: Envelope; error?: unknown; isLoadin
   return (
     <div className="my-2" data-testid="headline">
       <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
+        <span className="num text-3xl font-semibold tracking-tight text-fg" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
         <span className="text-sm text-muted">{cellUnit(cell)}</span>
         {bounded && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
       </div>
@@ -88,7 +88,7 @@ function Limitations({ env }: { env: Envelope | undefined }) {
   return (
     <div className="mt-2 flex flex-wrap gap-1" data-testid="limitation-chips">
       {env.limitations_hit.map((l, i) => (
-        <span key={i} className="pill border border-line bg-canvas px-2 py-0.5 text-micro normal-case tracking-normal text-muted" title={String(l.message ?? "")}>
+        <span key={i} className="pill border border-line bg-surface px-2 py-0.5 text-micro normal-case tracking-normal text-muted" title={String(l.message ?? "")}>
           {String(l.id)}
         </span>
       ))}
@@ -104,7 +104,7 @@ function UnallocatedLine({ env, province }: { env: Envelope | undefined; provinc
   if (!row) return null;
   return (
     <p className="mt-2 text-xs text-muted" data-testid="unallocated-line">
-      Unallocated, retained at ADM1: <span className="mono text-ink">{row.exact}</span> {cellUnit(env?.values[0])} (exact, {row.n_rows} rows) — {u?.note}
+      Unallocated, retained at ADM1: <span className="mono text-fg">{row.exact}</span> {cellUnit(env?.values[0])} (exact, {row.n_rows} rows) — {u?.note}
     </p>
   );
 }
@@ -116,7 +116,7 @@ function GasChips({ q }: { q: { data?: Envelope; error?: unknown; isLoading: boo
     <div className="mt-2">
       <div className="flex flex-wrap gap-1.5" data-testid="gas-chips">
         {q.data.values.map((c, i) => (
-          <span key={i} className="pill border border-line bg-white px-2 py-0.5 text-xs">
+          <span key={i} className="pill border border-line bg-surface-2 px-2 py-0.5 text-xs">
             <span className="text-muted">{gasLabel(labels, c.group?.gas ?? "")}</span> <span className="num font-semibold">{shown(c)}</span>
           </span>
         ))}
@@ -205,7 +205,7 @@ function DistrictCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "distr
           {rows.map((r, i) => (
             <span key={r.geography_id}>
               {i > 0 ? ", " : ""}
-              <span className="text-ink">{r.name}</span> <span className="mono">({r.status}, {r.unit_kind})</span>
+              <span className="text-fg">{r.name}</span> <span className="mono">({r.status}, {r.unit_kind})</span>
             </span>
           ))}
           {" · "}
@@ -228,7 +228,7 @@ function DistrictCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "distr
             {u.by_module_gas.map((r, i) => (
               <span key={`${r.module}|${r.gas}`} className="whitespace-nowrap">
                 {i > 0 ? " · " : ""}
-                {sectorLabel(labels, r.module)} {gasLabel(labels, r.gas)} <span className="mono text-ink">{r.exact}</span>
+                {sectorLabel(labels, r.module)} {gasLabel(labels, r.gas)} <span className="mono text-fg">{r.exact}</span>
               </span>
             ))}
             {" "}{cellUnit(lineage.data?.values[0])} (exact)
@@ -251,7 +251,7 @@ function CellCard({ bodies }: { bodies: Extract<DetailBodies, { kind: "cell" }> 
       ) : cell ? (
         <div className="my-2" data-testid="headline">
           <div className="flex items-baseline gap-2">
-            <span className="num text-3xl font-semibold tracking-tight text-ink" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
+            <span className="num text-3xl font-semibold tracking-tight text-fg" data-testid="headline-display" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span>
             <span className="text-sm text-muted">{cellUnit(cell)}</span>
           </div>
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">

@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * "No FY anywhere": with a release whose labels come in the API's shape (short "2023–24", label
- * "July 2023 – June 2024", basis_note), the explainer (all four screens, the mobile scroll), the
- * time rail and the scope chips print no "FY" token; the rail and the period chip carry the
- * spelled-out months as their tooltip (`title`); the ids stay in the state and the requests.
+ * "July 2023 – June 2024", basis_note), the time rail, the scope chips and the Current view
+ * bar print no "FY" token; the rail and the period chip carry the spelled-out months as their
+ * tooltip (`title`); the ids stay in the state and the requests.
  */
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,10 +14,10 @@ import type { ReleaseInfo } from "@/lib/envelope";
 import type { ExplorerState } from "@/lib/urlState";
 import { TimeRail } from "@/components/map/TimeRail";
 import { ScopeChips } from "@/components/map/ScopeChips";
-import { WelcomeModal } from "@/components/shell/WelcomeModal";
+import { CurrentView } from "@/components/shell/CurrentView";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 
-vi.mock("@/components/ui/BarChart", () => ({ BarChart: ({ env }: { env: { values: { display: string }[] } }) => <div data-testid="bar-chart">{env.values.map((v) => v.display).join(" ")}</div> }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const state: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
 
@@ -40,19 +40,17 @@ beforeEach(() => {
 });
 
 describe("no FY anywhere", () => {
-  it("the explainer, the rail and the chips print the release's labels, never a period id", async () => {
+  it("the rail, the chips and the Current view bar print the release's labels, never a period id", async () => {
     render(
       <Providers>
         <ExplorerContext.Provider value={ctx()}>
           <TimeRail />
           <ScopeChips />
-          <WelcomeModal />
+          <CurrentView />
         </ExplorerContext.Provider>
       </Providers>,
     );
-    await screen.findByTestId("welcome-modal");
-    await screen.findByTestId("intro-question");
-    await screen.findByTestId("bar-chart");
+    await screen.findByTestId("current-view-line");
     expect(RELEASE.labels.periods["FY2023-24"].short).toBe("2023–24");
     const text = document.body.textContent ?? "";
     expect(text).toContain("2023–24");
@@ -62,10 +60,8 @@ describe("no FY anywhere", () => {
     const periodChip = screen.getAllByTestId("scope-chip").find((c) => c.textContent === "2023–24");
     expect(periodChip).toBeTruthy();
     expect(periodChip).toHaveAttribute("title", "July 2023 – June 2024");
-    expect(screen.getByRole("heading", { level: 1, name: "Pakistan greenhouse-gas emissions, 2020–21 to 2023–24" })).toBeInTheDocument();
-    expect(screen.getByTestId("intro-facts")).toHaveTextContent("2 fiscal years");
-    expect(screen.getByTestId("intro-sectors-title")).toHaveTextContent("Emissions by sector, 2023–24");
-    expect(screen.getByTestId("intro-question")).toHaveTextContent("since 2020–21?");
+    expect(screen.getByTestId("current-view-line")).toHaveTextContent("2023–24 · Pakistan · Reference estimate · excludes land use and forestry");
+    expect(screen.getByTestId("current-view-line")).toHaveAttribute("title", expect.stringContaining("July 2023 – June 2024"));
     // nothing in any title attribute either
     for (const el of Array.from(document.body.querySelectorAll("[title]"))) expect(el.getAttribute("title")).not.toContain("FY");
   });

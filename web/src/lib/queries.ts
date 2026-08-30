@@ -1,8 +1,10 @@
 "use client";
 /** react-query wrappers over the typed client; a typed refusal is an error the caller shows by name (no retry). */
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type CompareRequest, type GridCellRequest, type QueryEmissions, type TimeseriesRequest, type UncertaintyRequest, type CompletenessRequest } from "./api";
-import type { LineageRequest } from "./requests";
+import { sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
+import { useExplorer } from "@/components/ExplorerContext";
 
 const opts = { retry: false as const, staleTime: 5 * 60 * 1000 };
 
@@ -44,4 +46,38 @@ export function configCoversPeriod(availablePeriods: string | undefined, period:
   const ia = fiscalPeriods.indexOf(a);
   const ib = fiscalPeriods.indexOf(b);
   return i >= 0 && ia >= 0 && ib >= 0 && i >= ia && i <= ib;
+}
+
+/** The national annual series under the reference configuration and the reported GWP basis, unfiltered (the Overview's trend). */
+export function useNationalSeries() {
+  const { defaults } = useExplorer();
+  const body = useMemo(() => seriesBody({ config: defaults.configuration_id, gwp: defaults.gwp_basis, sector: null, gas: null }), [defaults.configuration_id, defaults.gwp_basis]);
+  return useTimeseries(body);
+}
+
+/** One sector's annual series under the same configuration and basis, every gas. */
+export function useSectorSeries(sector: string | null | undefined) {
+  const { defaults } = useExplorer();
+  const body = useMemo(() => (sector ? sectorSeriesBody({ config: defaults.configuration_id, gwp: defaults.gwp_basis }, sector) : null), [defaults.configuration_id, defaults.gwp_basis, sector]);
+  return useTimeseries(body, !!sector);
+}
+
+/** The reference period's id: the dim row flagged is_reference, else the last fiscal period. */
+export function useReferencePeriod(): string {
+  const { dims } = useExplorer();
+  return dims.periods.find((p) => String(p.is_reference).toLowerCase() === "true")?.period_id ?? dims.fiscalPeriods[dims.fiscalPeriods.length - 1] ?? "";
+}
+
+/**
+ * The series uncertainty of one period: `get_uncertainty(scope="series", period_id)`, whose
+ * `annual_level` cells bound the same national total the KPI shows, one per scenario. Kept
+ * for the Explore page; the Overview shows the national (parametric) interval instead.
+ */
+export function useSeriesUncertainty(periodId: string | null | undefined) {
+  return useUncertainty(periodId ? { scope: "series", period_id: periodId } : null, !!periodId);
+}
+
+/** The release's headline parametric uncertainty: `get_uncertainty(scope="national")`, one cell per scenario. */
+export function useNationalUncertainty(enabled = true) {
+  return useUncertainty({ scope: "national" }, enabled);
 }

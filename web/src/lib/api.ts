@@ -91,9 +91,9 @@ function post(body: unknown): RequestInit {
   return { method: "POST", body: JSON.stringify(body) };
 }
 
-/** The URL of a receipt: the /data page replays it (static export has no dynamic /r/<receipt> route). */
+/** The URL of a receipt: the /downloads page replays it (static export has no dynamic /r/<receipt> route; /data redirects there). */
 export function receiptHref(receipt: string): string {
-  return `/data?receipt=${encodeURIComponent(receipt)}`;
+  return `/downloads?receipt=${encodeURIComponent(receipt)}`;
 }
 
 export const api = {

@@ -60,11 +60,11 @@ export function Composer({ onSend, onStop, streaming, disabled, showSuggestions 
     setText("");
   };
   return (
-    <div className="border-t border-line bg-white px-3 pb-3 pt-2" data-testid="composer">
+    <div className="border-t border-line bg-surface-2 px-3 pb-3 pt-2" data-testid="composer">
       {showSuggestions && (
         <div className="mb-2 flex flex-wrap gap-1">
           {suggestions.map((s) => (
-            <button key={s} type="button" onClick={() => insert(s)} className="pill border border-line bg-canvas px-2 py-0.5 text-left text-xs text-ink hover:border-accent hover:text-accent" data-testid="suggestion">
+            <button key={s} type="button" onClick={() => insert(s)} className="pill border border-line bg-surface px-2 py-0.5 text-left text-xs text-fg hover:border-accent hover:text-accent" data-testid="suggestion">
               {s}
             </button>
           ))}
@@ -85,15 +85,15 @@ export function Composer({ onSend, onStop, streaming, disabled, showSuggestions 
           placeholder={disabled ? "Ask PakEmis is not enabled" : "Ask about a place, a sector, a year… click the map to mention a feature"}
           disabled={disabled}
           aria-label="Question"
-          className="min-h-[2.5rem] flex-1 resize-none rounded-card border border-line bg-canvas px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
+          className="min-h-[2.5rem] flex-1 resize-none rounded-card border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
           data-testid="question"
         />
         {streaming ? (
-          <button type="button" onClick={onStop} className="pill flex h-9 w-9 items-center justify-center bg-warn text-white" aria-label="Stop" title="Stop">
+          <button type="button" onClick={onStop} className="pill flex h-9 w-9 items-center justify-center bg-warn text-surface" aria-label="Stop" title="Stop">
             <Square size={14} />
           </button>
         ) : (
-          <button type="button" onClick={submit} disabled={disabled || !text.trim()} className="pill flex h-9 w-9 items-center justify-center bg-accent text-white disabled:opacity-40" aria-label="Send" title="Send (Enter)">
+          <button type="button" onClick={submit} disabled={disabled || !text.trim()} className="pill flex h-9 w-9 items-center justify-center bg-accent-fill text-on-accent disabled:opacity-40" aria-label="Send" title="Send (Enter)">
             <SendHorizontal size={16} />
           </button>
         )}

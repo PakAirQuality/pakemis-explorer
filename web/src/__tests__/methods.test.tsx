@@ -1,16 +1,18 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * /about smoke: the sections render from the mocked release (period, GWP bases, LULUCF note,
- * limitation texts, functions, licences incl. the ODbL note), the territories' unit is named
- * from the boundary file, no decimal is printed, and no "avoid" phrase appears.
+ * /methods smoke (today's /about prose, moved): the sections render from the mocked release
+ * (period, GWP bases, LULUCF note, limitation texts, functions, licences incl. the ODbL note),
+ * the territories' unit is named from the boundary file, no decimal is printed, no "avoid"
+ * phrase appears, and the nav marks Methods & evidence as the current page.
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/components/Providers";
-import AboutPage from "@/app/about/page";
-import { INTRO_KEY } from "@/components/shell/WelcomeModal";
+import MethodsPage from "@/app/methods/page";
 import { RELEASE, mockFetch } from "./fixtures";
 import { avoidPhrasesIn } from "./vocabulary";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/methods", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const BBOXES = { adm1: { "Azad Kashmir": [73, 33, 75, 35], Balochistan: [61, 24, 70, 32], "Gilgit-Baltistan": [72, 34, 77, 37], "Islamabad Capital Territory": [72.8, 33.5, 73.4, 33.9], "Khyber Pakhtunkhwa": [69, 31, 74, 37], Punjab: [69, 27, 75, 34], Sindh: [66, 23, 71, 28] }, adm2: {} };
 
@@ -26,14 +28,15 @@ beforeEach(() => {
   );
 });
 
-describe("/about", () => {
+describe("/methods", () => {
   it("renders the sections from the release and the boundary file", async () => {
     render(
       <Providers>
-        <AboutPage />
+        <MethodsPage />
       </Providers>,
     );
-    expect(await screen.findByText("About PakEmis Explorer")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Methods & evidence" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods & evidence")).toHaveAttribute("aria-current", "page");
     // the version is printed once, under "Release"; nowhere else on the page
     expect(await screen.findByTestId("about-release")).toHaveTextContent("This Explorer reads PakEmis 1.0.0rc42 at commit bc1716d6");
     expect(screen.getAllByText(/1\.0\.0rc42/).length).toBe(1);
@@ -65,13 +68,13 @@ describe("/about", () => {
     expect(lic).toHaveTextContent("OpenStreetMap (c) contributors");
     expect(lic).toHaveTextContent("data/gis/rail/pak_rail_network.geojson");
     expect(screen.getByTestId("about-vocabulary")).toBeInTheDocument();
-    expect(screen.getByTestId("about-links")).toHaveTextContent("Data & API");
+    expect(screen.getByTestId("about-links")).toHaveTextContent("Downloads");
+    expect(screen.getByTestId("about-links").querySelector('a[href="/downloads"]')).not.toBeNull();
   });
-  it("every decimal is a string of the release (id, licence names); no avoid-list phrase; the intro link forgets the dismissal", async () => {
-    window.localStorage.setItem(INTRO_KEY, "1");
+  it("every decimal is a string of the release (id, licence names); no avoid-list phrase", async () => {
     const { container } = render(
       <Providers>
-        <AboutPage />
+        <MethodsPage />
       </Providers>,
     );
     await screen.findByTestId("about-territories");
@@ -80,7 +83,5 @@ describe("/about", () => {
     expect(tokens.length).toBeGreaterThan(0);
     for (const t of tokens) expect(fromRelease.has(t)).toBe(true);
     expect(avoidPhrasesIn(container.textContent ?? "")).toEqual([]);
-    screen.getByTestId("about-intro").click();
-    expect(window.localStorage.getItem(INTRO_KEY)).toBeNull();
   });
 });

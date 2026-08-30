@@ -38,7 +38,7 @@ export function Frame({ title, scope, env, error, isLoading, children, tableExtr
   const [chosen, setTab] = useState<"chart" | "table" | null>(defaultTab ?? null);
   const tab = chosen ?? (children ? "chart" : "table");
   const seg = (id: "chart" | "table", label: string) => (
-    <button key={id} onClick={() => setTab(id)} className={`px-2 py-0.5 text-micro normal-case tracking-normal ${tab === id ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>
+    <button key={id} onClick={() => setTab(id)} className={`px-2 py-0.5 text-micro normal-case tracking-normal ${tab === id ? "bg-fg text-surface" : "text-muted hover:text-fg"}`}>
       {label}
     </button>
   );
@@ -46,13 +46,13 @@ export function Frame({ title, scope, env, error, isLoading, children, tableExtr
     <section className={`${flat ? "" : "card"} flex flex-col ${className}`} data-testid="frame">
       <header className="flex items-start justify-between gap-2 px-3 pt-2.5 pb-1.5">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold leading-snug text-ink">{title}</h3>
-          {unitLine && <div className="text-xs text-ink/70" data-testid="frame-unit" title={unitTitle}>{unitLine}</div>}
+          <h3 className="text-sm font-semibold leading-snug text-fg">{title}</h3>
+          {unitLine && <div className="text-xs text-fg/70" data-testid="frame-unit" title={unitTitle}>{unitLine}</div>}
           {scope && <div className="text-xs text-muted">{scope}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {actions}
-          {children && env && <div className="pill flex overflow-hidden border border-line bg-white">{seg("chart", "Chart")}{seg("table", "Table")}</div>}
+          {children && env && <div className="pill flex overflow-hidden border border-line bg-surface-2">{seg("chart", "Chart")}{seg("table", "Table")}</div>}
         </div>
       </header>
       <div className="px-3 pb-2">

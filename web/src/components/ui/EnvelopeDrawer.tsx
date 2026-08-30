@@ -79,18 +79,18 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
     }
   };
   return (
-    <div className="fixed inset-0 z-[90] flex justify-end bg-ink/30" onClick={onClose} role="dialog" aria-label="Result details">
-      <div className="flex h-full w-full max-w-xl flex-col bg-white shadow-card" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[90] flex justify-end bg-fg/30" onClick={onClose} role="dialog" aria-label="Result details">
+      <div className="flex h-full w-full max-w-xl flex-col bg-surface-2 shadow-card" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
-            <div className="text-sm font-semibold text-ink">Result details</div>
+            <div className="text-sm font-semibold text-fg">Result details</div>
             <div className="mono text-xs text-muted">{env.request_type}</div>
           </div>
-          <button aria-label="Close" onClick={onClose} className="pill p-1 text-muted hover:bg-canvas hover:text-ink"><X size={16} /></button>
+          <button aria-label="Close" onClick={onClose} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg"><X size={16} /></button>
         </div>
         <div className="flex flex-wrap gap-1 border-b border-line px-3 py-2" role="tablist">
           {DRAWER_TABS.map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`pill px-3 py-1 text-xs ${tab === id ? "bg-ink text-white" : "text-muted hover:bg-canvas"}`}>{label}</button>
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`pill px-3 py-1 text-xs ${tab === id ? "bg-fg text-surface" : "text-muted hover:bg-surface-3"}`}>{label}</button>
           ))}
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-3 text-sm" data-testid={`drawer-${tab}`}>
@@ -100,7 +100,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
                 <h4 className="micro mb-1">Provenance</h4>
                 <ul className="space-y-1">
                   {(prov.tables ?? []).map((t) => (
-                    <li key={t.path} className="mono text-xs break-all text-muted">{t.table ? `${t.table}: ` : ""}{t.path} <span className="text-ink/60">sha256 {t.sha256 ?? "(not listed)"}</span></li>
+                    <li key={t.path} className="mono text-xs break-all text-muted">{t.table ? `${t.table}: ` : ""}{t.path} <span className="text-fg/60">sha256 {t.sha256 ?? "(not listed)"}</span></li>
                   ))}
                   {!(prov.tables ?? []).length && <li className="text-xs text-muted">{JSON.stringify(env.provenance)}</li>}
                 </ul>
@@ -133,13 +133,13 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
               {Object.keys(env.uncertainty).length > 0 && (
                 <section>
                   <h4 className="micro mb-1">Uncertainty</h4>
-                  <pre className="mono whitespace-pre-wrap break-all rounded bg-canvas p-2 text-xs">{JSON.stringify(env.uncertainty, null, 1)}</pre>
+                  <pre className="mono whitespace-pre-wrap break-all rounded bg-surface p-2 text-xs">{JSON.stringify(env.uncertainty, null, 1)}</pre>
                 </section>
               )}
               {env.completeness.length > 0 && (
                 <section>
                   <h4 className="micro mb-1">Completeness</h4>
-                  <pre className="mono whitespace-pre-wrap break-all rounded bg-canvas p-2 text-xs">{JSON.stringify(env.completeness, null, 1)}</pre>
+                  <pre className="mono whitespace-pre-wrap break-all rounded bg-surface p-2 text-xs">{JSON.stringify(env.completeness, null, 1)}</pre>
                 </section>
               )}
             </div>
@@ -149,7 +149,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
               <tbody>
                 {filterRows(env, labels).map((r) => (
                   <tr key={r.name} className="border-b border-line align-top">
-                    <th scope="row" className="w-32 py-1.5 pr-3 text-left font-semibold text-ink">{r.name}</th>
+                    <th scope="row" className="w-32 py-1.5 pr-3 text-left font-semibold text-fg">{r.name}</th>
                     <td className="py-1.5">
                       {r.value}
                       {r.id && r.id !== r.value ? <span className="mono ml-2 text-muted">{r.id}</span> : null}
@@ -162,7 +162,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
           {tab === "calculation" && (
             <div className="space-y-3">
               {calc.kind && <p className="text-xs text-muted">kind <span className="mono">{String(calc.kind)}</span></p>}
-              {calc.sql && <pre className="mono whitespace-pre-wrap break-words rounded bg-canvas p-2 text-xs">{formatSql(String(calc.sql))}</pre>}
+              {calc.sql && <pre className="mono whitespace-pre-wrap break-words rounded bg-surface p-2 text-xs">{formatSql(String(calc.sql))}</pre>}
               {Object.entries(calc).filter(([k]) => k !== "sql" && k !== "kind").map(([k, v]) => (
                 <p key={k} className="text-xs"><span className="text-muted">{k}</span> <span className="mono break-all">{typeof v === "string" ? v : JSON.stringify(v)}</span></p>
               ))}
@@ -195,12 +195,12 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
           {tab === "request" && (
             <div className="space-y-3">
               <p className="text-xs text-muted">The canonical request this result answers, as the envelope carries it.</p>
-              <pre className="mono whitespace-pre-wrap break-all rounded bg-canvas p-2 text-xs" data-testid="request-json">{prettyRequest(env.request)}</pre>
+              <pre className="mono whitespace-pre-wrap break-all rounded bg-surface p-2 text-xs" data-testid="request-json">{prettyRequest(env.request)}</pre>
               <p className="text-xs text-muted">
                 The same call against the API, returning the same envelope and Result ID
                 {env.context.defaults_applied.length ? <>: the fields the contract filled by default ({env.context.defaults_applied.join(", ")}) are left out so that it fills them again</> : null}.
               </p>
-              <pre className="mono whitespace-pre-wrap break-all rounded bg-canvas p-2 text-xs" data-testid="request-curl">{curlLine(absoluteApiBase(), call)}</pre>
+              <pre className="mono whitespace-pre-wrap break-all rounded bg-surface p-2 text-xs" data-testid="request-curl">{curlLine(absoluteApiBase(), call)}</pre>
             </div>
           )}
           {tab === "download" && (
@@ -219,10 +219,10 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
         <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
           <div className="min-w-0">
             <div className="micro">Result ID</div>
-            <div className="mono break-all text-xs text-ink" data-testid="result-id">{env.receipt}</div>
+            <div className="mono break-all text-xs text-fg" data-testid="result-id">{env.receipt}</div>
           </div>
           <div className="flex shrink-0 items-center gap-4">
-            <button type="button" onClick={copy} aria-label="Copy the Result ID" className="flex items-center gap-1 text-xs text-muted hover:text-ink">
+            <button type="button" onClick={copy} aria-label="Copy the Result ID" className="flex items-center gap-1 text-xs text-muted hover:text-fg">
               <Copy size={12} /> {copied ? "Copied" : "Copy"}
             </button>
             <Link href={receiptHref(env.receipt)} className="text-xs font-semibold text-accent hover:underline" data-testid="reproduce-link">Reproduce this result →</Link>

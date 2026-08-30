@@ -9,7 +9,8 @@
  * (`{API_BASE}/tiles/{name}`, whose `tiles` are the API's own absolute `/{z}/{x}/{y}.mvt` URLs).
  */
 import type { Map as MBMap, LayerSpecification, FilterSpecification } from "mapbox-gl";
-import { NO_CELL, ACCENT, AMBER } from "@/lib/palette";
+import { NO_CELL } from "@/lib/palette";
+import { mapTheme } from "@/lib/theme";
 import { absoluteApiBase } from "@/lib/api";
 import type { Level } from "@/lib/urlState";
 
@@ -41,7 +42,7 @@ export function hatchImage(): ImageData {
   c.height = 8;
   const ctx = c.getContext("2d")!;
   ctx.clearRect(0, 0, 8, 8);
-  ctx.strokeStyle = "rgba(27, 36, 48, 0.55)";
+  ctx.strokeStyle = mapTheme().hatch;
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   ctx.moveTo(-2, 6);
@@ -54,22 +55,24 @@ export function hatchImage(): ImageData {
 
 const NO_FILL_COLOR = NO_CELL;
 
+/** The outline, halo, hover and selection colours come from the theme's `map-*` tokens (drawn on the light basemap). */
 export function layerSpecs(): LayerSpecification[] {
   const hoverW = (base: number, hover: number) => ["case", ["boolean", ["feature-state", "hover"], false], hover, base] as unknown as number;
+  const t = mapTheme();
   return [
     { id: "grid-fill", type: "fill", source: "grid", "source-layer": "grid", minzoom: 6, paint: { "fill-color": "#000000", "fill-opacity": 0 } },
-    { id: "grid-line", type: "line", source: "grid", "source-layer": "grid", minzoom: 8, paint: { "line-color": "rgba(27,36,48,0.18)", "line-width": 0.5 } },
-    { id: "grid-hover", type: "line", source: "grid", "source-layer": "grid", minzoom: 6, paint: { "line-color": ACCENT, "line-width": hoverW(0, 1.5) } },
-    { id: "grid-selected", type: "line", source: "grid", "source-layer": "grid", minzoom: 5, filter: ["==", ["get", "cell_id"], ""], paint: { "line-color": AMBER, "line-width": 2.5 } },
+    { id: "grid-line", type: "line", source: "grid", "source-layer": "grid", minzoom: 8, paint: { "line-color": t.outline, "line-opacity": 0.18, "line-width": 0.5 } },
+    { id: "grid-hover", type: "line", source: "grid", "source-layer": "grid", minzoom: 6, paint: { "line-color": t.hover, "line-width": hoverW(0, 1.5) } },
+    { id: "grid-selected", type: "line", source: "grid", "source-layer": "grid", minzoom: 5, filter: ["==", ["get", "cell_id"], ""], paint: { "line-color": t.selected, "line-width": 2.5 } },
     { id: "adm2-fill", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.95, 0.82] } },
     { id: "adm2-hatch", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-pattern": HATCH_IMAGE, "fill-opacity": ["case", ["boolean", ["feature-state", "bounded"], false], 1, 0] } },
     { id: "adm1-fill", type: "fill", source: "adm1", "source-layer": "adm1", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.95, 0.82] } },
-    { id: "adm2-line", type: "line", source: "adm2", "source-layer": "adm2", paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.3, 8, 0.9] } },
-    { id: "adm1-line", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": "#1b2430", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 8, 1.6], "line-opacity": 0.7 } },
+    { id: "adm2-line", type: "line", source: "adm2", "source-layer": "adm2", paint: { "line-color": t.halo, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.3, 8, 0.9] } },
+    { id: "adm1-line", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": t.outline, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 8, 1.6], "line-opacity": 0.7 } },
     // the dotted outline of the polygons sharing the residual unit's one cell (feature-state `shared`, paint.ts)
-    { id: "adm1-shared", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": "#1b2430", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 2.2], "line-dasharray": [0.6, 1.6], "line-opacity": ["case", ["boolean", ["feature-state", "shared"], false], 0.95, 0] } },
-    { id: "adm2-selected", type: "line", source: "adm2", "source-layer": "adm2", filter: ["==", ["get", "shape_id"], ""], paint: { "line-color": AMBER, "line-width": 2.5 } },
-    { id: "adm1-selected", type: "line", source: "adm1", "source-layer": "adm1", filter: ["==", ["get", "name"], ""], paint: { "line-color": AMBER, "line-width": 2.5 } },
+    { id: "adm1-shared", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": t.outline, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 2.2], "line-dasharray": [0.6, 1.6], "line-opacity": ["case", ["boolean", ["feature-state", "shared"], false], 0.95, 0] } },
+    { id: "adm2-selected", type: "line", source: "adm2", "source-layer": "adm2", filter: ["==", ["get", "shape_id"], ""], paint: { "line-color": t.selected, "line-width": 2.5 } },
+    { id: "adm1-selected", type: "line", source: "adm1", "source-layer": "adm1", filter: ["==", ["get", "name"], ""], paint: { "line-color": t.selected, "line-width": 2.5 } },
   ];
 }
 
@@ -132,12 +135,14 @@ export function ensureRaster(map: MBMap, url: string, coordinates: [[number, num
   }
 }
 
-/** The ops dashboard's atmosphere (the globe's halo at low zoom, the horizon haze when tilted). */
-export const ATMOSPHERE = { range: [0.5, 10] as [number, number], color: "#ffffff", "high-color": "#b8d4e8", "space-color": "#d8f2ff", "horizon-blend": 0.08, "star-intensity": 0 };
+/** The ops dashboard's atmosphere (the globe's halo at low zoom, the horizon haze when tilted); the space around the globe is the theme's surface so the globe sits in the dark frame. */
+export function atmosphere() {
+  return { range: [0.5, 10] as [number, number], color: "#ffffff", "high-color": "#b8d4e8", "space-color": mapTheme().space, "horizon-blend": 0.08, "star-intensity": 0 };
+}
 
 /** streets-v12 declares no fog, so v3's globe would show a bare edge; the atmosphere is set once unless the style has its own. */
 export function ensureAtmosphere(map: MBMap) {
-  if (!map.getFog()) map.setFog(ATMOSPHERE);
+  if (!map.getFog()) map.setFog(atmosphere());
 }
 
 /** The ops dashboard's 3D recipe: Mapbox terrain, the atmosphere and a tilted camera; off keeps the atmosphere. */
@@ -146,7 +151,7 @@ export function setView3d(map: MBMap, on: boolean) {
   if (on) {
     if (!map.getSource(DEM_SOURCE)) map.addSource(DEM_SOURCE, { type: "raster-dem", url: "mapbox://mapbox.mapbox-terrain-dem-v1", tileSize: 512, maxzoom: 14 });
     map.setTerrain({ source: DEM_SOURCE, exaggeration: ["interpolate", ["linear"], ["zoom"], 0, 1.5, 15, 1.0] });
-    map.setFog(ATMOSPHERE);
+    map.setFog(atmosphere());
     map.easeTo({ pitch: 30, bearing: -10, duration: 700 });
   } else {
     map.easeTo({ pitch: 0, bearing: 0, duration: 500 });

@@ -1,8 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * The static export has no server routes: no link points at /r/<receipt> (a receipt's URL is
- * /data?receipt=<hash>), the app has no app/tiles or app/r route folders and no PMTiles reader,
- * and the Result details drawer's "Reproduce this result" link points at /data?receipt=.
+ * /downloads?receipt=<hash>; the old /data?receipt= redirects there), the app has no app/tiles
+ * or app/r route folders and no PMTiles reader, and the Result details drawer's "Reproduce
+ * this result" link points at /downloads?receipt=.
  */
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import path from "node:path";
@@ -35,15 +36,23 @@ describe("static-export link scheme", () => {
   it("the server-side route folders and the PMTiles reader are gone", () => {
     for (const rel of ["app/tiles", "app/r", "lib/pmtilesServer.ts"]) expect(existsSync(path.join(SRC, rel)), rel).toBe(false);
   });
-  it("a receipt's URL is /data?receipt=<hash>", () => {
+  it("no source links to /data or /about: the two moved to /downloads and /methods and are redirect stubs", () => {
+    const hits = walk(SRC)
+      .filter((f) => !/app\/(data|about)\/page\.tsx$/.test(f))
+      .filter((f) => /["'`]\/(data|about)(["'`?#/])/.test(readFileSync(f, "utf8")));
+    expect(hits).toEqual([]);
+    for (const rel of ["app/data/page.tsx", "app/about/page.tsx"]) expect(readFileSync(path.join(SRC, rel), "utf8")).toContain("<Redirect");
+  });
+  it("a receipt's URL is /downloads?receipt=<hash>", () => {
     const id = "0123456789abcdef0123456789abcdef";
-    expect(receiptHref(id)).toBe(`/data?receipt=${id}`);
+    expect(receiptHref(id)).toBe(`/downloads?receipt=${id}`);
     render(<ReceiptFooter env={envelope([{ display: "1.0" }], { receipt: id }) as unknown as Envelope} />);
     fireEvent.click(screen.getByTestId("result-details"));
     const drawer = screen.getByRole("dialog");
-    const replay = drawer.querySelector("a[href^='/data?receipt=']");
+    const replay = drawer.querySelector("a[href^='/downloads?receipt=']");
     expect(replay).not.toBeNull();
-    expect(replay).toHaveAttribute("href", `/data?receipt=${id}`);
+    expect(replay).toHaveAttribute("href", `/downloads?receipt=${id}`);
+    expect(drawer.querySelector("a[href^='/data?receipt=']")).toBeNull();
     expect(drawer.querySelector("a[href^='/r/']")).toBeNull();
   });
 });

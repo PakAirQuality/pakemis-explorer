@@ -36,7 +36,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
   const otherRow = dims.adm1.find((r) => r.has_polygon === "no");
   return (
     <div className="glass pointer-events-none absolute z-30 max-w-[300px] rounded-card px-3 py-2 text-xs" style={{ left, top }} data-testid="hover-tip">
-      <div className="font-semibold text-ink">{title}</div>
+      <div className="font-semibold text-fg">{title}</div>
       {sub && <div className="text-muted">{sub}</div>}
       {hover.level === "grid" ? (
         <div className="mt-1 text-muted">Click to read this cell from the cube (get_grid_cell).</div>
@@ -44,7 +44,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
         <div className="mt-1 text-warn">Refused for this scope: see the legend.</div>
       ) : cell ? (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-          <span className="num text-md font-semibold text-ink" data-testid="hover-display" title={`${cell.display} (contract precision)`}>{shown(cell)}</span>
+          <span className="num text-md font-semibold text-fg" data-testid="hover-display" title={`${cell.display} (contract precision)`}>{shown(cell)}</span>
           <span className="text-muted">{cellUnit(cell)}</span>
           {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           {isBounded(cell) && <div className="w-full text-muted">{String((cell as Record<string, unknown>).interpretation ?? "")}</div>}

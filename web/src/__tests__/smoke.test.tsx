@@ -1,19 +1,21 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * Smoke: the screen renders against a mocked /release and mocked envelopes, and every number
- * on screen is an envelope's display string. The map and charts are stubbed (no WebGL/canvas in jsdom).
+ * Smoke: the Map page and the Downloads page render against a mocked /release and mocked
+ * envelopes under the shared ExplorerProvider, and every number on screen is an envelope's
+ * display string. The map and charts are stubbed (no WebGL/canvas in jsdom).
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
-import Page from "@/app/page";
-import DataPage from "@/app/data/page";
+import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
+import Page from "@/app/map/page";
+import DownloadsPage from "@/app/downloads/page";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 
 vi.mock("@/components/map/ExplorerMap", () => ({ ExplorerMap: () => <div data-testid="map-stub" /> }));
 vi.mock("@/components/ui/BarChart", () => ({ BarChart: () => <div data-testid="bar-chart" /> }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/map", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), redirect: vi.fn() }));
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -35,28 +37,33 @@ function mount(node: React.ReactNode, search = "") {
   const Wrapper = withNuqsTestingAdapter({ searchParams: search });
   return render(
     <Wrapper>
-      <Providers>{node}</Providers>
+      <Providers>
+        <ExplorerProvider>{node}</ExplorerProvider>
+      </Providers>
     </Wrapper>,
   );
 }
 
-describe("PakEmis Explorer", () => {
-  it("renders the shell with the national KPI from an envelope and the receipt as a footer", async () => {
+describe("PakEmis Map page", () => {
+  it("renders the map screen with the national KPI from an envelope and the receipt as a footer", async () => {
     mount(<Page />);
     expect(await screen.findByTestId("explorer")).toBeTruthy();
     expect(await screen.findByTestId("national-kpi")).toHaveTextContent("452.35"); // the server's two-decimal rendering; the contract display in the title
     expect(screen.getByTestId("national-kpi")).toHaveAttribute("title", expect.stringContaining("452.34662"));
     expect((await screen.findAllByTestId("receipt-footer")).length).toBeGreaterThan(0);
     expect(screen.getByTestId("map-stub")).toBeTruthy();
+    expect(screen.getByTestId("map-frame")).toBeTruthy();
+    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Map")).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByTestId("welcome-modal")).toBeNull();
   });
   it("shows the Ask placeholder as a disabled card with the release's reason", async () => {
     mount(<Page />, "?ask=1");
     expect(await screen.findByTestId("disabled-card")).toHaveTextContent("not mounted");
     expect(screen.getByText("query_emissions")).toBeTruthy();
   });
-  it("renders /data with the release identity (the one place the version is printed) and the sector x gas frame", async () => {
-    mount(<DataPage />);
-    expect(await screen.findByText("Data & API")).toBeTruthy();
+  it("renders /downloads with the release identity (the one place the version is printed) and the sector x gas frame", async () => {
+    mount(<DownloadsPage />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Downloads" })).toBeTruthy();
     expect(await screen.findByText("Release identity")).toBeTruthy();
     expect(screen.getByText("PakEmis 1.0.0rc42")).toBeTruthy();
     expect((await screen.findAllByTestId("frame")).length).toBeGreaterThan(0);

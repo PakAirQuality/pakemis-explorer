@@ -1,7 +1,7 @@
 /**
  * Every request body the Explorer sends is a pure function of the URL state (lib/urlState.ts):
  * same URL => same bodies => same receipts. `stateFromRequest` is the inverse the agent's
- * "show on map" and `/data?receipt=` use to put a request back on the map.
+ * "show on map" and `/downloads?receipt=` use to put a request back on the map.
  * Field values here are the contract's own words (openapi descriptions): "annual" is the
  * GridCellRequest's word for the twelve-month sum; group keys name the release's columns.
  */

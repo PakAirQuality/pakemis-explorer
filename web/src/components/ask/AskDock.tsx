@@ -59,7 +59,7 @@ export function AskDock() {
             {ask.conversationId ? ` · ${ask.conversationId.slice(0, 8)}` : ""}
           </div>
         </div>
-        <button type="button" onClick={reset} className="pill flex items-center gap-1 border border-line px-2 py-1 text-xs text-muted hover:bg-canvas hover:text-ink" title="Start a new conversation" data-testid="new-conversation">
+        <button type="button" onClick={reset} className="pill flex items-center gap-1 border border-line px-2 py-1 text-xs text-muted hover:bg-surface-3 hover:text-fg" title="Start a new conversation" data-testid="new-conversation">
           <RotateCcw size={12} /> New conversation
         </button>
       </div>

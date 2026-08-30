@@ -7,7 +7,7 @@ import { sectorLabel, streamLabel, type Dims as LabelDims } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import { Frame } from "@/components/ui/Frame";
 
-const SEL = "w-full rounded border border-line bg-white px-2 py-1 text-xs";
+const SEL = "w-full rounded border border-line bg-surface-2 px-2 py-1 text-xs";
 const LINEAGE_COLUMNS = ["evidence_class", "temporal_class", "spatial_class_measured", "placement_class", "allocation_surface", "temporal_evidence_grade", "licence_status", "ipcc_code", "ipcc_category", "methane_origin"];
 
 export function EvidenceBrowser({ labels, dims, sectors, sector: initialSector, wide = false }: { labels: Labels; dims: LabelDims; sectors: string[]; sector?: string | null; wide?: boolean }) {
@@ -44,7 +44,7 @@ export function EvidenceBrowser({ labels, dims, sectors, sector: initialSector, 
       <Frame title={stream ? streamLabel(labels, stream) : "Stream lineage"} scope="get_evidence · evidence / timing / placement grade" env={one.data} error={one.error} isLoading={one.isLoading} labels={labels} dims={dims} tableExtra={LINEAGE_COLUMNS}>
         {row && (
           <div>
-            <div className="num text-xl font-semibold text-ink" title={`${String(row.display)} (contract precision)`}>{String(row.display_short ?? row.display)}</div>
+            <div className="num text-xl font-semibold text-fg" title={`${String(row.display)} (contract precision)`}>{String(row.display_short ?? row.display)}</div>
             <dl className="mt-2 grid grid-cols-[minmax(0,140px)_1fr] gap-x-2 gap-y-0.5 text-xs">
               {Object.entries(row).filter(([k]) => !["exact", "value", "display", "unit", "result_row_ids", "formula", "group"].includes(k)).map(([k, v]) => (
                 <div key={k} className="contents">

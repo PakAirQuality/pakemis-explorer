@@ -42,7 +42,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
       </div>
       <div className="max-h-[60vh] overflow-auto rounded border border-line">
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-canvas">
+          <thead className="sticky top-0 bg-surface">
             <tr>
               {groupKeys.length ? groupKeys.map((k) => <th key={k} className={`${cellPad} text-left font-semibold text-muted`}>{columnLabel(k)}</th>) : <th className={`${cellPad} text-left font-semibold text-muted`}>Scope</th>}
               {extra.map((k) => <th key={k} className={`${cellPad} text-left font-semibold text-muted`}>{columnLabel(k)}</th>)}
@@ -56,7 +56,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
             {rows.map((v, i) => {
               const g = groupOf(v);
               return (
-                <tr key={i} className="border-t border-line align-top hover:bg-canvas/60">
+                <tr key={i} className="border-t border-line align-top hover:bg-surface-3/60">
                   {groupKeys.length ? (
                     groupKeys.map((k) => {
                       const id = g[k] ?? "";

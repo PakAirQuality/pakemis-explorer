@@ -17,7 +17,10 @@ export const SECTOR_HUES: Record<string, string> = {
   aviation: "#48CAE4",
 };
 
-export const ACCENT = "#2a6f97";
+/** The accent family (globals.css): `ACCENT` is the text-on-dark green, `ACCENT_BRIGHT` the chart stroke, `ACCENT_FILL` the filled button and the map hover. */
+export const ACCENT = "#34d399";
+export const ACCENT_BRIGHT = "#4ade80";
+export const ACCENT_FILL = "#1f6f4a";
 export const AMBER = "#f59e0b";
 export const NO_CELL = "#e2e6ea";
 export const RAMP = ["#f1f5f4", "#d7e8e4", "#a8cfd4", "#6faec5", "#3f88ad", "#23618f", "#0f3d66"] as const;

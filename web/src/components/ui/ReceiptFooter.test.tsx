@@ -54,8 +54,8 @@ describe("ReceiptFooter", () => {
     expect(within(drawer).getByTestId("result-id")).toHaveTextContent(e.receipt);
     expect(drawer).toHaveTextContent("Result ID");
     expect(within(drawer).getByLabelText("Copy the Result ID")).toBeInTheDocument();
-    expect(within(drawer).getByTestId("reproduce-link")).toHaveAttribute("href", `/data?receipt=${e.receipt}`);
-    expect(receiptHref(e.receipt)).toBe(`/data?receipt=${e.receipt}`);
+    expect(within(drawer).getByTestId("reproduce-link")).toHaveAttribute("href", `/downloads?receipt=${e.receipt}`);
+    expect(receiptHref(e.receipt)).toBe(`/downloads?receipt=${e.receipt}`);
     // Sources first: the provenance table and the limitation hit
     expect(within(drawer).getByTestId("drawer-sources")).toHaveTextContent("outputs/semantic/fact_annual.csv");
     expect(within(drawer).getByTestId("drawer-sources")).toHaveTextContent("lulucf_excluded");

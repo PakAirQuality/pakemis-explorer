@@ -1,20 +1,36 @@
 @import "tailwindcss";
 @import "mapbox-gl/dist/mapbox-gl.css";
 
-/* Design tokens (plan section C). Light UI over a light basemap; the rail is the one dark element. */
+/*
+ * Design tokens: the dark theme (2026-08-30). Semantic names only; every component reads
+ * these and none carries a literal colour. The map viewport keeps the light streets-v12
+ * basemap inside a framed dark container (the choropleth ramp and the raster colormap are
+ * calibrated on light), so the outline / halo colours drawn ON the basemap are the
+ * `map-*` tokens, read at layer construction (lib/theme.ts).
+ */
 @theme {
-  --color-ink: #1b2430;
-  --color-muted: #5c6b7a;
-  --color-line: #d9dee5;
-  --color-accent: #2a6f97;
-  --color-accent-soft: #e6eff5;
-  --color-warn: #8a3b12;
-  --color-refusal: #fff6f0;
-  --color-rail: #1e293b;
+  --color-surface: #0b0d10;
+  --color-surface-2: #12161b;
+  --color-surface-3: #181d23;
+  --color-fg: #e8ecf1;
+  --color-muted: #9aa4b2;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+  /* the green family: text and links on dark, the bright chart stroke, the filled button */
+  --color-accent: #34d399;
+  --color-accent-bright: #4ade80;
+  --color-accent-fill: #1f6f4a;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: rgba(52, 211, 153, 0.14);
+  --color-warn: #f6a95c;
+  --color-refusal: rgba(245, 158, 11, 0.1);
   --color-amber: #f59e0b;
   --color-amber-soft: #fbbf24;
-  --color-panel: rgba(255, 255, 255, 0.92);
-  --color-canvas: #f5f7f9;
+  --color-panel: rgba(18, 22, 27, 0.86);
+  /* drawn on the light basemap */
+  --color-map-outline: #1b2430;
+  --color-map-halo: #ffffff;
+  --color-map-hatch: rgba(27, 36, 48, 0.55);
   --font-sans: var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-card: 0.625rem;
@@ -33,29 +49,36 @@
   --text-xl--line-height: 26px;
   --text-3xl: 30px;
   --text-3xl--line-height: 34px;
-  --shadow-card: 0 1px 2px rgba(27, 36, 48, 0.06), 0 8px 24px rgba(27, 36, 48, 0.1);
-  --shadow-pill: 0 1px 2px rgba(27, 36, 48, 0.08), 0 4px 12px rgba(27, 36, 48, 0.08);
+  --text-4xl: 40px;
+  --text-4xl--line-height: 44px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-pill: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 @layer base {
   html, body { height: 100%; }
-  body { background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--text-base--line-height); font-feature-settings: "tnum" 1, "cv11" 1; -webkit-font-smoothing: antialiased; }
+  html { color-scheme: dark; }
+  body { background: var(--color-surface); color: var(--color-fg); font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--text-base--line-height); font-feature-settings: "tnum" 1, "cv11" 1; -webkit-font-smoothing: antialiased; }
   .num, .tabular { font-variant-numeric: tabular-nums; }
   code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; }
   button { cursor: pointer; font: inherit; }
-  select, input { font: inherit; }
+  select, input, textarea { font: inherit; color: var(--color-fg); }
+  select option { background: var(--color-surface-2); color: var(--color-fg); }
+  ::placeholder { color: var(--color-muted); opacity: 0.8; }
 }
 
-@utility glass { background: var(--color-panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(27, 36, 48, 0.08); box-shadow: var(--shadow-pill); }
-@utility card { background: #fff; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+@utility glass { background: var(--color-panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--color-line-strong); box-shadow: var(--shadow-pill); }
+@utility card { background: var(--color-surface-2); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 @utility micro { font-size: var(--text-micro); line-height: var(--text-micro--line-height); letter-spacing: var(--text-micro--letter-spacing); text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
 @utility pill { border-radius: 9999px; }
 @utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+/* the framed map viewport: a 1 px line and the card radius around the light basemap */
+@utility map-frame { border: 1px solid var(--color-line-strong); border-radius: var(--radius-card); overflow: hidden; background: var(--color-surface-2); }
 
-/* Mapbox GL chrome */
-.mapboxgl-ctrl-attrib { font-size: 10px; background: rgba(255, 255, 255, 0.75) !important; color: var(--color-muted); }
-.mapboxgl-ctrl-attrib a { color: var(--color-muted); }
+/* Mapbox GL chrome (drawn over the light basemap, so it keeps light glass) */
+.mapboxgl-ctrl-attrib { font-size: 10px; background: rgba(255, 255, 255, 0.75) !important; color: #5c6b7a; }
+.mapboxgl-ctrl-attrib a { color: #5c6b7a; }
 .mapboxgl-canvas:focus { outline: none; }
 
 /* Chart decal for bounded cells (the same diagonal hatch as the map). */
-.hatch-swatch { background-image: repeating-linear-gradient(135deg, rgba(27, 36, 48, 0.55) 0 1.5px, transparent 1.5px 5px); }
+.hatch-swatch { background-image: repeating-linear-gradient(135deg, var(--color-map-hatch) 0 1.5px, transparent 1.5px 5px); }

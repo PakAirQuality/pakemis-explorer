@@ -4,7 +4,7 @@
  * globe and atmosphere when the token exists), the layer stack inserted below the basemap's
  * labels (layers.ts), the PMTiles served as TileJSON by the API's /tiles routes, the envelope painted
  * through feature-state (paint.ts), hover and click (useMapInteractions), the floating chrome
- * (ScopeChips + the Ask hint, Ask pill, raster / 3D / frame buttons, TimeRail, Legend, context
+ * (ScopeChips, the Ask pill, raster / 3D / frame buttons, TimeRail, Legend, context
  * pill) and the camera written to `cam`. The choropleth's request is mapBody(state); a refused
  * request leaves outlines and puts the refusal in the legend.
  */
@@ -23,7 +23,7 @@ import { rasterFile, rasterUrl, unionBbox, useBboxes, useTilesInfo } from "./til
 import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
-import { AskHint, AskPill } from "@/components/ask/AskEntry";
+import { AskPill } from "@/components/ask/AskEntry";
 import { View3dToggle } from "./View3dToggle";
 import { HoverTip } from "./HoverTip";
 import { Legend } from "./Legend";
@@ -214,7 +214,6 @@ export function ExplorerMap() {
 
       <div className={`absolute left-3 z-20 ${bm.notice ? "top-8" : "top-3"}`}>
         <ScopeChips />
-        <AskHint />
       </div>
       <div className={`absolute right-3 z-20 flex flex-col items-end gap-1.5 ${bm.notice ? "top-8" : "top-3"}`}>
         <AskPill />
@@ -222,7 +221,7 @@ export function ExplorerMap() {
           <Layers size={16} />
         </button>
         <View3dToggle />
-        <button title="Frame Pakistan" onClick={fitAll} className="glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-ink">
+        <button title="Frame Pakistan" onClick={fitAll} className="glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-fg">
           <Locate size={16} />
         </button>
       </div>

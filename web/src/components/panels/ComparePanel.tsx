@@ -8,7 +8,7 @@ import { configLabel, configWords, gwpLabel, gwpTooltip, periodShort } from "@/l
 import { Frame } from "@/components/ui/Frame";
 import { BarChart } from "@/components/ui/BarChart";
 
-const SEL = "w-full rounded border border-line bg-white px-2 py-1 text-xs";
+const SEL = "w-full rounded border border-line bg-surface-2 px-2 py-1 text-xs";
 
 export function ComparePanel() {
   const { state, labels, dims } = useExplorer();
@@ -23,9 +23,9 @@ export function ComparePanel() {
   const title = mode === "periods" ? `${periodShort(labels, state.period)} minus ${periodShort(labels, left)}` : `${configLabel(labels, rightCfg)} minus ${configWords(labels, state.config)}`;
   return (
     <div className="space-y-3 p-3" data-testid="compare-panel">
-      <div className="pill flex overflow-hidden border border-line bg-white p-0.5">
-        <button onClick={() => setMode("periods")} className={`pill flex-1 py-1 text-xs ${mode === "periods" ? "bg-ink text-white" : "text-muted"}`}>Two periods</button>
-        <button onClick={() => setMode("configurations")} className={`pill flex-1 py-1 text-xs ${mode === "configurations" ? "bg-ink text-white" : "text-muted"}`}>Two configurations</button>
+      <div className="pill flex overflow-hidden border border-line bg-surface-2 p-0.5">
+        <button onClick={() => setMode("periods")} className={`pill flex-1 py-1 text-xs ${mode === "periods" ? "bg-fg text-surface" : "text-muted"}`}>Two periods</button>
+        <button onClick={() => setMode("configurations")} className={`pill flex-1 py-1 text-xs ${mode === "configurations" ? "bg-fg text-surface" : "text-muted"}`}>Two configurations</button>
       </div>
       {mode === "periods" ? (
         <label className="block">

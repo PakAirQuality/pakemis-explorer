@@ -19,11 +19,11 @@ export function TimeRail({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`glass rounded-2xl px-3 py-2 ${compact ? "w-full max-w-[520px]" : "w-full max-w-[560px]"}`} data-testid="time-rail">
       <div className="flex items-center gap-2">
-        <button aria-label="Previous year" disabled={i <= 0} onClick={() => go(i - 1)} className="pill flex h-6 w-6 items-center justify-center bg-ink/5 hover:bg-ink/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+        <button aria-label="Previous year" disabled={i <= 0} onClick={() => go(i - 1)} className="pill flex h-6 w-6 items-center justify-center bg-fg/5 hover:bg-fg/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
         <input type="range" min={0} max={Math.max(0, years.length - 1)} step={1} value={i} onChange={(e) => go(Number(e.target.value))} className="flex-1 accent-amber" aria-label="Fiscal year" />
-        <button aria-label="Next year" disabled={i >= years.length - 1} onClick={() => go(i + 1)} className="pill flex h-6 w-6 items-center justify-center bg-ink/5 hover:bg-ink/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+        <button aria-label="Next year" disabled={i >= years.length - 1} onClick={() => go(i + 1)} className="pill flex h-6 w-6 items-center justify-center bg-fg/5 hover:bg-fg/10 disabled:opacity-30"><ChevronRight size={14} /></button>
         <div className="min-w-[120px] text-right">
-          <div className="text-sm font-semibold text-ink" title={periodLabel(labels, state.period)}>{periodShort(labels, state.period)}</div>
+          <div className="text-sm font-semibold text-fg" title={periodLabel(labels, state.period)}>{periodShort(labels, state.period)}</div>
           {!isRef && <div className="text-micro normal-case tracking-normal text-warn">national only</div>}
         </div>
       </div>
@@ -41,7 +41,7 @@ export function TimeRail({ compact = false }: { compact?: boolean }) {
 
 function MonthChip({ active, onClick, label, title }: { active: boolean; onClick: () => void; label: string; title?: string }) {
   return (
-    <button onClick={onClick} title={title} className={`pill shrink-0 px-2 py-0.5 text-micro normal-case tracking-normal ${active ? "bg-ink text-white" : "text-muted hover:bg-ink/5 hover:text-ink"}`}>
+    <button onClick={onClick} title={title} className={`pill shrink-0 px-2 py-0.5 text-micro normal-case tracking-normal ${active ? "bg-fg text-surface" : "text-muted hover:bg-fg/5 hover:text-fg"}`}>
       {label}
     </button>
   );

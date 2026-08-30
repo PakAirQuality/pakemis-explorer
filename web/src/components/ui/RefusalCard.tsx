@@ -24,7 +24,7 @@ export function RefusalCard({ refusal, error, what, compact = false }: { refusal
         <span className="mono text-xs text-muted">{r.error}</span>
         {r.limitation_id && <span className="mono text-xs text-muted">limitation {r.limitation_id}</span>}
       </div>
-      <p className={`mt-1 ${compact ? "text-xs" : "text-sm"} text-ink`}>{r.message}</p>
+      <p className={`mt-1 ${compact ? "text-xs" : "text-sm"} text-fg`}>{r.message}</p>
       {!compact && Object.keys(r.detail ?? {}).length > 0 && <p className="mono mt-1 text-xs text-muted">{JSON.stringify(r.detail)}</p>}
     </div>
   );

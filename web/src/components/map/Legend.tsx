@@ -37,7 +37,7 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
     <div className="glass w-[272px] rounded-card text-xs" data-testid="legend">
       <div className="px-3 pt-2">
         <div className="micro">Legend</div>
-        <div className="truncate text-xs text-ink" title={scope}>{scope}</div>
+        <div className="truncate text-xs text-fg" title={scope}>{scope}</div>
       </div>
       {state.level === "grid" ? (
         <RasterLegend state={state} raster={raster} on={rasterOn} />
@@ -48,25 +48,25 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
           <ul className="space-y-0.5">
             {legendRanks(env.values).map((c, i) => (
               <li key={i} className="flex items-center gap-2">
-                <span className="inline-block h-3 w-5 rounded-sm border border-ink/10" style={{ background: rampColor(c.value as number, index.min, index.max) }} />
-                <span className="num text-ink" data-testid="legend-label" title={`${c.display} (contract precision)`}>{shown(c)}</span>
+                <span className="inline-block h-3 w-5 rounded-sm border border-fg/10" style={{ background: rampColor(c.value as number, index.min, index.max) }} />
+                <span className="num text-fg" data-testid="legend-label" title={`${c.display} (contract precision)`}>{shown(c)}</span>
               </li>
             ))}
             {index.anyBounded && (
               <li className="flex items-center gap-2">
-                <span className="hatch-swatch inline-block h-3 w-5 rounded-sm border border-ink/10" style={{ backgroundColor: RAMP[2] }} />
+                <span className="hatch-swatch inline-block h-3 w-5 rounded-sm border border-fg/10" style={{ backgroundColor: RAMP[2] }} />
                 <span className="text-muted">interval [low, high] (mixed CH₄ origin)</span>
               </li>
             )}
             {shared && (
               <li className="flex items-center gap-2" data-testid="legend-shared">
-                <span className="inline-block h-3 w-5 rounded-sm border-2 border-dotted border-ink/80" style={{ background: typeof shared.cell.value === "number" ? rampColor(shared.cell.value, index.min, index.max) : NO_CELL }} />
+                <span className="inline-block h-3 w-5 rounded-sm border-2 border-dotted border-fg/80" style={{ background: typeof shared.cell.value === "number" ? rampColor(shared.cell.value, index.min, index.max) : NO_CELL }} />
                 <span className="text-muted">{shared.name}: {shared.members.join(" + ")} share one cell</span>
               </li>
             )}
             {hasCells && (
               <li className="flex items-center gap-2">
-                <span className="inline-block h-3 w-5 rounded-sm border border-ink/10" style={{ background: NO_CELL }} />
+                <span className="inline-block h-3 w-5 rounded-sm border border-fg/10" style={{ background: NO_CELL }} />
                 <span className="text-muted">no cell</span>
               </li>
             )}
@@ -90,7 +90,7 @@ function RasterLegend({ state, raster, on }: { state: ExplorerState; raster: Ras
   return (
     <div className="px-3 pb-2 pt-1">
       {!on && <div className="mb-1 text-muted">Raster off (toggle in the layers control).</div>}
-      <div className="h-3 w-full rounded-sm border border-ink/10" style={{ background: `linear-gradient(90deg, ${stops.join(", ")})` }} />
+      <div className="h-3 w-full rounded-sm border border-fg/10" style={{ background: `linear-gradient(90deg, ${stops.join(", ")})` }} />
       <div className="mt-1 text-muted">{raster?.stretch ?? "log stretch"}; {raster?.note ?? "shading only"}.</div>
       {anchors ? (
         <ul className="mt-1 space-y-1">
@@ -111,7 +111,7 @@ function AnchorRow({ label, q }: { label: string; q: { data?: Envelope; error?: 
       <div className="text-muted">{label}</div>
       {cell ? (
         <div className="flex items-baseline justify-between gap-2">
-          <span className="num text-ink" data-testid="raster-anchor" title={`${cell.display} (contract precision)`}>{shown(cell)} {cellUnit(cell)}</span>
+          <span className="num text-fg" data-testid="raster-anchor" title={`${cell.display} (contract precision)`}>{shown(cell)} {cellUnit(cell)}</span>
           <span className="mono text-muted" title={q.data!.receipt}>{q.data!.receipt.slice(0, 8)}</span>
         </div>
       ) : q.error ? (

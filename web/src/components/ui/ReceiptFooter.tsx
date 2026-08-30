@@ -36,7 +36,7 @@ export function ReceiptFooter({ env = null, receipt, className = "", labels }: {
   };
   return (
     <div className={`flex items-center gap-2 text-micro normal-case tracking-normal ${className}`} data-testid="receipt-footer" data-receipt={id}>
-      <button type="button" onClick={openDrawer} title={RESULT_DETAILS_TITLE} className="flex items-center gap-0.5 text-muted hover:text-ink" data-testid="result-details">
+      <button type="button" onClick={openDrawer} title={RESULT_DETAILS_TITLE} className="flex items-center gap-0.5 text-muted hover:text-fg" data-testid="result-details">
         Result details <ChevronRight size={12} aria-hidden="true" />
       </button>
       {open && shown && <EnvelopeDrawer env={shown} tab="sources" labels={labels ?? ctx?.labels} onClose={() => setOpen(false)} />}
