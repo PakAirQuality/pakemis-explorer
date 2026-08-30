@@ -1,6 +1,6 @@
 "use client";
 /**
- * Map settings: the bottom-right pill (left of the Ask FAB the layout fixes there) and the
+ * Map settings: the bottom-right pill (the corner the Ask button left when it moved to the bottom left) and the
  * popover it opens, holding everything that is about the MAP rather than about the question, in
  * this order —
  *
@@ -58,7 +58,7 @@ export function MapSettings({ open, onToggle, opacity, onOpacity, basemap, onBas
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onToggle]);
   return (
-    <div className="absolute bottom-5 right-[92px] z-20 flex flex-col items-end gap-2" data-testid="map-settings">
+    <div className="absolute bottom-5 right-5 z-20 flex flex-col items-end gap-2" data-testid="map-settings">
       {open && (
         <div className="card max-h-[calc(100dvh-140px)] w-[300px] max-w-[calc(100vw-40px)] overflow-y-auto p-4 shadow-lg" role="dialog" aria-label={SETTINGS.title} data-testid="map-settings-panel">
           <div className="mb-3 flex items-center justify-between">

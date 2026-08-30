@@ -55,8 +55,10 @@ async function mount(props: Partial<React.ComponentProps<typeof TrendChart>> = {
     </Providers>,
   );
   const chart = screen.getByTestId("trend-chart");
-  await waitFor(() => expect(chart.querySelector("svg")).not.toBeNull());
-  await waitFor(() => expect(svgTexts(chart).length).toBeGreaterThan(0));
+  // ECharts is imported dynamically and drawn on a frame; under a loaded full-suite run the
+  // default one-second window is not always enough (this test flaked there, never alone).
+  await waitFor(() => expect(chart.querySelector("svg")).not.toBeNull(), { timeout: 5000 });
+  await waitFor(() => expect(svgTexts(chart).length).toBeGreaterThan(0), { timeout: 5000 });
   return { ...view, env, chart };
 }
 

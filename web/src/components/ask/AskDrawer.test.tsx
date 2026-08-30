@@ -8,6 +8,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/components/Providers";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
+import { AskFab } from "@/components/shell/AskFab";
 import { NavCapsule } from "@/components/shell/NavCapsule";
 import { openAsk, resetAskBus } from "@/lib/askBus";
 import { releaseDims, releaseLabels } from "@/lib/release";
@@ -51,6 +52,7 @@ function mount(value: ExplorerContextValue) {
     <Providers>
       <ExplorerContext.Provider value={value}>
         <NavCapsule />
+        <AskFab />
         <AskDrawer />
       </ExplorerContext.Provider>
     </Providers>,
@@ -86,7 +88,7 @@ describe("AskDrawer", () => {
     const drawer = screen.getByTestId("ask-drawer");
     expect(drawer.getAttribute("data-open")).toBe("0");
     expect(drawer.getAttribute("aria-hidden")).toBe("true");
-    fireEvent.click(screen.getByTestId("nav-ask"));
+    fireEvent.click(screen.getByTestId("ask-fab"));
     expect(drawer.getAttribute("data-open")).toBe("1");
     expect(screen.getByTestId("ask-dock").getAttribute("data-variant")).toBe("drawer");
     expect(screen.getByTestId("ask-contract")).toHaveTextContent("The assistant interprets your question; the inventory engine supplies every number. It never calculates from documents or prose.");
@@ -95,7 +97,7 @@ describe("AskDrawer", () => {
     expect(document.body.textContent).not.toContain("FY");
     fireEvent.keyDown(window, { key: "Escape" });
     expect(drawer.getAttribute("data-open")).toBe("0");
-    fireEvent.click(screen.getByTestId("nav-ask"));
+    fireEvent.click(screen.getByTestId("ask-fab"));
     expect(drawer.getAttribute("data-open")).toBe("1");
     fireEvent.click(screen.getByTestId("ask-close"));
     expect(drawer.getAttribute("data-open")).toBe("0");
@@ -103,7 +105,7 @@ describe("AskDrawer", () => {
 
   it("the scope line and the suggestions change with the state", () => {
     const { rerender } = mount(ctx(punjabAg));
-    fireEvent.click(screen.getByTestId("nav-ask"));
+    fireEvent.click(screen.getByTestId("ask-fab"));
     expect(screen.getAllByTestId("suggestion")).toHaveLength(5);
     rerender(
       <Providers>
@@ -149,7 +151,7 @@ describe("AskDrawer", () => {
     const fetchSpy = vi.fn(async () => sse(DONE));
     vi.stubGlobal("fetch", fetchSpy);
     mount(ctx(punjabAg));
-    fireEvent.click(screen.getByTestId("nav-ask"));
+    fireEvent.click(screen.getByTestId("ask-fab"));
     await act(async () => {
       fireEvent.click(screen.getAllByTestId("suggestion")[1]);
     });
@@ -167,7 +169,7 @@ describe("AskDrawer", () => {
     unmount();
     pathname.value = "/map";
     mount(ctx(national, vi.fn(), true));
-    fireEvent.click(screen.getByTestId("nav-ask"));
+    fireEvent.click(screen.getByTestId("ask-fab"));
     const drawer = screen.getByTestId("ask-drawer");
     expect(drawer.className).toContain("inset-0");
     expect(drawer.getAttribute("style") ?? "").not.toContain("440");

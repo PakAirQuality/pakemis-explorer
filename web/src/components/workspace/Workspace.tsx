@@ -142,7 +142,7 @@ export function Workspace() {
 
       <LegendCapsule />
 
-      {/* clear of the Ask FAB, which the layout fixes at bottom-6 right-6 (56 px) */}
+      {/* stacked above the Map settings pill in the same right column */}
       <div className="absolute bottom-[96px] right-5 z-20 flex flex-col gap-1.5" data-testid="map-buttons">
         <button type="button" title={MAP_BUTTONS.zoomIn} aria-label={MAP_BUTTONS.zoomIn} onClick={() => map?.zoomIn()} className={MAP_BUTTON} data-testid="map-zoom-in">
           <Plus size={16} aria-hidden="true" />

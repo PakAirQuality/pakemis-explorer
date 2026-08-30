@@ -42,7 +42,7 @@ import { DECK_COLLAPSE, DECK_EXPAND, DECK_TITLE } from "./copy";
 
 /** The deck's column, over the map, clear of the nav capsule above it. */
 export const DECK_CLASS =
-  "absolute left-5 top-[84px] bottom-5 w-[420px] z-20 overflow-y-auto overscroll-contain scrollbar-thin pointer-events-none flex flex-col gap-3 pr-2";
+  "absolute left-5 top-[84px] bottom-[108px] w-[420px] z-20 overflow-y-auto overscroll-contain scrollbar-none pointer-events-none flex flex-col gap-3";
 
 /** The bottom sheet's three heights under 1024 px (the old map drawer's snap states). */
 export const SNAP_HEIGHT: Record<Snap, string> = { peek: "84px", half: "55dvh", full: "calc(100dvh - 84px)" };

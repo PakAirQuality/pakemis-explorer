@@ -9,7 +9,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { axisFromTicks, fraction } from "./axis";
 import { buildBarsOption } from "./BarsWithAxis";
-import { buildColumnOption } from "./ColumnChart";
+import { buildColumnOption, columnColor } from "./ColumnChart";
 import { IntervalBar } from "./IntervalBar";
 import { StackedBar } from "./StackedBar";
 import { FALLBACK } from "@/lib/theme";
@@ -79,8 +79,11 @@ describe("ECharts option builders", () => {
     expect([0, 100, 250, 372.39678, 500, 600].map((v) => y.axisLabel.formatter(v))).toEqual(["0", "100", "", "", "500", ""]);
     expect(o.series[0].data.map((d) => d.label.show)).toEqual([true, false, true]);
     expect(o.series[0].data.map((d) => d.label.formatter())).toEqual(["372.40", "394.32", "452.35"]);
+    // the reference column is the oxblood; the others carry the ramp, saffron at the series' smallest
     expect(o.series[0].data[2].itemStyle.color).toBe(T.accent);
-    expect(o.series[0].data[0].itemStyle.color).toBe(T.line);
+    expect(o.series[0].data[0].itemStyle.color).toBe(columnColor(372.39678, 372.39678, 452.34662));
+    expect(o.series[0].data[0].itemStyle.color).toBe("rgb(255, 179, 19)");
+    expect(o.series[0].data[1].itemStyle.color).toBe(columnColor(394.32, 372.39678, 452.34662));
   });
 });
 

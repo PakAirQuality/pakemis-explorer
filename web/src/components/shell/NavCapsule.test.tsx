@@ -15,21 +15,22 @@ const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 describe("NavCapsule", () => {
-  it("lists Explore, Data, Methods, Downloads; Ask about this view toggles the drawer on the bus", () => {
+  it("lists Explore, Data, Methods, Downloads, at the deck's width, and offers no Ask action", () => {
     pathname.value = "/";
     resetAskBus();
     const bus = vi.fn();
     subscribeAsk(bus);
-    render(<NavCapsule />);
+    render(<NavCapsule floating />);
+    expect(screen.getByTestId("nav-capsule").className).toContain("w-[420px]");   // the deck's width: both edges line up
     const links = screen.getAllByTestId("nav-link");
     expect(links.map((a) => a.textContent)).toEqual(["Explore", "Data", "Methods", "Downloads"]);
     expect(links.map((a) => a.getAttribute("href"))).toEqual(["/", "/data", "/methods", "/downloads"]);
     expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_LINKS.map((l) => l.href));
     expect(links[0]).toHaveAttribute("aria-current", "page");
     expect(links[1]).not.toHaveAttribute("aria-current");
-    expect(screen.getByTestId("nav-ask")).toHaveTextContent(ASK_LABEL);
-    fireEvent.click(screen.getByTestId("nav-ask"));
-    expect(bus).toHaveBeenCalledWith({ type: "toggle" });
+    // the assistant has one entry only, the round button at the bottom left; the capsule offers it nowhere
+    expect(screen.queryByTestId("nav-ask")).toBeNull();
+    expect(bus).not.toHaveBeenCalled();
     // the brand mark is the logo alone: a link to /, no wordmark
     const brand = screen.getByTestId("brand");
     expect(brand).toHaveAttribute("href", "/");
@@ -71,12 +72,10 @@ describe("NavCapsule", () => {
     expect(methods).toHaveAttribute("aria-current", "page");
     expect(methods).toContainElement(screen.getByTestId("nav-underline"));
   });
-  it("a page may own the Ask action (the workspace's drawer)", () => {
+  it("a page may put its own controls in the capsule's slot", () => {
     pathname.value = "/";
-    const onAsk = vi.fn();
-    render(<NavHeader onAsk={onAsk}><span data-testid="slot">slot</span></NavHeader>);
-    fireEvent.click(screen.getByTestId("nav-ask"));
-    expect(onAsk).toHaveBeenCalledTimes(1);
+    render(<NavHeader><span data-testid="slot">slot</span></NavHeader>);
     expect(screen.getByTestId("slot")).toBeInTheDocument();
+    expect(screen.queryByTestId("nav-ask")).toBeNull();
   });
 });

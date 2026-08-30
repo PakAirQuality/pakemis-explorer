@@ -3,8 +3,8 @@
  * The navigation capsule every page carries (it replaced TopNav on 2026-08-30): one oxblood
  * `rounded-full` pill holding the PAQI logo (a link to /, no wordmark), the four sections
  * — Explore · Data · Methods · Downloads — in white with the current one underlined 2 px in
- * saffron, and the "Ask about this view" action at its right end (it toggles the AskDrawer on
- * lib/askBus.ts, mounted once in the layout, or calls `onAsk` when a page supplies its own).
+ * saffron. The assistant is not here: one entry only, the round button at the bottom left
+ * (components/shell/AskFab.tsx), so the same action is not offered twice.
  *
  * On the workspace (`floating`) the capsule is `absolute left-5 top-5 z-30`, sharing the deck's
  * left inset and radius family so the two left edges form one line; on every other page it is
@@ -14,8 +14,6 @@
 import { type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
-import { toggleAsk } from "@/lib/askBus";
 import { BrandLogo } from "./BrandLogo";
 
 export const NAV_LINKS = [
@@ -36,10 +34,12 @@ export function isActive(pathname: string | null, href: string): boolean {
 
 /** The pill itself: the classes the deck's left inset and radius family are matched to. */
 export const CAPSULE_CLASS = "rounded-full bg-accent text-white shadow-lg px-5 py-2.5 flex items-center gap-6";
-/** The floating placement on the workspace: the same left inset (20 px) as the deck beneath it. */
+/** Floating, the capsule is exactly the deck's width, so its left AND right edges line up with the cards beneath it. */
+export const CAPSULE_WIDTH = "w-[420px] justify-between";
+/** The floating placement on the workspace: the same left inset (20 px) and width as the deck beneath it. */
 export const CAPSULE_FLOATING = "absolute left-5 top-5 z-30";
 
-export function NavCapsule({ floating = false, onAsk, children }: { floating?: boolean; onAsk?: () => void; children?: ReactNode }) {
+export function NavCapsule({ floating = false, children }: { floating?: boolean; children?: ReactNode }) {
   const pathname = usePathname();
   const link = (href: string, label: string) => {
     const active = isActive(pathname, href);
@@ -57,7 +57,7 @@ export function NavCapsule({ floating = false, onAsk, children }: { floating?: b
     );
   };
   return (
-    <div className={`${floating ? `${CAPSULE_FLOATING} ` : ""}${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
+    <div className={`${floating ? `${CAPSULE_FLOATING} ${CAPSULE_WIDTH} ` : ""}${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
       <Link href="/" className="flex shrink-0 items-center" data-testid="brand" title="Pakistan Air Quality Initiative">
         <BrandLogo className="h-7 object-contain" />
       </Link>
@@ -65,24 +65,15 @@ export function NavCapsule({ floating = false, onAsk, children }: { floating?: b
         {NAV_LINKS.map((l) => link(l.href, l.label))}
       </nav>
       {children}
-      <button
-        type="button"
-        onClick={onAsk ?? toggleAsk}
-        className="pill flex h-8 shrink-0 items-center gap-1.5 bg-brand-gold px-3.5 text-xs font-semibold text-fg transition-[filter] hover:brightness-105"
-        data-testid="nav-ask"
-        title="Ask about this view: a question to the inventory, answered from receipts"
-      >
-        <Sparkles size={14} aria-hidden="true" /> <span className="whitespace-nowrap">{ASK_LABEL}</span>
-      </button>
     </div>
   );
 }
 
 /** The capsule in a normal header row: the pages that are not the workspace. */
-export function NavHeader({ onAsk, children }: { onAsk?: () => void; children?: ReactNode }) {
+export function NavHeader({ children }: { children?: ReactNode }) {
   return (
     <header className="flex shrink-0 items-center px-5 pb-3 pt-5" data-testid="top-nav">
-      <NavCapsule onAsk={onAsk}>{children}</NavCapsule>
+      <NavCapsule>{children}</NavCapsule>
     </header>
   );
 }

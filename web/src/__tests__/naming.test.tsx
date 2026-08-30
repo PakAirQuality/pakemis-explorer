@@ -38,10 +38,11 @@ describe("the chrome carries the initiative's name, not the dataset's", () => {
     expect(title).toBe("Pakistan Air Quality Initiative — emissions");
     expect(namesDataset(layout)).toBe(false);
   });
-  it("the nav: the sections, the brand mark and the Ask button", () => {
+  it("the nav: the sections and the brand mark; the assistant is the bottom-left button alone", () => {
     const { container } = render(<NavCapsule />);
     expect(namesDataset(renderedText(container))).toBe(false);
-    expect(screen.getByTestId("nav-ask")).toHaveTextContent(ASK_LABEL);
+    expect(screen.queryByTestId("nav-ask")).toBeNull();
+    expect(ASK_LABEL).toBe("Ask about this view");
     expect(screen.getByTestId("brand")).toHaveAttribute("title", INITIATIVE_NAME);
   });
   it("the Ask FAB is labelled for the view, not the dataset", () => {

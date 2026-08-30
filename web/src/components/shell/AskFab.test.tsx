@@ -20,7 +20,7 @@ describe("AskFab", () => {
     render(<AskFab />);
     const fab = screen.getByTestId("ask-fab");
     expect(fab).toHaveAttribute("aria-label", "Ask about this view");
-    expect(fab.className).toContain("fixed bottom-6 right-6");
+    expect(fab.className).toContain("fixed bottom-10 left-5");
     expect(fab.className).toContain("rounded-full bg-accent text-on-accent");
     expect(fab.querySelector("svg")).not.toBeNull();
     fireEvent.click(fab);

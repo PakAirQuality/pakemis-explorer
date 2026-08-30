@@ -37,7 +37,7 @@ function Ask() {
   const seed = request?.req.question ?? q;
   return (
     <div className="flex h-dvh flex-col bg-surface" data-testid="ask-page">
-      <NavHeader onAsk={() => document.querySelector<HTMLTextAreaElement>('[data-testid="question"]')?.focus()} />
+      <NavHeader />
       <div className="mx-auto min-h-0 w-full max-w-3xl flex-1 border-x border-line bg-card">
         <AskDock seed={seed} seedScope={request?.req.scope ?? null} seedKey={request ? request.key : q ? -1 : 0} onSeeded={onSeeded} />
       </div>
