@@ -21,7 +21,7 @@
  * Under 1024 px the deck becomes a bottom sheet over the map (peek / half / full), the filter
  * panel a button that opens a full-height sheet, and the legend capsule hides.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MBMap } from "mapbox-gl";
 import { Locate, Maximize2, Minimize2, Minus, Plus, SlidersHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
@@ -86,9 +86,17 @@ export function Workspace() {
   }, [data.total.data, data.total.isError]);
 
   const padding = useMemo(() => chromePadding({ deck: deckOpen, filters: filtersOpen, wide }), [deckOpen, filtersOpen, wide]);
-  // Pakistan stays centred in what is visible: the camera is re-padded whenever a panel toggles
+  // Pakistan stays centred in what is visible: the camera is re-padded whenever a panel toggles.
+  // Only on a CHANGE: the map applies the same padding itself when it first frames the country
+  // (and when it flies to a selection), and an easeTo on mount would interrupt that animation.
+  const appliedPad = useRef<MapPadding | null>(null);
   useEffect(() => {
-    if (map) map.easeTo({ padding, duration: 350 });
+    if (!map) return;
+    const was = appliedPad.current;
+    appliedPad.current = padding;
+    if (!was) return; // the map's own framing already used this padding
+    if (was.top === padding.top && was.right === padding.right && was.bottom === padding.bottom && was.left === padding.left) return;
+    map.easeTo({ padding, duration: 350 });
   }, [map, padding]);
 
   useEffect(() => {
@@ -135,7 +143,8 @@ export function Workspace() {
 
       <LegendCapsule />
 
-      <div className="absolute bottom-[72px] right-5 z-20 flex flex-col gap-1.5" data-testid="map-buttons">
+      {/* clear of the Ask FAB, which the layout fixes at bottom-6 right-6 (56 px) */}
+      <div className="absolute bottom-[96px] right-5 z-20 flex flex-col gap-1.5" data-testid="map-buttons">
         <button type="button" title={MAP_BUTTONS.zoomIn} aria-label={MAP_BUTTONS.zoomIn} onClick={() => map?.zoomIn()} className={MAP_BUTTON} data-testid="map-zoom-in">
           <Plus size={16} aria-hidden="true" />
         </button>

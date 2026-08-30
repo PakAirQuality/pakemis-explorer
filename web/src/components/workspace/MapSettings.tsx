@@ -1,6 +1,7 @@
 "use client";
 /**
- * Map settings: the bottom-right pill and the popover it opens, holding the controls that are
+ * Map settings: the bottom-right pill (left of the Ask FAB the layout fixes there) and the
+ * popover it opens, holding the controls that are
  * about the MAP rather than about the question — the estimate and the warming potentials, the
  * spatial view, the map layer (map/LayerSwitch.tsx), the shading opacity and the grid raster.
  * They left the filter panel with the merge on 2026-08-30, so the panel carries only what
@@ -34,7 +35,7 @@ export function MapSettings({ open, onToggle, opacity, onOpacity }: { open: bool
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onToggle]);
   return (
-    <div className="absolute bottom-5 right-5 z-20 flex flex-col items-end gap-2" ref={ref} data-testid="map-settings">
+    <div className="absolute bottom-5 right-[92px] z-20 flex flex-col items-end gap-2" ref={ref} data-testid="map-settings">
       {open && (
         <div className="card w-[300px] max-w-[calc(100vw-40px)] p-4 shadow-lg" role="dialog" aria-label={SETTINGS.title} data-testid="map-settings-panel">
           <div className="mb-3 flex items-center justify-between">
