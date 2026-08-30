@@ -217,10 +217,14 @@ def tool_result_payload(k, call_id, name, env, cap):
     return payload
 
 
-def refusal_payload(k, call_id, name, exc):
+def refusal_payload(k, call_id, name, exc, service=None):
     body = exc.to_dict() if isinstance(exc, E.QueryError) else {"error": "invalid_input", "message": str(exc), "limitation_id": None, "detail": {}}
-    return {"k": k, "id": call_id, "name": name, "error": body["error"], "error_class": type(exc).__name__,
-            "limitation_id": body.get("limitation_id"), "message": body["message"], "detail": body.get("detail") or {}}
+    out = {"k": k, "id": call_id, "name": name, "error": body["error"], "error_class": type(exc).__name__,
+           "limitation_id": body.get("limitation_id"), "message": body["message"], "detail": body.get("detail") or {}}
+    word = getattr(service, "word", None)
+    if callable(word):
+        out["message_worded"] = word(body["message"])
+    return out
 
 
 def _validation_message(exc):
@@ -249,7 +253,7 @@ class Turn:
                 action = validate_map_view(payload, self.dims)
             except ToolInputError as exc:
                 self.results.append(None)
-                return "error: %s" % exc, True, [("refusal", refusal_payload(k, call.id, name, exc))]
+                return "error: %s" % exc, True, [("refusal", refusal_payload(k, call.id, name, exc, self.service))]
             self.results.append(None)
             return json.dumps({"map_action": action}), False, [("map_action", action)]
         if name not in FUNCTION_MODEL:
@@ -261,7 +265,7 @@ class Turn:
         except ValidationError as exc:
             self.results.append(None)
             err = ToolInputError(_validation_message(exc))
-            return "error: invalid input: %s" % err, True, [("refusal", refusal_payload(k, call.id, name, err))]
+            return "error: invalid input: %s" % err, True, [("refusal", refusal_payload(k, call.id, name, err, self.service))]
         if name == DOWNLOAD_TOOL:
             return self._download(k, call, body)
         try:
@@ -269,7 +273,7 @@ class Turn:
         except E.QueryError as exc:
             self.results.append(None)
             body_text = json.dumps({"error": exc.to_dict(), "error_class": type(exc).__name__}, sort_keys=True)
-            return body_text, True, [("refusal", refusal_payload(k, call.id, name, exc))]
+            return body_text, True, [("refusal", refusal_payload(k, call.id, name, exc, self.service))]
         self.results.append(env)
         self.receipts.append(env["receipt"])
         self.conv.receipts.add(env["receipt"])
@@ -282,10 +286,10 @@ class Turn:
         receipt = body.receipt_id
         if body.format and body.format != "csv":
             err = ToolInputError("format %r is not served; the explorer serves csv and RECEIPT.json" % body.format)
-            return "error: %s" % err, True, [("refusal", refusal_payload(k, call.id, call.name, err))]
+            return "error: %s" % err, True, [("refusal", refusal_payload(k, call.id, call.name, err, self.service))]
         if receipt not in self.conv.receipts:
             err = ToolInputError("receipt %r was not minted in this conversation; run the query first" % receipt)
-            return "error: %s" % err, True, [("refusal", refusal_payload(k, call.id, call.name, err))]
+            return "error: %s" % err, True, [("refusal", refusal_payload(k, call.id, call.name, err, self.service))]
         links = {"csv": "%s/download/%s.csv" % (API_PREFIX, receipt), "receipt_json": "%s/download/%s.receipt.json" % (API_PREFIX, receipt)}
         result = {"k": k, "id": call.id, "name": call.name, "receipt": receipt, "request_type": "DownloadRequest",
                   "context": {}, "n_values": 0, "cells": [], "limitations_hit": [], "download": links}

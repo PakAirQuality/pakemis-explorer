@@ -100,10 +100,16 @@ export const RefusalSchema = z.object({
   error: z.string(),
   error_class: z.string(),
   message: z.string(),
+  message_worded: z.string().optional(),
   limitation_id: z.string().nullable(),
   detail: z.record(z.string(), z.unknown()),
 });
 export type Refusal = z.infer<typeof RefusalSchema>;
+
+/** The refusal's message as the release words it (periods and estimates by their labels), else the contract's own text. */
+export function refusalWords(r: { message: string; message_worded?: string | null } | null | undefined): string {
+  return r ? (r.message_worded ?? r.message) : "";
+}
 
 export const ReleaseSchema = z
   .object({

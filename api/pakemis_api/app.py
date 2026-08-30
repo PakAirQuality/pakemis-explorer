@@ -518,6 +518,21 @@ class Service:
                 "author": CITATION_AUTHOR, "year": CITATION_YEAR, "title": title, "repository": repository,
                 "commit": commit, "period_span": span}
 
+    def word(self, message):
+        """A message that names a period or a configuration by its id, worded with the release's
+        labels ("FY2023-24" -> "2023\u201324", "S_2023_24" -> "the survey-based estimate"). The
+        contract's own text stays verbatim beside it; this is a presentation field."""
+        labels = self.labels()
+        pairs = [(pid, e["short"]) for pid, e in labels["periods"].items()]
+        for cid, e in labels["configurations"].items():
+            if e.get("label"):
+                pairs.append((cid, "the %s" % e["label"].lower()))
+                if e.get("letter"):
+                    pairs.append(("configuration %s" % e["letter"], "the %s" % e["label"].lower()))
+        for ident, words in sorted(pairs, key=lambda kv: -len(kv[0])):
+            message = message.replace(ident, words)
+        return message
+
     def labels(self):
         """Humanised labels for every id the dims carry, built server-side so the web client and
         the agent share one wording; the ids stay the keys."""
@@ -559,9 +574,11 @@ class Service:
         }
 
 
-def refusal(exc):
+def refusal(exc, service=None):
     body = exc.to_dict()
     body["error_class"] = type(exc).__name__
+    if service is not None:
+        body["message_worded"] = service.word(body["message"])
     return JSONResponse(status_code=422, content=body)
 
 
@@ -591,7 +608,7 @@ def create_app(settings=None, model_client=None):
 
     @app.exception_handler(E.QueryError)
     async def _query_error(request: Request, exc: E.QueryError):
-        return refusal(exc)
+        return refusal(exc, getattr(request.app.state, "service", None))
 
     api = APIRouter()
     api.include_router(ask_router)                                    # ask: POST {prefix}/ask (SSE)

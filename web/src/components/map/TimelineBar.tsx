@@ -5,6 +5,7 @@
  * dims.dim_month.by_period. Any other year is tagged "national only" and the map's typed
  * refusal for it is shown here in the API's words; the drawer keeps its national envelopes.
  */
+import { refusalWords } from "@/lib/envelope";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useExplorer } from "@/components/ExplorerContext";
@@ -47,8 +48,8 @@ export function TimelineBar({ compact = false }: { compact?: boolean }) {
       ) : (
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs" data-testid="national-only">
           <span className="pill border border-warn/40 bg-refusal px-2 py-0.5 text-micro normal-case tracking-normal text-warn">national only</span>
-          <span className="truncate text-muted" title={refusal?.message ?? ""}>
-            {refusal ? `${refusal.message} (${refusal.error_class})` : mapQ.isLoading ? "asking the release for this year…" : "spatial products exist for the reference year only; the national envelopes answer this year"}
+          <span className="truncate text-muted" title={refusalWords(refusal)}>
+            {refusal ? `${refusalWords(refusal)} (${refusal.error_class})` : mapQ.isLoading ? "asking the release for this year…" : "spatial products exist for the reference year only; the national envelopes answer this year"}
           </span>
         </div>
       )}

@@ -35,7 +35,7 @@ export type ToolResultEvent = {
   truncated?: string;
   download?: { csv: string; receipt_json: string };
 };
-export type RefusalEvent = { k: number; id: string; name: string; error: string; error_class: string; limitation_id: string | null; message: string; detail: Record<string, unknown> };
+export type RefusalEvent = { k: number; id: string; name: string; error: string; error_class: string; limitation_id: string | null; message: string; message_worded?: string; detail: Record<string, unknown> };
 export type MapActionKey = "level" | "geo" | "period" | "month" | "sector" | "gas" | "config" | "gwp" | "view";
 export type MapActionEvent = Partial<Record<MapActionKey, string>>;
 export type Citation = { k: number; cell: number; attr: string; receipt: string; text: string };
