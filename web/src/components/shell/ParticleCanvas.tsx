@@ -69,7 +69,7 @@ export function ParticleCanvas({ count = 90 }: { count?: number }) {
       for (const d of dots) {
         ctx.beginPath();
         ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = d.tinted ? `rgba(70, 46, 50, ${d.a * 0.6})` : `rgba(122, 112, 104, ${d.a})`;
+        ctx.fillStyle = d.tinted ? `rgba(94, 26, 42, ${d.a * 0.6})` : `rgba(122, 112, 104, ${d.a})`;
         ctx.fill();
       }
     };

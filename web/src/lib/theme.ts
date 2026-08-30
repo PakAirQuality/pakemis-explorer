@@ -15,14 +15,14 @@ export const FALLBACK: Record<string, string> = {
   "--color-muted": "#666677",
   "--color-line": "#e5e1da",
   "--color-line-strong": "#d7d5d1",
-  "--color-primary": "#462e32",
-  "--color-primary-bright": "#5a3c40",
-  "--color-primary-soft": "rgba(70, 46, 50, 0.08)",
-  "--color-accent": "#462e32",
-  "--color-accent-bright": "#5a3c40",
-  "--color-accent-fill": "#462e32",
+  "--color-primary": "#5e1a2a",
+  "--color-primary-bright": "#7a2436",
+  "--color-primary-soft": "rgba(94, 26, 42, 0.08)",
+  "--color-accent": "#5e1a2a",
+  "--color-accent-bright": "#7a2436",
+  "--color-accent-fill": "#5e1a2a",
   "--color-on-accent": "#ffffff",
-  "--color-accent-soft": "rgba(70, 46, 50, 0.08)",
+  "--color-accent-soft": "rgba(94, 26, 42, 0.08)",
   "--color-brand-gold": "#ffb313",
   "--color-accent-2": "#ffb313",
   "--color-on-accent-2": "#242128",
@@ -37,8 +37,8 @@ export const FALLBACK: Record<string, string> = {
   "--color-panel": "rgba(255, 255, 255, 0.92)",
   "--color-map-outline": "#6b5b57",
   "--color-map-halo": "#ffffff",
-  "--color-map-hatch": "rgba(70, 46, 50, 0.5)",
-  "--color-map-hover": "#462e32",
+  "--color-map-hatch": "rgba(94, 26, 42, 0.5)",
+  "--color-map-hover": "#5e1a2a",
   "--color-map-selected": "#242128",
 };
 
@@ -58,7 +58,7 @@ export function cssVar(name: string): string {
   return FALLBACK[name] ?? "";
 }
 
-/** `#462e32` at an alpha, for an area fill (the accent at 18 %); a non-hex colour is returned as it is. */
+/** `#5e1a2a` at an alpha, for an area fill (the accent at 18 %); a non-hex colour is returned as it is. */
 export function withAlpha(color: string, alpha: number): string {
   const m = /^#([0-9a-f]{6})$/i.exec(color.trim());
   if (!m) return color;

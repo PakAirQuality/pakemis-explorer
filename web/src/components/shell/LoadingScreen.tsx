@@ -124,7 +124,7 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
           Pakistan&apos;s greenhouse-gas emissions, reconstructed from public documents
         </p>
         <div className="h-1 w-64 overflow-hidden rounded-full" style={{ background: "#e5e1da" }} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} data-testid="loading-progress">
-          <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%`, background: "linear-gradient(90deg, #462e32, #ffb313)" }} data-testid="loading-fill" />
+          <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%`, background: "linear-gradient(90deg, #5e1a2a, #ffb313)" }} data-testid="loading-fill" />
         </div>
         <p key={lineIx} className={`mt-4 min-h-[36px] max-w-xs text-center text-[12px] leading-relaxed text-muted ${styles.line}`} data-testid="loading-line">
           {LOADING_LINES[lineIx]}

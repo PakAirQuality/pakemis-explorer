@@ -115,7 +115,7 @@ describe("paint", () => {
     expect(map.paints.get("adm1-fill.fill-color")).toBe(NO_CELL);
   });
   it("the magnitude ramp is the PAQI five, light to dark, in order, and the interpolate expression walks it", () => {
-    expect([...RAMP]).toEqual(["#fff0b3", "#ffb313", "#e87832", "#b4453f", "#462e32"]);
+    expect([...RAMP]).toEqual(["#fff0b3", "#ffb313", "#e87832", "#b4453f", "#5e1a2a"]);
     const expr = fillColorExpression(0, 4) as unknown[];
     const interp = expr[3] as unknown[];
     const colours = interp.slice(3).filter((_, i) => i % 2 === 1);

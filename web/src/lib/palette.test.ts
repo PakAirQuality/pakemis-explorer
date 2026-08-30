@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { ACCENT, GAS_HUES, NO_CELL, RAMP, gasColor, rampByRank, rampColor, rampStops } from "./palette";
 
-/** "rgb(70, 46, 50)" as "#462e32", so a stop and an interpolation compare. */
+/** "rgb(70, 46, 50)" as "#5e1a2a", so a stop and an interpolation compare. */
 function hexOf(rgb: string): string {
   const m = /^rgb\((\d+), (\d+), (\d+)\)$/.exec(rgb);
   if (!m) return rgb;
@@ -14,7 +14,7 @@ function hexOf(rgb: string): string {
 
 describe("the PAQI ramp", () => {
   it("is the five warm stops, light to dark", () => {
-    expect([...RAMP]).toEqual(["#fff0b3", "#ffb313", "#e87832", "#b4453f", "#462e32"]);
+    expect([...RAMP]).toEqual(["#fff0b3", "#ffb313", "#e87832", "#b4453f", "#5e1a2a"]);
   });
   it("no stop is blue-dominant and the last is the oxblood primary", () => {
     for (const c of RAMP) {
@@ -36,7 +36,7 @@ describe("the PAQI ramp", () => {
     expect(rampColor(1, 5, 5)).toBe(RAMP[4]);
   });
   it("rampStops interpolates any length: the five stops between one envelope's own min and max", () => {
-    expect(rampStops(0, 100)).toEqual([0, "#fff0b3", 25, "#ffb313", 50, "#e87832", 75, "#b4453f", 100, "#462e32"]);
+    expect(rampStops(0, 100)).toEqual([0, "#fff0b3", 25, "#ffb313", 50, "#e87832", 75, "#b4453f", 100, "#5e1a2a"]);
   });
 });
 
@@ -73,7 +73,7 @@ describe("rampByRank", () => {
 
 describe("the gas hues", () => {
   it("stay three distinct hues, all of the PAQI family", () => {
-    expect(GAS_HUES).toEqual({ CH4: "#462e32", CO2: "#b4453f", N2O: "#ffb313" });
+    expect(GAS_HUES).toEqual({ CH4: "#5e1a2a", CO2: "#b4453f", N2O: "#ffb313" });
     expect(new Set(Object.values(GAS_HUES)).size).toBe(3);
     for (const c of Object.values(GAS_HUES)) {
       const n = parseInt(c.slice(1), 16);

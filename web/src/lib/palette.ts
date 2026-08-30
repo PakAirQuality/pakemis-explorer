@@ -12,19 +12,19 @@
  */
 
 /** The primary family (globals.css `--color-accent*` / `--color-primary*`): `ACCENT` is the oxblood of links, chart strokes and the filled button, `ACCENT_BRIGHT` its hover, `ACCENT_FILL` the same oxblood (kept for callers), `ACCENT_SOFT` the 8 % tint behind it. */
-export const ACCENT = "#462e32";
-export const ACCENT_BRIGHT = "#5a3c40";
-export const ACCENT_FILL = "#462e32";
-export const ACCENT_SOFT = "rgba(70, 46, 50, 0.08)";
+export const ACCENT = "#5e1a2a";
+export const ACCENT_BRIGHT = "#7a2436";
+export const ACCENT_FILL = "#5e1a2a";
+export const ACCENT_SOFT = "rgba(94, 26, 42, 0.08)";
 /** The saffron accent (`--color-brand-gold` / `--color-amber`): the reference-year marker and small marks. */
 export const AMBER = "#ffb313";
 /** A polygon or a cell the release has no row for (`--color-no-data`), drawn hatched. */
 export const NO_CELL = "#d7d5d1";
 /** The PAQI ramp, light to dark: the magnitude layer's ramp at every level and the rank ramp of every chart. */
-export const RAMP = ["#fff0b3", "#ffb313", "#e87832", "#b4453f", "#462e32"] as const;
+export const RAMP = ["#fff0b3", "#ffb313", "#e87832", "#b4453f", "#5e1a2a"] as const;
 
 /** The three gases' hues, used inside charts only (the stacked gas bar): distinct, and all three of the PAQI family. */
-export const GAS_HUES: Record<string, string> = { CH4: "#462e32", CO2: "#b4453f", N2O: "#ffb313" };
+export const GAS_HUES: Record<string, string> = { CH4: "#5e1a2a", CO2: "#b4453f", N2O: "#ffb313" };
 export function gasColor(id: string | null | undefined): string {
   return (id && GAS_HUES[id.toUpperCase()]) || ACCENT;
 }

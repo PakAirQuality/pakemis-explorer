@@ -133,7 +133,7 @@ describe("the layer legends", () => {
     expect(bar).toHaveTextContent(/^LowHigh$/);
     const gradient = bar.querySelector("span[style]")?.getAttribute("style") ?? ""; // jsdom writes the stops as rgb()
     expect(gradient).toContain("linear-gradient(90deg, rgb(255, 240, 179)");
-    expect(gradient).toContain("rgb(70, 46, 50))");
+    expect(gradient).toContain("rgb(94, 26, 42))");
     expect(screen.getByTestId("layer-legend").className).toContain("w-[272px]");
     r.unmount();
     r = mountLegend("evidence");

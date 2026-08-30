@@ -35,14 +35,14 @@ describe("the palette tokens (globals.css)", () => {
     expect(token("--color-muted")).toBe("#666677");
     expect(token("--color-line")).toBe("#e5e1da");
     expect(token("--color-line-strong")).toBe("#d7d5d1");
-    expect(token("--color-accent")).toBe("#462e32");
-    expect(token("--color-primary")).toBe("#462e32");
+    expect(token("--color-accent")).toBe("#5e1a2a");
+    expect(token("--color-primary")).toBe("#5e1a2a");
   });
   it("the primary's hover, the 8 % soft tint, the input ground, the saffron accent, the no-data grey and the card radius", () => {
-    expect(token("--color-accent-bright")).toBe("#5a3c40");
-    expect(token("--color-primary-bright")).toBe("#5a3c40");
-    expect(token("--color-accent-soft")).toBe("rgba(70, 46, 50, 0.08)");
-    expect(token("--color-primary-soft")).toBe("rgba(70, 46, 50, 0.08)");
+    expect(token("--color-accent-bright")).toBe("#7a2436");
+    expect(token("--color-primary-bright")).toBe("#7a2436");
+    expect(token("--color-accent-soft")).toBe("rgba(94, 26, 42, 0.08)");
+    expect(token("--color-primary-soft")).toBe("rgba(94, 26, 42, 0.08)");
     expect(token("--color-surface-3")).toBe("#efece7");
     expect(token("--color-brand-gold")).toBe("#ffb313");
     expect(token("--color-accent-2")).toBe("#ffb313");
@@ -91,14 +91,14 @@ describe("lib/theme.ts", () => {
     for (const name of colorTokens()) expect(Object.keys(FALLBACK), name).toContain(name);
   });
   it("cssVar reads the fallback without a stylesheet (jsdom carries none)", () => {
-    expect(cssVar("--color-accent")).toBe("#462e32");
+    expect(cssVar("--color-accent")).toBe("#5e1a2a");
     expect(cssVar("--color-brand-gold")).toBe("#ffb313");
     expect(cssVar("--no-such-token")).toBe("");
   });
   it("chartTheme: the oxblood, its 18 % area fill, the saffron reference mark, the system font", () => {
     const t = chartTheme();
-    expect(t.accent).toBe("#462e32");
-    expect(t.accentSoft).toBe("rgba(70, 46, 50, 0.18)");
+    expect(t.accent).toBe("#5e1a2a");
+    expect(t.accentSoft).toBe("rgba(94, 26, 42, 0.18)");
     expect(t.amber).toBe("#ffb313");
     expect(t.amberSoft).toBe("#8a5a0c");
     expect(t.fg).toBe("#242128");
@@ -110,7 +110,7 @@ describe("lib/theme.ts", () => {
   it("mapTheme: a warm-grey outline, the oxblood hover and the charcoal selected, all legible over the PAQI ramp", () => {
     const m = mapTheme();
     expect(m.outline).toBe("#6b5b57");
-    expect(m.hover).toBe("#462e32");
+    expect(m.hover).toBe("#5e1a2a");
     expect(m.selected).toBe("#242128");
     expect(m.halo).toBe("#ffffff");
     expect(m.space).toBe("#f6f4f1");
@@ -124,7 +124,7 @@ describe("lib/theme.ts", () => {
     for (const c of [m.outline, m.selected]) expect((RAMP as readonly string[]).includes(c), c).toBe(false);
   });
   it("withAlpha turns a hex into rgba and leaves other strings alone", () => {
-    expect(withAlpha("#462e32", 0.5)).toBe("rgba(70, 46, 50, 0.5)");
+    expect(withAlpha("#5e1a2a", 0.5)).toBe("rgba(94, 26, 42, 0.5)");
     expect(withAlpha("rgba(0,0,0,0.1)", 0.5)).toBe("rgba(0,0,0,0.1)");
   });
 });

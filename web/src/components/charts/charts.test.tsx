@@ -15,7 +15,7 @@ import { StackedBar } from "./StackedBar";
 import { FALLBACK } from "@/lib/theme";
 import { GAS_HUES, rampByRank } from "@/lib/palette";
 
-const T = { surface: FALLBACK["--color-card"], fg: FALLBACK["--color-fg"], muted: FALLBACK["--color-muted"], line: FALLBACK["--color-line-strong"], grid: FALLBACK["--color-line"], accent: FALLBACK["--color-accent"], accentSoft: "rgba(70, 46, 50, 0.18)", accentBright: FALLBACK["--color-accent-bright"], amber: FALLBACK["--color-amber"], amberSoft: FALLBACK["--color-amber-soft"], font: "Inter" };
+const T = { surface: FALLBACK["--color-card"], fg: FALLBACK["--color-fg"], muted: FALLBACK["--color-muted"], line: FALLBACK["--color-line-strong"], grid: FALLBACK["--color-line"], accent: FALLBACK["--color-accent"], accentSoft: "rgba(94, 26, 42, 0.18)", accentBright: FALLBACK["--color-accent-bright"], amber: FALLBACK["--color-amber"], amberSoft: FALLBACK["--color-amber-soft"], font: "Inter" };
 const TICKS = ["0", "50", "100", "150", "200", "250"];
 
 function decimals(el: HTMLElement): string[] {
