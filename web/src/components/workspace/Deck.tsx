@@ -33,7 +33,7 @@ import { releaseCitation, releaseFacts } from "@/lib/release";
 import { BrandLogo } from "@/components/shell/BrandLogo";
 import { HeaderBlock } from "@/components/overview/HeaderBlock";
 import { DeckControls } from "@/components/overview/DeckControls";
-import { HEADER, INDEPENDENT_SHORT, licenceLine } from "@/components/overview/copy";
+import { HEADER, licenceLine } from "@/components/overview/copy";
 import { DECK_CARD } from "@/components/overview/deck";
 import { ScopeChips } from "./ScopeChips";
 import { cardsFor, scopeOf, type CardId } from "./cards";
@@ -144,14 +144,13 @@ export function DeckRail({ onExpand }: { onExpand: () => void }) {
   );
 }
 
-/** The deck's last card, compact: the release's licences in one line, and what this is not. */
+/** The deck's last card: the release's licences, in one line. */
 function DeckFooter(): ReactNode {
   const { release } = useExplorer();
   const licences = licenceLine(releaseFacts(release).licences);
   return (
     <footer className="pointer-events-auto shrink-0 rounded-2xl bg-white/90 px-4 py-3 text-xs text-muted shadow-md" data-testid="footer">
       <div data-testid="footer-licences">{licences || "Licences as the release states them"}</div>
-      <div className="mt-1">{INDEPENDENT_SHORT}</div>
     </footer>
   );
 }

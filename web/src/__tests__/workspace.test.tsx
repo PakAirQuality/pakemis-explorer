@@ -381,9 +381,9 @@ describe("the workspace's audits", () => {
       expect(el.getAttribute("title") ?? "").not.toContain("FY");
       expect(el.getAttribute("title") ?? "").not.toContain("1.0.0rc");
     }
-    // the footer is two short lines: the release's own licence identifiers, and what this is not
+    // the footer is one line: the release's own licence identifiers
     expect(screen.getByTestId("footer-licences")).toHaveTextContent("Data/text CC-BY-4.0 · code MIT · OSM data ODbL");
-    expect(screen.getByTestId("footer")).toHaveTextContent("An independent public-data reconstruction, not an official inventory.");
+    expect(screen.getByTestId("footer").textContent?.trim()).toBe("Data/text CC-BY-4.0 · code MIT · OSM data ODbL");
     expect(screen.queryByTestId("footer-repository")).toBeNull();
   });
 });
