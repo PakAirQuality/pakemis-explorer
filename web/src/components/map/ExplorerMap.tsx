@@ -34,6 +34,7 @@ import { rasterFile, rasterUrl, unionBbox, useBboxes, useTilesInfo } from "./til
 import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
+import { markStage } from "@/components/shell/bootstrap";
 import { View3dToggle } from "./View3dToggle";
 import { HoverTip } from "./HoverTip";
 import { Legend } from "./Legend";
@@ -159,6 +160,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
         if (msg) setMapError(msg);
       });
       m.on("load", () => {
+        markStage("map"); // the loading screen's last stage on the pages with a map
         ensureAtmosphere(m);
         beforeRef.current = firstSymbolLayerId(m);
         addSources(m);
