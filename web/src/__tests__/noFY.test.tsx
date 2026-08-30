@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * "No FY anywhere": with a release whose labels come in the API's shape (short "2023–24", label
- * "July 2023 – June 2024", basis_note), the timeline, the filter panel and the Current view
- * bar print no "FY" token; the timeline's year and the period select carry the spelled-out
- * months as their tooltip (`title`); the ids stay in the state and the requests.
+ * "July 2023 – June 2024", basis_note), the timeline, the workspace's filter panel and the
+ * Current view bar print no "FY" token; the timeline's year and the year slider carry the
+ * spelled-out months as their tooltip (`title`); the ids stay in the state and the requests.
  */
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,7 +13,7 @@ import { releaseAgent, releaseDims, releaseLabels } from "@/lib/release";
 import type { ReleaseInfo } from "@/lib/envelope";
 import type { ExplorerState } from "@/lib/urlState";
 import { TimelineBar } from "@/components/map/TimelineBar";
-import { FilterPanel } from "@/components/map/FilterPanel";
+import { FilterPanel } from "@/components/workspace/FilterPanel";
 import { CurrentView } from "@/components/shell/CurrentView";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 
@@ -45,7 +45,7 @@ describe("no FY anywhere", () => {
       <Providers>
         <ExplorerContext.Provider value={ctx()}>
           <TimelineBar />
-          <FilterPanel open onToggle={() => {}} />
+          <FilterPanel open onToggle={() => {}} place="Pakistan" />
           <CurrentView />
         </ExplorerContext.Provider>
       </Providers>,
@@ -57,9 +57,9 @@ describe("no FY anywhere", () => {
     expect(text).not.toContain("FY");
     expect(screen.getByTestId("time-rail")).toHaveTextContent("2023–24");
     expect(screen.getByTestId("time-rail").querySelector('[title="July 2023 – June 2024"]')).toHaveTextContent("2023–24");
-    const period = screen.getByTestId("period-select") as HTMLSelectElement;
-    expect(period.options[period.selectedIndex].textContent).toBe("2023–24");
-    expect(period.options[period.selectedIndex]).toHaveAttribute("title", "July 2023 – June 2024");
+    expect(screen.getByTestId("year-value")).toHaveTextContent("2023–24");
+    expect(screen.getByTestId("year-value")).toHaveAttribute("title", "July 2023 – June 2024");
+    expect(screen.getByTestId("year-range")).toHaveAttribute("title", "a fiscal year runs from July to June");
     expect(screen.getByTestId("current-view-line")).toHaveTextContent("2023–24 · Pakistan · Reference estimate · excludes land use and forestry");
     expect(screen.getByTestId("current-view-line")).toHaveAttribute("title", expect.stringContaining("July 2023 – June 2024"));
     // nothing in any title attribute either

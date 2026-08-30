@@ -1,0 +1,378 @@
+import "@testing-library/jest-dom/vitest";
+/**
+ * The workspace at `/` (the Overview and the Map merged on 2026-08-30) against mocked envelopes
+ * that carry the server's presentation fields (`display_short`, `share_pct_short`,
+ * `share_phrase`, `rank`, `axis.ticks_short`, `change`, `derived`):
+ *
+ *  · the frame — the map full-bleed behind everything, the nav capsule, the 420 px insight
+ *    deck, the filter panel and the legend capsule over it, the map buttons and Map settings;
+ *  · the URL round trip — the level, sector, gas and year the filter panel writes come back as
+ *    the deck's and the map's scope, and nothing but the URL carries them;
+ *  · the scope chips clearing each of the three back to its default;
+ *  · collapse-all flipping every widget's switch, and each switch collapsing its own card;
+ *  · the four audits — every decimal on the page is a server string (ticks included), no "FY",
+ *    no raw id (bare AR5, "(NE)", "LULUCF", a version), no avoid-list phrase — and the naming
+ *    rule: the chrome never names the dataset.
+ */
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
+import { Providers } from "@/components/Providers";
+import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
+import Page from "@/app/page";
+import { RELEASE, envelope, mockFetch, refusal, stubWideViewport } from "./fixtures";
+import { avoidPhrasesIn, namesDataset } from "./vocabulary";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock("@/components/map/ExplorerMap", () => ({
+  ExplorerMap: ({ override, padding, opacity }: { override?: { sector?: string | null }; padding?: { left: number; right: number }; opacity?: number }) => (
+    <div data-testid="map-stub" data-sector={override?.sector ?? ""} data-pad-left={padding?.left ?? ""} data-pad-right={padding?.right ?? ""} data-opacity={opacity ?? ""} />
+  ),
+}));
+type Item = { id: string; name: string; label: string };
+vi.mock("@/components/charts/BarsWithAxis", () => ({
+  BarsWithAxis: ({ items, ticks, onHover, onSelect, testId = "bars-with-axis" }: { items: Item[]; ticks?: string[] | null; onHover?: (id: string | null) => void; onSelect?: (id: string) => void; testId?: string }) => (
+    <div data-testid={testId} data-ticks={(ticks ?? []).join("|")}>
+      {(ticks ?? []).map((t, i) => <span key={i} data-testid="axis-tick">{t}</span>)}
+      {items.map((i) => <button key={i.id} type="button" data-testid="bar-item" data-id={i.id} onMouseEnter={() => onHover?.(i.id)} onClick={() => onSelect?.(i.id)}>{i.name} {i.label}</button>)}
+    </div>
+  ),
+}));
+vi.mock("@/components/charts/ColumnChart", () => ({
+  ColumnChart: ({ points, ticks }: { points: Item[]; ticks?: string[] | null }) => (
+    <div data-testid="column-chart" data-ticks={(ticks ?? []).join("|")}>
+      {(ticks ?? []).map((t, i) => <span key={i} data-testid="axis-tick">{t}</span>)}
+      {points.map((p) => <span key={p.id} data-testid="column">{p.name} {p.label}</span>)}
+    </div>
+  ),
+}));
+
+const U = { unit_short: "Mt CO₂e", unit_words: "million tonnes CO₂e" };
+const AXIS_250 = { ticks_short: ["0", "50", "100", "150", "200", "250"], min_short: "0.30", max_short: "223.45", unit_short: "Mt CO₂e" };
+const SECTORS = [
+  { display: "223.454", display_short: "223.45", ...U, group: { sector_id: "agriculture" }, extra: { share_pct_short: "49.4", share_phrase: "nearly half", rank: 1 } },
+  { display: "63.370", display_short: "63.37", ...U, group: { sector_id: "power" }, extra: { share_pct_short: "14.0", share_phrase: "about a tenth", rank: 2 } },
+  { display: "41.926", display_short: "41.93", ...U, group: { sector_id: "transport" }, extra: { share_pct_short: "9.3", share_phrase: "a small share", rank: 3 } },
+];
+const PUNJAB_SECTORS = [
+  { display: "123.301", display_short: "123.30", ...U, group: { module: "agriculture" }, extra: { share_pct_short: "53.9", share_phrase: "nearly half", rank: 1 } },
+  { display: "27.488", display_short: "27.49", ...U, group: { module: "transport" }, extra: { share_pct_short: "12.0", share_phrase: "about a tenth", rank: 2 } },
+];
+const GASES = [
+  { display: "248.748", display_short: "248.75", ...U, group: { gas: "CH4" }, extra: { share_pct_short: "55.0", share_phrase: "over half", rank: 1 } },
+  { display: "161.456", display_short: "161.46", ...U, group: { gas: "CO2" }, extra: { share_pct_short: "35.7", share_phrase: "about a third", rank: 2 } },
+];
+const PROVINCES = [
+  { display: "228.7168", display_short: "228.72", ...U, group: { province: "Punjab" }, extra: { share_pct_short: "50.6", share_phrase: "nearly half", rank: 1 } },
+  { display: "134.7255", display_short: "134.73", ...U, group: { province: "Sindh" }, extra: { share_pct_short: "29.8", share_phrase: "about a quarter", rank: 2 } },
+];
+const DERIVED_PK = { unallocated_total_short: "9.01", placed_short: "443.34" };
+const DERIVED_PB = { unallocated_total_short: "4.84", placed_short: "223.88" };
+const SERIES = [
+  { display: "372.397", display_short: "372.40", ...U, group: { period_id: "FY2020-21" } },
+  { display: "452.347", display_short: "452.35", ...U, group: { period_id: "FY2023-24" } },
+];
+const SERIES_AXIS = { ticks_short: ["0", "100", "200", "300", "400", "500"], unit_short: "Mt CO₂e" };
+const CHANGE = { from_period: "FY2020-21", to_period: "FY2023-24", from_short: "372.40", to_short: "452.35", change_short: "+79.95", change_pct_short: "+21.5", direction: "rose", unit_short: "Mt CO₂e" };
+const NATIONAL = [{ display: "452.34662", display_short: "452.35", ...U }];
+const PUNJAB = [{ display: "228.7168", display_short: "228.72", ...U, group: { province: "Punjab" } }];
+const SERIES_REFUSAL = refusal("grain_unavailable", "GrainUnavailable", "spatial products exist for the reference year only");
+
+const fetchSpy = vi.fn();
+beforeEach(() => {
+  fetchSpy.mockReset();
+  stubWideViewport();
+  vi.stubGlobal(
+    "fetch",
+    mockFetch((url, body) => {
+      fetchSpy(url, body);
+      if (url.endsWith("/release")) return RELEASE;
+      if (url.endsWith("/openapi.json")) return { paths: { "/api/v1/emissions/release": {} }, components: { schemas: { QueryEmissions: { properties: { gwp_basis: { description: "AR5 | AR6" }, spatial_view: { description: "all | physical | origin | accounting" } } }, GridCellRequest: { properties: { gas: { default: "CO2" }, month: { description: 'YYYYMM or "annual"' } } } } } };
+      if (url.includes("/tiles/")) return { raster: undefined, adm1: {}, adm2: {} };
+      if (url.includes("/timeseries")) {
+        const q = (body as { query?: { geography_ids?: string[] } } | undefined)?.query;
+        if (q?.geography_ids?.length) return SERIES_REFUSAL;
+        return envelope(SERIES, { request_type: "get_timeseries", axis: SERIES_AXIS, change: CHANGE });
+      }
+      if (body?.group_by?.includes("sector_id")) return envelope(SECTORS, { axis: AXIS_250, partition: { n: 3 } });
+      if (body?.group_by?.includes("module")) return envelope(PUNJAB_SECTORS, { axis: { ticks_short: ["0", "25", "50", "75", "100", "125"], unit_short: "Mt CO₂e" }, partition: { n: 2 } });
+      if (body?.group_by?.includes("gas")) return envelope(GASES, { axis: AXIS_250, partition: { n: 2 } });
+      if (body?.group_by?.includes("province")) return envelope(PROVINCES, { axis: AXIS_250, partition: { n: 2 }, derived: DERIVED_PK });
+      if (body?.geography_ids?.includes("Punjab")) return envelope(PUNJAB, { derived: DERIVED_PB });
+      return envelope(NATIONAL);
+    }),
+  );
+});
+
+function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
+  const Wrapper = withNuqsTestingAdapter({ searchParams: search, hasMemory: true, onUrlUpdate });
+  return render(
+    <Wrapper>
+      <Providers>
+        <ExplorerProvider>
+          <Page />
+        </ExplorerProvider>
+      </Providers>
+    </Wrapper>,
+  );
+}
+
+/** Every decimal token the mocked server sent: displays, shorts, shares, ticks, the change strings and the derived strings. */
+function serverDecimals(): Set<string> {
+  const out = new Set<string>();
+  const add = (s: string) => (s.match(/\d+\.\d+/g) ?? []).forEach((t) => out.add(t));
+  for (const c of [...SECTORS, ...PUNJAB_SECTORS, ...GASES, ...PROVINCES, ...SERIES, ...NATIONAL, ...PUNJAB]) add(JSON.stringify(c));
+  for (const o of [AXIS_250, SERIES_AXIS, CHANGE, DERIVED_PK, DERIVED_PB, RELEASE]) add(JSON.stringify(o));
+  return out;
+}
+
+async function loaded() {
+  await screen.findByTestId("opening-statement");
+  await screen.findByTestId("sector-widget-sentence");
+  await screen.findByTestId("gas-widget-sentence");
+  await screen.findByTestId("places-widget-sentence");
+}
+
+/** The last URL the page wrote once one containing `part` has arrived (nuqs batches its writes). */
+async function urlWith(updates: Parameters<OnUrlUpdateFunction>[0][], part: string) {
+  await waitFor(() => expect(updates.some((u) => u.queryString.includes(part)), `no URL update containing ${part}`).toBe(true));
+  return updates[updates.length - 1].queryString;
+}
+
+describe("the workspace frame", () => {
+  it("one full-bleed map behind everything, with the nav capsule, the deck, the filter panel, the legend capsule, the map buttons and Map settings over it", async () => {
+    mount();
+    await loaded();
+    const page = screen.getByTestId("workspace");
+    for (const c of ["relative", "h-dvh", "overflow-hidden"]) expect(page.className, c).toContain(c);
+    // the map fills the frame, behind the panels
+    const pane = screen.getByTestId("map-pane");
+    expect(pane.className).toContain("absolute inset-0");
+    expect(pane).toContainElement(screen.getByTestId("map-stub"));
+    expect(Array.from(page.children)[0]).toBe(pane);
+    // the nav capsule floats at the deck's own left inset, so the two left edges are one line
+    const nav = screen.getByTestId("nav-capsule");
+    expect(nav.className).toContain("absolute left-5 top-5");
+    expect(screen.getAllByTestId("nav-link").map((a) => a.textContent)).toEqual(["Explore", "Data", "Methods", "Downloads"]);
+    // the deck: 420 px, inset 20, under the capsule, its own scroll, letting pointer events through
+    const deck = screen.getByTestId("deck");
+    for (const c of ["absolute", "left-5", "top-[84px]", "bottom-5", "w-[420px]", "z-20", "overflow-y-auto", "overscroll-contain", "scrollbar-thin", "pointer-events-none", "flex flex-col gap-3", "pr-2"]) expect(deck.className, c).toContain(c);
+    expect(deck.className).not.toMatch(/(^|\s)bg-/); // the map shows between the cards
+    const cards = Array.from(deck.children).map((el) => el.getAttribute("data-testid"));
+    expect(cards).toEqual(["header-block", "deck-header", "scope-chips", "opening", "sector-widget", "trend-widget", "gas-widget", "places-widget", "footer"]);
+    for (const id of ["opening", "sector-widget", "trend-widget", "gas-widget", "places-widget", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
+    expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PAKISTAN");
+    // the filter panel: 340 px, top-right
+    const filters = screen.getByTestId("filter-panel");
+    for (const c of ["absolute", "right-5", "top-5", "z-20", "w-[340px]", "card", "p-4"]) expect(filters.className, c).toContain(c);
+    // the legend capsule: bottom-left of the map, right of the deck, one line and no break numbers
+    const legend = screen.getByTestId("legend-capsule");
+    expect(legend.className).toContain("left-[calc(20px+420px+16px)]");
+    expect(legend.className).toContain("bottom-5");
+    expect(legend).toHaveTextContent("Relative");
+    expect(legend).toHaveTextContent("Lower");
+    expect(legend).toHaveTextContent("Higher");
+    expect((legend.textContent ?? "").match(/\d/g)).toBeNull();
+    expect(screen.queryByTestId("legend")).toBeNull(); // never two legends at once
+    expect(screen.queryByTestId("layer-legend")).toBeNull();
+    expect(screen.queryByTestId("opacity-pill")).toBeNull();
+    // the map's own buttons, bottom-right, and the Map settings pill under them
+    const buttons = screen.getByTestId("map-buttons");
+    expect(buttons.className).toContain("right-5");
+    for (const id of ["map-zoom-in", "map-zoom-out", "map-locate", "map-fullscreen"]) expect(within(buttons).getByTestId(id).className, id).toContain("glass");
+    expect(screen.getByTestId("map-settings-button")).toHaveTextContent("Map settings");
+    expect(screen.queryByTestId("map-settings-panel")).toBeNull();
+    // one logo in the nav and one in the deck's footer card
+    const logos = screen.getAllByTestId("brand-logo");
+    expect(logos).toHaveLength(2);
+    expect(nav).toContainElement(logos[0]);
+    expect(screen.getByTestId("footer")).toContainElement(logos[1]);
+  });
+  it("the map's padding is the chrome's own widths, and collapsing a panel re-computes it", async () => {
+    mount();
+    await loaded();
+    const stub = () => screen.getByTestId("map-stub");
+    expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16));
+    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16));
+    fireEvent.click(screen.getByTestId("filters-collapse"));
+    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "0");
+    expect(stub()).toHaveAttribute("data-pad-right", String(48 + 20 + 16));
+    fireEvent.click(screen.getByTestId("deck-collapse"));
+    expect(screen.queryByTestId("deck")).toBeNull();
+    expect(screen.getByTestId("deck-rail")).toBeInTheDocument();
+    expect(stub()).toHaveAttribute("data-pad-left", "20");
+    fireEvent.click(screen.getByTestId("deck-rail"));
+    expect(await screen.findByTestId("deck")).toBeInTheDocument();
+    expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16));
+    fireEvent.click(screen.getByTestId("filters-expand"));
+    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16));
+  });
+  it("Map settings carries what left the filter panel: the estimate, the warming potentials, the spatial view, the layer, the opacity and the raster", async () => {
+    mount();
+    await loaded();
+    // none of them is in the panel any more
+    for (const id of ["config-select", "gwp-select", "view-select", "layer-switch", "opacity-range", "raster-toggle"]) expect(screen.queryByTestId(id), id).toBeNull();
+    fireEvent.click(screen.getByTestId("map-settings-button"));
+    const panel = screen.getByTestId("map-settings-panel");
+    for (const id of ["config-select", "gwp-select", "view-select", "layer-switch", "opacity-range", "raster-toggle"]) expect(within(panel).getByTestId(id), id).toBeInTheDocument();
+    expect((within(panel).getByTestId("config-select") as HTMLSelectElement).options[0].textContent).toBe("Reference estimate");
+    expect(Array.from(within(panel).getByTestId("gwp-select").querySelectorAll("button")).map((b) => b.textContent)).toEqual(["IPCC 2013 (AR5)", "IPCC 2021 (AR6)"]);
+    // the opacity is a display setting the page owns and hands to the map, never the URL
+    fireEvent.change(within(panel).getByTestId("opacity-range"), { target: { value: "40" } });
+    expect(screen.getByTestId("opacity-value")).toHaveTextContent("40%");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-opacity", "40");
+    fireEvent.click(screen.getByTestId("map-settings-close"));
+    expect(screen.queryByTestId("map-settings-panel")).toBeNull();
+  });
+});
+
+describe("the workspace's state", () => {
+  it("the filter panel writes level, sector, gas and the year to the URL, and the deck and the map read them back", async () => {
+    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
+    mount("", (e) => updates.push(e));
+    await loaded();
+    fireEvent.click(screen.getByTestId("level-adm2"));
+    expect(await urlWith(updates, "level=adm2")).toContain("level=adm2");
+    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "power" } });
+    expect(await urlWith(updates, "sector=power")).toContain("sector=power");
+    fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "CH4" } });
+    expect(await urlWith(updates, "gas=CH4")).toContain("gas=CH4");
+    fireEvent.change(screen.getByTestId("year-range"), { target: { value: "0" } });
+    expect(await urlWith(updates, "period=FY2020-21")).toContain("period=FY2020-21");
+    // the year slider's ends are the release's own short labels, and the value is one of them
+    expect(screen.getByTestId("year-first")).toHaveTextContent("2020–21");
+    expect(screen.getByTestId("year-last")).toHaveTextContent("2023–24");
+    await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21"));
+    // the active view line reads the same scope back in words
+    expect(screen.getByTestId("active-view")).toHaveTextContent("Pakistan · Power · CH₄ · 2020–21 · land use excluded");
+  });
+  it("a scope read from the URL becomes the chips, and each chip clears back to its default", async () => {
+    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
+    mount("?sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
+    await screen.findByTestId("opening-statement");
+    const chips = screen.getByTestId("scope-chips");
+    expect(within(chips).getByTestId("chip-sector")).toHaveTextContent("Power");
+    expect(within(chips).getByTestId("chip-gas")).toHaveTextContent("CH₄");
+    expect(within(chips).getByTestId("chip-period")).toHaveTextContent("2020–21");
+    for (const id of ["chip-sector", "chip-gas", "chip-period"]) expect(screen.getByTestId(id)).toHaveAttribute("data-default", "0");
+    fireEvent.click(screen.getByTestId("chip-sector-clear"));
+    await waitFor(() => expect(screen.getByTestId("chip-sector")).toHaveTextContent("All sectors"));
+    fireEvent.click(screen.getByTestId("chip-gas-clear"));
+    await waitFor(() => expect(screen.getByTestId("chip-gas")).toHaveTextContent("All gases"));
+    fireEvent.click(screen.getByTestId("chip-period-clear"));
+    await waitFor(() => expect(screen.getByTestId("chip-period")).toHaveTextContent("2023–24"));
+    // a chip at its default carries no clear button
+    for (const id of ["chip-sector", "chip-gas", "chip-period"]) {
+      expect(screen.getByTestId(id)).toHaveAttribute("data-default", "1");
+      expect(screen.queryByTestId(`${id}-clear`), id).toBeNull();
+    }
+    expect(updates[updates.length - 1].queryString).toBe("");
+  });
+  it("the province card re-scopes the deck; the hovered sector steers the map without reaching the URL", async () => {
+    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
+    mount("", (e) => updates.push(e));
+    await loaded();
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
+    const bars = within(screen.getByTestId("bars-with-axis")).getAllByTestId("bar-item");
+    fireEvent.click(bars[1]);
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "power");
+    expect(updates.some((u) => u.queryString.includes("sector="))).toBe(false); // the hover/pick stays local
+    expect(screen.getByTestId("sectors-link")).toHaveAttribute("href", "/data?sector=power");
+    fireEvent.click(bars[1]);
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
+    // the province select writes `geo`, and the deck re-scopes to a module breakdown
+    fireEvent.change(screen.getByTestId("province-select"), { target: { value: "Punjab" } });
+    await waitFor(() => expect(screen.getByTestId("opening-statement")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "Punjab");
+    expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PUNJAB");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Punjab");
+    const trend = await within(screen.getByTestId("trend-widget")).findByTestId("refusal-card");
+    expect(trend).toHaveTextContent("Refused: GrainUnavailable");
+    // Reset view returns the deck and the map to Pakistan
+    fireEvent.click(screen.getByTestId("header-reset"));
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan"));
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "PK");
+  });
+  it("Reset filters clears the level, the place, the sector, the gas and the year at once", async () => {
+    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
+    mount("?level=adm2&sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
+    await screen.findByTestId("opening-statement");
+    fireEvent.click(screen.getByTestId("reset-filters"));
+    await waitFor(() => expect(updates[updates.length - 1].queryString).toBe(""));
+    expect(screen.getByTestId("chip-sector")).toHaveTextContent("All sectors");
+  });
+});
+
+describe("the deck's cards", () => {
+  it("collapse-all flips every switch and its own label; one switch collapses its own card to its header row", async () => {
+    mount();
+    await loaded();
+    const all = screen.getByTestId("deck-collapse-all");
+    expect(all).toHaveTextContent("Collapse all");
+    const ids = ["sector-widget", "trend-widget", "gas-widget", "places-widget"];
+    const switches = ids.map((id) => screen.getByTestId(`${id}-switch`));
+    expect(screen.getAllByRole("switch")).toHaveLength(4);
+    for (const sw of switches) expect(sw).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(switches[0]);
+    expect(switches[0]).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByTestId("sector-widget-sentence")).toBeNull();
+    expect(screen.queryByTestId("bars-with-axis")).toBeNull();
+    expect(screen.getByTestId("sector-widget")).toHaveTextContent("Emissions by sector in Pakistan");
+    expect(screen.getByTestId("trend-widget-sentence")).toBeInTheDocument();
+    fireEvent.click(switches[0]);
+    expect(await screen.findByTestId("sector-widget-sentence")).toBeInTheDocument();
+    fireEvent.click(all);
+    for (const sw of switches) expect(sw).toHaveAttribute("aria-checked", "false");
+    for (const id of ids) expect(screen.queryByTestId(`${id}-sentence`), id).toBeNull();
+    expect(all).toHaveTextContent("Expand all");
+    expect(all).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("opening-statement")).toBeInTheDocument(); // the statement is not a section
+    fireEvent.click(all);
+    for (const id of ids) expect(await screen.findByTestId(`${id}-sentence`)).toBeInTheDocument();
+  });
+  it("each card's sentence is built from the envelope's server strings, and the charts' ticks are the envelopes' own", async () => {
+    mount();
+    await loaded();
+    expect(screen.getByTestId("opening-statement")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory, which excludes land use and forestry.");
+    expect(screen.getByTestId("sector-widget-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source at 223.45 Mt (49.4 %), followed by power (63.37 Mt, 14.0 %) and transport (41.93 Mt, 9.3 %).");
+    expect(screen.getByTestId("trend-widget-sentence")).toHaveTextContent("From 2020–21 to 2023–24, Pakistan's emissions rose from 372.40 Mt to 452.35 Mt CO₂e, a change of +79.95 Mt (+21.5 %).");
+    expect(screen.getByTestId("gas-widget-sentence")).toHaveTextContent("Methane made up 248.75 Mt (55.0 %) of Pakistan's CO₂-equivalent total; carbon dioxide 161.46 Mt (35.7 %).");
+    expect(screen.getByTestId("places-widget-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
+    expect(screen.getByTestId("bars-with-axis")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
+    expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));
+    expect(within(screen.getByTestId("column-chart")).getAllByTestId("column").map((c) => c.textContent)).toEqual(["2020–21 372.40", "2023–24 452.35"]);
+    for (const id of ["sector-widget", "trend-widget", "gas-widget", "places-widget"]) {
+      expect(screen.getByTestId(`${id}-info`)).toBeInTheDocument();
+      expect(screen.getByTestId(`${id}-download`)).toBeInTheDocument();
+    }
+  });
+});
+
+describe("the workspace's audits", () => {
+  it("every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase; and the chrome never names the dataset", async () => {
+    mount();
+    await loaded();
+    const allowed = serverDecimals();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const tokens: string[] = [];
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
+    expect(tokens.length).toBeGreaterThan(20);
+    for (const t of tokens) expect(allowed.has(t), t).toBe(true);
+    const text = document.body.textContent ?? "";
+    expect(text).not.toContain("FY");
+    expect(text).not.toMatch(/(^|[^A-Z0-9(])AR5(?![)\w])/);
+    expect(text).not.toContain("(NE)");
+    expect(text).not.toContain("LULUCF");
+    expect(text).not.toContain("1.0.0rc");
+    expect(text).not.toContain("REF_2023_24");
+    expect(text).not.toContain("Mt CO2e");
+    expect(avoidPhrasesIn(text)).toEqual([]);
+    expect(namesDataset(text)).toBe(false);
+    for (const el of Array.from(document.body.querySelectorAll("[title]"))) {
+      expect(el.getAttribute("title") ?? "").not.toContain("FY");
+      expect(el.getAttribute("title") ?? "").not.toContain("1.0.0rc");
+    }
+    expect(screen.getByTestId("footer")).toHaveTextContent("Data and text CC-BY-4.0 · code MIT · OSM-derived tables ODbL");
+    expect(screen.getByTestId("footer-repository")).toHaveAttribute("href", "https://github.com/example/pakemis");
+  });
+});

@@ -14,12 +14,21 @@
  * spatial exceptions (exceptions.ts), each with its legend (LayerLegend).
  *
  * `variant="briefing"` (the Overview's map pane) keeps the frame button and, in the legend's
- * place, the bottom-left pill, offset right of the Overview deck on wide screens (OpacityPill: the Low–High gradient and an Opacity slider that
+ * place, the bottom-left pill (OpacityPill: the Low–High gradient and an Opacity slider that
  * sets the choropleth's fill-opacity, local state, never the URL); it flies with a small
  * padding and reads `override` merged over the URL state (a hovered sector, the Provinces |
  * Districts toggle) so the briefing can steer the map without writing the URL; `onPick`
  * replaces the click's default (writing `geo` / `cell`). The shared "Other" cell keeps its
  * dotted outline; the hover tip's line explains it.
+ *
+ * `variant="workspace"` (components/workspace/Workspace.tsx) is the bare canvas: no chrome of
+ * its own — the nav capsule, the deck, the filter panel, the legend capsule, the map buttons
+ * and Map settings are the workspace's, and the fill opacity arrives as the `opacity` prop.
+ * `padding` is the chrome the workspace occupies ({top,right,bottom,left} in CSS pixels): it is
+ * applied to the initial fitBounds, to `fitAll()` and to every selection flyTo, so the country
+ * stays centred in the VISIBLE canvas rather than under a panel, and the bottom-left slot is
+ * offset by it instead of by a hard-coded deck width. `onMap` hands the map instance to the
+ * page, which drives its zoom buttons and re-applies the padding when a panel toggles.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -50,7 +59,20 @@ import type { Cell } from "@/lib/envelope";
 
 const LEVEL_WORD = { adm1: "Provinces", adm2: "Districts", grid: "Grid" } as const;
 
-export type ExplorerMapProps = { variant?: "console" | "briefing"; override?: Partial<ExplorerState>; onPick?: (level: Level, id: string) => void };
+/** The chrome a page puts over the map, in CSS pixels: the camera keeps the country inside it. */
+export type MapPadding = { top: number; right: number; bottom: number; left: number };
+
+export type ExplorerMapProps = {
+  variant?: "console" | "briefing" | "workspace";
+  override?: Partial<ExplorerState>;
+  onPick?: (level: Level, id: string) => void;
+  /** The visible canvas's insets; applied to the initial framing, fitAll and every flyTo. */
+  padding?: MapPadding;
+  /** The choropleth's fill opacity in percent (the workspace's Map settings owns the slider). */
+  opacity?: number;
+  /** The map instance as it loads, and null as it is torn down. */
+  onMap?: (map: MBMap | null) => void;
+};
 
 /** The hover tip's line for the current layer: the feature's class, status, retained mass or exception kind, in words. */
 export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell: Cell | undefined, id: string, shared: boolean, ex: ReturnType<typeof exceptionIndex> | null, unalloc: ReturnType<typeof indexUnallocated>, residual: { name: string; members: string[] } | null, labelStream: (s: string) => string): string | null {
@@ -79,13 +101,19 @@ export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell
   return k ? `Exception: ${k.label}` : "no known exception here";
 }
 
-export function ExplorerMap({ variant = "console", override, onPick }: ExplorerMapProps = {}) {
+export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, onMap }: ExplorerMapProps = {}) {
   const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
   const state = useMemo(() => (override ? { ...urlState, ...override } : urlState), [urlState, override]);
   const full = variant === "console";
+  const briefing = variant === "briefing";
   const layer = full ? state.layer : "magnitude";
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
+  const onMapRef = useRef(onMap);
+  onMapRef.current = onMap;
+  // the page's chrome, read through a ref so a panel toggling does not re-run the framing effects
+  const padRef = useRef<MapPadding | undefined>(padding);
+  padRef.current = padding;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MBMap | null>(null);
   const [map, setMap] = useState<MBMap | null>(null);
@@ -93,7 +121,8 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
   const [mapError, setMapError] = useState("");
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [legendOpen, setLegendOpen] = useState(true);
-  const [opacity, setOpacity] = useState(OPACITY_DEFAULT); // the briefing pill's slider, percent; a display setting
+  const [pillOpacity, setPillOpacity] = useState(OPACITY_DEFAULT); // the briefing pill's slider, percent; a display setting
+  const opacity = opacityProp ?? pillOpacity;
   const setStateRef = useRef(setState);
   setStateRef.current = setState;
   const stateRef = useRef(state);
@@ -172,6 +201,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
         addLayers(m, beforeRef.current);
         applyLevel(m, stateRef.current.level, stateRef.current.raster, full ? stateRef.current.layer : "magnitude");
         setMap(m);
+        onMapRef.current?.(m);
       });
       m.on("moveend", () => {
         const c = m.getCenter();
@@ -187,6 +217,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
       mapRef.current?.remove();
       mapRef.current = null;
       setMap(null);
+      onMapRef.current?.(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -198,7 +229,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
     framed.current = true;
     if (stateRef.current.cam) return;
     const u = unionBbox(bboxes.data.adm1);
-    if (u) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: isMobile ? 16 : 40, duration: 0 });
+    if (u) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: padRef.current ?? (isMobile ? 16 : 40), duration: 0 });
   }, [map, bboxes.data, isMobile]);
 
   // --- level, layer and raster visibility
@@ -206,7 +237,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
     if (map) applyLevel(map, state.level, state.raster, layer);
   }, [map, state.level, state.raster, layer]);
 
-  // --- the briefing's opacity slider: the fills' opacity, re-applied when the level's layer changes
+  // --- the opacity slider (the briefing pill, the workspace's Map settings): the fills' opacity, re-applied when the level's layer changes
   useEffect(() => {
     if (map && !full) setFillOpacity(map, opacity);
   }, [map, full, opacity, state.level]);
@@ -235,8 +266,8 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
     lastFlown.current = key;
     // a province name flies to its box at either level (the briefing's Districts toggle keeps the province)
     const box = residual && state.geo === residual.name ? unionOf(bboxes.data.adm1, residual.members) : state.level === "grid" ? null : (bboxes.data.adm1[state.geo] ?? bboxes.data.adm2[state.geo] ?? null);
-    const padding = !full ? { top: 48, bottom: 48, left: 40, right: 40 } : isMobile ? { top: 60, bottom: 260, left: 16, right: 16 } : { top: 90, bottom: 80, left: 60, right: 60 };
-    if (box) map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding, maxZoom: 9, duration: 700 });
+    const pad = padRef.current ?? (!full ? { top: 48, bottom: 48, left: 40, right: 40 } : isMobile ? { top: 60, bottom: 260, left: 16, right: 16 } : { top: 90, bottom: 80, left: 60, right: 60 });
+    if (box) map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding: pad, maxZoom: 9, duration: 700 });
   }, [map, bboxes.data, state.geo, state.level, isMobile, residual, full]);
 
   // --- the grid raster (visual only): one image source, updated per frame, opacity 0 when off
@@ -269,9 +300,12 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
   const scope = [LEVEL_WORD[state.level], scopeWords(labels, state, defaults.gwp_basis, sectorWords(labels, state.sector), state.gas || state.level === "grid" ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null)].join(" · ");
   // the context pill: the year basis, the configuration, the GWP basis and the LULUCF status as words; no version (the release identity lives on /data)
   const pill = contextPill(labels, release.context_bar, state);
+  const workspace = variant === "workspace";
+  // the bottom-left slot clears the page's own chrome: the deck's column on the workspace, the legend's own inset elsewhere
+  const corner = padding ? { left: padding.left + 12, bottom: workspace ? 64 : 32 } : undefined;
   const fitAll = () => {
     const u = bboxes.data ? unionBbox(bboxes.data.adm1) : null;
-    if (u && map) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: 40, duration: 500 });
+    if (u && map) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: padRef.current ?? 40, duration: 500 });
   };
 
   return (
@@ -288,19 +322,21 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
           <LayerSwitch compact={isMobile || (size.width > 0 && size.width < 980)} />
         </div>
       )}
-      <div className={`absolute right-3 z-20 flex flex-col items-end gap-1.5 ${bm.notice ? "top-8" : "top-3"}`}>
-        {full && (
-          <button title={state.raster ? "Hide the grid raster (visual only)" : "Show the grid raster (visual only)"} aria-pressed={state.raster} onClick={() => setState({ raster: !state.raster })} className={`glass flex h-9 w-9 items-center justify-center rounded-xl ${state.raster ? "text-accent" : "text-muted"}`} data-testid="raster-toggle">
-            <Layers size={16} />
+      {!workspace && (
+        <div className={`absolute right-3 z-20 flex flex-col items-end gap-1.5 ${bm.notice ? "top-8" : "top-3"}`}>
+          {full && (
+            <button title={state.raster ? "Hide the grid raster (visual only)" : "Show the grid raster (visual only)"} aria-pressed={state.raster} onClick={() => setState({ raster: !state.raster })} className={`glass flex h-9 w-9 items-center justify-center rounded-xl ${state.raster ? "text-accent" : "text-muted"}`} data-testid="raster-toggle">
+              <Layers size={16} />
+            </button>
+          )}
+          {full && <View3dToggle />}
+          <button title="Frame Pakistan" onClick={fitAll} className="glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-fg">
+            <Locate size={16} />
           </button>
-        )}
-        {full && <View3dToggle />}
-        <button title="Frame Pakistan" onClick={fitAll} className="glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-fg">
-          <Locate size={16} />
-        </button>
-      </div>
-      {/* the briefing's pill sits right of the Overview deck on wide screens (20 px inset + 520 px column + 16 px; deck.ts) */}
-      <div className={`absolute z-20 ${full ? (isMobile ? "bottom-3 left-3" : "bottom-8 left-3") : "bottom-8 left-3 lg:left-[calc(20px+520px+16px)]"}`} data-testid="map-bottom-left">
+        </div>
+      )}
+      {/* the bottom-left slot: cleared of the page's chrome by `padding` (the deck's column) rather than by a hard-coded width */}
+      <div className={`absolute z-20 ${corner ? "" : full && isMobile ? "bottom-3 left-3" : "bottom-8 left-3"}`} style={corner} data-testid="map-bottom-left">
         {isMobile && full && (
           <button onClick={() => setLegendOpen((o) => !o)} className="glass pill mb-1 px-2.5 py-1 text-micro normal-case tracking-normal">
             {legendOpen ? "hide legend" : "legend"}
@@ -309,7 +345,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
         {legendOpen && full && (
           <LayerLegend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} hasCells={anyNoCell} shared={legendShared} unallocated={{ env: provinceQ.data, index: unallocIdx, error: provinceQ.error, isLoading: provinceQ.isLoading }} exceptions={{ present: exPresent, items: exItems }} />
         )}
-        {!full && <OpacityPill value={opacity} onChange={setOpacity} />}
+        {briefing && <OpacityPill value={opacity} onChange={setPillOpacity} />}
         {!full && mapQ.error ? <div className="mt-1 max-w-[272px]" data-testid="briefing-refusal"><RefusalCard error={mapQ.error} compact /></div> : null}
       </div>
       {full && !isMobile && (

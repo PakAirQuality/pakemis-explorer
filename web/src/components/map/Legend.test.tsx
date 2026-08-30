@@ -11,7 +11,8 @@ import { ExplorerContext, type ExplorerContextValue } from "@/components/Explore
 import { releaseDims, releaseLabels } from "@/lib/release";
 import type { ReleaseInfo } from "@/lib/envelope";
 import type { ExplorerState } from "@/lib/urlState";
-import { FilterPanel } from "./FilterPanel";
+import { FilterPanel } from "@/components/workspace/FilterPanel";
+import { MapSettings } from "@/components/workspace/MapSettings";
 import { Legend } from "./Legend";
 import { ExplorePanel } from "@/components/panels/ExplorePanel";
 import { RELEASE } from "@/__tests__/fixtures";
@@ -30,33 +31,47 @@ function mount(node: React.ReactNode, state: ExplorerState = base) {
 }
 
 describe("FilterPanel", () => {
-  it("the selects read '2023–24', 'Reference estimate', 'All sectors' with the notes as titles; the warming potentials are spelled out", () => {
-    mount(<FilterPanel open onToggle={() => {}} />);
-    const period = screen.getByTestId("period-select") as HTMLSelectElement;
-    expect(period.options[period.selectedIndex].textContent).toBe("2023–24");
-    expect(screen.getByTestId("filter-period")).toHaveTextContent("July 2023 – June 2024");
+  it("the controls that drive both the deck and the map: the level, the sector, the gas and the year, in the release's own words", () => {
+    mount(<FilterPanel open onToggle={() => {}} place="Pakistan" />);
+    expect(screen.getByTestId("year-value")).toHaveTextContent("2023–24");
+    expect(screen.getByTestId("year-first")).toHaveTextContent("2020–21");
+    expect(screen.getByTestId("year-last")).toHaveTextContent("2023–24");
+    const sector = screen.getByTestId("sector-select") as HTMLSelectElement;
+    expect(sector.options[sector.selectedIndex].textContent).toBe("All sectors");
+    const gas = screen.getByTestId("gas-select") as HTMLSelectElement;
+    expect(gas.options[gas.selectedIndex].textContent).toBe("All gases (CO₂e)");
+    expect(screen.getByTestId("level-adm1")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("level-adm1").className).toContain("bg-accent");
+    expect(screen.getByTestId("level-adm2")).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByTestId("active-view")).toHaveTextContent("Pakistan · All sectors · CO₂e · 2023–24");
+    expect(screen.getByTestId("filter-panel").textContent).not.toContain("FY");
+    expect(screen.getByTestId("filter-panel").textContent).not.toContain("REF_2023_24");
+    // the estimate, the warming potentials, the spatial view and the raster left for Map settings
+    for (const id of ["config-select", "gwp-select", "view-select", "raster-toggle"]) expect(screen.queryByTestId(id), id).toBeNull();
+  });
+  it("collapsed: a rail of icons that bring the panel back", () => {
+    mount(<FilterPanel open={false} onToggle={() => {}} place="Pakistan" />);
+    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "0");
+    for (const id of ["filters-expand", "rail-level", "rail-sector", "rail-gas"]) expect(screen.getByTestId(id), id).toBeTruthy();
+    expect(screen.queryByTestId("year-range")).toBeNull();
+  });
+});
+
+describe("MapSettings", () => {
+  it("the estimate and the warming potentials read their labels, and the survey configuration and AR6 are named by theirs", () => {
+    const { unmount } = mount(<MapSettings open onToggle={() => {}} opacity={80} onOpacity={() => {}} />);
     const config = screen.getByTestId("config-select") as HTMLSelectElement;
     expect(config.options[config.selectedIndex].textContent).toBe("Reference estimate");
     expect(config.getAttribute("title")).toBe("every axis at its reference setting; residential dung on the ledger basis (L)");
-    const sector = screen.getByTestId("sector-select") as HTMLSelectElement;
-    expect(sector.options[sector.selectedIndex].textContent).toBe("All sectors");
     const buttons = Array.from(screen.getByTestId("gwp-select").querySelectorAll("button"));
     expect(buttons.map((b) => b.textContent)).toEqual(["IPCC 2013 (AR5)", "IPCC 2021 (AR6)"]);
     expect(buttons[0].getAttribute("title")).toContain("Fifth Assessment Report");
-    expect(screen.getByTestId("filter-panel").textContent).not.toContain("FY");
-    expect(screen.getByTestId("filter-panel").textContent).not.toContain("REF_2023_24");
-  });
-  it("the survey configuration and AR6 are named by their labels", () => {
-    mount(<FilterPanel open onToggle={() => {}} />, { ...base, config: "S_2023_24", gwp: "AR6" });
-    const config = screen.getByTestId("config-select") as HTMLSelectElement;
-    expect(config.options[config.selectedIndex].textContent).toBe("Survey-based estimate");
+    expect(screen.getByTestId("map-settings-panel").textContent).not.toContain("REF_2023_24");
+    unmount();
+    mount(<MapSettings open onToggle={() => {}} opacity={80} onOpacity={() => {}} />, { ...base, config: "S_2023_24", gwp: "AR6" });
+    const survey = screen.getByTestId("config-select") as HTMLSelectElement;
+    expect(survey.options[survey.selectedIndex].textContent).toBe("Survey-based estimate");
     expect(screen.getByTestId("gwp-select").querySelector('[aria-selected="true"]')).toHaveTextContent("IPCC 2021 (AR6)");
-  });
-  it("collapsed: a rail of one icon per section", () => {
-    mount(<FilterPanel open={false} onToggle={() => {}} />);
-    expect(screen.getByTestId("filter-rail")).toBeTruthy();
-    for (const id of ["geography", "period", "sector", "gas", "estimate", "view"]) expect(screen.getByTestId(`rail-${id}`)).toBeTruthy();
-    expect(screen.queryByTestId("period-select")).toBeNull();
   });
 });
 

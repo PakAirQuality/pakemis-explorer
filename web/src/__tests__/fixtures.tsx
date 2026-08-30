@@ -151,3 +151,22 @@ export function mockFetch(route: (url: string, body: MockBody | undefined) => un
     return { ok: true, status: 200, statusText: "OK", json: async () => payload } as Response;
   });
 }
+
+/**
+ * jsdom answers every media query `false`, which would put the workspace into its mobile
+ * layout; this stubs `matchMedia` so a `(min-width: …)` query matches — the desktop frame the
+ * workspace tests assert. A `(max-width: …)` query still answers false, as it does on a wide
+ * screen.
+ */
+export function stubWideViewport() {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: /min-width/.test(query),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }));
+}

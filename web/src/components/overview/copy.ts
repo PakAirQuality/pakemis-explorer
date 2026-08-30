@@ -59,6 +59,8 @@ export const DECK = {
   sections: (n: number) => `Sections (${n})`,
   collapseAll: "Collapse all sections",
   expandAll: "Expand all sections",
+  collapseAllShort: "Collapse all",
+  expandAllShort: "Expand all",
 } as const;
 
 /** The muted line under the opening statement, and the footer's. */
@@ -83,7 +85,7 @@ export const WIDGETS: Record<WidgetId, string> = {
 export const GAS_WORDS: Record<string, string> = { CH4: "Methane", CO2: "Carbon dioxide", N2O: "Nitrous oxide" };
 
 export const LINKS = {
-  openMap: "Open the map →",
+  openMap: "Show it on the map →",
 } as const;
 
 export const FOOTER = { product: "A Pakistan Air Quality Initiative product", repository: "Repository", methods: "Methods & evidence", downloads: "Downloads", api: "API" } as const;

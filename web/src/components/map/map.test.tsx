@@ -1,16 +1,16 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * The Map page: the filter panel, the map (stubbed: no WebGL in jsdom) with its layer switch
- * reflected in the URL, the timeline, the selection drawer's five tabs and the legend of every
- * layer against mocked envelopes. The four audits: every decimal on screen is a server string,
- * no "FY", no raw id, no avoid-list phrase; the word "Allocated" is present and no heading
- * is a bare "Emissions".
+ * `/map` is a redirect stub since the workspace absorbed the map (2026-08-30) — the page's own
+ * behaviour now lives in __tests__/workspace.test.tsx — so what is asserted here is the stub
+ * itself and the layer legends, which Wave 4 folds into the workspace's legend capsule: each
+ * layer's own legend against mocked envelopes (magnitude's cell displays, evidence's S1–S4,
+ * method's statuses and hatch, unallocated's province rows, the named exceptions), the one
+ * sentence saying the map is an allocation and not an observation, and the audits — every
+ * decimal on screen is a server string, no "FY", no raw id, no avoid-list phrase.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
-import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import { ExplorerContext, useExplorer, type ExplorerContextValue } from "@/components/ExplorerContext";
 import { releaseDims, releaseLabels } from "@/lib/release";
 import type { Envelope, ReleaseInfo } from "@/lib/envelope";
@@ -64,35 +64,6 @@ beforeEach(() => {
   vi.stubGlobal("fetch", mockFetch(route));
 });
 
-/** The last URL the page wrote once one containing `part` has arrived (nuqs batches its writes). */
-async function urlWith(updates: Parameters<OnUrlUpdateFunction>[0][], part: string) {
-  await waitFor(() => expect(updates.some((u) => u.queryString.includes(part)), `no URL update containing ${part}`).toBe(true));
-  return updates[updates.length - 1].queryString;
-}
-
-function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
-  const Wrapper = withNuqsTestingAdapter({ searchParams: search, onUrlUpdate });
-  return render(
-    <Wrapper>
-      <Providers>
-        <ExplorerProvider>
-          <Page />
-        </ExplorerProvider>
-      </Providers>
-    </Wrapper>,
-  );
-}
-
-/** Every decimal token on screen is one of the strings received from the mocked API. */
-function assertServerDecimals(extra: string[] = []) {
-  const allowed = [...Object.values(D).flat(), ...Object.values(U), ...extra];
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  const tokens: string[] = [];
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
-  expect(tokens.length).toBeGreaterThan(0);
-  for (const t of tokens) expect(allowed.some((a) => a.includes(t)), `${t} is not a server string`).toBe(true);
-}
-
 function audits(allocated = true) {
   const text = document.body.textContent ?? "";
   expect(text).not.toContain("FY");
@@ -111,118 +82,13 @@ function audits(allocated = true) {
   for (const h of Array.from(document.body.querySelectorAll("h1, h2, h3"))) expect((h.textContent ?? "").trim()).not.toMatch(/^Emissions\b/);
 }
 
-describe("the Map page", () => {
-  it("renders the filter panel, the map, the timeline and the national drawer: 'Pakistan · allocated emissions' with the total and the placed / unallocated sentence from the server's derived strings", async () => {
-    mount();
-    expect(await screen.findByTestId("explorer")).toBeTruthy();
-    expect(screen.getByTestId("page-title")).toHaveTextContent("Map allocated emissions");
-    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "1");
-    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-layer", "magnitude");
-    expect(screen.getByTestId("time-rail")).toHaveTextContent("2023–24");
-    expect(screen.getByTestId("month-row")).toHaveTextContent("Annual");
-    expect(screen.getByTestId("month-row")).toHaveTextContent("Jul 23");
-    expect(await screen.findByTestId("drawer-title")).toHaveTextContent("Pakistan · allocated emissions");
-    const headline = await screen.findByTestId("headline-display");
-    expect(headline).toHaveTextContent(D.national);
-    expect(headline).toHaveAttribute("title", expect.stringContaining(D.nationalFull));
-    expect(screen.getByTestId("headline-unit")).toHaveTextContent("Mt CO₂e");
-    const sentence = await screen.findByTestId("placed-sentence");
-    expect(sentence).toHaveTextContent(`Of this total, ${U.placed} Mt CO₂e is spatially placed and ${U.total} Mt CO₂e remains explicitly unallocated`);
-    expect(screen.getByTestId("how-to-read")).toHaveTextContent("not a measurement");
-    expect(screen.getByTestId("ask-about")).toHaveAttribute("href", expect.stringContaining("/ask?q="));
-    expect(screen.getByTestId("open-rows")).toBeTruthy();
-    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Map")).toHaveAttribute("aria-current", "page");
-    // the light chrome: the page re-values no token (no dark wrapper) and the panels are white glass
-    expect(screen.getByTestId("explorer").getAttribute("style")).toBeNull();
-    expect(screen.getByTestId("right-column").getAttribute("style")).not.toContain("--color");
-    for (const id of ["filter-panel", "time-rail", "right-column"]) expect(screen.getByTestId(id).className).toContain("bg-white/90");
-    assertServerDecimals();
-    audits();
-  });
-  it("the drawer tabs follow the URL `tab`: Breakdown (shares), Trend (the series and its change), Evidence (class definitions), Sources (the release on Downloads)", async () => {
-    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
-    mount("", (e) => updates.push(e));
-    await screen.findByTestId("drawer-title");
-    const tabs = screen.getByTestId("drawer-tabs");
-    expect(within(tabs).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Summary", "Breakdown", "Trend", "Evidence", "Sources"]);
-    fireEvent.click(within(tabs).getByText("Breakdown"));
-    expect(await urlWith(updates, "tab=breakdown")).toContain("tab=breakdown");
-    await screen.findByTestId("tab-breakdown");
-    await waitFor(() => expect(screen.getAllByTestId("table-share").map((e) => e.textContent)).toEqual([`${D.shares[0]}%`, `${D.shares[1]}%`]));
-    fireEvent.click(within(tabs).getByText("Trend"));
-    await screen.findByTestId("tab-trend");
-    expect(await screen.findByTestId("change-sentence")).toHaveTextContent(`${D.change} Mt CO₂e (${D.changePct}%)`);
-    expect(screen.getByTestId("trend-chart")).toHaveTextContent(D.series.join(" "));
-    fireEvent.click(within(tabs).getByText("Evidence"));
-    await screen.findByTestId("tab-evidence");
-    expect(screen.getByTestId("class-definitions")).toHaveTextContent("S1");
-    expect(screen.getByTestId("class-definitions")).toHaveTextContent("native source geometry");
-    fireEvent.click(within(tabs).getByText("Sources"));
-    await screen.findByTestId("tab-sources");
-    expect(await screen.findByTestId("provenance")).toHaveTextContent("fact_annual");
-    expect(screen.getByTestId("release-identity").querySelector("a")).toHaveAttribute("href", "/downloads");
-    fireEvent.click(within(tabs).getByText("Summary"));
-    await waitFor(() => expect(updates[updates.length - 1].queryString).not.toContain("tab="));
-    assertServerDecimals();
-    audits();
-  });
-  it("a province from the URL: '{Place} · allocated emissions', its retained mass; a district: the interval verbatim, the evidence fields and the lineage statuses; the trend is the typed refusal", async () => {
-    const { unmount } = mount("?geo=Punjab");
-    expect(await screen.findByTestId("drawer-title")).toHaveTextContent("Punjab · allocated emissions");
-    expect(await screen.findByTestId("headline-display")).toHaveTextContent(D.punjab);
-    expect(await screen.findByTestId("placed-sentence")).toHaveTextContent(`${U.punjab} Mt CO₂e remains explicitly unallocated`);
-    expect(screen.getByTestId("drawer-close")).toBeTruthy();
-    assertServerDecimals();
-    unmount();
-    mount(`?level=adm2&geo=${LAHORE}&tab=evidence`);
-    expect(await screen.findByTestId("drawer-title")).toHaveTextContent("Lahore · allocated emissions");
-    const fields = await screen.findByTestId("evidence-fields");
-    await waitFor(() => expect(fields).toHaveTextContent("S3 — administrative statistic"));
-    expect(fields).toHaveTextContent("diffuse by nature on builtup");
-    expect(fields).toHaveTextContent("one-to-one");
-    expect(fields).toHaveTextContent("road transport");
-    const lineage = await screen.findByTestId("evidence-lineage");
-    await waitFor(() => expect(lineage).toHaveTextContent("shared shape · 1 rows"));
-    expect(await screen.findByTestId("unallocated-table")).toHaveTextContent(U.moduleGas);
-    fireEvent.click(within(screen.getByTestId("drawer-tabs")).getByText("Trend"));
-    expect(await screen.findByTestId("refusal-card")).toHaveTextContent("GrainUnavailable");
-    fireEvent.click(within(screen.getByTestId("drawer-tabs")).getByText("Summary"));
-    expect(await screen.findByTestId("headline-display")).toHaveTextContent(D.district);
-    expect(screen.getByTestId("headline")).toHaveTextContent("interval");
-    expect(screen.getByTestId("shape-rows")).toHaveTextContent("Lahore District");
-    assertServerDecimals();
-    audits();
-  });
-  it("the layer switch and the level are read from the URL; a non-reference year is 'national only' with the refusal in the API's words", async () => {
-    const { unmount } = mount("?layer=evidence&level=adm2");
-    await screen.findByTestId("drawer-title");
-    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-layer", "evidence");
-    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-level", "adm2");
-    unmount();
-    mount("?period=FY2020-21");
-    const only = await screen.findByTestId("national-only");
-    expect(only).toHaveTextContent("national only");
-    await waitFor(() => expect(only).toHaveTextContent("spatial products exist for FY2023-24 only (GrainUnavailable)"));
-    expect(screen.queryByTestId("month-row")).toBeNull();
-    expect(await screen.findByTestId("headline-display")).toHaveTextContent(D.national);
-  });
-  it("the filter panel writes the URL and collapses to a rail; the timeline writes period and month", async () => {
-    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
-    mount("", (e) => updates.push(e));
-    await screen.findByTestId("drawer-title");
-    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "power" } });
-    await urlWith(updates, "sector=power");
-    fireEvent.click(screen.getByTestId("level-adm2"));
-    expect(await urlWith(updates, "level=adm2")).toContain("sector=power");
-    fireEvent.click(screen.getByTestId("filters-collapse"));
-    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "0");
-    expect(screen.getByTestId("rail-period")).toBeTruthy();
-    fireEvent.click(screen.getByTestId("rail-period"));
-    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "1");
-    fireEvent.click(screen.getAllByTestId("month-chip")[1]);
-    await urlWith(updates, "month=202307");
-    fireEvent.click(screen.getAllByTestId("year-chip")[0]);
-    expect(await urlWith(updates, "period=FY2020-21")).not.toContain("month="); // a new period drops the month
+describe("the /map stub", () => {
+  it("redirects to the workspace, carrying the view across", () => {
+    window.history.replaceState({}, "", "/map/?level=adm2&geo=Punjab");
+    render(<Page />);
+    expect(screen.getByTestId("redirect")).toHaveAttribute("data-to", "/");
+    expect(screen.getByRole("link")).toHaveTextContent("Explore");
+    window.history.replaceState({}, "", "/");
   });
 });
 

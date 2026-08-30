@@ -74,7 +74,7 @@ export function SectorWidget({ data, place, open, onToggle, onHover, onSelect, s
         <>
           <BarsWithAxis items={items} ticks={env.axis?.ticks_short} onHover={onHover} onSelect={onSelect} />
           <div className="mt-1 flex justify-end">
-            <Link href={hrefForState({ ...state, sector: selected }, defaults, "/explore")} className={LINK} data-testid="sectors-link">Explore the inventory →</Link>
+            <Link href={hrefForState({ ...state, sector: selected }, defaults, "/data")} className={LINK} data-testid="sectors-link">Explore the inventory →</Link>
           </div>
         </>
       ) : (
@@ -164,7 +164,7 @@ export function PlacesWidget({ data, geo, open, onToggle, onPick }: WidgetProps 
         <>
           <BarsWithAxis items={items} ticks={env.axis?.ticks_short} onSelect={onPick} testId="places-bars" />
           <div className="mt-1 flex justify-end">
-            <Link href={hrefForState({ ...state, geo, level: "adm1" }, defaults, "/map")} className={LINK} data-testid="places-link">{LINKS.openMap}</Link>
+            <Link href={hrefForState({ ...state, geo, level: "adm1" }, defaults, "/")} className={LINK} data-testid="places-link">{LINKS.openMap}</Link>
           </div>
         </>
       ) : (
