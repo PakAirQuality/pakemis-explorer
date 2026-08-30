@@ -588,3 +588,63 @@ gives the toolbar for free. `ExplorerMap` accepts `variant="briefing"`, `overrid
 state merged over the URL state for the choropleth, level, fly-to and legend) and `onPick`;
 the fly-to now looks a province up at either level. `headlineCell` / `magnitudeOf` live in
 `lib/uncertainty.ts`.
+
+
+## The six surfaces (2026-08-30, final pass): Overview tells · Explore tests · Map locates · Methods proves · Downloads releases · Ask PakEmis explains
+
+Delivered against the definitions in the plan, by five agents on disjoint files and one
+integration pass:
+
+- API (`dcdd4a9`…`a3098e6`, `24d8ab9`, `69fd396`, `3d3d160`): the 21 registries copied into
+  the payload with their manifest digests (`data/fetch_release.py`, checked by
+  `verify_release.py`); `GET /claim` (own read-only DuckDB over the fact tables as text plus
+  the registries; every value a string; ~10 ms per cell); `Service.category_grain_guard`
+  (categories at a geography grain → typed `GrainUnavailable`, so no claim record can be
+  mis-attributed while the query core's `_filters` defect stands); the ADM2 evidence fields
+  (`allocation_status`, `spatial_class`, `placement_class`, `allocation_surface`,
+  `dominant_stream`; dominance by the largest reference-year atom because
+  `located_mass_fraction` is empty for 162 of 189 evidence rows) and the per-province
+  `unallocated_short`; the `evidence` and `complete` product families and the streamed
+  `complete.zip`; `answer.scope`, `tool_result.n_rows` and `tool_result.uncertainty` (read
+  from `fact_uncertainty` because the core's envelope block is always empty); refusals worded
+  beside the contract's text (`message_worded`: "2023–24", "the survey-based estimate");
+  the claim formula's row count corrected (the core bakes "over 0 rows"). 368 tests.
+- Web: Explore as a Grapher (`83406a1`), the Ask drawer with the eight-part answer card
+  (`10e3776`, `5689f05`), the Map page with the five-layer switch, drawer and timeline
+  (`2db4b3f`, `3a70b26`), the claim record, the Methods claim browser and purpose-first
+  Downloads (`ae0ec0f`, `fe73f45`), types regenerated (`185fd0b`), Explain rewired to the
+  drawer and the GWP chip worded (`fb6cafe`), the orphaned panels removed. 172 tests, ESLint
+  clean, `next build` green.
+
+The visible walk (Chrome, 1520 px, this session) and what it found:
+
+- Overview: the briefing renders with the map; the legend's "Result details" opened a drawer
+  *inside the legend's 270 px box* — the sticky map container contained the fixed drawer.
+  Fixed: `EnvelopeDrawer` is portalled to the body.
+- Explore: the sector canvas, the four actions; Evidence opens the claim record for the
+  chosen cell (breadcrumb Agriculture → All categories (6) → All gases (3) → Pakistan →
+  2023–24, 34 rows summed); Explain opens the Ask drawer with the scope, which answered
+  "Explain this result" in 21 s with every part of the card. Found: the answer's unit
+  placeholder printed "Mt CO2e AR5" — the renderer's `.unit` now prints `unit_short`; a tool
+  card printed "adm1" — levels are worded; the cell picker printed "agriculture" — cells are
+  worded through the labels.
+- Map: the basemap and fills take several seconds in a visible window (the JPEG hides the
+  paler provinces; zoomed, every province is painted); selection by real mouse events works
+  (the automation extension's synthetic click does not reach Mapbox, so the walk selected
+  through the filter and through dispatched events); the Sindh and Punjab drawers read their
+  placed/unallocated sentences; the Spatial evidence layer paints S1/S2/S3 with the class
+  definitions and counts (5 / 7 / 114 districts); the Known spatial exceptions layer hatches
+  and lists 21 named exceptions.
+- Methods: the claim browser opened the whole-inventory record (452.35, 452.34662 exact) with
+  the permalink `?claim=…:0`. Downloads: the seven purposes, then the spatial family's files
+  with CSV · Parquet · NetCDF and Schema.
+- The eyebrow read "non-LULUCF" on every page: the API's `SCOPE_WORDS` now says "excluding
+  land use and forestry" (the citation title follows).
+
+Follow-ups that belong to the emissions repo (through its gate, not here): `engine._filters`
+applies `categories`/`ipcc_codes` at the national grain only; `_uncertainty_for` leaves the
+envelope's `uncertainty.rows` empty; the per-cell `formula` bakes "over 0 rows" (the `%d`
+substitution is dead code); the citation string's missing space. Left in the explorer: the
+Result details Sources tab still prints the uncertainty and completeness blocks as raw JSON;
+the compare envelope's difference cell has no claim record (the left/right sub-cells are not
+followed); the mobile bottom sheets are covered by code paths only.

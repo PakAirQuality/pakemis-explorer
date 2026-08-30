@@ -115,68 +115,89 @@ the refusal is shown by name, and the interval stays national with a caption say
 charts (`components/charts/`) print axis labels only from `axis.ticks_short` and value labels
 only from `display_short` / `share_pct_short`; the browser computes nothing but row counts.
 
-`/map` is the console: the framed map with floating scope chips, the Ask pill, raster / 3D /
-frame buttons, time rail, legend and context pill, the detail card over the map's right edge,
-and a right column that is the national context panel or, with `ask=1`, the Ask dock. Every
-control reads and writes the URL (`level`, `period`, `month`, `sector`, `gas`, `config`,
-`gwp`, `view`, `geo`, `cell`, `panel`, `ask`, `c`, `cam`, `raster`, `view3d`), so a copied URL
-opens with identical receipts. `/ask` is the dock as a page (`?q=` seeds one question and is
-then cleared; "moved the map" and a tool card's "Show on map" link to `/map?…`). There is no
-first-visit modal: the Overview is the introduction.
+`/map` — Map allocated emissions (2026-08-30, the immersive allocation map). Full-bleed under
+a dark chrome (the tokens re-valued on the page wrapper; the map itself stays the light
+`streets-v12`): a collapsible filter panel on the left (Geography level and place, Period,
+Sector, Gas, Estimate and warming potentials, Spatial view; a rail of icons when collapsed),
+the map, a timeline beneath it (the fiscal years as chips, Annual plus the twelve months of the
+reference year; any other year is "national only" and shows the release's typed refusal in its
+own words) and the selected-geography drawer on the right (`components/detail/SelectionDrawer`,
+420 px; a bottom sheet on mobile) with the tabs Summary · Breakdown · Trend · Evidence ·
+Sources on the URL key `tab`. The drawer is titled "{Place} · allocated emissions" (Pakistan
+when nothing is selected) and its Summary reads the cell's `display_short` and the envelope's
+`derived` sentence ("Of this total, 443.34 Mt CO₂e is spatially placed and 9.01 Mt CO₂e remains
+explicitly unallocated"); Breakdown asks `sector_id` nationally and `module` at ADM grain with
+the server's shares, or the spatial views; Trend shows the national series with its `change`
+and, off the national scope, the typed refusal by name; Evidence shows the district cell's
+`spatial_class`, its basis sentence, dominant stream, placement and allocation status with the
+lineage rows; Sources the lineage, the provenance tables and the release. The layer switch
+(URL key `layer`, `components/map/layerModes.ts`) paints five readings of the same envelope,
+each with its own legend and one sentence ending "this is an inventory allocation, not an
+observation": Emission magnitude (the choropleth), Spatial evidence (districts by
+`spatial_class` S1–S4/NA with the class definitions and counts), Allocation method
+(`allocation_status` × `placement_class`), Unallocated mass (provinces shaded by their
+`unallocated_short` over greyed districts) and Known spatial exceptions (the shared "Other"
+cell, shapes shared by several census units, units without a polygon — Larkana's active
+district among them — and the bounded CH₄ modules, hatched or outlined, with a named list from
+`dim_geography` and `known_limitations`). Every control reads and writes the URL (`level`,
+`period`, `month`, `sector`, `gas`, `config`, `gwp`, `view`, `geo`, `cell`, `layer`, `tab`,
+`c`, `cam`, `raster`, `view3d`), so a copied URL opens with identical receipts.
 
-`/explore`, `/methods` and `/downloads` (2026-08-30, from the mockups) share one composition:
-`PageHeader` (the identity line, `/release.identity_line` when the API sends it, else the same
-three parts from the labels, never a version; the h1, the dek, an action at the right) and
-`Widget` cards (a small-caps title, a toolbar of round icon buttons top-right: info -> Result
-details on the widget's envelope, download -> the receipt's canonical CSV, share -> the page
-link copied; a sentence with the key figures in bold; the figure; an optional amber `NoteBox`;
-a caption line). The other shared pieces are `StatCard` (label · value · unit · caption ·
-Result details), `ControlsCard` (+ `Field`, `Select`; a grid of selects with a "More settings"
-disclosure), `ShowingLine` ("Showing: …" with an icon) and `ResultTabs` (a segmented tab
-strip). All of them use the semantic token classes only.
+Ask PakEmis (2026-08-30) is a right-side drawer on every page (`components/ask/AskDrawer`,
+mounted once in the layout; the nav button and `lib/askBus.ts`'s `openAsk({question, scope})`
+open it; `/ask` remains the permalink form with `?q=`). It inherits the page's scope ("Scope:
+Punjab · agriculture · 2023–24 · reference estimate"), offers suggested questions generated
+from that scope (`suggestions.ts`: with Punjab and agriculture selected — Why is Punjab's
+estimate high? · How much comes from livestock? · Which parts are proxy-allocated? · Compare
+Punjab with Sindh · Download the rows used here) and renders every answer as a structured card
+(`AnswerCard`): the answer with its server-inserted figures, the applied scope and filters
+(from `answer.scope`), the principal result as a figure, bars or a table sized from the
+replayed envelope, the uncertainty rows the API attaches (`tool_result.uncertainty`, else
+"Uncertainty not requested" with a one-click follow-up), the evidence qualification
+(limitations hit, exactness), the exact source rows (`n_rows` per cell, Open rows), the
+expandable query and calculation receipt, and Open in Explore · Download CSV · Reproduce.
+Explore's Explain action opens the drawer with the canvas scope and "Explain this result".
 
-`/explore` — Explore the inventory. The controls are Period, Break down by (Sector · IPCC
-category · Gas · Month · Province; `lib/breakdown.ts` maps them to the contract's single-key
-`group_by` values the release answers at national grain, Month sends the period's twelve
-`months`, and Province is offered disabled with the reason since the API refuses it there
-with a typed `grain_unavailable`), Measure (CO₂-equivalent on either warming-potential basis)
-and Sector, with Estimate, Warming potentials and Spatial view under More settings; the
-breakdown key is the URL's `by` (page-local nuqs) beside the shared keys. "Showing:
-Pakistan's 2023–24 reference emissions, all sectors, grouped by sector, using IPCC 2013
-warming factors." is built from labels only. Three stat cards: the national envelope's
-`display_short`, the top cell's `share_pct_short` of the sector breakdown (or of the
-sector's categories when one is chosen), and the 95% interval (`interval_short` of
-`get_uncertainty(scope="national"[, module])` for the reference year, the series draws for
-another year). The result widget shows the breakdown as Chart | Table (the table carries the
-server's Share column), its sentence reads the top cell's share, Show calculation / Inspect
-evidence open Result details at that tab (`useEnvelopeDrawer`), and a sector row or bar sets
-`sector` and switches the breakdown to IPCC categories. "Interpret this result" lists the
-configuration in the release's words, "Not an official inventory", the count of NE rows from
-`get_completeness` (narrowed to the sector's IPCC codes through `lib/completeness.ts`) and
-"Exact result available".
+`/explore` — Explore data as a Grapher (2026-08-30): one control row (Geography: Pakistan · a
+province · Compare provinces · a district · All districts; Period: a year · All years · Months
+of 2023–24; Sector and, nationally, its Category; Gas: All · By gas · one gas; Measure: CO₂e on
+either warming-potential basis · Share of total; More: Estimate incl. Compare estimates,
+Spatial view), one canvas with a Chart · Table · Map switch over the same query, and exactly
+four actions under it: Explain · Evidence · Download · Share. `lib/explore/query.ts` maps the
+control state to exactly one contract call — `query_emissions` with a single `group_by`
+inferred from the control varied last (`sector_id` nationally, `module` at ADM grain,
+`category`, `gas`, `month`, `province`, `shape_id`), `get_timeseries` for a year range,
+`compare_emissions` for the two estimates — or a typed `GrainUnavailable` for a category
+filter off the national grain; two provinces are the ADM1-by-province envelope kept to the
+two (a filter, never arithmetic). The five model questions work by controls alone: the
+nine-year change (a line with the server's `change` sentence), what makes up agriculture
+(its categories), which gases dominate (a stacked bar with `share_pct_short`), Punjab against
+Sindh, and the reference against the survey-based estimate (grouped bars with the difference
+cells). The "Showing:" sentence stays as the canvas subtitle; the notes fold into one
+"Reading this result" line.
 
-`/methods` — Methods & evidence. A search over the sectors, their IPCC categories, streams,
-sources and sub-categories (`get_evidence(_)`), the Browse sectors grid (the ten modules; the
-selected one is the URL's `sector`) and the sector widget: "IPCC sector n" from the module's
-codes, the status badge from the completeness ledger (Estimated with explicit gaps /
-Estimated / Not estimated), an authored summary and four-step narrative
-(`components/methods/sectorText.ts`, prose without digits) each printed beside the release's
-own lists (source ids as words, sub-categories, the rules from `GET /method/{sector}`, the
-sector envelope's `display_short`), Evidence dimensions worded verbatim from
-`dim_evidence_class` (`evidenceClassText.ts` mirrors the table; `/release.dims` exposes only
-its shape), the module's not-estimated categories, View equations, Inspect sources and Open
-data rows. The methodology prose sits under it (`id="methodology"`; the Release section is
-`#release`, the one place the version is printed).
+`/methods` — Methods & evidence, the inventory microscope (2026-08-30). Every number on every
+page opens a claim record: the Result details drawer's first tab, Evidence, fetches
+`GET /claim?receipt=…&cell=n` for the chosen cell and renders `components/claim/ClaimRecord`
+— a breadcrumb header (Agriculture → Enteric fermentation → CH₄ → Pakistan → 2023–24) and
+the sections Reported estimate · Calculation · Activity data · Emission factors · Monthly
+allocation basis · Spatial allocation basis · Uncertainty · Source documents and pages ·
+Validation tests · Known limitation · Exact machine-readable rows, each filled from the
+payload's tables and registries as strings, or reading "Not carried by this release" with the
+API's reason (today only source page numbers). The page keeps the sector cards, the search and
+the methodology prose, and adds the claim-record browser: Sector → Category → Gas → Place →
+Period issue one `query_emissions` and open its cell's record inline (`?claim=<receipt>:<cell>`
+is the permalink); a category with a province is sent as asked and the `GrainUnavailable`
+refusal is shown by name.
 
-`/downloads` — Downloads & API. The release widget (the window from the labels, the DOI
-slot's note, Release notes -> `/methods#release`, Verify checksums listing every digest the
-release declares plus the Parquet twins' computed ones), use-case chips highlighting a
-product family with its footnote, the four product cards from `GET /products` (each table
-downloadable per format from `GET /products/{name}.{ext}`, the link carrying the file's sha256
-— the download's ETag — as its hint; View schema lists columns, primary key, rows, digest and
-closure), Cite the release (APA and BibTeX from `/release.citation`, copy buttons; the version
-appears inside these strings only), Query through the API (a curl line for the current view's
-national total, the docs, the manifest) and the receipt replay (`?receipt=`).
+`/downloads` — Downloads & API, purpose-first (2026-08-30). "What do you want to study?" leads
+with seven purposes — National and sector totals · Monthly emissions · Province and district
+allocations · Gridded emissions · Uncertainty and configurations · Evidence and provenance ·
+Complete release — mapped to the API's product families (`?purpose=`); only after a choice do
+the matching products appear with CSV · Parquet · NetCDF buttons where each format exists, the
+schema panel, the checksums, the complete-archive button (`GET /products/complete.zip`) and
+the citation and identity table, the one place the version string appears. The API card and
+the receipt replay sit below.
 
 The map is hawanama.org's: Mapbox GL JS v3 rendering `mapbox://styles/mapbox/streets-v12`
 with hawanama's flags (maxPitch 45, no drag-rotate, no world copies) and v3's default globe
@@ -366,7 +387,7 @@ payload path, member by member, with a `SHA256SUMS` member in `sha256sum` format
 digests) and `FETCH.json`; the archive itself carries no digest, its members do.
 
 `/release` carries `identity_line` ("PakEmis · public-data reconstruction of Pakistan's
-non-LULUCF emissions · 2015–16 to 2023–24", no version: the web's sub-header) and `citation`
+emissions, excluding land use and forestry · 2015–16 to 2023–24", no version: the web's sub-header) and `citation`
 `{apa, bibtex, doi, doi_note, cite_as, version, author, year, title, repository, commit,
 period_span}` built from the manifest's `product.cite_as`, `product.repository` and
 `git.describes_commit`, the release version and the reporting window read from the dims. While
