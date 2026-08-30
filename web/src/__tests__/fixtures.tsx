@@ -77,10 +77,10 @@ export const RELEASE = {
   },
   agent: { enabled: false, model: "", reason: "not mounted" },
   doi: { data: "", documentation: "", software: "" },
-  identity_line: "PakEmis · public-data reconstruction of Pakistan's non-LULUCF emissions · 2020–21 to 2023–24",
+  identity_line: "PakEmis · public-data reconstruction of Pakistan's emissions, excluding land use and forestry · 2020–21 to 2023–24",
   citation: {
-    apa: "Ahmad, R. (2026). PakEmis: public-data reconstruction of Pakistan's non-LULUCF emissions, 2020–21 to 2023–24 (Version 1.0.0rc42) [Data set]. https://github.com/example/pakemis (commit bc1716d6df79)",
-    bibtex: "@dataset{ahmad2026pakemis,\n  author  = {Ahmad, R.},\n  title   = {PakEmis: public-data reconstruction of Pakistan's non-LULUCF emissions, 2020--21 to 2023--24},\n  year    = {2026},\n  version = {1.0.0rc42},\n  url     = {https://github.com/example/pakemis},\n  note    = {commit bc1716d6df79; DOI to be inserted at release freeze}\n}",
+    apa: "Ahmad, R. (2026). PakEmis: public-data reconstruction of Pakistan's emissions, excluding land use and forestry, 2020–21 to 2023–24 (Version 1.0.0rc42) [Data set]. https://github.com/example/pakemis (commit bc1716d6df79)",
+    bibtex: "@dataset{ahmad2026pakemis,\n  author  = {Ahmad, R.},\n  title   = {PakEmis: public-data reconstruction of Pakistan's emissions, excluding land use and forestry, 2020--21 to 2023--24},\n  year    = {2026},\n  version = {1.0.0rc42},\n  url     = {https://github.com/example/pakemis},\n  note    = {commit bc1716d6df79; DOI to be inserted at release freeze}\n}",
     doi: "",
     doi_note: "DOI to be inserted at release freeze",
     cite_as: "PakEmis 1.0.0rc42",

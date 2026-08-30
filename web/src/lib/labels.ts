@@ -9,6 +9,9 @@ import type { Adm2Row, Adm1Row } from "./release";
 
 export type Dims = { adm1: Adm1Row[]; adm2: Adm2Row[] };
 
+/** The geography levels in words (the request key `geography_level` and the URL key `level`). */
+export const LEVEL_WORDS: Record<string, string> = { national: "Pakistan", adm1: "Provinces", adm2: "Districts", grid: "Grid cells" };
+
 export const COLUMN_NAMES: Record<string, string> = {
   province: "Province",
   shape_id: "District",
@@ -76,7 +79,7 @@ export function periodRange(dims: { fiscalPeriods: string[] }, labels: Labels): 
 }
 
 /** The scope in words the identity line carries when the API sends none. */
-export const IDENTITY_SCOPE = "public-data reconstruction of Pakistan's non-LULUCF emissions";
+export const IDENTITY_SCOPE = "public-data reconstruction of Pakistan's emissions, excluding land use and forestry";
 /**
  * The sub-header line under every page's title: `/release.identity_line` as the API sends it
  * ("PakEmis · public-data reconstruction of Pakistan's non-LULUCF emissions · 2015–16 to
@@ -338,6 +341,9 @@ function humanValue(labels: Labels, dims: Dims, key: string, v: unknown): string
       case "months":
       case "month":
         return labels.months[x] ?? x;
+      case "geography_level":
+      case "level":
+        return LEVEL_WORDS[x] ?? x;
       case "spatial_view":
       case "view":
         return (labels.views[x] ?? x).split(":")[0];

@@ -21,7 +21,7 @@ import re
 from pakemis_query import placeholders as P
 
 MULTI = re.compile(r"\{\{result_(?:(\d+)_)?cell_(\d+)(?:\.(exact|unit|value|short))?\}\}")
-SERVICE_ATTRS = {"short": "display_short"}     # attributes the service adds; the rest are the core's
+SERVICE_ATTRS = {"short": ("display_short", "display"), "unit": ("unit_short", "unit")}     # (service field, the core's fallback); the rest are the core's
 
 
 class BareNumberError(P.PlaceholderError):
@@ -64,7 +64,8 @@ def render_multi(template, results, allowlist=()):
             if index >= len(values):
                 raise P.PlaceholderError("template names result_cell_%d; the result has %d cells" % (index, len(values)))
             cell = values[index]
-            text = str(cell.get(SERVICE_ATTRS[attr], cell["display"]))
+            field, fallback = SERVICE_ATTRS[attr]
+            text = str(cell.get(field) or cell.get(fallback) or cell["display"])
         else:
             single = "{{result_cell_%s%s}}" % (n_text, "." + attr if attr else "")
             text = P.render(single, env)

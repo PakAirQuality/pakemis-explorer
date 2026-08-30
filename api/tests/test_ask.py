@@ -136,7 +136,7 @@ def test_golden_through_agent(ask_client, fake, name, golden):
     answer = only(events, "answer")[0]
     env = ask_client.get("/api/v1/emissions/receipt/%s" % golden["expect_receipt"]).json()
     cell = env["values"][0]
-    assert cell["display"] in answer["text"] and cell["unit"] in answer["text"]
+    assert cell["display"] in answer["text"] and (cell.get("unit_short") or cell["unit"]) in answer["text"]
     cites = CITE.findall(answer["text"])
     assert cites[0] == ("1", "0", golden["expect_receipt"], cell["display"])
     assert answer["receipts"] == [golden["expect_receipt"]]
@@ -222,7 +222,7 @@ def test_multi_result_placeholders(ask_client, fake):
     answer = only(events, "answer")[0]
     cites = CITE.findall(answer["text"])
     assert [c[0] for c in cites] == ["1", "2", "2", "2"]        # value, value, unit, legacy (= last result)
-    assert cites[0][3] == "452.34662" and cites[1][3] == "447.21383" and cites[2][3] == "Mt CO2e AR5" and cites[3][3] == "447.21383"
+    assert cites[0][3] == "452.34662" and cites[1][3] == "447.21383" and cites[2][3] == "Mt CO₂e" and cites[3][3] == "447.21383"
     assert answer["receipts"] == [results[0]["receipt"], results[1]["receipt"]]
     # both tool results went back in one user message, in order
     tr = fake.calls[1]["messages"][-1]["content"]

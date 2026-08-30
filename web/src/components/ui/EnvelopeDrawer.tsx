@@ -12,6 +12,7 @@
  * is a field of the envelope as received; the labels, when given, only name ids.
  */
 import { useCallback, useMemo, useState, useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Copy, X } from "lucide-react";
 import { absoluteApiBase, api, receiptHref } from "@/lib/api";
@@ -19,7 +20,7 @@ import { cellLabel, shown, type Envelope } from "@/lib/envelope";
 import { ClaimPanel } from "@/components/claim/ClaimDrawer";
 import { apiCallOf, curlLine } from "@/lib/requests";
 import { releaseLabels, type Labels } from "@/lib/release";
-import { cellUnit, configLabel, geographyName, gwpLabel, lulucfShort, periodShort, viewLabel } from "@/lib/labels";
+import { cellUnit, configLabel, geographyName, groupValueLabel, gwpLabel, lulucfShort, periodShort, viewLabel } from "@/lib/labels";
 
 export type DrawerTab = "evidence" | "sources" | "filters" | "calculation" | "request" | "download" | "cite";
 export const DRAWER_TABS: [DrawerTab, string][] = [["evidence", "Evidence"], ["sources", "Sources"], ["filters", "Filters"], ["calculation", "Calculation"], ["request", "API request"], ["download", "Download"], ["cite", "Cite"]];
@@ -82,6 +83,16 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+  // A cell's words: its group values through the release's labels when the drawer has them
+  // (sector, gas, period, province); district ids need the dims and stay as the release names them.
+  const cellWords = (v: Envelope["values"][number], fallback: string) => {
+    if (!labels) return cellLabel(v, fallback);
+    const left = (v as Record<string, unknown>).left as { group?: Record<string, string | null> } | undefined;
+    const parts = Object.entries(v.group ?? left?.group ?? {})
+      .map(([k, val]) => (k === "shape_id" ? (val ?? "") : groupValueLabel(labels, { adm1: [], adm2: [] }, k, val)))
+      .filter((w) => w.length > 0);
+    return parts.length ? parts.join(" · ") : fallback;
+  };
   const prov = env.provenance as Prov;
   const unalloc = env.unallocated as Unalloc;
   const calc = env.calculation as { sql?: string; kind?: string; [k: string]: unknown };
@@ -96,7 +107,11 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
       /* clipboard unavailable: the full id is on screen */
     }
   };
-  return (
+  // Portalled to the body: a legend inside a sticky or transformed map container would otherwise
+  // contain the fixed drawer and render it inside its own 270 px box.
+  const host = typeof document !== "undefined" ? document.body : null;
+  if (!host) return null;
+  return createPortal(
     <div className="fixed inset-0 z-[90] flex justify-end bg-fg/30" onClick={onClose} role="dialog" aria-label="Result details">
       <div className="flex h-full w-full max-w-xl flex-col bg-surface-2 shadow-card" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -119,7 +134,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
                   <span className="micro mb-1 block">Cell</span>
                   <select className="w-full rounded-md border border-line bg-surface-3 px-2.5 py-2 text-sm text-fg" value={cell} onChange={(e) => setCell(Number(e.target.value))} aria-label="Cell" data-testid="evidence-cell">
                     {env.values.map((v, i) => (
-                      <option key={i} value={i}>{cellLabel(v, `cell ${i}`)} · {shown(v)}</option>
+                      <option key={i} value={i}>{cellWords(v, `cell ${i}`)} · {shown(v)}</option>
                     ))}
                   </select>
                 </label>
@@ -212,7 +227,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
                     <tbody>
                       {env.values.slice(0, 50).map((v, i) => (
                         <tr key={i} className="border-t border-line align-top">
-                          <td className="py-1 pr-2 text-muted">{cellLabel(v, `cell ${i}`)}</td>
+                          <td className="py-1 pr-2 text-muted">{cellWords(v, `cell ${i}`)}</td>
                           <td className="num py-1 pr-2 text-right">{shown(v)}</td>
                           <td className="num py-1 pr-2 text-right" data-testid="published-value">{v.display}</td>
                           <td className="mono break-all py-1" data-testid="exact-value">{v.exact}{v.exact_high && v.exact_high !== v.exact ? ` .. ${v.exact_high}` : ""}</td>
@@ -263,5 +278,5 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
         </div>
       </div>
     </div>
-  );
+  , host);
 }
