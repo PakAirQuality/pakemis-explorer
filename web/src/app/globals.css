@@ -85,9 +85,9 @@
   --text-3xl--line-height: 34px;
   --text-4xl: 34px;
   --text-4xl--line-height: 38px;
-  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --shadow-card: 0 1px 2px rgba(94, 26, 42, 0.05), 0 1px 3px rgba(94, 26, 42, 0.07);
   /* Tailwind's shadow-md: the glass pill's shadow */
-  --shadow-pill: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-pill: 0 4px 6px -1px rgba(94, 26, 42, 0.1), 0 2px 4px -2px rgba(94, 26, 42, 0.1);
 }
 
 @layer base {
@@ -109,7 +109,7 @@
 @utility card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 @utility micro { font-size: var(--text-micro); line-height: var(--text-micro--line-height); letter-spacing: var(--text-micro--letter-spacing); text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
 /* a widget's small-caps title */
-@utility widget-title { font-size: 11px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-fg); font-weight: 600; }
+@utility widget-title { font-size: 11px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; }
 /* the warm note box */
 @utility note { background: var(--color-note-bg); border: 1px solid var(--color-note-border); color: var(--color-note-text); border-radius: 0.375rem; }
 /* a widget's caption line */

@@ -15,6 +15,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Download, RotateCcw, Share2 } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
+import { ContourMotif } from "@/components/ui/ContourMotif";
 import { HEADER } from "./copy";
 
 const UTILITY = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-fg transition-colors hover:bg-accent-soft";
@@ -36,12 +37,7 @@ export function HeaderBlock({ geo, place, onGeo, onReset, showReset = false }: {
     <header className="pointer-events-auto relative shrink-0 overflow-hidden rounded-[20px] border border-nav-line bg-nav text-nav-fg shadow-lg" data-testid="header-block">
       <div className="h-1 w-full bg-brand-gold" aria-hidden="true" data-testid="header-edge" />
       <div className="relative px-6 pb-5 pt-5">
-        {/* one wave, a whisper of fine saffron strokes in the top right; no image asset */}
-        <svg className="pointer-events-none absolute right-0 top-0 h-32 w-56" viewBox="0 0 224 128" fill="none" preserveAspectRatio="none" aria-hidden="true" data-testid="header-wave">
-          {[0, 7, 14, 21, 28, 35, 42].map((d) => (
-            <path key={d} d={`M40 ${128 - d} C 96 ${112 - d}, 120 ${52 - d}, 224 ${34 - d}`} stroke="var(--color-brand-gold)" strokeOpacity="0.28" strokeWidth="1" />
-          ))}
-        </svg>
+        <ContourMotif />
         <div className="relative">
           <div className="text-micro font-semibold uppercase tracking-[0.08em] text-accent" data-testid="eyebrow">{HEADER.eyebrow}</div>
           <h1 className="mt-1.5 text-[30px] font-semibold leading-tight tracking-tight text-fg" data-testid="place-title">{place}</h1>

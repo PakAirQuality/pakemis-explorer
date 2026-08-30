@@ -75,7 +75,9 @@ describe("the palette tokens (globals.css)", () => {
     expect(glass).toContain("backdrop-filter: blur(8px)");
     expect(glass).toContain("border: 1px solid rgba(229, 225, 218, 0.6)");
     expect(glass).toContain("box-shadow: var(--shadow-pill)");
-    expect(token("--shadow-pill")).toBe("0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)");
+    // warm shadows, the oxblood family: the pill and the card are lit like the nav capsule
+    expect(token("--shadow-pill")).toBe("0 4px 6px -1px rgba(94, 26, 42, 0.1), 0 2px 4px -2px rgba(94, 26, 42, 0.1)");
+    expect(token("--shadow-card")).toBe("0 1px 2px rgba(94, 26, 42, 0.05), 0 1px 3px rgba(94, 26, 42, 0.07)");
   });
   it("no dark chrome remains: the map page re-values no token", () => {
     expect(css).not.toContain("#14181c");

@@ -394,6 +394,11 @@ describe("every card keeps the deck's affordances", () => {
   it("a card's header is its title and the switch alone: the toolbar icons were removed", async () => {
     set();
     await ready();
+    // one family: every deck card wears the amber top edge, the warm hairline and the warm shadow
+    for (const id of ["snapshot", "sectors", "trend", "places"]) {
+      const card = screen.getByTestId(`card-${id}`);
+      for (const c of ["border-t-brand-gold", "border-nav-line", "shadow-card", "bg-card"]) expect(card.className, `${id}: ${c}`).toContain(c);
+    }
     for (const id of ["snapshot", "sectors", "trend", "places"]) {
       expect(screen.getByTestId(`card-${id}-switch`), id).toHaveAttribute("role", "switch");
       for (const tool of ["info", "download", "share", "claim"]) expect(screen.queryByTestId(`card-${id}-${tool}`), `${id}-${tool}`).toBeNull();

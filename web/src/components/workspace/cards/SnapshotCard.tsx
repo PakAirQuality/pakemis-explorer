@@ -20,6 +20,7 @@ import type { Deck } from "@/lib/queries";
 import { shown } from "@/lib/envelope";
 import { cellUnit, gasLabel, geographyName, periodShort, sectorLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
+import { ContourMotif } from "@/components/ui/ContourMotif";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { SNAPSHOT } from "@/components/overview/copy";
 import type { Scope } from "../cards";
@@ -54,13 +55,14 @@ export function SnapshotCard({ id, scope, deck, place, title, open, onToggle }: 
   return (
     <DeckCard id={id} title={title} env={env} open={open} onToggle={onToggle} sentence={sentence}>
       {cell ? (
-        <div data-testid="snapshot-figure">
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="num text-3xl font-semibold tracking-tight text-fg" data-testid="snapshot-display" title={`${cell.display} ${cell.unit}`}>{shown(cell)}</span>
+        <div className="relative" data-testid="snapshot-figure">
+          <ContourMotif corner="bottom-right" />
+          <div className="relative flex flex-wrap items-baseline gap-x-2">
+            <span className="num text-3xl font-semibold tracking-tight text-accent" data-testid="snapshot-display" title={`${cell.display} ${cell.unit}`}>{shown(cell)}</span>
             <span className="text-sm text-muted" data-testid="snapshot-unit">{cellUnit(cell)}</span>
             {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           </div>
-          {chip && <div className="mt-2">{chip}</div>}
+          {chip && <div className="relative mt-2">{chip}</div>}
         </div>
       ) : (
         <Pending q={deck.total} what={whatWords(scope, place)} />
