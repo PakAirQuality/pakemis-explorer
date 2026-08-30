@@ -9,7 +9,7 @@
  * the Result ID (the receipt, in full, with a copy button) and the replay link. Everything shown
  * is a field of the envelope as received; the labels, when given, only name ids.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { Copy, X } from "lucide-react";
 import { absoluteApiBase, api, receiptHref } from "@/lib/api";
@@ -54,6 +54,20 @@ export function filterRows(env: Envelope, labels: Labels = NO_LABELS): { name: s
   if (c.basis) rows.push({ name: "Basis", value: c.basis });
   rows.push({ name: "Defaults applied", value: c.defaults_applied.length ? c.defaults_applied.join(", ") : "none" });
   return rows;
+}
+
+/**
+ * A page-level drawer opened on demand: `open(env, tab)` shows the EnvelopeDrawer on that
+ * envelope at that tab (a result card's "Show calculation" -> calculation, "Inspect evidence"
+ * -> sources); `node` is rendered once by the page. Each opening mounts afresh, so the tab asked
+ * for is the one shown.
+ */
+export function useEnvelopeDrawer(labels?: Labels): { open: (env: Envelope, tab?: DrawerTab) => void; close: () => void; node: ReactNode; isOpen: boolean } {
+  const [state, setState] = useState<{ env: Envelope; tab: DrawerTab; n: number } | null>(null);
+  const open = useCallback((env: Envelope, tab: DrawerTab = "sources") => setState((s) => ({ env, tab, n: (s?.n ?? 0) + 1 })), []);
+  const close = useCallback(() => setState(null), []);
+  const node = useMemo(() => (state ? <EnvelopeDrawer key={`${state.n}-${state.tab}`} env={state.env} tab={state.tab} labels={labels} onClose={close} /> : null), [state, labels, close]);
+  return { open, close, node, isOpen: !!state };
 }
 
 export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: Envelope; tab: DrawerTab; onClose: () => void; labels?: Labels }) {

@@ -3,7 +3,9 @@
  * An envelope's values as a table: humanised group columns (the id as secondary text),
  * right-aligned tabular values as shown (display_short, else display), an interval badge on
  * bounded cells, and a "full precision" toggle that switches the column to the contract's
- * `display` and adds the `exact` strings and row counts; sticky header. Nothing is computed;
+ * `display` and adds the `exact` strings and row counts; sticky header. A Share column appears
+ * when the cells carry the server's `share_pct_short` (a query grouped by one key whose cells
+ * partition a total). Rows are selectable when `onRowClick` is given. Nothing is computed;
  * every string is a field as received.
  */
 import { useState } from "react";
@@ -20,12 +22,21 @@ function fmt(v: unknown): string {
 const EMPTY_LABELS: Labels = releaseLabels(undefined);
 const EMPTY_DIMS: Dims = { adm1: [], adm2: [] };
 
-export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMPTY_LABELS, dims = EMPTY_DIMS, maxRows, dense = false }: { env: Envelope; extra?: string[]; showExact?: boolean; labels?: Labels; dims?: Dims; maxRows?: number; dense?: boolean }) {
+export type EnvelopeTableProps = { env: Envelope; extra?: string[]; showExact?: boolean; labels?: Labels; dims?: Dims; maxRows?: number; dense?: boolean; onRowClick?: (cell: Cell, index: number) => void; selectedIndex?: number | null };
+
+/** The server's share string of a cell, when the envelope partitions a total. */
+export function shareOf(cell: Cell): string {
+  const s = (cell as Record<string, unknown>).share_pct_short;
+  return typeof s === "string" ? s : "";
+}
+
+export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMPTY_LABELS, dims = EMPTY_DIMS, maxRows, dense = false, onRowClick, selectedIndex = null }: EnvelopeTableProps) {
   const [exact, setExact] = useState(showExact);
   const [all, setAll] = useState(false);
   const groupOf = (v: Cell) => v.group ?? ((v as Record<string, unknown>).left as { group?: Record<string, string | null> } | undefined)?.group ?? {};
   const groupKeys = Array.from(new Set(env.values.flatMap((v) => Object.keys(groupOf(v)))));
   const hasDisplay = env.values.some((v) => v.display !== "");
+  const hasShare = env.values.some((v) => shareOf(v) !== "");
   const rows = maxRows && !all ? env.values.slice(0, maxRows) : env.values;
   const cellPad = dense ? "px-2 py-1" : "px-2 py-1.5";
   return (
@@ -46,6 +57,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
             <tr>
               {groupKeys.length ? groupKeys.map((k) => <th key={k} className={`${cellPad} text-left font-semibold text-muted`}>{columnLabel(k)}</th>) : <th className={`${cellPad} text-left font-semibold text-muted`}>Scope</th>}
               {extra.map((k) => <th key={k} className={`${cellPad} text-left font-semibold text-muted`}>{columnLabel(k)}</th>)}
+              {hasShare && <th className={`${cellPad} text-right font-semibold text-muted`} title={String((env as Record<string, unknown>).partition ? ((env as Record<string, unknown>).partition as { rule?: string }).rule ?? "" : "")}>Share</th>}
               {hasDisplay && <th className={`${cellPad} text-right font-semibold text-muted`}>Value</th>}
               {hasDisplay && <th className={`${cellPad} text-left font-semibold text-muted`}>Unit</th>}
               {exact && <th className={`${cellPad} text-left font-semibold text-muted`}>Exact</th>}
@@ -55,8 +67,15 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
           <tbody>
             {rows.map((v, i) => {
               const g = groupOf(v);
+              const selected = selectedIndex === i;
               return (
-                <tr key={i} className="border-t border-line align-top hover:bg-surface-3/60">
+                <tr
+                  key={i}
+                  className={`border-t border-line align-top hover:bg-surface-3/60 ${onRowClick ? "cursor-pointer" : ""} ${selected ? "bg-surface-3" : ""}`}
+                  onClick={onRowClick ? () => onRowClick(v, i) : undefined}
+                  aria-selected={onRowClick ? selected : undefined}
+                  data-testid="envelope-row"
+                >
                   {groupKeys.length ? (
                     groupKeys.map((k) => {
                       const id = g[k] ?? "";
@@ -72,6 +91,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
                     <td className={cellPad}>{cellLabel(v)}</td>
                   )}
                   {extra.map((k) => <td key={k} className={`${cellPad} break-words`}>{groupValueLabel(labels, dims, k, fmt((v as Record<string, unknown>)[k]))}</td>)}
+                  {hasShare && <td className={`${cellPad} num whitespace-nowrap text-right text-muted`} data-testid="table-share">{shareOf(v) ? `${shareOf(v)}%` : ""}</td>}
                   {hasDisplay && (
                     <td className={`${cellPad} num whitespace-nowrap text-right`}>
                       <span className={isBounded(v) ? "mr-1" : ""} data-testid="table-value">{exact ? v.display : shown(v)}</span>

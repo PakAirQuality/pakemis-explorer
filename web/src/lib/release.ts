@@ -105,6 +105,21 @@ export function releaseFacts(r: ReleaseInfo | undefined): ReleaseFacts {
   };
 }
 
+/** `/release.citation`: APA and BibTeX for the served release with the DOI slot's note; null while the API has none. The version legitimately appears inside these strings and nowhere else on a page. */
+export type Citation = { apa: string; bibtex: string; doi: string; doi_note: string; cite_as?: string; repository?: string; commit?: string; period_span?: string };
+export function releaseCitation(r: ReleaseInfo | undefined): Citation | null {
+  const c = (r as unknown as { citation?: Partial<Citation> } | undefined)?.citation;
+  if (!c || typeof c.apa !== "string" || typeof c.bibtex !== "string") return null;
+  return { apa: c.apa, bibtex: c.bibtex, doi: c.doi ?? "", doi_note: c.doi_note ?? "", cite_as: c.cite_as, repository: c.repository, commit: c.commit, period_span: c.period_span };
+}
+
+/** `/release.doi`: the three DOI slots of the manifest (empty strings until the release freeze). */
+export function releaseDoi(r: ReleaseInfo | undefined): { data: string; documentation: string; software: string } {
+  const d = ((r as unknown as { doi?: Record<string, unknown> } | undefined)?.doi ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  return { data: str(d.data), documentation: str(d.documentation), software: str(d.software) };
+}
+
 export function releaseAgent(r: ReleaseInfo | undefined): { enabled: boolean; model: string; reason: string } {
   const a = (r as unknown as { agent?: { enabled?: boolean; model?: string; reason?: string } } | undefined)?.agent;
   return { enabled: !!a?.enabled, model: a?.model ?? "", reason: a?.reason ?? "not mounted" };

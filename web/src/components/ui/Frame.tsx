@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 import type { Envelope } from "@/lib/envelope";
 import type { Labels } from "@/lib/release";
 import type { Dims } from "@/lib/labels";
-import { EnvelopeTable } from "./EnvelopeTable";
+import { EnvelopeTable, type EnvelopeTableProps } from "./EnvelopeTable";
 import { ReceiptFooter } from "./ReceiptFooter";
 import { RefusalCard, Loading } from "./RefusalCard";
 
@@ -31,9 +31,13 @@ export type FrameProps = {
   unitLine?: string;
   /** The tooltip of the unit line (the GWP basis sentence from the release's labels). */
   unitTitle?: string;
+  /** Passed to the table tab (row selection, a selected row). */
+  tableProps?: Pick<EnvelopeTableProps, "onRowClick" | "selectedIndex">;
+  /** Rendered under the chart or table, inside the frame (a caption, action buttons). */
+  footer?: ReactNode;
 };
 
-export function Frame({ title, scope, env, error, isLoading, children, tableExtra, labels, dims, defaultTab, maxRows, className = "", actions, flat = false, unitLine, unitTitle }: FrameProps) {
+export function Frame({ title, scope, env, error, isLoading, children, tableExtra, labels, dims, defaultTab, maxRows, className = "", actions, flat = false, unitLine, unitTitle, tableProps, footer }: FrameProps) {
   // null = automatic: a chart when children arrive (they may come after the envelope), else the table
   const [chosen, setTab] = useState<"chart" | "table" | null>(defaultTab ?? null);
   const tab = chosen ?? (children ? "chart" : "table");
@@ -57,13 +61,14 @@ export function Frame({ title, scope, env, error, isLoading, children, tableExtr
       </header>
       <div className="px-3 pb-2">
         {env ? (
-          tab === "chart" && children ? children : <EnvelopeTable env={env} extra={tableExtra} labels={labels} dims={dims} maxRows={maxRows} dense />
+          tab === "chart" && children ? children : <EnvelopeTable env={env} extra={tableExtra} labels={labels} dims={dims} maxRows={maxRows} dense {...tableProps} />
         ) : error ? (
           <RefusalCard error={error} compact />
         ) : isLoading ? (
           <Loading what={typeof title === "string" ? title : "the envelope"} />
         ) : null}
       </div>
+      {footer && <div className="px-3 pb-3">{footer}</div>}
       {env && <ReceiptFooter env={env} labels={labels} className="border-t border-line px-3 py-1.5" />}
     </section>
   );

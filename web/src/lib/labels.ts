@@ -75,6 +75,19 @@ export function periodRange(dims: { fiscalPeriods: string[] }, labels: Labels): 
   return first === last ? first : `${first} to ${last}`;
 }
 
+/** The scope in words the identity line carries when the API sends none. */
+export const IDENTITY_SCOPE = "public-data reconstruction of Pakistan's non-LULUCF emissions";
+/**
+ * The sub-header line under every page's title: `/release.identity_line` as the API sends it
+ * ("PakEmis · public-data reconstruction of Pakistan's non-LULUCF emissions · 2015–16 to
+ * 2023–24"), else the same three parts built from the labels. No version string.
+ */
+export function identityLine(release: Record<string, unknown> | undefined, dims: { fiscalPeriods: string[] }, labels: Labels): string {
+  const sent = release?.identity_line;
+  if (typeof sent === "string" && sent.trim()) return sent;
+  return ["PakEmis", IDENTITY_SCOPE, periodRange(dims, labels)].filter(Boolean).join(" · ");
+}
+
 const MAGNITUDE_WORDS: Record<string, string> = { Mt: "million tonnes", Gg: "thousand tonnes", kt: "thousand tonnes", t: "tonnes" };
 const SUBSCRIPT_DIGITS: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
 const GWP_TOKEN = /^AR\d$/;

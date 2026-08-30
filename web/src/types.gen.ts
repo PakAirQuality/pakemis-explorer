@@ -72,15 +72,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/emissions/method/{method_or_category}": {
+    "/api/v1/emissions/method/{method_or_category_or_sector}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Method */
-        get: operations["method_api_v1_emissions_method__method_or_category__get"];
+        /**
+         * Method
+         * @description get_method by method_id or category (the core's two filters), or every rule of one sector
+         *     when the path names a sector of the registry (agriculture, power, ...).
+         */
+        get: operations["method_api_v1_emissions_method__method_or_category_or_sector__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every downloadable product of the served release, with digests, schema and families */
+        get: operations["products_api_v1_emissions_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/products/{filename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One product file from the release payload (attachment; ETag = sha256; immutable; ranges) */
+        get: operations["product_file_api_v1_emissions_products__filename__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -691,12 +729,63 @@ export interface operations {
             };
         };
     };
-    method_api_v1_emissions_method__method_or_category__get: {
+    method_api_v1_emissions_method__method_or_category_or_sector__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                method_or_category: string;
+                method_or_category_or_sector: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    products_api_v1_emissions_products_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    product_file_api_v1_emissions_products__filename__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
             };
             cookie?: never;
         };
