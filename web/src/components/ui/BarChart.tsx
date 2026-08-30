@@ -65,7 +65,7 @@ export function BarChart({ env, horizontal = false, height = 220, labels, dims, 
         };
       });
       const cat = { type: "category" as const, data: names, axisLabel: { interval: 0, rotate: horizontal ? 0 : 35, fontSize: 11, color: t.muted, fontFamily: t.font, width: horizontal ? 96 : undefined, overflow: "truncate" as const }, axisTick: { show: false }, axisLine: { lineStyle: { color: t.line } } };
-      const val = { type: "value" as const, axisLabel: { show: false }, splitLine: { lineStyle: { color: t.grid } } };
+      const val = { type: "value" as const, axisLabel: { show: false }, splitLine: { lineStyle: { color: t.grid, type: "dashed" } } };
       chart.setOption({
         animation: false,
         grid: { left: horizontal ? 104 : 8, right: horizontal ? 64 : 8, bottom: horizontal ? 8 : compact ? 24 : 56, top: compact ? 8 : 16, containLabel: !horizontal },

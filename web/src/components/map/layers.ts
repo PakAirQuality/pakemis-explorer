@@ -135,7 +135,7 @@ export function ensureRaster(map: MBMap, url: string, coordinates: [[number, num
   }
 }
 
-/** The ops dashboard's atmosphere (the globe's halo at low zoom, the horizon haze when tilted); the space around the globe is the theme's surface so the globe sits in the dark frame. */
+/** The ops dashboard's atmosphere (the globe's halo at low zoom, the horizon haze when tilted); the space around the globe is the theme's ground so the globe sits in the frame. */
 export function atmosphere() {
   return { range: [0.5, 10] as [number, number], color: "#ffffff", "high-color": "#b8d4e8", "space-color": mapTheme().space, "horizon-blend": 0.08, "star-intensity": 0 };
 }

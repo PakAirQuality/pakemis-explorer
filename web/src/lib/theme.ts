@@ -1,27 +1,29 @@
 /**
  * The theme as JavaScript reads it: the CSS variables of globals.css' `@theme` block (Tailwind
- * emits them on :root), read at render so ECharts (TrendChart, BarChart) and the Mapbox layer
- * stack (map/layers.ts) follow the theme without carrying a literal colour. Each read has the
- * token's own value as its fallback for environments without a stylesheet (tests, the export
- * build). Colours size nothing and print nothing.
+ * emits them on :root), read at render so ECharts (TrendChart, BarChart, the briefing's
+ * charts) and the Mapbox layer stack (map/layers.ts) follow the theme without carrying a
+ * literal colour. Each read has the token's own value as its fallback for environments
+ * without a stylesheet (tests, the export build). Colours size nothing and print nothing.
  */
 export const FALLBACK: Record<string, string> = {
-  "--color-surface": "#0b0d10",
-  "--color-surface-2": "#12161b",
-  "--color-surface-3": "#181d23",
-  "--color-fg": "#e8ecf1",
-  "--color-muted": "#9aa4b2",
-  "--color-line": "rgba(255, 255, 255, 0.08)",
-  "--color-line-strong": "rgba(255, 255, 255, 0.16)",
-  "--color-accent": "#34d399",
-  "--color-accent-bright": "#4ade80",
-  "--color-accent-fill": "#1f6f4a",
-  "--color-accent-soft": "rgba(52, 211, 153, 0.14)",
-  "--color-amber": "#f59e0b",
-  "--color-amber-soft": "#fbbf24",
-  "--color-map-outline": "#1b2430",
+  "--color-ground": "#faf8f4",
+  "--color-card": "#ffffff",
+  "--color-surface": "#faf8f4",
+  "--color-surface-2": "#ffffff",
+  "--color-surface-3": "#f1eee8",
+  "--color-fg": "#161a1d",
+  "--color-muted": "#5c6670",
+  "--color-line": "#e7e3dc",
+  "--color-line-strong": "#d6d1c8",
+  "--color-accent": "#1f7a5c",
+  "--color-accent-bright": "#27956f",
+  "--color-accent-fill": "#1f7a5c",
+  "--color-accent-soft": "#e6f4ee",
+  "--color-amber": "#d97706",
+  "--color-amber-soft": "#b45309",
+  "--color-map-outline": "#161a1d",
   "--color-map-halo": "#ffffff",
-  "--color-map-hatch": "rgba(27, 36, 48, 0.55)",
+  "--color-map-hatch": "rgba(22, 26, 29, 0.55)",
 };
 
 /** One token's current value (`--color-fg`), or its fallback. */
@@ -37,16 +39,26 @@ export function cssVar(name: string): string {
   return FALLBACK[name] ?? "";
 }
 
-/** The colours a chart needs, read once per render. */
+/** `#1f7a5c` at an alpha, for an area fill (the accent at 18 %); a non-hex colour is returned as it is. */
+export function withAlpha(color: string, alpha: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return color;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+/** The colours a chart needs, read once per render: gridlines on the line token (drawn dashed), axis text muted, the area fill the accent at 18 %. */
 export function chartTheme() {
+  const accent = cssVar("--color-accent");
   return {
-    surface: cssVar("--color-surface-2"),
+    surface: cssVar("--color-card"),
     fg: cssVar("--color-fg"),
     muted: cssVar("--color-muted"),
     line: cssVar("--color-line-strong"),
     grid: cssVar("--color-line"),
-    accent: cssVar("--color-accent-bright"),
-    accentSoft: cssVar("--color-accent-soft"),
+    accent,
+    accentSoft: withAlpha(accent, 0.18),
+    accentBright: cssVar("--color-accent-bright"),
     amber: cssVar("--color-amber"),
     amberSoft: cssVar("--color-amber-soft"),
     font: "var(--font-inter), Inter, system-ui, sans-serif",
@@ -61,6 +73,6 @@ export function mapTheme() {
     hatch: cssVar("--color-map-hatch"),
     hover: cssVar("--color-accent-fill"),
     selected: cssVar("--color-amber"),
-    space: cssVar("--color-surface"),
+    space: cssVar("--color-ground"),
   };
 }

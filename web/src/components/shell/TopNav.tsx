@@ -55,8 +55,8 @@ export function TopNav({ compact = false, onAsk, children }: { compact?: boolean
     </Link>
   );
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-surface/85 backdrop-blur" data-testid="top-nav">
-      <div className={`flex h-14 items-center gap-3 px-4 ${compact ? "" : "mx-auto max-w-6xl md:px-6"}`}>
+    <header className="sticky top-0 z-50 border-b border-line bg-card/90 backdrop-blur" data-testid="top-nav">
+      <div className={`flex h-14 items-center gap-3 px-4 ${compact ? "" : "mx-auto max-w-[1500px] md:px-6"}`}>
         <Link href="/" className="mr-2 flex shrink-0 items-center gap-2 text-sm font-semibold text-fg" data-testid="brand" title="PakEmis">
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent-fill text-[11px] font-bold text-on-accent">PE</span>
           <span>PakEmis</span>

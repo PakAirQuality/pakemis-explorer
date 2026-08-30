@@ -4,19 +4,20 @@
  * icon buttons top-right (info -> Result details on the widget's envelope, download -> the
  * receipt's canonical CSV, share -> the page link copied), a sentence with the key figures in
  * bold (the caller passes server strings inside <b>), the figure, an optional amber note box
- * and a small caption line. Only semantic token classes are used, so a theme swap re-colours
- * it. Nothing here computes: every string is the caller's.
+ * and a small caption line. Only the theme's utilities (`card`, `widget-title`, `toolbar-icon`,
+ * `note`, `caption`) and token classes are used, so a theme swap re-colours it. Nothing here
+ * computes: every string is the caller's.
  */
 import { useState, type ReactNode } from "react";
-import { Download, Info, Link2 } from "lucide-react";
+import { AlertTriangle, Download, Info, Link2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Envelope } from "@/lib/envelope";
 import type { Labels } from "@/lib/release";
 import { EnvelopeDrawer, type DrawerTab } from "./EnvelopeDrawer";
 import { RESULT_DETAILS_TITLE } from "./ReceiptFooter";
 
-export const WIDGET_TITLE = "text-[11px] font-semibold uppercase tracking-[0.08em] text-muted";
-export const ICON_BUTTON = "flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted hover:bg-surface-3 hover:text-fg";
+export const WIDGET_TITLE = "widget-title";
+export const ICON_BUTTON = "toolbar-icon";
 
 export type WidgetProps = {
   title: ReactNode;
@@ -83,7 +84,7 @@ export function Widget({ title, env, labels, infoTab = "sources", downloadHref, 
       {sentence && <p className="mt-2 text-sm text-fg" data-testid={`${testId}-sentence`}>{sentence}</p>}
       {children && <div className="mt-3">{children}</div>}
       {note && <NoteBox className="mt-3" testId={`${testId}-note`}>{note}</NoteBox>}
-      {caption && <p className="mt-2 text-xs text-muted" data-testid={`${testId}-caption`}>{caption}</p>}
+      {caption && <p className="caption mt-2" data-testid={`${testId}-caption`}>{caption}</p>}
       {open && env && <EnvelopeDrawer env={env} tab={infoTab} labels={labels} onClose={() => setOpen(false)} />}
     </section>
   );
@@ -92,8 +93,9 @@ export function Widget({ title, env, labels, infoTab = "sources", downloadHref, 
 /** The amber note box: a caution a reader should see before reusing the figure. */
 export function NoteBox({ children, className = "", testId = "note-box" }: { children: ReactNode; className?: string; testId?: string }) {
   return (
-    <div className={`rounded-md border border-amber/40 bg-refusal px-3 py-2 text-xs text-fg ${className}`} data-testid={testId} role="note">
-      {children}
+    <div className={`note flex items-start gap-2 px-3 py-2 text-xs ${className}`} data-testid={testId} role="note">
+      <AlertTriangle size={14} className="mt-px shrink-0" aria-hidden="true" />
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }

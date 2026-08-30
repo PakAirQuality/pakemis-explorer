@@ -54,8 +54,8 @@ export function CurrentView({ compact = false }: { compact?: boolean }) {
     };
   }, [open]);
   return (
-    <div className="border-b border-line bg-surface-2/60" data-testid="current-view">
-      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 text-xs ${compact ? "" : "mx-auto max-w-6xl md:px-6"}`}>
+    <div className="border-b border-line bg-surface" data-testid="current-view">
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 text-xs ${compact ? "" : "mx-auto max-w-[1500px] md:px-6"}`}>
         <span className="text-muted">Current view:</span>
         <span className="text-fg" data-testid="current-view-line" title={title}>
           {words}

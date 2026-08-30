@@ -94,7 +94,7 @@ export function Composer({ onSend, onStop, streaming, disabled, showSuggestions 
           data-testid="question"
         />
         {streaming ? (
-          <button type="button" onClick={onStop} className="pill flex h-9 w-9 items-center justify-center bg-warn text-surface" aria-label="Stop" title="Stop">
+          <button type="button" onClick={onStop} className="pill flex h-9 w-9 items-center justify-center bg-warn text-card" aria-label="Stop" title="Stop">
             <Square size={14} />
           </button>
         ) : (

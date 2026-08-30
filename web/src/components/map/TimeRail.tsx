@@ -41,7 +41,7 @@ export function TimeRail({ compact = false }: { compact?: boolean }) {
 
 function MonthChip({ active, onClick, label, title }: { active: boolean; onClick: () => void; label: string; title?: string }) {
   return (
-    <button onClick={onClick} title={title} className={`pill shrink-0 px-2 py-0.5 text-micro normal-case tracking-normal ${active ? "bg-fg text-surface" : "text-muted hover:bg-fg/5 hover:text-fg"}`}>
+    <button onClick={onClick} title={title} className={`pill shrink-0 px-2 py-0.5 text-micro normal-case tracking-normal ${active ? "bg-fg text-card" : "text-muted hover:bg-fg/5 hover:text-fg"}`}>
       {label}
     </button>
   );

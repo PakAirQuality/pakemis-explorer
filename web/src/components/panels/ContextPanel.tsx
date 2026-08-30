@@ -63,8 +63,8 @@ export function ContextPanel() {
         <div className="border-b border-line px-4 py-2">
           <div className="flex flex-wrap gap-1.5">
             {byGas.data.values.map((c, i) => (
-              <button key={i} onClick={() => setState({ gas: state.gas === c.group?.gas ? null : c.group?.gas ?? null })} className={`pill border px-2 py-0.5 text-xs ${state.gas === c.group?.gas ? "border-fg bg-fg text-surface" : "border-line bg-surface-2"}`}>
-                <span className={state.gas === c.group?.gas ? "text-surface/70" : "text-muted"}>{gasLabel(labels, c.group?.gas ?? "")}</span> <span className="num font-semibold">{shown(c)}</span>
+              <button key={i} onClick={() => setState({ gas: state.gas === c.group?.gas ? null : c.group?.gas ?? null })} className={`pill border px-2 py-0.5 text-xs ${state.gas === c.group?.gas ? "border-fg bg-fg text-card" : "border-line bg-surface-2"}`}>
+                <span className={state.gas === c.group?.gas ? "text-card/70" : "text-muted"}>{gasLabel(labels, c.group?.gas ?? "")}</span> <span className="num font-semibold">{shown(c)}</span>
               </button>
             ))}
           </div>

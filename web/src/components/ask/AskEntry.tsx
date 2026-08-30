@@ -11,7 +11,7 @@ export function AskPill() {
       onClick={() => setState({ ask: !state.ask })}
       aria-pressed={state.ask}
       title={state.ask ? "Close Ask PakEmis" : "Ask PakEmis: a question to the inventory, answered from receipts"}
-      className={`pill flex h-9 items-center gap-1.5 px-3.5 text-sm font-semibold shadow-pill transition-colors ${state.ask ? "bg-fg text-surface" : "bg-accent-fill text-on-accent hover:bg-accent/90"}`}
+      className={`pill flex h-9 items-center gap-1.5 px-3.5 text-sm font-semibold shadow-pill transition-colors ${state.ask ? "bg-fg text-card" : "bg-accent-fill text-on-accent hover:bg-accent/90"}`}
       data-testid="ask-pill"
     >
       <Sparkles size={15} />

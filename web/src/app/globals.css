@@ -2,35 +2,44 @@
 @import "mapbox-gl/dist/mapbox-gl.css";
 
 /*
- * Design tokens: the dark theme (2026-08-30). Semantic names only; every component reads
- * these and none carries a literal colour. The map viewport keeps the light streets-v12
- * basemap inside a framed dark container (the choropleth ramp and the raster colormap are
- * calibrated on light), so the outline / halo colours drawn ON the basemap are the
- * `map-*` tokens, read at layer construction (lib/theme.ts).
+ * Design tokens: the light theme (2026-08-30, replacing the dark tokens of the same day).
+ * Semantic names only; every component reads these and none carries a literal colour. The
+ * names the components already use are kept so a theme is a value change: `surface` is the
+ * warm off-white page ground, `surface-2` the card (white), `surface-3` a slightly darker ground for hovers
+ * and inputs; `ground` and `card` are the same two values under the plan's names. The map's
+ * light streets-v12 basemap sits in a 1 px frame; the outline / halo colours drawn ON the
+ * basemap are the `map-*` tokens, read at layer construction (lib/theme.ts).
  */
 @theme {
-  --color-surface: #0b0d10;
-  --color-surface-2: #12161b;
-  --color-surface-3: #181d23;
-  --color-fg: #e8ecf1;
-  --color-muted: #9aa4b2;
-  --color-line: rgba(255, 255, 255, 0.08);
-  --color-line-strong: rgba(255, 255, 255, 0.16);
-  /* the green family: text and links on dark, the bright chart stroke, the filled button */
-  --color-accent: #34d399;
-  --color-accent-bright: #4ade80;
-  --color-accent-fill: #1f6f4a;
+  --color-ground: #faf8f4;
+  --color-card: #ffffff;
+  --color-surface: #faf8f4;
+  --color-surface-2: #ffffff;
+  --color-surface-3: #f1eee8;
+  --color-fg: #161a1d;
+  --color-muted: #5c6670;
+  --color-line: #e7e3dc;
+  --color-line-strong: #d6d1c8;
+  /* the green family: links and text, the chart stroke, the filled button (one green on light) */
+  --color-accent: #1f7a5c;
+  --color-accent-bright: #27956f;
+  --color-accent-fill: #1f7a5c;
   --color-on-accent: #ffffff;
-  --color-accent-soft: rgba(52, 211, 153, 0.14);
-  --color-warn: #f6a95c;
-  --color-refusal: rgba(245, 158, 11, 0.1);
-  --color-amber: #f59e0b;
-  --color-amber-soft: #fbbf24;
-  --color-panel: rgba(18, 22, 27, 0.86);
+  --color-accent-soft: #e6f4ee;
+  /* the amber note box and the refusal tint */
+  --color-note-bg: #fff8e6;
+  --color-note-border: #f0c36d;
+  --color-note-text: #7a4b00;
+  --color-refusal: #fff1ec;
+  --color-warn: #9a4a0c;
+  /* the reference-year marker on charts, the selection outline on the map, the rail's thumb */
+  --color-amber: #d97706;
+  --color-amber-soft: #b45309;
+  --color-panel: rgba(255, 255, 255, 0.9);
   /* drawn on the light basemap */
-  --color-map-outline: #1b2430;
+  --color-map-outline: #161a1d;
   --color-map-halo: #ffffff;
-  --color-map-hatch: rgba(27, 36, 48, 0.55);
+  --color-map-hatch: rgba(22, 26, 29, 0.55);
   --font-sans: var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-card: 0.625rem;
@@ -45,39 +54,52 @@
   --text-base--line-height: 20px;
   --text-md: 16px;
   --text-md--line-height: 22px;
+  --text-lg: 18px;
+  --text-lg--line-height: 28px;
   --text-xl: 22px;
   --text-xl--line-height: 26px;
   --text-3xl: 30px;
   --text-3xl--line-height: 34px;
-  --text-4xl: 40px;
-  --text-4xl--line-height: 44px;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-pill: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --text-4xl: 34px;
+  --text-4xl--line-height: 38px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --shadow-pill: 0 1px 2px rgba(16, 24, 40, 0.08), 0 4px 12px rgba(16, 24, 40, 0.08);
 }
 
 @layer base {
   html, body { height: 100%; }
-  html { color-scheme: dark; }
-  body { background: var(--color-surface); color: var(--color-fg); font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--text-base--line-height); font-feature-settings: "tnum" 1, "cv11" 1; -webkit-font-smoothing: antialiased; }
+  html { color-scheme: light; }
+  body { background: var(--color-ground); color: var(--color-fg); font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--text-base--line-height); font-feature-settings: "tnum" 1, "cv11" 1; -webkit-font-smoothing: antialiased; }
   .num, .tabular { font-variant-numeric: tabular-nums; }
   code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; }
   button { cursor: pointer; font: inherit; }
   select, input, textarea { font: inherit; color: var(--color-fg); }
-  select option { background: var(--color-surface-2); color: var(--color-fg); }
+  select option { background: var(--color-card); color: var(--color-fg); }
   ::placeholder { color: var(--color-muted); opacity: 0.8; }
+  b, strong { font-weight: 600; }
 }
 
 @utility glass { background: var(--color-panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--color-line-strong); box-shadow: var(--shadow-pill); }
-@utility card { background: var(--color-surface-2); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+/* the white card on the warm ground: no border (the ground gives the contrast), the card radius, a small shadow */
+@utility card { background: var(--color-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 @utility micro { font-size: var(--text-micro); line-height: var(--text-micro--line-height); letter-spacing: var(--text-micro--letter-spacing); text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
+/* a widget's small-caps title */
+@utility widget-title { font-size: 11px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-fg); font-weight: 600; }
+/* the amber note box */
+@utility note { background: var(--color-note-bg); border: 1px solid var(--color-note-border); color: var(--color-note-text); border-radius: 0.375rem; }
+/* a widget's caption line */
+@utility caption { font-size: var(--text-xs); line-height: var(--text-xs--line-height); color: var(--color-muted); }
+/* a widget toolbar's round icon button */
+@utility toolbar-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 9999px; background: var(--color-ground); color: var(--color-muted); border: 1px solid transparent; &:hover { color: var(--color-accent); background: var(--color-accent-soft); } }
 @utility pill { border-radius: 9999px; }
 @utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
-/* the framed map viewport: a 1 px line and the card radius around the light basemap */
-@utility map-frame { border: 1px solid var(--color-line-strong); border-radius: var(--radius-card); overflow: hidden; background: var(--color-surface-2); }
+/* the framed map viewport: a 1 px line and the card radius around the basemap */
+@utility map-frame { border: 1px solid var(--color-line-strong); border-radius: var(--radius-card); overflow: hidden; background: var(--color-card); }
 
-/* Mapbox GL chrome (drawn over the light basemap, so it keeps light glass) */
-.mapboxgl-ctrl-attrib { font-size: 10px; background: rgba(255, 255, 255, 0.75) !important; color: #5c6b7a; }
-.mapboxgl-ctrl-attrib a { color: #5c6b7a; }
+/* Mapbox GL chrome over the basemap */
+.mapboxgl-ctrl-attrib { font-size: 10px; background: rgba(255, 255, 255, 0.8) !important; color: var(--color-muted); }
+.mapboxgl-ctrl-attrib a { color: var(--color-muted); }
+.mapboxgl-ctrl-attrib-button { background-color: rgba(255, 255, 255, 0.8) !important; }
 .mapboxgl-canvas:focus { outline: none; }
 
 /* Chart decal for bounded cells (the same diagonal hatch as the map). */

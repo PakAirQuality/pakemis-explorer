@@ -28,7 +28,7 @@ export function Overview() {
     <div className="min-h-dvh bg-surface" data-testid="overview">
       <TopNav />
       <CurrentView />
-      <main className="mx-auto max-w-6xl px-4 pb-10 pt-8 md:px-6 md:pt-12">
+      <main className="mx-auto max-w-[1500px] px-4 pb-10 pt-8 md:px-6 md:pt-12">
         <section className="grid grid-cols-1 items-start gap-8 md:grid-cols-[minmax(0,1fr)_360px]" data-testid="hero">
           <div className="max-w-2xl">
             <div className="micro text-accent">{HERO.eyebrow}</div>
@@ -68,7 +68,7 @@ export function Overview() {
         </section>
       </main>
       <footer className="border-t border-line" data-testid="footer">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-5 text-xs text-muted md:px-6">
+        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-5 text-xs text-muted md:px-6">
           <span>{licences || "Licences as the release states them"}. Every number on this page is a server string carrying a receipt; the browser computes nothing.</span>
           <span className="flex flex-wrap gap-4">
             <Link href="/methods" className="hover:text-fg">Methods &amp; evidence</Link>

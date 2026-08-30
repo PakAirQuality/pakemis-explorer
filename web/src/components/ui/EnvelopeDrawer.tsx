@@ -104,7 +104,7 @@ export function EnvelopeDrawer({ env, tab: initial, onClose, labels }: { env: En
         </div>
         <div className="flex flex-wrap gap-1 border-b border-line px-3 py-2" role="tablist">
           {DRAWER_TABS.map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`pill px-3 py-1 text-xs ${tab === id ? "bg-fg text-surface" : "text-muted hover:bg-surface-3"}`}>{label}</button>
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`pill px-3 py-1 text-xs ${tab === id ? "bg-fg text-card" : "text-muted hover:bg-surface-3"}`}>{label}</button>
           ))}
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-3 text-sm" data-testid={`drawer-${tab}`}>

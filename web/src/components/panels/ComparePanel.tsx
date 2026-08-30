@@ -24,8 +24,8 @@ export function ComparePanel() {
   return (
     <div className="space-y-3 p-3" data-testid="compare-panel">
       <div className="pill flex overflow-hidden border border-line bg-surface-2 p-0.5">
-        <button onClick={() => setMode("periods")} className={`pill flex-1 py-1 text-xs ${mode === "periods" ? "bg-fg text-surface" : "text-muted"}`}>Two periods</button>
-        <button onClick={() => setMode("configurations")} className={`pill flex-1 py-1 text-xs ${mode === "configurations" ? "bg-fg text-surface" : "text-muted"}`}>Two configurations</button>
+        <button onClick={() => setMode("periods")} className={`pill flex-1 py-1 text-xs ${mode === "periods" ? "bg-fg text-card" : "text-muted"}`}>Two periods</button>
+        <button onClick={() => setMode("configurations")} className={`pill flex-1 py-1 text-xs ${mode === "configurations" ? "bg-fg text-card" : "text-muted"}`}>Two configurations</button>
       </div>
       {mode === "periods" ? (
         <label className="block">

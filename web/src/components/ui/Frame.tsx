@@ -42,7 +42,7 @@ export function Frame({ title, scope, env, error, isLoading, children, tableExtr
   const [chosen, setTab] = useState<"chart" | "table" | null>(defaultTab ?? null);
   const tab = chosen ?? (children ? "chart" : "table");
   const seg = (id: "chart" | "table", label: string) => (
-    <button key={id} onClick={() => setTab(id)} className={`px-2 py-0.5 text-micro normal-case tracking-normal ${tab === id ? "bg-fg text-surface" : "text-muted hover:text-fg"}`}>
+    <button key={id} onClick={() => setTab(id)} className={`px-2 py-0.5 text-micro normal-case tracking-normal ${tab === id ? "bg-fg text-card" : "text-muted hover:text-fg"}`}>
       {label}
     </button>
   );

@@ -26,7 +26,7 @@ export function ExplorePanel() {
       <Field label="Level">
         <div className="pill flex overflow-hidden border border-line bg-surface-2 p-0.5">
           {(["adm1", "adm2", "grid"] as Level[]).map((l) => (
-            <button key={l} onClick={() => setState({ level: l })} className={`pill flex-1 py-1 text-xs ${state.level === l ? "bg-fg text-surface" : "text-muted"}`}>{l === "adm1" ? "Provinces" : l === "adm2" ? "Districts" : "Grid"}</button>
+            <button key={l} onClick={() => setState({ level: l })} className={`pill flex-1 py-1 text-xs ${state.level === l ? "bg-fg text-card" : "text-muted"}`}>{l === "adm1" ? "Provinces" : l === "adm2" ? "Districts" : "Grid"}</button>
           ))}
         </div>
       </Field>
@@ -51,7 +51,7 @@ export function ExplorePanel() {
       </Field>
       <Field label="Warming potentials" hint={state.gwp}>
         <div className="pill flex overflow-hidden border border-line bg-surface-2 p-0.5" data-testid="gwp-select">
-          {gwps.map((g) => <button key={g} onClick={() => setState({ gwp: g })} title={gwpTooltip(labels, g)} className={`pill flex-1 py-1 text-xs ${state.gwp === g ? "bg-fg text-surface" : "text-muted"}`}>{gwpLabel(labels, g)}</button>)}
+          {gwps.map((g) => <button key={g} onClick={() => setState({ gwp: g })} title={gwpTooltip(labels, g)} className={`pill flex-1 py-1 text-xs ${state.gwp === g ? "bg-fg text-card" : "text-muted"}`}>{gwpLabel(labels, g)}</button>)}
         </div>
         {gwpTooltip(labels, state.gwp) && <p className="mt-1 text-xs text-muted">{gwpTooltip(labels, state.gwp)}.</p>}
         {labels.limitations.ar6_adm2_ne && <p className="mt-1 text-xs text-muted">{labels.limitations.ar6_adm2_ne}</p>}

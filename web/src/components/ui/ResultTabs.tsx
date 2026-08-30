@@ -21,7 +21,7 @@ export function ResultTabs<T extends string>({ tabs, value, onChange, ariaLabel 
             disabled={t.disabled}
             title={t.title}
             onClick={() => onChange(t.id)}
-            className={`pill ${pad} transition-colors ${on ? "bg-fg text-surface" : "text-muted hover:text-fg"} disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`pill ${pad} transition-colors ${on ? "bg-fg text-card" : "text-muted hover:text-fg"} disabled:cursor-not-allowed disabled:opacity-50`}
             data-testid={`${testId}-${t.id}`}
           >
             {t.label}

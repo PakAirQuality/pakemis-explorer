@@ -97,7 +97,7 @@ export function Downloads() {
     <div className="min-h-dvh bg-surface" data-testid="downloads-page">
       <TopNav compact />
       <CurrentView compact />
-      <main className="mx-auto max-w-6xl px-4 pb-12 pt-8 md:px-6">
+      <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
         <PageHeader
           title={DOWNLOADS.title}
           dek={DOWNLOADS.dek}
@@ -207,7 +207,7 @@ export function Downloads() {
             }}
           >
             <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={receiptParam ?? "Result ID: 32 hex characters"} className="mono w-96 max-w-full rounded-md border border-line bg-surface-3 px-2 py-1.5 text-xs" aria-label="Result ID" data-testid="receipt-input" />
-            <button type="submit" className="pill bg-fg px-3 py-1.5 text-xs font-semibold text-surface">Replay</button>
+            <button type="submit" className="pill bg-fg px-3 py-1.5 text-xs font-semibold text-card">Replay</button>
           </form>
           {replay.data && (
             <div className="mt-3">

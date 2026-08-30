@@ -110,7 +110,7 @@ export function Methods() {
     <div className="min-h-dvh bg-surface" data-testid="methods-page">
       <TopNav compact />
       <CurrentView compact />
-      <main className="mx-auto max-w-6xl px-4 pb-12 pt-8 md:px-6">
+      <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
         <PageHeader
           title={METHODS.title}
           dek={METHODS.dek}

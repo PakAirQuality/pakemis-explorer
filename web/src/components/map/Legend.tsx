@@ -48,13 +48,13 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
           <ul className="space-y-0.5">
             {legendRanks(env.values).map((c, i) => (
               <li key={i} className="flex items-center gap-2">
-                <span className="inline-block h-3 w-5 rounded-sm border border-fg/10" style={{ background: rampColor(c.value as number, index.min, index.max) }} />
+                <span className="inline-block h-3 w-5 rounded-sm border border-line-strong" style={{ background: rampColor(c.value as number, index.min, index.max) }} />
                 <span className="num text-fg" data-testid="legend-label" title={`${c.display} (contract precision)`}>{shown(c)}</span>
               </li>
             ))}
             {index.anyBounded && (
               <li className="flex items-center gap-2">
-                <span className="hatch-swatch inline-block h-3 w-5 rounded-sm border border-fg/10" style={{ backgroundColor: RAMP[2] }} />
+                <span className="hatch-swatch inline-block h-3 w-5 rounded-sm border border-line-strong" style={{ backgroundColor: RAMP[2] }} />
                 <span className="text-muted">interval [low, high] (mixed CH₄ origin)</span>
               </li>
             )}
@@ -66,7 +66,7 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
             )}
             {hasCells && (
               <li className="flex items-center gap-2">
-                <span className="inline-block h-3 w-5 rounded-sm border border-fg/10" style={{ background: NO_CELL }} />
+                <span className="inline-block h-3 w-5 rounded-sm border border-line-strong" style={{ background: NO_CELL }} />
                 <span className="text-muted">no cell</span>
               </li>
             )}
@@ -90,7 +90,7 @@ function RasterLegend({ state, raster, on }: { state: ExplorerState; raster: Ras
   return (
     <div className="px-3 pb-2 pt-1">
       {!on && <div className="mb-1 text-muted">Raster off (toggle in the layers control).</div>}
-      <div className="h-3 w-full rounded-sm border border-fg/10" style={{ background: `linear-gradient(90deg, ${stops.join(", ")})` }} />
+      <div className="h-3 w-full rounded-sm border border-line-strong" style={{ background: `linear-gradient(90deg, ${stops.join(", ")})` }} />
       <div className="mt-1 text-muted">{raster?.stretch ?? "log stretch"}; {raster?.note ?? "shading only"}.</div>
       {anchors ? (
         <ul className="mt-1 space-y-1">

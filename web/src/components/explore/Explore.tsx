@@ -116,7 +116,7 @@ export function Explore() {
     <div className="min-h-dvh bg-surface" data-testid="explore-page">
       <TopNav compact />
       <CurrentView compact />
-      <main className="mx-auto max-w-6xl px-4 pb-12 pt-8 md:px-6">
+      <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
         <PageHeader
           title={EXPLORE.title}
           dek={EXPLORE.dek}
