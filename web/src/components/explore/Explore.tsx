@@ -11,7 +11,6 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Download, Link2, ScrollText, Sparkles } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { api } from "@/lib/api";
@@ -19,6 +18,7 @@ import { shown, type Cell, type Envelope } from "@/lib/envelope";
 import { cellUnit, configLabel, configWords, envelopeUnitLine, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
 import { useCompare, useCompleteness, useEmissions, useTimeseries } from "@/lib/queries";
 import { hrefForState } from "@/lib/urlState";
+import { openAsk } from "@/lib/askBus";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { canvasTitle, placeWords, possessive, showingWords, type ExploreState, type QueryPlan } from "@/lib/explore/query";
 import { useExploreState } from "@/lib/explore/useExploreState";
@@ -55,7 +55,6 @@ export function topCell(env: Envelope | null | undefined): Cell | null {
 export function Explore() {
   const { state: shared, labels, dims, defaults, contract } = useExplorer();
   const { state, plan, ctx, dispatch } = useExploreState();
-  const router = useRouter();
   const drawer = useEnvelopeDrawer(labels);
   const [copied, setCopied] = useState(false);
   const [readingOpen, setReadingOpen] = useState(false);
@@ -82,7 +81,7 @@ export function Explore() {
   const others = configs.filter((c) => c !== state.config).map((c) => configLabel(labels, c));
   const neCount = completeness.data?.values.length ?? null;
 
-  const explain = () => router.push(explainHref(shared, defaults));
+  const explain = () => openAsk({ question: EXPLORE.question, scope: shared });
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);

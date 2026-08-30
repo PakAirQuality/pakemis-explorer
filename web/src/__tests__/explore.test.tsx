@@ -23,6 +23,7 @@ import { RELEASE, envelope, mockFetch } from "./fixtures";
 import { avoidPhrasesIn } from "./vocabulary";
 
 const push = vi.fn();
+import { subscribeAsk } from "@/lib/askBus";
 vi.mock("next/navigation", () => ({ usePathname: () => "/explore", useRouter: () => ({ push, replace: vi.fn() }) }));
 vi.mock("@/components/map/ExplorerMap", () => ({
   ExplorerMap: ({ override }: { override?: { level?: string; sector?: string | null } }) => <div data-testid="map-stub" data-level={override?.level ?? ""} data-sector={override?.sector ?? ""} />,
@@ -249,8 +250,12 @@ describe("/explore", () => {
     const actions = screen.getByTestId("actions");
     expect(Array.from(actions.children).map((c) => c.getAttribute("data-testid"))).toEqual(["action-explain", "action-evidence", "action-download", "action-share"]);
     expect(screen.getByTestId("action-explain")).toHaveAttribute("data-href", "/ask?q=Explain%20this%20result");
+    const asked: unknown[] = [];
+    const unsub = subscribeAsk((e) => asked.push(e));
     fireEvent.click(screen.getByTestId("action-explain"));
-    expect(push).toHaveBeenCalledWith("/ask?q=Explain%20this%20result");
+    unsub();
+    expect(asked).toEqual([{ type: "open", request: { question: "Explain this result", scope: expect.objectContaining({ sector: null }) } }]);
+    expect(push).not.toHaveBeenCalled();
     expect(screen.getByTestId("action-download")).toHaveAttribute("href", expect.stringMatching(/\/download\/[0-9a-f]{32}\.csv$/));
     fireEvent.click(screen.getByTestId("action-evidence"));
     expect(await screen.findByTestId("drawer-sources")).toBeInTheDocument();

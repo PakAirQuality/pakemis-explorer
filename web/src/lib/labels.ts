@@ -332,6 +332,9 @@ function humanValue(labels: Labels, dims: Dims, key: string, v: unknown): string
       case "configuration_id":
       case "config":
         return configLabel(labels, x);
+      case "gwp_basis":
+      case "gwp":
+        return gwpLabel(labels, x);
       case "months":
       case "month":
         return labels.months[x] ?? x;
