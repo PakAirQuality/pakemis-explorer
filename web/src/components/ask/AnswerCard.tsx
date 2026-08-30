@@ -8,7 +8,7 @@
  * `uncertainty` rows, else an uncertainty tool result of the turn, else "not requested" with a
  * one-click follow-up); (5) evidence qualification (limitations hit, exactness, truncation,
  * unallocated mass); (6) the exact source rows (`n_rows` per cell, "Open rows" -> Result
- * details); (7) the expandable query and calculation receipt; (8) the permalink to /explore
+ * details); (7) the expandable query and calculation receipt; (8) the permalink to /data
  * (stateFromRequest of the call's input), the CSV and the reproduce link. Every number on the
  * card is a string the stream or the replayed envelope carried.
  */
@@ -124,7 +124,7 @@ export function AnswerCard({ answer, items, onCite, onFollowUp }: { answer: Answ
   const uncCells = unc?.result?.cells ?? [];
   const exactness = exactnessWords(cells);
   const patch = principal.name === "set_map_view" ? {} : stateFromRequest({ name: principal.name, body: principal.input });
-  const exploreHref = Object.keys(patch).length ? hrefForState(applyPatch({ ...state, c: null }, patch), defaults, "/explore") : null;
+  const exploreHref = Object.keys(patch).length ? hrefForState(applyPatch({ ...state, c: null }, patch), defaults, "/data") : null;
   const csv = dl?.result?.download?.csv ? apiUrl(dl.result.download.csv) : r.receipt ? api.downloadCsvUrl(r.receipt) : null;
   const chips = receiptChips(labels, dims, principal.input);
   const rowCounts = shownCells.map((c) => ({ name: cellName(labels, dims, c), n: rowsOf(c, env) }));

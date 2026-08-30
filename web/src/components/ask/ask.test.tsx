@@ -18,7 +18,7 @@ import { createSseParser, parseSse } from "./useAskStream";
 import { timelineOf } from "./timeline";
 import { STORE_PREFIX } from "./store";
 
-const pathname = vi.hoisted(() => ({ value: "/map" }));
+const pathname = vi.hoisted(() => ({ value: "/" })); // the workspace carries the map
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const RECEIPT = "8328128a5bd1eca6b1a29ad79cf6d910";
@@ -224,11 +224,11 @@ describe("AskDock", () => {
     expect(stored.turns[0].events.map((e: { name: string }) => e.name)).toEqual(EVENTS.map(([n]) => n));
     // usage and elapsed as received
     expect(screen.getByTestId("usage-line")).toHaveTextContent("in 400 · out 80 · ≈ $0.0031 · 4.213 s");
-    // "Show on map" maps the call's input to URL state through stateFromRequest (this is the Map page)
+    // "Show on map" maps the call's input to URL state through stateFromRequest (this is the workspace)
     fireEvent.click(within(cards[0]).getByTestId("show-on-map"));
     expect(setState).toHaveBeenLastCalledWith(expect.objectContaining({ level: "adm1", period: "FY2023-24", geo: "Punjab", sector: "agriculture" }));
-    // the "moved the map" chip links to /map with the action's state
-    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab");
+    // the "moved the map" chip links to the workspace with the action's state
+    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/?sector=agriculture&geo=Punjab");
     // every decimal on screen is a string the stream carried
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const tokens: string[] = [];
@@ -239,7 +239,7 @@ describe("AskDock", () => {
     expect(screen.getAllByTestId("scope-row").map((r) => r.textContent)).toContain("Geography Punjab (province)");
   });
 
-  it("off the Map page, Show on map and the map chip are links to /map with the state, and ?q= seeds one send", async () => {
+  it("away from the workspace, Show on map and the map chip are links to it with the state, and ?q= seeds one send", async () => {
     pathname.value = "/ask";
     const fetchSpy = askFetch(EVENTS);
     vi.stubGlobal("fetch", fetchSpy);
@@ -268,9 +268,9 @@ describe("AskDock", () => {
     fireEvent.click(screen.getByTestId("how-answered-toggle"));
     const link = within(screen.getAllByTestId("tool-card")[0]).getByTestId("show-on-map");
     expect(link.tagName).toBe("A");
-    expect(link).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab");
-    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab");
-    pathname.value = "/map";
+    expect(link).toHaveAttribute("href", "/?sector=agriculture&geo=Punjab");
+    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/?sector=agriculture&geo=Punjab");
+    pathname.value = "/";
   });
 
   it("restores a conversation from the c parameter and sends it as client_history", async () => {

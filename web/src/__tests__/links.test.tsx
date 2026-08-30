@@ -1,9 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * The static export has no server routes: no link points at /r/<receipt> (a receipt's URL is
- * /downloads?receipt=<hash>; the old /data?receipt= redirects there), the app has no app/tiles
- * or app/r route folders and no PMTiles reader, and the Result details drawer's "Reproduce
- * this result" link points at /downloads?receipt=.
+ * /downloads?receipt=<hash>), the app has no app/tiles or app/r route folders and no PMTiles
+ * reader, the Result details drawer's "Reproduce this result" link points at
+ * /downloads?receipt=, and nothing links at a route that has become a redirect stub (/map,
+ * /explore, /about) — the four sections are /, /data, /methods and /downloads.
  */
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import path from "node:path";
@@ -36,12 +37,16 @@ describe("static-export link scheme", () => {
   it("the server-side route folders and the PMTiles reader are gone", () => {
     for (const rel of ["app/tiles", "app/r", "lib/pmtilesServer.ts"]) expect(existsSync(path.join(SRC, rel)), rel).toBe(false);
   });
-  it("no source links to /data or /about: the two moved to /downloads and /methods and are redirect stubs", () => {
+  it("no source links to /map, /explore or /about: the three are redirect stubs, and /data is the Grapher's own route", () => {
+    // the three routes that moved: the workspace absorbed /map, the Grapher moved to /data, /about is /methods
     const hits = walk(SRC)
-      .filter((f) => !/app\/(data|about)\/page\.tsx$/.test(f))
-      .filter((f) => /["'`]\/(data|about)(["'`?#/])/.test(readFileSync(f, "utf8")));
+      .filter((f) => !/app\/(map|explore|about)\/page\.tsx$/.test(f))
+      .filter((f) => /["'`]\/(map|explore|about)(["'`?#/])/.test(readFileSync(f, "utf8")));
     expect(hits).toEqual([]);
-    for (const rel of ["app/data/page.tsx", "app/about/page.tsx"]) expect(readFileSync(path.join(SRC, rel), "utf8")).toContain("<Redirect");
+    for (const rel of ["app/map/page.tsx", "app/explore/page.tsx", "app/about/page.tsx"]) expect(readFileSync(path.join(SRC, rel), "utf8")).toContain("<Redirect");
+    // /data is a real page now (the Grapher), and the nav points at it
+    expect(readFileSync(path.join(SRC, "app/data/page.tsx"), "utf8")).toContain("<Explore");
+    expect(readFileSync(path.join(SRC, "components/shell/NavCapsule.tsx"), "utf8")).toContain('href: "/data"');
   });
   it("a receipt's URL is /downloads?receipt=<hash>", () => {
     const id = "0123456789abcdef0123456789abcdef";

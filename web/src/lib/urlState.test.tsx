@@ -74,12 +74,13 @@ describe("resolve / raw / patch", () => {
     expect(rawFromState(grid, D).gas).toBeNull();
     expect(rawFromState(grid, D).raster).toBeNull();
   });
-  it("the Map page's `layer` and `tab` round-trip: absent at magnitude / summary, written otherwise, kept by hrefForState, and retired keys are ignored", () => {
+  it("the map's `layer` and the drawer's `tab` round-trip: absent at magnitude / summary, written otherwise, kept by hrefForState, and retired keys are ignored", () => {
     expect(resolveState({}, D)).toMatchObject({ layer: "magnitude", tab: "summary" });
     expect(resolveState({ layer: "evidence", tab: "sources" }, D)).toMatchObject({ layer: "evidence", tab: "sources" });
     const s = { ...base, level: "adm2" as const, layer: "exceptions" as const, tab: "evidence" as const, geo: "60131773B12131197496886" };
     expect(rawFromState(s, D)).toMatchObject({ layer: "exceptions", tab: "evidence" });
-    expect(hrefForState(s, D)).toBe("/map?level=adm2&geo=60131773B12131197496886&tab=evidence&layer=exceptions");
+    expect(hrefForState(s, D)).toBe("/?level=adm2&geo=60131773B12131197496886&tab=evidence&layer=exceptions"); // the workspace is the default path
+    expect(hrefForState(s, D, "/data")).toBe("/data?level=adm2&geo=60131773B12131197496886&tab=evidence&layer=exceptions");
     expect(resolveState(rawFromState(s, D), D)).toEqual(s);
     // a level change keeps the layer and the tab (the selection is dropped, as before)
     expect(applyPatch(s, { level: "adm1" })).toMatchObject({ level: "adm1", geo: null, layer: "exceptions", tab: "evidence" });

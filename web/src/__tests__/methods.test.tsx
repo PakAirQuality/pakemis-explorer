@@ -93,7 +93,7 @@ describe("/methods", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Methods & evidence" })).toBeInTheDocument();
     expect(screen.getByTestId("identity-line")).toHaveTextContent("PakEmis · public-data reconstruction");
     expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "#methodology");
-    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods & evidence")).toHaveAttribute("aria-current", "page");
+    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods")).toHaveAttribute("aria-current", "page");
     const tiles = await screen.findAllByTestId("sector-tile");
     expect(tiles.map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture", "power", "residential"]);
     expect(tiles[0]).toHaveAttribute("aria-pressed", "true");
@@ -116,7 +116,7 @@ describe("/methods", () => {
     expect(within(card).getByTestId("dim-uncertainty")).toHaveTextContent("one uncertainty model (product lognormal activity x ef)");
     const ne = within(card).getAllByTestId("ne-row");
     expect(ne.map((r) => r.textContent)).toEqual(["NEAgricultural soils - N from SOC mineralisation · N2O", "NELiming · CO2"]);
-    expect(within(card).getByTestId("open-rows")).toHaveAttribute("href", "/explore?sector=agriculture");
+    expect(within(card).getByTestId("open-rows")).toHaveAttribute("href", "/data?sector=agriculture");
     const methodCall = fetchSpy.mock.calls.find(([u]) => String(u).includes("/method/"));
     expect(String(methodCall?.[0])).toMatch(/\/method\/agriculture$/);
   });

@@ -142,11 +142,12 @@ export function useExplorerState(defaults: StateDefaults) {
 }
 
 /**
- * The URL of a state on a page: `/map?level=adm2&sector=transport` (only the fields that differ
- * from the release's defaults are written, as `rawFromState` writes them). The Overview's
- * "Show on map", the dock's map chips and the Downloads page's replay link use it.
+ * The URL of a state on a page: `/?level=adm2&sector=transport` (only the fields that differ
+ * from the release's defaults are written, as `rawFromState` writes them). The deck's
+ * "Show it on the map", the dock's map chips and the Downloads page's replay link use it; the
+ * workspace at `/` is the default path since the map merged into it.
  */
-export function hrefForState(s: ExplorerState, d: StateDefaults, path = "/map"): string {
+export function hrefForState(s: ExplorerState, d: StateDefaults, path = "/"): string {
   const raw = rawFromState(s, d);
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(raw)) if (v !== null && v !== undefined) qs.set(k, typeof v === "boolean" ? (v ? "1" : "0") : String(v));

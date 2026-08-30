@@ -1,9 +1,15 @@
 import "@testing-library/jest-dom/vitest";
-/** /about and /data are client-side redirect stubs (the static export has no server redirects); /data carries its ?receipt= across. */
+/**
+ * The routes that moved are client-side redirect stubs (the static export has no server
+ * redirects): /about → /methods, /map → / (the workspace absorbed the map on 2026-08-30) and
+ * /explore → /data (the Grapher moved there). Each carries its query string and hash across, so
+ * a shared `/map?level=adm2&geo=…` link opens the same view on the workspace.
+ */
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AboutRedirect from "@/app/about/page";
-import DataRedirect from "@/app/data/page";
+import MapRedirect from "@/app/map/page";
+import ExploreRedirect from "@/app/explore/page";
 
 const replace = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace }) }));
@@ -18,10 +24,19 @@ describe("redirect stubs", () => {
     expect(screen.getByTestId("redirect")).toHaveAttribute("data-to", "/methods");
     expect(screen.getByRole("link")).toHaveAttribute("href", "/methods");
   });
-  it("/data?receipt=<hash> replaces itself with /downloads?receipt=<hash>", () => {
-    window.history.replaceState({}, "", "/data/?receipt=0123456789abcdef0123456789abcdef#x");
-    render(<DataRedirect />);
-    expect(replace).toHaveBeenCalledWith("/downloads?receipt=0123456789abcdef0123456789abcdef#x");
+  it("/map carries the whole view across to the workspace", () => {
+    window.history.replaceState({}, "", "/map/?level=adm2&geo=Punjab&sector=power");
+    render(<MapRedirect />);
+    expect(replace).toHaveBeenCalledWith("/?level=adm2&geo=Punjab&sector=power");
+    expect(screen.getByTestId("redirect")).toHaveAttribute("data-to", "/");
+    expect(screen.getByRole("link")).toHaveTextContent("Explore");
+    window.history.replaceState({}, "", "/");
+  });
+  it("/explore replaces itself with /data, hash and all", () => {
+    window.history.replaceState({}, "", "/explore/?sector=transport#x");
+    render(<ExploreRedirect />);
+    expect(replace).toHaveBeenCalledWith("/data?sector=transport#x");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/data");
     window.history.replaceState({}, "", "/");
   });
 });

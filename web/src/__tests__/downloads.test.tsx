@@ -178,7 +178,7 @@ describe("/downloads", () => {
     expect(screen.getByTestId("download-metadata")).toHaveAttribute("href", `${BASE}/release_manifest.json`);
     expect(await screen.findByText("Replayed query emissions")).toBeInTheDocument();
     expect(screen.getByText("223.45")).toBeInTheDocument();
-    expect(screen.getByText("Show on map")).toHaveAttribute("href", "/map?sector=agriculture");
+    expect(screen.getByText("Show on map")).toHaveAttribute("href", "/?sector=agriculture");
   });
   it("audits: every decimal is a server string; no FY outside the curl line; the version inside the citation table only; no raw id; no avoid-list phrase", async () => {
     const { container } = mount("?purpose=totals");

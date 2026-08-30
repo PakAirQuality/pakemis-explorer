@@ -46,11 +46,11 @@ export function stateOfAction(state: ExplorerState, action: MapActionEvent): Exp
   return applyPatch(state, patch);
 }
 
-/** "moved the map" links to /map with the action's state, so the chip opens the map from the /ask page too. */
+/** "moved the map" links to the workspace with the action's state, so the chip opens the map from the assistant's page too. */
 function MapActionChip({ action }: { action: MapActionEvent }) {
   const { labels, dims, state, defaults } = useExplorer();
   const chips = inputChips(labels, dims, action);
-  const href = hrefForState(stateOfAction(state, action), defaults, "/map");
+  const href = hrefForState(stateOfAction(state, action), defaults, "/");
   return (
     <div className="flex flex-wrap items-center gap-1 text-xs text-muted" data-testid="map-action">
       <MapPin size={12} className="text-accent" />

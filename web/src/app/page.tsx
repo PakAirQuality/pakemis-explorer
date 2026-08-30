@@ -1,12 +1,12 @@
 "use client";
-/** The public Overview: the home page (components/overview/Overview.tsx). The map console lives at /map. */
+/** The workspace: one full-bleed map with the insight deck and the filter panel floating over it (components/workspace/Workspace.tsx). */
 import { Suspense } from "react";
-import { Overview } from "@/components/overview/Overview";
+import { Workspace } from "@/components/workspace/Workspace";
 
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <Overview />
+      <Workspace />
     </Suspense>
   );
 }

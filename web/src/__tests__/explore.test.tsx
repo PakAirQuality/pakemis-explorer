@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * /explore, the Grapher: the query builder (lib/explore/query.ts) answers the five model
+ * /data, the Grapher: the query builder (lib/explore/query.ts) answers the five model
  * questions with exactly one contract call each — the nine-year change (a range → get_timeseries,
  * a line, the server's `change` sentence), what makes up agriculture (a sector → its
  * categories), which gases dominate (By gas → a stacked bar), Punjab against Sindh (two
@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
-import Page from "@/app/explore/page";
+import Page from "@/app/data/page";
 import { resolveState } from "@/lib/urlState";
 import { buildQuery, resolveExplore, toUrl, transition, type ExploreContext, type ExploreState, type LocalKeys } from "@/lib/explore/query";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
@@ -24,7 +24,7 @@ import { avoidPhrasesIn } from "./vocabulary";
 
 const push = vi.fn();
 import { subscribeAsk } from "@/lib/askBus";
-vi.mock("next/navigation", () => ({ usePathname: () => "/explore", useRouter: () => ({ push, replace: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/data", useRouter: () => ({ push, replace: vi.fn() }) }));
 vi.mock("@/components/map/ExplorerMap", () => ({
   ExplorerMap: ({ override }: { override?: { level?: string; sector?: string | null } }) => <div data-testid="map-stub" data-level={override?.level ?? ""} data-sector={override?.sector ?? ""} />,
 }));
@@ -234,7 +234,7 @@ describe("lib/explore/query: one state, one contract call", () => {
 
 // --- the page -------------------------------------------------------------------------------
 
-describe("/explore", () => {
+describe("/data (the Grapher)", () => {
   it("the sector canvas: title, Showing sentence, the largest cell's share, bars on the server's ticks, exactly four actions", async () => {
     mount();
     expect(await screen.findByRole("heading", { level: 1, name: "Explore the inventory" })).toBeInTheDocument();
@@ -267,7 +267,7 @@ describe("/explore", () => {
     expect(screen.getByTestId("reading-estimate")).toHaveTextContent("Every number on this page is the reference estimate. Structural alternatives (Survey-based estimate) are selectable under More.");
     expect(screen.getByTestId("reading-not-official")).toHaveTextContent("Not an official inventory");
     expect(screen.getByTestId("reading-exact")).toHaveTextContent("Every value can expose its data rows, calculation, release and query receipt.");
-    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Explore data")).toHaveAttribute("aria-current", "page");
+    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Data")).toHaveAttribute("aria-current", "page");
   });
   it("Chart · Table · Map show the same envelope: the table carries the Share column, the map is refused by name off a place breakdown and drawn for every province", async () => {
     const updates: string[] = [];

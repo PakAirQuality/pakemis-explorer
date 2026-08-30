@@ -232,7 +232,7 @@ describe("AnswerCard", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     // (8) permalink to /explore from the call's input, the CSV, the reproduce link
     const links = within(card).getByTestId("answer-part-links");
-    expect(within(links).getByTestId("explore-permalink")).toHaveAttribute("href", "/explore?sector=agriculture");
+    expect(within(links).getByTestId("explore-permalink")).toHaveAttribute("href", "/data?sector=agriculture");
     expect(within(links).getByTestId("download-csv").getAttribute("href")).toContain(`/download/${RECEIPT}.csv`);
     expect(within(links).getByTestId("reproduce-link")).toHaveAttribute("href", `/downloads?receipt=${RECEIPT}`);
     // the reasoning is folded and opens on demand
@@ -330,7 +330,7 @@ describe("AnswerCard", () => {
     expect(within(card).getAllByTestId("scope-row").map((r) => r.textContent)).toContain("Geography every district");
     expect(within(card).getByTestId("exactness-badge")).toHaveTextContent("bounded");
     expect(within(card).getByTestId("limitation-chip")).toHaveTextContent("their CO2e is a bounded interval, never a midpoint");
-    expect(within(card).getByTestId("explore-permalink")).toHaveAttribute("href", "/explore?level=adm2&sector=power");
+    expect(within(card).getByTestId("explore-permalink")).toHaveAttribute("href", "/data?level=adm2&sector=power");
     // the same turn's series as the principal: columns with the reference year
     const tl = timelineOf(events.map(([name, data]) => ({ name, data })));
     expect(chartKind(principalTool(tl.items, { k: 2 })!.result!.cells)).toBe("columns");

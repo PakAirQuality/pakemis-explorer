@@ -53,12 +53,16 @@ export function useBootstrap(): BootstrapState {
   return useSyncExternalStore(subscribeBootstrap, getBootstrap, () => EMPTY);
 }
 
-/** The stages a page waits for before the loading screen finishes: the map's load event on the pages that carry a map, the first envelope on the pages that ask for one. */
+/**
+ * The stages a page waits for before the loading screen finishes: the map's load event on the
+ * pages that carry a map, the first envelope on the pages that ask for one. The workspace at
+ * `/` carries both (the deck's first envelope and the full-bleed map); the Grapher at `/data`
+ * asks for an envelope; the routes that moved are redirect stubs and wait for neither.
+ */
 export function stagesFor(pathname: string | null): readonly Stage[] {
   const p = (pathname ?? "/").replace(/\/+$/, "") || "/";
   if (p === "/") return ["release", "labels", "envelope", "map"];
-  if (p === "/map") return ["release", "labels", "map"];
-  if (p === "/explore") return ["release", "labels", "envelope"];
+  if (p === "/data") return ["release", "labels", "envelope"];
   return ["release", "labels"];
 }
 

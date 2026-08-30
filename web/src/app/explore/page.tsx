@@ -1,12 +1,7 @@
 "use client";
-/** Explore data: the national result built from the URL state (period, breakdown, measure, sector; more settings), with every figure a server string. */
-import { Suspense } from "react";
-import { Explore } from "@/components/explore/Explore";
+/** The Grapher moved to /data on 2026-08-30 (the nav reads Explore · Data · Methods · Downloads); this stub redirects, carrying the query string across. */
+import { Redirect } from "@/components/shell/Redirect";
 
-export default function ExplorePage() {
-  return (
-    <Suspense fallback={null}>
-      <Explore />
-    </Suspense>
-  );
+export default function ExploreRedirect() {
+  return <Redirect to="/data" label="Data" />;
 }
