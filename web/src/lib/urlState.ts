@@ -3,12 +3,14 @@
  * The one screen's state lives in the URL (nuqs). `useExplorerState()` resolves the raw
  * parameters against the release's defaults (/release.defaults: period, configuration, GWP,
  * spatial view) so a bare `/` and `/?period=FY2023-24&config=REF_2023_24` are the same state and
- * produce the same request bodies (lib/requests.ts) and therefore the same receipts.
+ * produce the same request bodies (lib/requests.ts) and therefore the same receipts. The Map
+ * page adds `layer` (its layer switch) and `tab` (its drawer's tab); the old `panel` and `ask`
+ * keys are retired (the Ask drawer lives outside the URL; the filter panel is not state).
  */
 import { useCallback, useMemo } from "react";
 import { createParser, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 
-/** `1` | `0` flags (the plan's `ask=1`, `raster=0`, `view3d=1`); `true`/`false` are read too. */
+/** `1` | `0` flags (`raster=0`, `view3d=1`); `true`/`false` are read too. */
 const parseAsFlag = createParser<boolean>({
   parse: (v) => (v === "1" || v === "true" ? true : v === "0" || v === "false" ? false : null),
   serialize: (v) => (v ? "1" : "0"),
@@ -16,8 +18,12 @@ const parseAsFlag = createParser<boolean>({
 
 export const LEVELS = ["adm1", "adm2", "grid"] as const;
 export type Level = (typeof LEVELS)[number];
-export const PANELS = ["explore", "inventory", "compare", "evidence"] as const;
-export type Panel = (typeof PANELS)[number];
+/** The Map page's drawer tabs (URL `tab`; absent = summary). */
+export const MAP_TABS = ["summary", "breakdown", "trend", "evidence", "sources"] as const;
+export type MapTab = (typeof MAP_TABS)[number];
+/** The Map page's layer switch (URL `layer`; absent = magnitude). */
+export const MAP_LAYERS = ["magnitude", "evidence", "method", "unallocated", "exceptions"] as const;
+export type MapLayer = (typeof MAP_LAYERS)[number];
 
 export type ExplorerState = {
   level: Level;
@@ -30,8 +36,8 @@ export type ExplorerState = {
   view: string;
   geo: string | null;
   cell: string | null;
-  panel: Panel | null;
-  ask: boolean;
+  tab: MapTab;
+  layer: MapLayer;
   c: string | null;
   cam: string | null;
   raster: boolean;
@@ -51,8 +57,8 @@ export const parsers = {
   view: parseAsString,
   geo: parseAsString,
   cell: parseAsString,
-  panel: parseAsStringLiteral(PANELS),
-  ask: parseAsFlag,
+  tab: parseAsStringLiteral(MAP_TABS),
+  layer: parseAsStringLiteral(MAP_LAYERS),
   c: parseAsString,
   cam: parseAsString.withOptions({ history: "replace", throttleMs: 400 }),
   raster: parseAsFlag,
@@ -74,8 +80,8 @@ export function resolveState(raw: Partial<RawState>, d: StateDefaults): Explorer
     view: raw.view ?? d.spatial_view,
     geo: raw.geo ?? null,
     cell: raw.cell ?? null,
-    panel: raw.panel ?? null,
-    ask: raw.ask ?? false,
+    tab: raw.tab ?? "summary",
+    layer: raw.layer ?? "magnitude",
     c: raw.c ?? null,
     cam: raw.cam ?? null,
     raster: raw.raster ?? level === "grid",
@@ -96,8 +102,8 @@ export function rawFromState(s: ExplorerState, d: StateDefaults): RawState {
     view: s.view === d.spatial_view ? null : s.view,
     geo: s.geo,
     cell: s.cell,
-    panel: s.panel,
-    ask: s.ask ? true : null,
+    tab: s.tab === "summary" ? null : s.tab,
+    layer: s.layer === "magnitude" ? null : s.layer,
     c: s.c,
     cam: s.cam,
     raster: s.raster === (s.level === "grid") ? null : s.raster,

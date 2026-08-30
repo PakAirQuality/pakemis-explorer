@@ -1,27 +1,22 @@
 "use client";
 /**
- * The Map page: today's console, moved from `/` unchanged in substance (2026-08-30) under the
- * TopNav: [SlidingPanel 0|370] [framed map flex-1] [right column 300|420]. Floating over the
- * map: ScopeChips (top-left), the Ask pill and layer toggles (top-right), TimeRail
- * (bottom-centre), Legend (bottom-left), context pill (bottom-right); the DetailCard slides in
- * over the map's right edge. The right column is the ContextPanel, or the AskDock when
- * `ask=1`. The rail's panel tabs sit in the nav's slot until the filter bar and the tabbed
- * results drawer replace them (agent B). Everything reads one URL state (lib/urlState.ts).
+ * Map allocated emissions (2026-08-30): the immersive allocation map. A dark chrome
+ * (components/map/chrome.ts re-values the theme's tokens on this page) around the light
+ * streets-v12 map: [TopNav compact] · [FilterPanel 300 | rail 48] [the full-width map with the
+ * layer switch, its legend and the TimelineBar beneath] [SelectionDrawer 420, light]. Under
+ * 768 px the filters are a sheet and the drawer a bottom sheet. Everything reads one URL state
+ * (lib/urlState.ts: level, geo, cell, period, month, sector, gas, config, gwp, view, layer,
+ * tab, raster, view3d, cam), so any view is a shareable link.
  */
-import { Suspense } from "react";
-import { BarChart3, Compass, GitCompare, ScrollText } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import type { Panel } from "@/lib/urlState";
 import { TopNav } from "@/components/shell/TopNav";
-import { SlidingPanel } from "@/components/shell/SlidingPanel";
-import { AskDock } from "@/components/ask/AskDock";
 import { ExplorerMap } from "@/components/map/ExplorerMap";
-import { DetailCard } from "@/components/detail/DetailCard";
-import { ContextPanel } from "@/components/panels/ContextPanel";
-import { ExplorePanel } from "@/components/panels/ExplorePanel";
-import { InventoryPanel } from "@/components/panels/InventoryPanel";
-import { ComparePanel } from "@/components/panels/ComparePanel";
-import { EvidencePanel } from "@/components/panels/EvidencePanel";
+import { FilterPanel } from "@/components/map/FilterPanel";
+import { TimelineBar } from "@/components/map/TimelineBar";
+import { DARK_CHROME, LIGHT_CHROME, MAP_PAGE_TITLE } from "@/components/map/chrome";
+import { DRAWER_WIDTH, SelectionDrawer } from "@/components/detail/SelectionDrawer";
 
 export default function MapPage() {
   return (
@@ -31,54 +26,43 @@ export default function MapPage() {
   );
 }
 
-const PANEL_TITLES = { explore: "Explore", inventory: "Inventory", compare: "Compare", evidence: "Evidence & methods" } as const;
-const TABS: { id: Panel; icon: typeof Compass; label: string }[] = [
-  { id: "explore", icon: Compass, label: "Explore" },
-  { id: "inventory", icon: BarChart3, label: "Inventory" },
-  { id: "compare", icon: GitCompare, label: "Compare" },
-  { id: "evidence", icon: ScrollText, label: "Evidence" },
-];
-
 function MapScreen() {
-  const { state, setState, isMobile } = useExplorer();
-  const panel =
-    state.panel === "explore" ? <ExplorePanel /> : state.panel === "inventory" ? <InventoryPanel /> : state.panel === "compare" ? <ComparePanel /> : state.panel === "evidence" ? <EvidencePanel /> : null;
-  const tabs = (
-    <div className="flex items-center gap-0.5" data-testid="panel-tabs">
-      {TABS.map((t) => (
-        <button key={t.id} type="button" onClick={() => setState({ panel: state.panel === t.id ? null : t.id })} aria-pressed={state.panel === t.id} title={t.label} className={`flex h-9 items-center gap-1 rounded-md px-2 text-xs ${state.panel === t.id ? "bg-surface-3 text-fg" : "text-muted hover:bg-surface-3 hover:text-fg"}`}>
-          <t.icon size={15} />
-          <span className="hidden lg:inline">{t.label}</span>
-        </button>
-      ))}
-    </div>
-  );
+  const { isMobile } = useExplorer();
+  // the desktop panel starts open; the mobile sheet starts closed
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  useEffect(() => {
+    document.title = `${MAP_PAGE_TITLE} · PakEmis`;
+  }, []);
   return (
-    <div className="flex h-dvh w-screen flex-col overflow-hidden" data-testid="explorer">
-      <TopNav compact onAsk={() => setState({ ask: !state.ask })}>
-        {tabs}
+    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-surface text-fg" style={DARK_CHROME} data-testid="explorer">
+      <TopNav compact>
+        <h1 className="hidden truncate text-sm font-semibold text-fg lg:block" data-testid="page-title">{MAP_PAGE_TITLE}</h1>
       </TopNav>
-      <div className={`flex min-h-0 flex-1 ${isMobile ? "flex-col" : "flex-row"}`}>
-        <SlidingPanel open={!!state.panel} title={state.panel ? PANEL_TITLES[state.panel] : ""} onClose={() => setState({ panel: null })} mobile={isMobile}>
-          {panel}
-        </SlidingPanel>
-        <main className="relative min-w-0 flex-1 p-2">
-          <div className="map-frame relative h-full" data-testid="map-frame">
+      <div className="flex min-h-0 flex-1 flex-row">
+        <FilterPanel open={isMobile ? sheetOpen : filtersOpen} onToggle={isMobile ? setSheetOpen : setFiltersOpen} mobile={isMobile} />
+        <main className="relative flex min-w-0 flex-1 flex-col">
+          <div className="relative min-h-0 flex-1" data-testid="map-frame">
             <ExplorerMap />
-            <DetailCard />
+            {isMobile && (
+              <button type="button" onClick={() => setSheetOpen(true)} className="glass pill absolute bottom-3 right-3 z-20 flex h-9 items-center gap-1.5 px-3 text-xs font-semibold text-fg" data-testid="filters-button">
+                <SlidersHorizontal size={14} /> Filters
+              </button>
+            )}
           </div>
+          <TimelineBar compact={isMobile} />
         </main>
         {!isMobile && (
-          <aside className={`relative z-40 h-full shrink-0 border-l border-line bg-surface-2 transition-[width] duration-250 ${state.ask ? "overflow-hidden" : "overflow-y-auto"}`} style={{ width: state.ask ? 420 : 300 }} data-testid="right-column">
-            {state.ask ? <AskDock /> : <ContextPanel />}
+          <aside className="relative z-40 h-full shrink-0 border-l border-line bg-surface-2" style={{ width: DRAWER_WIDTH, ...LIGHT_CHROME }} data-testid="right-column">
+            <SelectionDrawer />
           </aside>
         )}
-        {isMobile && state.ask && (
-          <div className="fixed inset-x-0 bottom-0 top-14 z-[55] overflow-hidden bg-surface-2">
-            <AskDock />
-          </div>
-        )}
       </div>
+      {isMobile && (
+        <div style={LIGHT_CHROME}>
+          <SelectionDrawer mobile />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * "No FY anywhere": with a release whose labels come in the API's shape (short "2023–24", label
- * "July 2023 – June 2024", basis_note), the time rail, the scope chips and the Current view
- * bar print no "FY" token; the rail and the period chip carry the spelled-out months as their
- * tooltip (`title`); the ids stay in the state and the requests.
+ * "July 2023 – June 2024", basis_note), the timeline, the filter panel and the Current view
+ * bar print no "FY" token; the timeline's year and the period select carry the spelled-out
+ * months as their tooltip (`title`); the ids stay in the state and the requests.
  */
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,14 +12,14 @@ import { ExplorerContext, type ExplorerContextValue } from "@/components/Explore
 import { releaseAgent, releaseDims, releaseLabels } from "@/lib/release";
 import type { ReleaseInfo } from "@/lib/envelope";
 import type { ExplorerState } from "@/lib/urlState";
-import { TimeRail } from "@/components/map/TimeRail";
-import { ScopeChips } from "@/components/map/ScopeChips";
+import { TimelineBar } from "@/components/map/TimelineBar";
+import { FilterPanel } from "@/components/map/FilterPanel";
 import { CurrentView } from "@/components/shell/CurrentView";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
-const state: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
+const state: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", c: null, cam: null, raster: false, view3d: false };
 
 function ctx(): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
@@ -44,8 +44,8 @@ describe("no FY anywhere", () => {
     render(
       <Providers>
         <ExplorerContext.Provider value={ctx()}>
-          <TimeRail />
-          <ScopeChips />
+          <TimelineBar />
+          <FilterPanel open onToggle={() => {}} />
           <CurrentView />
         </ExplorerContext.Provider>
       </Providers>,
@@ -57,9 +57,9 @@ describe("no FY anywhere", () => {
     expect(text).not.toContain("FY");
     expect(screen.getByTestId("time-rail")).toHaveTextContent("2023–24");
     expect(screen.getByTestId("time-rail").querySelector('[title="July 2023 – June 2024"]')).toHaveTextContent("2023–24");
-    const periodChip = screen.getAllByTestId("scope-chip").find((c) => c.textContent === "2023–24");
-    expect(periodChip).toBeTruthy();
-    expect(periodChip).toHaveAttribute("title", "July 2023 – June 2024");
+    const period = screen.getByTestId("period-select") as HTMLSelectElement;
+    expect(period.options[period.selectedIndex].textContent).toBe("2023–24");
+    expect(period.options[period.selectedIndex]).toHaveAttribute("title", "July 2023 – June 2024");
     expect(screen.getByTestId("current-view-line")).toHaveTextContent("2023–24 · Pakistan · Reference estimate · excludes land use and forestry");
     expect(screen.getByTestId("current-view-line")).toHaveAttribute("title", expect.stringContaining("July 2023 – June 2024"));
     // nothing in any title attribute either

@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * The chips, the legend's scope line and the Explore panel's selects print the release's
- * labels ("Reference estimate", "IPCC 2013 (AR5)"), never the raw ids; the ids stay as
- * secondary text in the Explore panel only.
+ * The filter panel's controls, the legend's scope line and the Explore panel's selects print
+ * the release's labels ("Reference estimate", "IPCC 2013 (AR5)"), never the raw ids; the ids
+ * stay as secondary text in the Explore panel only.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -10,7 +10,7 @@ import { ExplorerContext, type ExplorerContextValue } from "@/components/Explore
 import { releaseDims, releaseLabels } from "@/lib/release";
 import type { ReleaseInfo } from "@/lib/envelope";
 import type { ExplorerState } from "@/lib/urlState";
-import { ScopeChips } from "./ScopeChips";
+import { FilterPanel } from "./FilterPanel";
 import { Legend } from "./Legend";
 import { ExplorePanel } from "@/components/panels/ExplorePanel";
 import { RELEASE } from "@/__tests__/fixtures";
@@ -18,7 +18,7 @@ import { scopeWords, sectorWords } from "@/lib/labels";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", c: null, cam: null, raster: false, view3d: false };
 
 function ctx(state: ExplorerState): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
@@ -28,19 +28,34 @@ function mount(node: React.ReactNode, state: ExplorerState = base) {
   return render(<ExplorerContext.Provider value={ctx(state)}>{node}</ExplorerContext.Provider>);
 }
 
-describe("ScopeChips", () => {
-  it("reads '2023–24 · Reference estimate · IPCC 2013 (AR5) · All sectors' with the notes as titles", () => {
-    mount(<ScopeChips />);
-    const chips = screen.getAllByTestId("scope-chip").map((c) => ({ text: c.textContent, title: c.getAttribute("title") }));
-    expect(chips.map((c) => c.text)).toEqual(["2023–24", "Reference estimate", "IPCC 2013 (AR5)", "All sectors"]);
-    expect(chips[1].title).toBe("every axis at its reference setting; residential dung on the ledger basis (L)");
-    expect(chips[2].title).toContain("Fifth Assessment Report");
-    expect(screen.getByTestId("scope-chips").textContent).not.toMatch(/\bL\b/);
+describe("FilterPanel", () => {
+  it("the selects read '2023–24', 'Reference estimate', 'All sectors' with the notes as titles; the warming potentials are spelled out", () => {
+    mount(<FilterPanel open onToggle={() => {}} />);
+    const period = screen.getByTestId("period-select") as HTMLSelectElement;
+    expect(period.options[period.selectedIndex].textContent).toBe("2023–24");
+    expect(screen.getByTestId("filter-period")).toHaveTextContent("July 2023 – June 2024");
+    const config = screen.getByTestId("config-select") as HTMLSelectElement;
+    expect(config.options[config.selectedIndex].textContent).toBe("Reference estimate");
+    expect(config.getAttribute("title")).toBe("every axis at its reference setting; residential dung on the ledger basis (L)");
+    const sector = screen.getByTestId("sector-select") as HTMLSelectElement;
+    expect(sector.options[sector.selectedIndex].textContent).toBe("All sectors");
+    const buttons = Array.from(screen.getByTestId("gwp-select").querySelectorAll("button"));
+    expect(buttons.map((b) => b.textContent)).toEqual(["IPCC 2013 (AR5)", "IPCC 2021 (AR6)"]);
+    expect(buttons[0].getAttribute("title")).toContain("Fifth Assessment Report");
+    expect(screen.getByTestId("filter-panel").textContent).not.toContain("FY");
+    expect(screen.getByTestId("filter-panel").textContent).not.toContain("REF_2023_24");
   });
-  it("the survey configuration and AR6", () => {
-    mount(<ScopeChips />, { ...base, config: "S_2023_24", gwp: "AR6" });
-    const chips = screen.getAllByTestId("scope-chip").map((c) => c.textContent);
-    expect(chips).toEqual(["2023–24", "Survey-based estimate", "IPCC 2021 (AR6)", "All sectors"]);
+  it("the survey configuration and AR6 are named by their labels", () => {
+    mount(<FilterPanel open onToggle={() => {}} />, { ...base, config: "S_2023_24", gwp: "AR6" });
+    const config = screen.getByTestId("config-select") as HTMLSelectElement;
+    expect(config.options[config.selectedIndex].textContent).toBe("Survey-based estimate");
+    expect(screen.getByTestId("gwp-select").querySelector('[aria-selected="true"]')).toHaveTextContent("IPCC 2021 (AR6)");
+  });
+  it("collapsed: a rail of one icon per section", () => {
+    mount(<FilterPanel open={false} onToggle={() => {}} />);
+    expect(screen.getByTestId("filter-rail")).toBeTruthy();
+    for (const id of ["geography", "period", "sector", "gas", "estimate", "view"]) expect(screen.getByTestId(`rail-${id}`)).toBeTruthy();
+    expect(screen.queryByTestId("period-select")).toBeNull();
   });
 });
 

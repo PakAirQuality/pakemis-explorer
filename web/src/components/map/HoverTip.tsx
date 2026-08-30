@@ -4,7 +4,7 @@
  * and the cell's `interpretation` when bounded); for a member of the release's residual ADM1
  * unit, that unit's one cell with the sentence saying it is shared (the member names come from
  * lib/geography.ts, not from here); for polygons without a cell, why (census units sharing
- * one shape are listed).
+ * one shape are listed). `extra` is the current layer's line (LayerLegend's vocabulary).
  */
 import { shown } from "@/lib/envelope";
 import type { Cell } from "@/lib/envelope";
@@ -15,7 +15,7 @@ import type { Dims } from "@/components/ExplorerContext";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import type { Hover } from "./useMapInteractions";
 
-export function HoverTip({ hover, cell, labels, dims, refused, container, residual = null }: { hover: Hover; cell: Cell | null; labels: Labels; dims: Dims; refused: boolean; container: { width: number; height: number }; residual?: Residual | null }) {
+export function HoverTip({ hover, cell, labels, dims, refused, container, residual = null, extra = null }: { hover: Hover; cell: Cell | null; labels: Labels; dims: Dims; refused: boolean; container: { width: number; height: number }; residual?: Residual | null; /** The current layer's reading of the feature (its class, status or retained mass), under the value. */ extra?: string | null }) {
   if (!hover) return null;
   const shared = hover.level === "adm1" && !!residual && residual.members.includes(hover.id) && !!cell;
   const left = Math.min(hover.x + 14, Math.max(0, container.width - 300));
@@ -49,6 +49,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
           {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           {isBounded(cell) && <div className="w-full text-muted">{String((cell as Record<string, unknown>).interpretation ?? "")}</div>}
           {shared && <div className="w-full text-muted" data-testid="hover-shared">one cell for the whole unit; coverage differs by sector for these territories — see About</div>}
+          {extra && <div className="w-full text-fg/80" data-testid="hover-layer">{extra}</div>}
         </div>
       ) : (
         <div className="mt-1 text-muted">

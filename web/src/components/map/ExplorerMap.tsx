@@ -4,15 +4,19 @@
  * globe and atmosphere when the token exists), the layer stack inserted below the basemap's
  * labels (layers.ts), the PMTiles served as TileJSON by the API's /tiles routes, the envelope painted
  * through feature-state (paint.ts), hover and click (useMapInteractions), the floating chrome
- * (ScopeChips, the Ask pill, raster / 3D / frame buttons, TimeRail, Legend, context
- * pill) and the camera written to `cam`. The choropleth's request is mapBody(state); a refused
- * request leaves outlines and puts the refusal in the legend.
+ * (the layer switch, raster / 3D / frame buttons, the layer legend, the context pill) and the
+ * camera written to `cam`. The choropleth's request is mapBody(state); a refused request leaves
+ * outlines and puts the refusal in the legend.
  *
- * `variant="briefing"` (the Overview's sticky map) keeps the legend and the frame button only,
- * flies with a small padding, and reads `override` merged over the URL state (a hovered sector,
- * the Provinces | Districts toggle) so the briefing can steer the map without writing the
- * URL; `onPick` replaces the click's default (writing `geo` / `cell`). The console (`/map`)
- * passes nothing and behaves as before.
+ * The Map page (`variant="console"`) paints the URL's `layer` (layerModes.ts): the magnitude
+ * choropleth, the district cells' spatial_class / allocation_status (the envelope's own fields),
+ * the province rows' retained mass (the ADM1 envelope's unallocated block) or the known
+ * spatial exceptions (exceptions.ts), each with its legend (LayerLegend).
+ *
+ * `variant="briefing"` (the Overview's sticky map) keeps the magnitude legend and the frame
+ * button only, flies with a small padding, and reads `override` merged over the URL state (a
+ * hovered sector, the Provinces | Districts toggle) so the briefing can steer the map without
+ * writing the URL; `onPick` replaces the click's default (writing `geo` / `cell`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -20,31 +24,61 @@ import { Layers, Locate } from "lucide-react";
 import type { Map as MBMap } from "mapbox-gl";
 import type { ExplorerState, Level } from "@/lib/urlState";
 import { api } from "@/lib/api";
-import { mapBody, parseCell } from "@/lib/requests";
-import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, viewLabel } from "@/lib/labels";
+import { adm1Body, mapBody, parseCell } from "@/lib/requests";
+import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap } from "./basemap";
 import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setSelected, setView3d } from "./layers";
-import { anyWithoutCell, cellForFeature, clearPaint, indexCells, paintEnvelope } from "./paint";
+import { anyWithoutCell, cellForFeature, exceptionKindOf, exceptionKindsPresent, indexCells, indexUnallocated, paintLayer } from "./paint";
 import { rasterFile, rasterUrl, unionBbox, useBboxes, useTilesInfo } from "./tiles";
 import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
-import { AskPill } from "@/components/ask/AskEntry";
 import { View3dToggle } from "./View3dToggle";
 import { HoverTip } from "./HoverTip";
 import { Legend } from "./Legend";
-import { TimeRail } from "./TimeRail";
-import { ScopeChips } from "./ScopeChips";
+import { LayerLegend } from "./LayerLegend";
+import { LayerSwitch } from "./LayerSwitch";
+import { exceptionIndex, exceptionItems } from "./exceptions";
+import { categoryOf, EXCEPTION_KINDS, SPATIAL_CLASSES, statusWords } from "./layerModes";
+import type { Cell } from "@/lib/envelope";
 
 const LEVEL_WORD = { adm1: "Provinces", adm2: "Districts", grid: "Grid" } as const;
 
 export type ExplorerMapProps = { variant?: "console" | "briefing"; override?: Partial<ExplorerState>; onPick?: (level: Level, id: string) => void };
 
+/** The hover tip's line for the current layer: the feature's class, status, retained mass or exception kind, in words. */
+export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell: Cell | undefined, id: string, shared: boolean, ex: ReturnType<typeof exceptionIndex> | null, unalloc: ReturnType<typeof indexUnallocated>, residual: { name: string; members: string[] } | null, labelStream: (s: string) => string): string | null {
+  if (layer === "magnitude" || level === "grid") return null;
+  const f = (cell ?? {}) as Record<string, unknown>;
+  if (layer === "evidence") {
+    const c = categoryOf("evidence", cell);
+    const def = SPATIAL_CLASSES.find((s) => s.id === c);
+    const stream = typeof f.dominant_stream === "string" ? f.dominant_stream : "";
+    return def ? `Spatial evidence ${def.label}${stream ? ` · dominant stream ${labelStream(stream)}` : ""}` : cell ? "spatial class not served on this cell" : null;
+  }
+  if (layer === "method") {
+    if (!cell) return null;
+    const status = statusWords(String(f.allocation_status ?? "")) || "status not served";
+    const pc = statusWords(String(f.placement_class ?? ""));
+    const surface = String(f.allocation_surface ?? "");
+    return `Allocation ${status}${pc ? ` · placement ${pc}` : ""}${surface ? ` on ${surface}` : ""}`;
+  }
+  if (layer === "unallocated") {
+    const name = residual && residual.members.includes(id) ? residual.name : id;
+    const row = unalloc?.byProvince.get(name);
+    return row ? `${name}: ${row.short} retained at province level (unallocated)` : level === "adm1" ? "no unallocated row for this province" : "districts are greyed under this layer; provinces carry the retained mass";
+  }
+  const kind = exceptionKindOf(level, id, cell, shared, ex);
+  const k = EXCEPTION_KINDS.find((e) => e.id === kind);
+  return k ? `Exception: ${k.label}` : "no known exception here";
+}
+
 export function ExplorerMap({ variant = "console", override, onPick }: ExplorerMapProps = {}) {
   const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
   const state = useMemo(() => (override ? { ...urlState, ...override } : urlState), [urlState, override]);
   const full = variant === "console";
+  const layer = full ? state.layer : "magnitude";
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,11 +99,18 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
   const body = useMemo(() => mapBody(state), [state]);
   const mapQ = useQuery({ queryKey: ["map", body], queryFn: () => api.queryEmissions(body!), enabled: !!body, retry: false });
   const index = useMemo(() => (mapQ.data && state.level !== "grid" ? indexCells(mapQ.data, state.level) : null), [mapQ.data, state.level]);
+  // the unallocated layer reads the province envelope at either level (the map's own ADM1 request, so the key is shared)
+  const provinceBody = useMemo(() => adm1Body(state), [state]);
+  const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: full && layer === "unallocated", retry: false });
+  const unallocIdx = useMemo(() => (layer === "unallocated" ? indexUnallocated(provinceQ.data) : null), [layer, provinceQ.data]);
   // the release's residual ADM1 unit ("Other": one cell, several polygons), derived from the dims and the boundary file
   const residual = useMemo(() => residualUnit(dims, bboxes.data), [dims, bboxes.data]);
   const residualRef = useRef(residual);
   residualRef.current = residual;
-  const ids = useMemo(() => (state.level === "adm1" ? Object.keys(bboxes.data?.adm1 ?? {}) : state.level === "adm2" ? Object.keys(bboxes.data?.adm2 ?? {}) : []), [state.level, bboxes.data]);
+  const exIdx = useMemo(() => (full ? exceptionIndex(dims, residual?.name ?? null) : null), [full, dims, residual]);
+  const exItems = useMemo(() => (full && exIdx ? exceptionItems(release, exIdx, residual) : []), [full, exIdx, release, residual]);
+  const adm1Ids = useMemo(() => Object.keys(bboxes.data?.adm1 ?? {}), [bboxes.data]);
+  const ids = useMemo(() => (state.level === "adm1" ? adm1Ids : state.level === "adm2" ? Object.keys(bboxes.data?.adm2 ?? {}) : []), [state.level, adm1Ids, bboxes.data]);
 
   // --- the map itself
   useEffect(() => {
@@ -122,7 +163,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
         beforeRef.current = firstSymbolLayerId(m);
         addSources(m);
         addLayers(m, beforeRef.current);
-        applyLevel(m, stateRef.current.level, stateRef.current.raster);
+        applyLevel(m, stateRef.current.level, stateRef.current.raster, full ? stateRef.current.layer : "magnitude");
         setMap(m);
       });
       m.on("moveend", () => {
@@ -153,22 +194,21 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
     if (u) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: isMobile ? 16 : 40, duration: 0 });
   }, [map, bboxes.data, isMobile]);
 
-  // --- level and raster visibility
+  // --- level, layer and raster visibility
   useEffect(() => {
-    if (map) applyLevel(map, state.level, state.raster);
-  }, [map, state.level, state.raster]);
+    if (map) applyLevel(map, state.level, state.raster, layer);
+  }, [map, state.level, state.raster, layer]);
 
   // --- the 3D view: terrain, atmosphere and the tilted camera
   useEffect(() => {
     if (map) setView3d(map, state.view3d);
   }, [map, state.view3d]);
 
-  // --- paint the envelope (or clear on refusal)
+  // --- paint the layer (or clear on refusal)
   useEffect(() => {
     if (!map || state.level === "grid") return;
-    if (index) paintEnvelope(map, state.level, index, ids, residual);
-    else if (mapQ.error) clearPaint(map, state.level);
-  }, [map, index, state.level, mapQ.error, ids, residual]);
+    if (index || mapQ.error || layer === "unallocated") paintLayer(map, state.level, { layer, index, ids, residual, exceptions: exIdx, unallocated: unallocIdx, adm1Ids });
+  }, [map, index, state.level, layer, mapQ.error, ids, residual, exIdx, unallocIdx, adm1Ids]);
 
   // --- selection outline and flyTo
   useEffect(() => {
@@ -183,7 +223,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
     lastFlown.current = key;
     // a province name flies to its box at either level (the briefing's Districts toggle keeps the province)
     const box = residual && state.geo === residual.name ? unionOf(bboxes.data.adm1, residual.members) : state.level === "grid" ? null : (bboxes.data.adm1[state.geo] ?? bboxes.data.adm2[state.geo] ?? null);
-    const padding = !full ? { top: 48, bottom: 48, left: 40, right: 40 } : isMobile ? { top: 60, bottom: 260, left: 16, right: 16 } : { top: 90, bottom: 120, left: 60, right: 420 };
+    const padding = !full ? { top: 48, bottom: 48, left: 40, right: 40 } : isMobile ? { top: 60, bottom: 260, left: 16, right: 16 } : { top: 90, bottom: 80, left: 60, right: 60 };
     if (box) map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding, maxZoom: 9, duration: 700 });
   }, [map, bboxes.data, state.geo, state.level, isMobile, residual, full]);
 
@@ -203,13 +243,16 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
     if (onPickRef.current) onPickRef.current(lvl, lvl === "grid" ? `${props.lat},${props.lon}` : geo);
     else if (lvl === "grid") setStateRef.current({ cell: `${props.lat},${props.lon}` });
     else setStateRef.current({ geo });
-    if (stateRef.current.ask) emitMapPick({ level: lvl, id: geo, props }); // an @mention for the Ask composer
+    emitMapPick({ level: lvl, id: geo, props }); // an @mention for an open Ask composer
   }, []);
   const hover = useMapInteractions(map, state.level, onSelect);
-  const hoverCell = hover && index ? cellForFeature(index, hover.level, hover.id, residual).cell ?? null : null;
+  const hovered = hover && index ? cellForFeature(index, hover.level, hover.id, residual) : null;
+  const hoverCell = hovered?.cell ?? null;
+  const hoverExtra = hover && full ? layerHoverLine(layer, hover.level, hoverCell ?? undefined, hover.id, !!hovered?.shared, exIdx, unallocIdx, residual, (s) => streamLabel(labels, s)) : null;
   const sharedCell = index && residual && state.level === "adm1" ? index.byId.get(residual.name) : undefined;
   const legendShared = sharedCell && residual ? { ...residual, cell: sharedCell } : null;
   const anyNoCell = !!index && anyWithoutCell(index, state.level, ids, residual);
+  const exPresent = useMemo(() => (layer === "exceptions" ? exceptionKindsPresent(state.level, index, ids, residual, exIdx) : new Set<string>()), [layer, state.level, index, ids, residual, exIdx]);
 
   const scope = [LEVEL_WORD[state.level], scopeWords(labels, state, defaults.gwp_basis, sectorWords(labels, state.sector), state.gas || state.level === "grid" ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null)].join(" · ");
   // the context pill: the year basis, the configuration, the GWP basis and the LULUCF status as words; no version (the release identity lives on /data)
@@ -220,21 +263,20 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
   };
 
   return (
-    <div className="absolute inset-0" data-testid="explorer-map">
+    <div className="absolute inset-0" data-testid="explorer-map" data-layer={layer}>
       {/* mapbox-gl.css (imported after Tailwind) sets .mapboxgl-map { position: relative },
           which beats `absolute`; the explicit height keeps the container full-size either way. */}
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
       {bm.notice && <div className="absolute inset-x-0 top-0 z-20 bg-refusal px-3 py-1 text-center text-micro normal-case tracking-normal text-warn" data-testid="basemap-notice">{bm.notice}</div>}
       {mapError && <div className="absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded bg-refusal px-3 py-1 text-xs text-warn" data-testid="map-error">Map: {mapError}</div>}
-      <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} residual={residual} />
+      <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} residual={residual} extra={hoverExtra} />
 
       {full && (
-        <div className={`absolute left-3 z-20 ${bm.notice ? "top-8" : "top-3"}`}>
-          <ScopeChips />
+        <div className={`absolute left-3 z-20 max-w-[calc(100%-140px)] ${bm.notice ? "top-8" : "top-3"}`}>
+          <LayerSwitch compact={isMobile} />
         </div>
       )}
       <div className={`absolute right-3 z-20 flex flex-col items-end gap-1.5 ${bm.notice ? "top-8" : "top-3"}`}>
-        {full && <AskPill />}
         {full && (
           <button title={state.raster ? "Hide the grid raster (visual only)" : "Show the grid raster (visual only)"} aria-pressed={state.raster} onClick={() => setState({ raster: !state.raster })} className={`glass flex h-9 w-9 items-center justify-center rounded-xl ${state.raster ? "text-accent" : "text-muted"}`} data-testid="raster-toggle">
             <Layers size={16} />
@@ -245,20 +287,17 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
           <Locate size={16} />
         </button>
       </div>
-      <div className={`absolute left-3 z-20 ${full && isMobile ? "bottom-[92px]" : full ? "bottom-8" : "bottom-3"}`}>
+      <div className={`absolute left-3 z-20 ${full && isMobile ? "bottom-3" : "bottom-8"}`}>
         {isMobile && (
           <button onClick={() => setLegendOpen((o) => !o)} className="glass pill mb-1 px-2.5 py-1 text-micro normal-case tracking-normal">
             {legendOpen ? "hide legend" : "legend"}
           </button>
         )}
-        {legendOpen && <Legend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} rasterOn={state.raster} hasCells={anyNoCell} shared={legendShared} />}
-        {full && !isMobile && <div className="mt-1.5 text-micro normal-case tracking-normal text-muted/90">PakEmis Explorer</div>}
+        {legendOpen && full && (
+          <LayerLegend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} hasCells={anyNoCell} shared={legendShared} unallocated={{ env: provinceQ.data, index: unallocIdx, error: provinceQ.error, isLoading: provinceQ.isLoading }} exceptions={{ present: exPresent, items: exItems }} />
+        )}
+        {legendOpen && !full && <Legend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} rasterOn={state.raster} hasCells={anyNoCell} shared={legendShared} />}
       </div>
-      {full && (
-        <div className={`absolute z-20 flex justify-center ${isMobile ? "bottom-2 left-2 right-2" : "bottom-8 left-[296px] right-[300px]"}`}>
-          <TimeRail compact={isMobile} />
-        </div>
-      )}
       {full && !isMobile && (
         <div className="glass pill absolute bottom-8 right-3 z-20 max-w-[420px] truncate px-3 py-1 text-micro normal-case tracking-normal text-muted" data-testid="context-pill" title={pill.title}>
           {pill.words}

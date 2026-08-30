@@ -5,12 +5,12 @@
 import { describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
-import { applyPatch, rawFromState, resolveState, useExplorerState, type ExplorerState, type StateDefaults } from "./urlState";
+import { applyPatch, hrefForState, rawFromState, resolveState, useExplorerState, type ExplorerState, type StateDefaults } from "./urlState";
 import { adm1Body, adm2Body, detailBodies, gridCellBody, requestFromState, stateFromEnvelopeRequest, stateFromRequest } from "./requests";
 
 const D: StateDefaults = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, panel: null, ask: false, c: null, cam: null, raster: false, view3d: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", c: null, cam: null, raster: false, view3d: false };
 
 const CASES: ExplorerState[] = [
   base,
@@ -67,12 +67,24 @@ describe("request bodies", () => {
 describe("resolve / raw / patch", () => {
   it("defaults are absent from the URL and restored on read", () => {
     expect(resolveState({}, D)).toEqual({ ...base });
-    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, panel: null, ask: null, c: null, cam: null, raster: null, view3d: null });
+    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, tab: null, layer: null, c: null, cam: null, raster: null, view3d: null });
     const grid = resolveState({ level: "grid" }, D);
     expect(grid.gas).toBe("CO2");
     expect(grid.raster).toBe(true);
     expect(rawFromState(grid, D).gas).toBeNull();
     expect(rawFromState(grid, D).raster).toBeNull();
+  });
+  it("the Map page's `layer` and `tab` round-trip: absent at magnitude / summary, written otherwise, kept by hrefForState, and retired keys are ignored", () => {
+    expect(resolveState({}, D)).toMatchObject({ layer: "magnitude", tab: "summary" });
+    expect(resolveState({ layer: "evidence", tab: "sources" }, D)).toMatchObject({ layer: "evidence", tab: "sources" });
+    const s = { ...base, level: "adm2" as const, layer: "exceptions" as const, tab: "evidence" as const, geo: "60131773B12131197496886" };
+    expect(rawFromState(s, D)).toMatchObject({ layer: "exceptions", tab: "evidence" });
+    expect(hrefForState(s, D)).toBe("/map?level=adm2&geo=60131773B12131197496886&tab=evidence&layer=exceptions");
+    expect(resolveState(rawFromState(s, D), D)).toEqual(s);
+    // a level change keeps the layer and the tab (the selection is dropped, as before)
+    expect(applyPatch(s, { level: "adm1" })).toMatchObject({ level: "adm1", geo: null, layer: "exceptions", tab: "evidence" });
+    expect(Object.keys(rawFromState(base, D))).not.toContain("panel");
+    expect(Object.keys(rawFromState(base, D))).not.toContain("ask");
   });
   it("view3d is a flag: absent when off, `1` when on, and survives a level change", () => {
     expect(resolveState({ view3d: true }, D).view3d).toBe(true);

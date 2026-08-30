@@ -1,8 +1,11 @@
 /**
  * The layer stack (bottom -> top): basemap fills · grid-raster (image) · grid-fill (hit-test
  * only) + grid-line + grid-selected · adm2-fill + adm2-hatch · adm1-fill · adm2-line · adm1-line
- * · adm1-shared (the dotted outline of the residual unit's members) · selected outlines · the
- * basemap's symbol (label) layers. Everything of ours is inserted
+ * · adm1-shared (the dotted outline of the residual unit's members) · adm2-outline + adm1-outline
+ * (the dashed outlines of the exception and method layers, coloured by feature-state `outline`)
+ * · selected outlines · the basemap's symbol (label) layers. The hatch reads feature-state
+ * `hatch` (a bounded cell on the magnitude layer; a diffuse placement or a bounded module on
+ * the other layers). Everything of ours is inserted
  * before the style's first symbol layer so place names stay readable. adm1 keyed by `name`,
  * adm2 by `shape_id`, grid by `cell_id` (promoteId). Visibility follows the URL `level`. Tiles
  * carry geometry and ids only; they reach Mapbox GL as TileJSON from the API
@@ -12,7 +15,7 @@ import type { Map as MBMap, LayerSpecification, FilterSpecification } from "mapb
 import { NO_CELL } from "@/lib/palette";
 import { mapTheme } from "@/lib/theme";
 import { absoluteApiBase } from "@/lib/api";
-import type { Level } from "@/lib/urlState";
+import type { Level, MapLayer } from "@/lib/urlState";
 
 export const KEYS: Record<Level, string> = { adm1: "name", adm2: "shape_id", grid: "cell_id" };
 export const FILL_LAYER: Record<Level, string> = { adm1: "adm1-fill", adm2: "adm2-fill", grid: "grid-fill" };
@@ -65,12 +68,15 @@ export function layerSpecs(): LayerSpecification[] {
     { id: "grid-hover", type: "line", source: "grid", "source-layer": "grid", minzoom: 6, paint: { "line-color": t.hover, "line-width": hoverW(0, 1.5) } },
     { id: "grid-selected", type: "line", source: "grid", "source-layer": "grid", minzoom: 5, filter: ["==", ["get", "cell_id"], ""], paint: { "line-color": t.selected, "line-width": 2.5 } },
     { id: "adm2-fill", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.95, 0.82] } },
-    { id: "adm2-hatch", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-pattern": HATCH_IMAGE, "fill-opacity": ["case", ["boolean", ["feature-state", "bounded"], false], 1, 0] } },
+    { id: "adm2-hatch", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-pattern": HATCH_IMAGE, "fill-opacity": ["case", ["boolean", ["feature-state", "hatch"], false], 1, 0] } },
     { id: "adm1-fill", type: "fill", source: "adm1", "source-layer": "adm1", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.95, 0.82] } },
     { id: "adm2-line", type: "line", source: "adm2", "source-layer": "adm2", paint: { "line-color": t.halo, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.3, 8, 0.9] } },
     { id: "adm1-line", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": t.outline, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 8, 1.6], "line-opacity": 0.7 } },
     // the dotted outline of the polygons sharing the residual unit's one cell (feature-state `shared`, paint.ts)
     { id: "adm1-shared", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": t.outline, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 2.2], "line-dasharray": [0.6, 1.6], "line-opacity": ["case", ["boolean", ["feature-state", "shared"], false], 0.95, 0] } },
+    // the dashed outlines of the exception / method layers: colour from feature-state `outline` (a css colour string), transparent otherwise
+    { id: "adm2-outline", type: "line", source: "adm2", "source-layer": "adm2", paint: { "line-color": ["to-color", ["coalesce", ["feature-state", "outline"], "rgba(0,0,0,0)"]], "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 2.4], "line-dasharray": [1.2, 1.2] } },
+    { id: "adm1-outline", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": ["to-color", ["coalesce", ["feature-state", "outline"], "rgba(0,0,0,0)"]], "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.6, 8, 3], "line-dasharray": [1.2, 1.2] } },
     { id: "adm2-selected", type: "line", source: "adm2", "source-layer": "adm2", filter: ["==", ["get", "shape_id"], ""], paint: { "line-color": t.selected, "line-width": 2.5 } },
     { id: "adm1-selected", type: "line", source: "adm1", "source-layer": "adm1", filter: ["==", ["get", "name"], ""], paint: { "line-color": t.selected, "line-width": 2.5 } },
   ];
@@ -82,14 +88,21 @@ export function addLayers(map: MBMap, before?: string) {
   for (const spec of layerSpecs()) if (!map.getLayer(spec.id)) map.addLayer(spec, before);
 }
 
-/** Which layers show at each level. Lines of the coarser levels stay as context. */
-export function applyLevel(map: MBMap, level: Level, raster: boolean) {
+/**
+ * Which layers show at each level. Lines of the coarser levels stay as context. The
+ * unallocated layer shows the province fill over greyed districts at either level; the
+ * outline layers show on the exceptions and method layers only.
+ */
+export function applyLevel(map: MBMap, level: Level, raster: boolean, layer: MapLayer = "magnitude") {
   const show = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
-  show("adm1-fill", level === "adm1");
+  const provinceFill = level === "adm1" || (layer === "unallocated" && level === "adm2");
+  show("adm1-fill", provinceFill);
   show("adm1-selected", level === "adm1");
   show("adm1-shared", level === "adm1");
+  show("adm1-outline", level === "adm1" && layer === "exceptions");
   show("adm2-fill", level === "adm2");
-  show("adm2-hatch", level === "adm2");
+  show("adm2-hatch", level === "adm2" && layer !== "unallocated");
+  show("adm2-outline", level === "adm2" && (layer === "exceptions" || layer === "method"));
   show("adm2-selected", level === "adm2");
   show("adm2-line", level !== "adm1");
   show("adm1-line", true);
