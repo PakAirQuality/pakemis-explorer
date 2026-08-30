@@ -57,33 +57,21 @@ function mount(state: Partial<ExplorerState> = {}) {
 }
 
 describe("the year slider", () => {
-  it("one tick per published year, the current one found even when the state names another", () => {
+  it("one step per published year, the current one found even when the state names another, and the year named once", () => {
     expect(sliderTicks(["a", "b", "c"], "b")).toEqual({ ids: ["a", "b", "c"], index: 1 });
     expect(sliderTicks(["a", "b", "c"], "zz").index).toBe(2);
     mount();
-    expect(screen.getAllByTestId("year-tick")).toHaveLength(RELEASE.labels.periods ? Object.keys(RELEASE.labels.periods).length : 0);
+    const range = screen.getByTestId("year-range");
+    expect(range).toHaveAttribute("max", String(Object.keys(RELEASE.labels.periods).length - 1));
     expect(screen.getByTestId("year-value")).toHaveTextContent("2023–24");
-    expect(screen.getByTestId("year-first")).toHaveTextContent("2020–21");
-    expect(screen.getByTestId("year-last")).toHaveTextContent("2023–24");
+    // the year is said once: the tick row and the end labels went on 2026-08-31
+    expect(screen.queryAllByTestId("year-tick")).toHaveLength(0);
+    expect(screen.queryByTestId("year-first")).toBeNull();
+    expect(screen.queryByTestId("year-last")).toBeNull();
   });
 
-  it("the reference year's tick is filled and every other one hollow, and a hollow tick's tooltip says which year the map shows", () => {
+  it("the track selects a year", () => {
     mount();
-    const ticks = screen.getAllByTestId("year-tick");
-    const filled = ticks.filter((t) => t.getAttribute("data-mapped") === "1");
-    const hollow = ticks.filter((t) => t.getAttribute("data-mapped") === "0");
-    expect(filled).toHaveLength(1);
-    expect(hollow.length).toBeGreaterThan(0);
-    expect(filled[0]).toHaveAttribute("aria-label", "2023–24");
-    expect(filled[0].className).toContain("bg-amber");
-    for (const t of hollow) {
-      expect(t.className).toContain("bg-transparent");
-      expect(t.getAttribute("title")).toContain(FILTERS.mappedYear("2023–24"));
-      expect(t.getAttribute("title")).not.toContain("FY");
-    }
-    // a tick selects its year, as the track does
-    fireEvent.click(hollow[0]);
-    expect(setState).toHaveBeenCalledWith({ period: "FY2020-21" });
     fireEvent.change(screen.getByTestId("year-range"), { target: { value: "0" } });
     expect(setState).toHaveBeenCalledWith({ period: "FY2020-21" });
   });

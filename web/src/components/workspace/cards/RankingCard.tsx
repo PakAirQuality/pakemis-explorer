@@ -15,25 +15,21 @@
  * refusal by name instead of an empty chart.
  */
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
 import { districtName, geographyName, viewLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { rampByRank } from "@/lib/palette";
-import { hrefForState } from "@/lib/urlState";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
-import { LINKS } from "@/components/overview/copy";
 import type { Scope } from "../cards";
 import { DeckCard, Pending, Figure } from "./DeckCard";
 import { rankedCells } from "./data";
 
-const LINK = "inline-flex items-center text-xs font-semibold text-accent hover:underline";
 type Derived = { unallocated_total_short?: string; placed_short?: string };
 
 export function RankingCard({ id, scope, deck, title, open, onToggle }: { id: string; scope: Scope; deck: Deck; title: string; open: boolean; onToggle: (open: boolean) => void }) {
-  const { state, setState, labels, dims, defaults } = useExplorer();
+  const { state, setState, labels, dims } = useExplorer();
   const districts = id === "peers" && scope.kind === "district";
   const q = districts ? deck.peers : deck.provinces;
   const env = q.data;
@@ -52,12 +48,7 @@ export function RankingCard({ id, scope, deck, title, open, onToggle }: { id: st
   return (
     <DeckCard id={id} title={title} env={env} open={open} onToggle={onToggle} sentence={sentence} caption={`${districts ? "Allocated at district level" : "Allocated at province level"} · ${view.split(":")[0]}`}>
       {env ? (
-        <>
-          <BarsWithAxis items={items} ticks={env.axis?.ticks_short} onSelect={pick} testId={`${id}-bars`} />
-          <div className="mt-1 flex justify-end">
-            <Link href={hrefForState({ ...state, level: districts ? "adm2" : "adm1" }, defaults, "/")} className={LINK} data-testid={`${id}-link`}>{LINKS.openMap}</Link>
-          </div>
-        </>
+        <BarsWithAxis items={items} ticks={env.axis?.ticks_short} onSelect={pick} testId={`${id}-bars`} />
       ) : (
         <Pending q={q} what={districts ? "the districts" : "the provinces"} />
       )}

@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe("no FY anywhere", () => {
-  it("the year slider, its ticks and the Current view bar print the release's labels, never a period id", async () => {
+  it("the year slider and the Current view bar print the release's labels, never a period id", async () => {
     render(
       <Providers>
         <ExplorerContext.Provider value={ctx()}>
@@ -54,7 +54,6 @@ describe("no FY anywhere", () => {
     const text = document.body.textContent ?? "";
     expect(text).toContain("2023–24");
     expect(text).not.toContain("FY");
-    expect(screen.getAllByTestId("year-tick").some((t) => t.getAttribute("title") === "July 2023 – June 2024")).toBe(true);
     expect(screen.getByTestId("year-value")).toHaveTextContent("2023–24");
     expect(screen.getByTestId("year-value")).toHaveAttribute("title", "July 2023 – June 2024");
     expect(screen.getByTestId("year-range")).toHaveAttribute("title", "a fiscal year runs from July to June");

@@ -1,18 +1,18 @@
 "use client";
 /**
- * The filter panel's year slider: one tick per fiscal period the release publishes
- * (`dims.fiscalPeriods`, in order), a saffron thumb, the two ends labelled with the release's
- * own short labels and the chosen year named above the track. Moving it writes `period`
+ * The filter panel's year slider: one step per fiscal period the release publishes
+ * (`dims.fiscalPeriods`, in order) with a saffron thumb, and the year it stands on named once
+ * beside the label. (The tick row and the two end labels it used to carry underneath printed
+ * the same dates a second time; they went on 2026-08-31.) Moving it writes `period`
  * (`applyPatch` drops the month with it).
  *
- * The release's spatial products exist for the REFERENCE year only, so the ticks are drawn in
- * two kinds: the reference year filled, every other year HOLLOW, each hollow tick's tooltip
- * saying which year the map shows. Standing on a hollow tick the deck keeps answering
- * nationally, the map greys to its outlines (components/map/ExplorerMap.tsx calls `clearPaint`)
- * and the line under the slider carries THE API'S OWN refusal for that year — the same refusal
- * the legend capsule shows, read from the map's own query key so it is never asked twice, and
- * never a reason invented here. No period id is ever printed and nothing is computed: every
- * label is `periodShort` / `periodLabel` / `periodBasisNote`.
+ * The release's spatial products exist for the REFERENCE year only. Standing anywhere else the
+ * deck keeps answering nationally, the map greys to its outlines
+ * (components/map/ExplorerMap.tsx calls `clearPaint`) and the line under the slider carries
+ * THE API'S OWN refusal for that year — the same refusal the legend capsule shows, read from
+ * the map's own query key so it is never asked twice, and never a reason invented here. No
+ * period id is ever printed and nothing is computed: every label is `periodShort` /
+ * `periodLabel` / `periodBasisNote`.
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -40,7 +40,6 @@ export function YearSlider() {
   if (!ids.length) return null;
   const last = ids.length - 1;
   const current = ids[index];
-  const referenceId = ids.find((id) => mapsPeriod(labels, id)) ?? ids[last];
   const mapped = mapsPeriod(labels, current);
   const refusal = refusalOf(mapQ.error);
   return (
@@ -64,31 +63,6 @@ export function YearSlider() {
         title={periodBasisNote(labels, current)}
         data-testid="year-range"
       />
-      {/* one tick per year: filled for the year the release maps, hollow for the years it answers nationally */}
-      <div className="mt-1 flex items-center justify-between px-0.5" role="group" aria-label={FILTERS.year} data-testid="year-ticks">
-        {ids.map((id) => {
-          const isMapped = mapsPeriod(labels, id);
-          const on = id === current;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setState({ period: id })}
-              aria-label={periodShort(labels, id)}
-              aria-pressed={on}
-              title={isMapped ? periodLabel(labels, id) : `${periodLabel(labels, id)} · ${FILTERS.mappedYear(periodShort(labels, referenceId))}`}
-              className={`h-2.5 w-2.5 rounded-full border transition-colors ${isMapped ? "border-amber bg-amber" : "border-line-strong bg-transparent"} ${on ? "ring-2 ring-amber/50" : ""}`}
-              data-testid="year-tick"
-              data-mapped={isMapped ? "1" : "0"}
-              data-current={on ? "1" : "0"}
-            />
-          );
-        })}
-      </div>
-      <div className="mt-0.5 flex justify-between text-micro normal-case tracking-normal text-muted">
-        <span data-testid="year-first">{periodShort(labels, ids[0])}</span>
-        <span data-testid="year-last">{periodShort(labels, ids[last])}</span>
-      </div>
       {!mapped && (
         <p className="mt-1.5 text-xs text-muted" data-testid="year-national-only">
           <span className="font-semibold text-warn">{FILTERS.nationalOnly}</span>

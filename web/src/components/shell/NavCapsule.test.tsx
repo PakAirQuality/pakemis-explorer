@@ -6,10 +6,10 @@ import "@testing-library/jest-dom/vitest";
  * the drawer on the bus or calls a page's own handler. On the workspace it floats at the deck's
  * own left inset; everywhere else the same pill sits in a header row.
  */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { resetAskBus, subscribeAsk } from "@/lib/askBus";
-import { ASK_LABEL, CAPSULE_CLASS, isActive, NAV_LINKS, NavCapsule, NavHeader } from "./NavCapsule";
+import { CAPSULE_CLASS, isActive, NAV_LINKS, NavCapsule, NavHeader } from "./NavCapsule";
 
 const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));

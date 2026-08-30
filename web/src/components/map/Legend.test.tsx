@@ -39,8 +39,6 @@ describe("FilterPanel", () => {
   it("the controls that drive both the deck and the map: the level, the sector, the gas and the year, in the release's own words", () => {
     mount(<FilterPanel open onToggle={() => {}} place="Pakistan" />);
     expect(screen.getByTestId("year-value")).toHaveTextContent("2023–24");
-    expect(screen.getByTestId("year-first")).toHaveTextContent("2020–21");
-    expect(screen.getByTestId("year-last")).toHaveTextContent("2023–24");
     const sector = screen.getByTestId("sector-select") as HTMLSelectElement;
     expect(sector.options[sector.selectedIndex].textContent).toBe("All sectors");
     const gas = screen.getByTestId("gas-select") as HTMLSelectElement;

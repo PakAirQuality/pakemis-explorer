@@ -244,8 +244,6 @@ describe("the workspace's state", () => {
     fireEvent.change(screen.getByTestId("year-range"), { target: { value: "0" } });
     expect(await urlWith(updates, "period=FY2020-21")).toContain("period=FY2020-21");
     // the year slider's ends are the release's own short labels, and the value is one of them
-    expect(screen.getByTestId("year-first")).toHaveTextContent("2020–21");
-    expect(screen.getByTestId("year-last")).toHaveTextContent("2023–24");
     await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21"));
     // the active view line reads the same scope back in words
     expect(screen.getByTestId("active-view")).toHaveTextContent("Pakistan · Power · CH₄ · 2020–21");

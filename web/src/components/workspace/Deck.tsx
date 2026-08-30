@@ -22,15 +22,12 @@
  * Under 1024 px it is a bottom sheet over the map with three snap heights.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { ChevronsLeft, ChevronsRight, GripHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { useDeck } from "@/lib/queries";
 import { markStage } from "@/components/shell/bootstrap";
-import { api } from "@/lib/api";
 import { districtName, geographyName } from "@/lib/labels";
-import { releaseCitation, releaseFacts } from "@/lib/release";
-import { BrandLogo } from "@/components/shell/BrandLogo";
+import { releaseFacts } from "@/lib/release";
 import { HeaderBlock } from "@/components/overview/HeaderBlock";
 import { DeckControls } from "@/components/overview/DeckControls";
 import { HEADER, licenceLine } from "@/components/overview/copy";
