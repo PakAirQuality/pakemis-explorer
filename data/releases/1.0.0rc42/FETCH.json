@@ -3,7 +3,7 @@
   "release_manifest.json": "630d11228d768eef5e3889a916bdf5c7610f330f4327689ba38ef845e203c9ce",
   "semantic_release.json": "0d612d2e19ec055cf7768f86cb5dffd2b803a0856a22a9e36c0a9af03ef28d4d"
  },
- "fetched_at": "2026-08-29T14:31:06+00:00",
+ "fetched_at": "2026-08-30T01:19:51+00:00",
  "files": {
   "data/adm2_canonical.csv": {
    "bytes": 28154,
@@ -24,6 +24,132 @@
   "data/method_registry.csv": {
    "bytes": 14190,
    "sha256": "a035c13ae61b8cf40040cfc6626bf88c2ad1fd6274fbc6a6ba457c4185dc6864"
+  },
+  "data/registries/allowed_grid_fallbacks.csv": {
+   "bytes": 2110,
+   "identity": "manifest_sources",
+   "sha256": "b05ff81a1ea60a289dfcd3a2d6fab0f25964dd0faded3b6dcbde2743b511e6dd",
+   "source_path": "data/allowed_grid_fallbacks.csv"
+  },
+  "data/registries/benchmarks.csv": {
+   "bytes": 20215,
+   "identity": "manifest_sources",
+   "sha256": "95c21df55c0998566286c16eeaa7b24a7388606dec3c03b508e6e6f64bd849a0",
+   "source_path": "data/benchmarks.csv"
+  },
+  "data/registries/data_gaps.csv": {
+   "bytes": 94566,
+   "identity": "manifest_sources",
+   "sha256": "4129e5920e10df5b778c7cdb7ea774e5d1525e676f3ad65a4c8ae0827fbe0968",
+   "source_path": "data/data_gaps.csv"
+  },
+  "data/registries/emission_factors.csv": {
+   "bytes": 92647,
+   "identity": "manifest_sources",
+   "sha256": "d5958b53b66a27489cd24f701d7d18ce111c0876095e15a56c949d455fcdcb79",
+   "source_path": "data/emission_factors.csv"
+  },
+  "data/registries/geometry_sets.csv": {
+   "bytes": 5952,
+   "identity": "manifest_sources",
+   "sha256": "0acc2fa1d394d5f7c7dbdf89d2dcf25d3e182e0692a68907dba643ce9f706fa7",
+   "source_path": "data/geometry_sets.csv"
+  },
+  "data/registries/national_uncertainty_parameters.csv": {
+   "bytes": 143225,
+   "identity": "fetch",
+   "sha256": "6ee5d07c6736b86273076b511a0c3ce5ac763cc4a3cd885b0e0a67e1037fe509",
+   "source_path": "outputs/national_uncertainty_parameters.csv"
+  },
+  "data/registries/pakemis_grid_fallbacks.csv": {
+   "bytes": 48661,
+   "identity": "manifest_products",
+   "sha256": "00b862f4225f5f4001d2f3e9c0d9ab46701225617431988afbf3c13ce53ce3c8",
+   "source_path": "outputs/pakemis_grid_fallbacks.csv"
+  },
+  "data/registries/pakemis_source_register.csv": {
+   "bytes": 106169,
+   "identity": "manifest_products",
+   "sha256": "d2bba784bc31e0ef2e088504fbc8d9e9617a2c8cf9d8c12ca558fa2b53f6377e",
+   "source_path": "outputs/pakemis_source_register.csv"
+  },
+  "data/registries/pakemis_source_streams.csv": {
+   "bytes": 126161,
+   "identity": "manifest_products",
+   "sha256": "6a2cb4cc80d81dab9ddc612bdffb71d6b1d9596803ba19099d2c1964dae12531",
+   "source_path": "outputs/pakemis_source_streams.csv"
+  },
+  "data/registries/pakemis_temporal_profiles.csv": {
+   "bytes": 10636412,
+   "identity": "manifest_products",
+   "sha256": "c2c7835af0763eb2c23c9e63e1e5af060f6dedf31698a0a69cd546255eca8fd7",
+   "source_path": "outputs/pakemis_temporal_profiles.csv"
+  },
+  "data/registries/pakemis_validation_catalog.csv": {
+   "bytes": 46165,
+   "identity": "manifest_products",
+   "sha256": "6c6584e5edd36a2e692342cb82cb13e38bc1b142531377fcc70613e4c8c04cde",
+   "source_path": "outputs/pakemis_validation_catalog.csv"
+  },
+  "data/registries/pakemis_validation_scorecard.csv": {
+   "bytes": 4642,
+   "identity": "manifest_products",
+   "sha256": "5a203e889b7fb3a8cce0553093163d8d64cbdd772bc2c34555e1f45f5aa31666",
+   "source_path": "outputs/pakemis_validation_scorecard.csv"
+  },
+  "data/registries/pakemis_validation_sector_scorecard.csv": {
+   "bytes": 6878,
+   "identity": "manifest_products",
+   "sha256": "661a03363d8ac9355b59aa936fce9890b1c095b966f45fb1a2e678ad68ad4ea9",
+   "source_path": "outputs/pakemis_validation_sector_scorecard.csv"
+  },
+  "data/registries/parameters.csv": {
+   "bytes": 6962,
+   "identity": "manifest_sources",
+   "sha256": "31e5f495842d6cf3dab6e550fcc718c2ac64fa0aec6eda5ebfb9cee097ae900a",
+   "source_path": "data/parameters.csv"
+  },
+  "data/registries/public_documents.csv": {
+   "bytes": 1110,
+   "identity": "manifest_sources",
+   "sha256": "22b16d4280c096ebb0017eef1affc1a6a3e692a8e247b040aa215d28619719dc",
+   "source_path": "data/public_documents.csv"
+  },
+  "data/registries/release_heights.csv": {
+   "bytes": 3188,
+   "identity": "manifest_sources",
+   "sha256": "7bb4cda58f3241911611c0d8273ae24f2a232d6370c29a8f22139b388d9d012d",
+   "source_path": "data/release_heights.csv"
+  },
+  "data/registries/source_documents.csv": {
+   "bytes": 40823,
+   "identity": "manifest_sources",
+   "sha256": "5a362a529e24147bb566c73cb085a6086286559b2c00b1412d8fb778ab28bf72",
+   "source_path": "data/source_documents.csv"
+  },
+  "data/registries/stream_geometry.csv": {
+   "bytes": 4486,
+   "identity": "manifest_sources",
+   "sha256": "37161c2cfde0567c7566ccd13cb3d16010c84620c13e6b7f90ce8847a55a6f94",
+   "source_path": "data/stream_geometry.csv"
+  },
+  "data/registries/stream_grid_proxy.csv": {
+   "bytes": 4056,
+   "identity": "manifest_sources",
+   "sha256": "20a7da3303e0a157eef72a54753bcc014406b9e7863a7ce55a88498196af64a5",
+   "source_path": "data/stream_grid_proxy.csv"
+  },
+  "data/registries/temporal_profiles.csv": {
+   "bytes": 9731,
+   "identity": "manifest_sources",
+   "sha256": "2123b9f538bff9c68c2bc271163f7818715e73dcf1296cd64d40de879d0726f2",
+   "source_path": "data/temporal_profiles.csv"
+  },
+  "data/registries/validation_catalog.csv": {
+   "bytes": 44199,
+   "identity": "manifest_sources",
+   "sha256": "0dbf5692437d1c2eec60af38961caa1e81be600b48b6b07aabec992c46302dd3",
+   "source_path": "data/validation_catalog.csv"
   },
   "outputs/pakemis_grid_0p05_monthly.nc": {
    "bytes": 6123121,
@@ -218,13 +344,36 @@
    "sha256": "0d612d2e19ec055cf7768f86cb5dffd2b803a0856a22a9e36c0a9af03ef28d4d"
   }
  },
+ "registries": [
+  "data/registries/allowed_grid_fallbacks.csv",
+  "data/registries/benchmarks.csv",
+  "data/registries/data_gaps.csv",
+  "data/registries/emission_factors.csv",
+  "data/registries/geometry_sets.csv",
+  "data/registries/national_uncertainty_parameters.csv",
+  "data/registries/pakemis_grid_fallbacks.csv",
+  "data/registries/pakemis_source_register.csv",
+  "data/registries/pakemis_source_streams.csv",
+  "data/registries/pakemis_temporal_profiles.csv",
+  "data/registries/pakemis_validation_catalog.csv",
+  "data/registries/pakemis_validation_scorecard.csv",
+  "data/registries/pakemis_validation_sector_scorecard.csv",
+  "data/registries/parameters.csv",
+  "data/registries/public_documents.csv",
+  "data/registries/release_heights.csv",
+  "data/registries/source_documents.csv",
+  "data/registries/stream_geometry.csv",
+  "data/registries/stream_grid_proxy.csv",
+  "data/registries/temporal_profiles.csv",
+  "data/registries/validation_catalog.csv"
+ ],
  "release_id": "PakEmis 1.0.0rc42",
  "schema": "pakemis_explorer.fetch/v1",
  "source": {
   "commit": "5e42b7cb125e9ba13a986c1df47129cdff6a9f8e",
   "kind": "git",
   "manifest_describes_commit": "bc1716d6df797d3232daf95122197eaee25fa8bd",
-  "ref": "HEAD",
+  "ref": "5e42b7cb",
   "repository": "/Users/rehanahmad/Desktop/emissions"
  },
  "version": "1.0.0rc42"

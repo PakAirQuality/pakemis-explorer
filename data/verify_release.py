@@ -8,7 +8,10 @@ Checks, in order, naming the first file that fails and exiting non-zero:
      in the release directory has the listed sha256 (the two NetCDF cubes, adm2_canonical.csv);
   4. every file FETCH.json recorded still has its recorded digest (the boundary files, the method
      registry, the manifest and the contract themselves);
-  5. the version's row in RELEASES.md pins the same two digests FETCH.json recorded.
+  5. every registry under data/registries/ whose FETCH.json entry claims a manifest identity
+     (manifest_sources | manifest_products) hashes to the digest release_manifest.json lists for its
+     source path; a claimed identity the manifest does not carry is a mismatch too;
+  6. the version's row in RELEASES.md pins the same two digests FETCH.json recorded.
 
 Usage: python3 data/verify_release.py [version]   (default: the version pinned in RELEASES.md)
 """
@@ -120,6 +123,30 @@ def verify(version, releases_root=RELEASES, releases_md=os.path.join(ROOT, "RELE
         if got != rec["sha256"]:
             raise Mismatch("%s: sha256 %s != FETCH.json %s" % (rel, got, rec["sha256"]))
     log("  %d fetched files match FETCH.json" % len(fetch["files"]))
+
+    listed_sources = {s.get("path"): s.get("sha256") for s in manifest.get("sources") or []}
+    listed_products = {p.get("path"): p.get("sha256") for p in manifest.get("products") or []}
+    registries = 0
+    for rel, rec in fetch["files"].items():
+        identity = rec.get("identity")
+        if identity is None:
+            continue
+        source_path = rec.get("source_path") or rel
+        if identity == "manifest_sources":
+            listed = listed_sources.get(source_path)
+        elif identity == "manifest_products":
+            listed = listed_products.get(source_path)
+        elif identity == "fetch":
+            listed = rec["sha256"]
+        else:
+            raise Mismatch("%s: unknown identity %r in FETCH.json" % (rel, identity))
+        if listed is None:
+            raise Mismatch("%s: FETCH.json claims identity %s but the manifest does not list %s" % (rel, identity, source_path))
+        got = sha256_file(os.path.join(d, rel))
+        if got != listed:
+            raise Mismatch("%s: sha256 %s != the manifest's %s for %s (%s)" % (rel, got, listed, source_path, identity))
+        registries += 1
+    log("  %d registries match their declared identity (manifest sources/products or FETCH.json)" % registries)
 
     if os.path.exists(releases_md):
         sem, man = pinned_digests(releases_md, version)
