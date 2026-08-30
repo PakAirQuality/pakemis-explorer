@@ -1,273 +1,240 @@
 "use client";
 /**
- * Explore the inventory (plan §/explore): the controls card (Period, Break down by, Measure,
- * Sector; More settings: Estimate, Warming potentials, Spatial view), the "Showing:" sentence
- * from the labels, three stat cards (the national envelope's `display_short`, the top cell's
- * `share_pct_short` of the sector or category breakdown, the national uncertainty's
- * `interval_short`), the result widget (the breakdown as chart | table with the server's Share
- * column, a sentence from the top cell's share, Show calculation / Inspect evidence and the
- * toolbar's Result details / download / share) and the "Interpret this result" widget. Every
- * request is a pure function of the URL state (`period, sector, gas, config, gwp, view` and
- * `by`); every number is a server string; the page computes nothing.
+ * Explore data — a Grapher for PakEmis (plan §1). One control row, one dominant canvas, one
+ * query: the URL state resolves (lib/explore/query.ts) to exactly one contract call —
+ * query_emissions with a single group_by, get_timeseries for a year range, compare_emissions
+ * for the two estimates — and the canvas shows that envelope as a chart, a table or a map.
+ * Under the canvas, four actions and no more: Explain (Ask with this scope and "Explain this
+ * result"), Evidence (Result details at Sources), Download (the receipt's CSV), Share (the
+ * permalink); then one expandable "Reading this result" line. Every number is a server
+ * string; the page computes nothing.
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { Calculator, ScrollText, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Download, Link2, ScrollText, Sparkles } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { BREAKDOWNS, BREAKDOWN_META, breakdownBody, categoriesBody, sectorsBody, showingSentence, type Breakdown } from "@/lib/breakdown";
-import { neRowsFor, sectorCodes, type CodedCell } from "@/lib/completeness";
-import { cellUnit, configLabel, configWords, envelopeUnitLine, gasLabel, groupValueLabel, gwpLabel, gwpTooltip, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
+import { api } from "@/lib/api";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
-import { useCompleteness, useEmissions, useEvidence, useUncertainty } from "@/lib/queries";
-import { scopeBody } from "@/lib/requests";
+import { cellUnit, configLabel, configWords, envelopeUnitLine, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
+import { useCompare, useCompleteness, useEmissions, useTimeseries } from "@/lib/queries";
+import { hrefForState } from "@/lib/urlState";
+import { magnitudeOf } from "@/lib/uncertainty";
+import { canvasTitle, placeWords, possessive, showingWords, type ExploreState, type QueryPlan } from "@/lib/explore/query";
+import { useExploreState } from "@/lib/explore/useExploreState";
 import { TopNav } from "@/components/shell/TopNav";
-import { CurrentView } from "@/components/shell/CurrentView";
-import { ACTION_CLASS, PageHeader } from "@/components/shell/PageHeader";
-import { ControlsCard, Field, Select } from "@/components/ui/ControlsCard";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { ShowingLine } from "@/components/ui/ShowingLine";
-import { StatCard } from "@/components/ui/StatCard";
 import { ResultTabs } from "@/components/ui/ResultTabs";
-import { Widget } from "@/components/ui/Widget";
-import { EnvelopeTable } from "@/components/ui/EnvelopeTable";
-import { BarChart } from "@/components/ui/BarChart";
-import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
-import { headlineCell, magnitudeOf } from "@/lib/uncertainty";
+import { Controls } from "./Controls";
+import { Canvas, sidesOf } from "./Canvas";
 import { EXPLORE } from "./copy";
 
-type ShareCell = Cell & { share_pct_short?: string };
+const ACTION = "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent-soft";
 
-const TEXT_BUTTON = "inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline";
+/** The Ask permalink of a scope with the question first: `/ask?q=Explain%20this%20result&sector=agriculture`. */
+export function explainHref(shared: Parameters<typeof hrefForState>[0], defaults: Parameters<typeof hrefForState>[1], question = EXPLORE.question): string {
+  const scope = hrefForState(shared, defaults, "/ask").split("?")[1] ?? "";
+  return `/ask?q=${encodeURIComponent(question)}${scope ? `&${scope}` : ""}`;
+}
 
-/** The first numeric cell of a breakdown: the largest, since every breakdown is ordered by value. */
-export function topCell(env: Envelope | null | undefined): ShareCell | null {
-  return ((env?.values ?? []) as ShareCell[]).find((c) => typeof c.value === "number") ?? null;
+/** The envelope the canvas shows: the plan's filter applied (several provinces out of the ADM1 envelope), never a changed value. */
+export function visibleEnvelope(env: Envelope | null | undefined, plan: QueryPlan): Envelope | null {
+  if (!env) return null;
+  if (plan.kind !== "emissions" || !plan.filterTo) return env;
+  const { key, ids } = plan.filterTo;
+  return { ...env, values: env.values.filter((c) => ids.includes(c.group?.[key] ?? "")) };
+}
+
+/** The first numeric cell (the largest: every breakdown is ordered by value). */
+export function topCell(env: Envelope | null | undefined): Cell | null {
+  return env?.values.find((c) => typeof c.value === "number") ?? null;
 }
 
 export function Explore() {
-  const { state, setState, labels, dims, defaults, contract } = useExplorer();
-  const [byRaw, setBy] = useQueryState("by", parseAsStringLiteral(BREAKDOWNS));
-  const by: Breakdown = byRaw ?? "sector";
-  const [figure, setFigure] = useState<"chart" | "table">("chart");
-  const months = useMemo(() => dims.monthsByPeriod[state.period] ?? [], [dims.monthsByPeriod, state.period]);
+  const { state: shared, labels, dims, defaults, contract } = useExplorer();
+  const { state, plan, ctx, dispatch } = useExploreState();
+  const router = useRouter();
+  const drawer = useEnvelopeDrawer(labels);
+  const [copied, setCopied] = useState(false);
+  const [readingOpen, setReadingOpen] = useState(false);
+
+  const emissions = useEmissions(plan.kind === "emissions" ? plan.body : null, plan.kind === "emissions");
+  const series = useTimeseries(plan.kind === "timeseries" ? plan.body : null, plan.kind === "timeseries");
+  const compare = useCompare(plan.kind === "compare" ? plan.body : null, plan.kind === "compare");
+  const active = plan.kind === "timeseries" ? series : plan.kind === "compare" ? compare : emissions;
+  const raw = plan.kind === "refused" ? null : active.data;
+  const env = useMemo(() => visibleEnvelope(raw, plan), [raw, plan]);
+  // the sector's categories for the Category control: the same body as the category breakdown, so one request serves both
+  const categoriesBody = useMemo(() => (state.sector && state.level === "national" ? { periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp, sectors: [state.sector], group_by: ["category"], order_by: "value desc" } : null), [state.sector, state.level, state.period, state.config, state.gwp]);
+  const categoriesQ = useEmissions(categoriesBody, !!categoriesBody);
+  const categories = useMemo(() => (categoriesQ.data?.values ?? []).map((c) => c.group?.category ?? "").filter(Boolean), [categoriesQ.data]);
+  const completeness = useCompleteness({ notation_keys: ["NE"] }, readingOpen);
+
   const gwps = contract?.gwp?.length ? contract.gwp : Object.keys(labels.gwp).length ? Object.keys(labels.gwp) : [state.gwp];
   const configs = dims.configurations.length ? dims.configurations : [state.config];
   const views = Object.keys(labels.views).length ? Object.keys(labels.views) : [state.view];
-
-  const nationalBody = useMemo(() => scopeBody(state), [state]);
-  const bodyBy = useMemo(() => breakdownBody(state, by, months), [state, by, months]);
-  const bodySectors = useMemo(() => sectorsBody(state), [state]);
-  const bodyCategories = useMemo(() => (state.sector ? categoriesBody(state, state.sector) : null), [state]);
-  const national = useEmissions(nationalBody);
-  const breakdown = useEmissions(bodyBy, !!bodyBy);
-  const sectors = useEmissions(bodySectors, !state.sector);
-  const categories = useEmissions(bodyCategories, !!state.sector);
-  // the release's parametric interval bounds the reference year's national total (per module when a sector is chosen); another year's total is bounded by the series draws
-  const defaultBasis = state.config === defaults.configuration_id && state.gwp === defaults.gwp_basis && !state.gas && !state.month;
-  const uncBody = useMemo(() => {
-    if (!defaultBasis) return null;
-    if (state.period === defaults.period_id) return { scope: "national", ...(state.sector ? { module: state.sector } : {}) };
-    return state.sector ? null : { scope: "series", period_id: state.period };
-  }, [defaultBasis, state.period, state.sector, defaults.period_id]);
-  const unc = useUncertainty(uncBody, !!uncBody);
-  const completeness = useCompleteness({ notation_keys: ["NE"] });
-  const evidence = useEvidence("_", state.sector ? { module: state.sector } : {}, !!state.sector);
-  const drawer = useEnvelopeDrawer(labels);
-
-  const sentence = showingSentence(labels, state, by, state.gas ? gasLabel(labels, state.gas) : undefined);
-  const kpi = national.data?.values[0];
-  const largestEnv = state.sector ? categories.data : sectors.data;
-  const largestQuery = state.sector ? categories : sectors;
-  const largest = topCell(largestEnv);
-  const largestName = largest ? (state.sector ? groupValueLabel(labels, dims, "category", largest.group?.category) : sectorLabel(labels, largest.group?.sector_id)) : "";
-  const interval = headlineCell(unc.data);
-  const env = breakdown.data;
-  const top = topCell(env);
-  const meta = BREAKDOWN_META[by];
-  const topName = top ? groupValueLabel(labels, dims, meta.groupBy, top.group?.[meta.groupBy]) : "";
-  const selectedIndex = env && by === "sector" && state.sector ? env.values.findIndex((c) => c.group?.sector_id === state.sector) : env && by === "gas" && state.gas ? env.values.findIndex((c) => c.group?.gas === state.gas) : -1;
-  const neCells = (completeness.data?.values ?? []) as CodedCell[];
-  const neRows = state.sector ? neRowsFor(neCells, sectorCodes((evidence.data?.values ?? []) as CodedCell[])) : neCells;
+  const partitions = plan.kind === "emissions";
+  const sentence = showingWords(state, ctx, labels, dims);
+  const place = placeWords(state, dims);
+  const result = resultSentence(state, plan, env, labels, place, possessive(place));
   const others = configs.filter((c) => c !== state.config).map((c) => configLabel(labels, c));
-  const selectable = by === "sector" || by === "gas";
+  const neCount = completeness.data?.values.length ?? null;
 
-  const select = (cell: Cell) => {
-    const g = cell.group ?? {};
-    if (by === "sector" && g.sector_id) {
-      setState({ sector: g.sector_id });
-      setBy("ipcc");
-    } else if (by === "gas" && g.gas) {
-      setState({ gas: state.gas === g.gas ? null : g.gas });
+  const explain = () => router.push(explainHref(shared, defaults));
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard unavailable: the address bar holds the link */
     }
   };
-  const askHref = `/ask?q=${encodeURIComponent(`${sentence} ${EXPLORE.askSuffix}`)}`;
-  const resultSentence = top?.share_pct_short && topName ? (
-    <>
-      <b>{topName}</b> accounts for <b className="num">{top.share_pct_short}%</b> of the {periodShort(labels, state.period)} {configWords(labels, state.config)}.
-    </>
-  ) : env ? (
-    <>
-      {env.values.length} {meta.noun === "category" ? "categories" : `${meta.noun}s`} in the {periodShort(labels, state.period)} {configWords(labels, state.config)}.
-    </>
-  ) : null;
 
   return (
     <div className="min-h-dvh bg-surface" data-testid="explore-page">
-      <TopNav compact />
-      <CurrentView compact />
+      <TopNav />
       <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
-        <PageHeader
-          title={EXPLORE.title}
-          dek={EXPLORE.dek}
-          action={
-            <Link href={askHref} className={ACTION_CLASS} data-testid="ask-about-view">
-              <Sparkles size={15} /> {EXPLORE.ask}
-            </Link>
-          }
-        />
+        <PageHeader title={EXPLORE.title} dek={EXPLORE.dek} />
+        <div className="mt-6">
+          <Controls state={state} ctx={ctx} dispatch={dispatch} labels={labels} dims={dims} categories={categories} gwps={gwps} configs={configs} views={views} partitions={partitions} />
+        </div>
 
-        <ControlsCard
-          className="mt-6"
-          more={
-            <>
-              <Field label={EXPLORE.controls.estimate} title={labels.configurations[state.config]?.tooltip}>
-                <Select value={state.config} onChange={(v) => setState({ config: v })} options={configs.map((c) => ({ value: c, label: configLabel(labels, c), title: labels.configurations[c]?.tooltip }))} ariaLabel={EXPLORE.controls.estimate} testId="config-select" />
-              </Field>
-              <Field label={EXPLORE.controls.gwp} hint={gwpTooltip(labels, state.gwp) || undefined}>
-                <Select value={state.gwp} onChange={(v) => setState({ gwp: v })} options={gwps.map((g) => ({ value: g, label: gwpLabel(labels, g), title: gwpTooltip(labels, g) }))} ariaLabel={EXPLORE.controls.gwp} testId="gwp-select" />
-              </Field>
-              <Field label={EXPLORE.controls.view} hint="Applies to the Map's province and district results; a national total is the same under every view.">
-                <Select value={state.view} onChange={(v) => setState({ view: v })} options={views.map((v) => ({ value: v, label: viewLabel(labels, v) }))} ariaLabel={EXPLORE.controls.view} testId="view-select" />
-              </Field>
-            </>
-          }
-        >
-          <Field label={EXPLORE.controls.period} hint={labels.periods[state.period]?.label}>
-            <Select value={state.period} onChange={(v) => setState({ period: v })} options={dims.fiscalPeriods.map((p) => ({ value: p, label: periodShort(labels, p), title: labels.periods[p]?.label }))} ariaLabel={EXPLORE.controls.period} testId="period-select" />
-          </Field>
-          <Field label={EXPLORE.controls.by} hint={meta.unavailable}>
-            <Select value={by} onChange={(v) => setBy(v as Breakdown)} options={BREAKDOWNS.map((b) => ({ value: b, label: BREAKDOWN_META[b].label, disabled: !!BREAKDOWN_META[b].unavailable, title: BREAKDOWN_META[b].unavailable }))} ariaLabel={EXPLORE.controls.by} testId="by-select" />
-          </Field>
-          <Field label={EXPLORE.controls.measure} hint={state.gas ? "Native gas mass is served at province and district grain; a national total stays CO₂-equivalent." : undefined}>
-            <Select value={state.gwp} onChange={(v) => setState({ gwp: v })} options={gwps.map((g) => ({ value: g, label: `${EXPLORE.measure} · ${gwpLabel(labels, g)}`, title: gwpTooltip(labels, g) }))} ariaLabel={EXPLORE.controls.measure} testId="measure-select" />
-          </Field>
-          <Field label={EXPLORE.controls.sector}>
-            <Select value={state.sector ?? ""} onChange={(v) => setState({ sector: v || null })} options={[{ value: "", label: sectorLabel(labels, null) }, ...dims.sectors.map((s) => ({ value: s, label: sectorLabel(labels, s) }))]} ariaLabel={EXPLORE.controls.sector} testId="sector-select" />
-          </Field>
-        </ControlsCard>
-
-        <ShowingLine className="mt-4">{sentence}</ShowingLine>
-
-        <section className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3" data-testid="stat-cards">
-          <StatCard
-            label={EXPLORE.stats.national.label}
-            value={kpi ? shown(kpi) : null}
-            unit={kpi ? cellUnit(kpi) : undefined}
-            title={kpi ? `${kpi.display} ${kpi.unit} (contract precision) · exact ${kpi.exact}` : undefined}
-            caption={EXPLORE.stats.national.caption}
-            env={national.data}
-            error={national.error}
-            isLoading={national.isLoading}
-            labels={labels}
-            testId="stat-national"
-          />
-          <StatCard
-            label={state.sector ? EXPLORE.stats.largestCategory : EXPLORE.stats.largestSector}
-            value={largest ? largest.share_pct_short ?? shown(largest) : null}
-            unit={largest ? (largest.share_pct_short ? "%" : cellUnit(largest)) : undefined}
-            title={largest ? `${largest.display} ${largest.unit} (contract precision)` : undefined}
-            caption={largest ? `${largestName} · ${shown(largest)} ${cellUnit(largest)}` : undefined}
-            env={largestEnv}
-            error={largestQuery.error}
-            isLoading={largestQuery.isLoading}
-            labels={labels}
-            testId="stat-largest"
-          />
-          <StatCard
-            label={EXPLORE.stats.interval.label}
-            value={interval?.interval_short ?? null}
-            unit={interval ? magnitudeOf(interval) : undefined}
-            title={interval ? `${interval.scenario_label ?? String(interval.scenario ?? "")} · the draws' median ${shown(interval)} ${cellUnit(interval)}` : undefined}
-            caption={EXPLORE.stats.interval.caption}
-            env={unc.data}
-            error={unc.error}
-            isLoading={!!uncBody && unc.isLoading}
-            labels={labels}
-            testId="stat-interval"
-            empty="No draws bound this scope; the interval covers the release's national totals."
-          />
-        </section>
-
-        <Widget
-          className="mt-4"
-          title={meta.title}
-          env={env}
-          labels={labels}
-          infoTab="sources"
-          tools={env && <ResultTabs size="xs" ariaLabel="Figure" tabs={[{ id: "chart", label: "Chart" }, { id: "table", label: "Table" }]} value={figure} onChange={setFigure} testId="figure-tabs" />}
-          sentence={resultSentence}
-          caption={
-            env ? (
-              <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                {selectable && <span data-testid="result-caption">{by === "sector" ? EXPLORE.result.selectSector : "Select a row to filter the view to that gas."}</span>}
-                <button type="button" className={TEXT_BUTTON} onClick={() => drawer.open(env, "calculation")} data-testid="show-calculation">
-                  <Calculator size={12} /> {EXPLORE.result.showCalculation}
-                </button>
-                <button type="button" className={TEXT_BUTTON} onClick={() => drawer.open(env, "sources")} data-testid="inspect-evidence">
-                  <ScrollText size={12} /> {EXPLORE.result.inspectEvidence}
-                </button>
-              </span>
-            ) : null
-          }
-          testId="result-card"
-        >
-          {!bodyBy ? (
-            <div data-testid="breakdown-unavailable">
-              <p className="text-sm text-muted">{meta.unavailable}</p>
-              <Link href="/map" className="mt-2 inline-block text-xs font-semibold text-accent hover:underline">Open the Map →</Link>
+        <section className="card mt-5 p-5 md:p-6" data-testid="canvas" data-receipt={env?.receipt ?? ""} data-chart={plan.kind === "refused" ? "" : plan.chart}>
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold tracking-tight text-fg" data-testid="canvas-title">{canvasTitle(state)}</h2>
+              <ShowingLine className="mt-1.5" testId="showing-line">{sentence}</ShowingLine>
             </div>
-          ) : env ? (
-            <>
-              <div className="text-xs text-muted" data-testid="frame-unit" title={gwpTooltip(labels, state.gwp)}>{envelopeUnitLine(env)}</div>
-              {figure === "chart" ? (
-                <BarChart env={env} horizontal height={Math.max(160, 28 * env.values.length + 24)} labels={labels} dims={dims} colorBy={by === "sector" ? "sector" : "accent"} onClick={selectable ? select : undefined} selectedIndex={selectedIndex >= 0 ? selectedIndex : null} />
-              ) : (
-                <EnvelopeTable env={env} labels={labels} dims={dims} dense onRowClick={selectable ? select : undefined} selectedIndex={selectedIndex >= 0 ? selectedIndex : null} />
-              )}
-            </>
-          ) : breakdown.error ? (
-            <RefusalCard error={breakdown.error} compact />
-          ) : (
-            <Loading what={meta.title.toLowerCase()} />
+            <ResultTabs<ExploreState["rep"]> ariaLabel="Representation" tabs={[{ id: "chart", label: EXPLORE.reps.chart }, { id: "table", label: EXPLORE.reps.table }, { id: "map", label: EXPLORE.reps.map }]} value={state.rep} onChange={(rep) => dispatch({ control: "rep", value: rep })} testId="rep-tabs" />
+          </header>
+          {result && <p className="mt-4 text-md text-fg" data-testid="canvas-sentence">{result}</p>}
+          {env && state.rep !== "map" && (
+            <div className="mt-3 text-xs text-muted" data-testid="frame-unit" title={gwpTooltip(labels, state.gwp)}>{envelopeUnitLine(env)}</div>
           )}
-        </Widget>
+          <div className="mt-2">
+            <Canvas state={state} plan={plan} ctx={ctx} env={env} error={plan.kind === "refused" ? null : active.error} isLoading={plan.kind !== "refused" && active.isLoading} labels={labels} dims={dims} dispatch={dispatch} />
+          </div>
 
-        <Widget className="mt-4" title={EXPLORE.interpret.title} share={false} sentence={EXPLORE.interpret.dek} testId="interpret-card">
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
-            <Row label={configLabel(labels, state.config)} testId="interpret-estimate">
-              Every number on this page is the {configWords(labels, state.config)}.{others.length ? ` Structural alternatives (${others.join(", ")}) are selectable under ${EXPLORE.controls.more}.` : ""}
-            </Row>
-            <Row label={EXPLORE.interpret.notOfficial.label} testId="interpret-not-official">{EXPLORE.interpret.notOfficial.text}</Row>
-            <Row label={EXPLORE.interpret.ne.label} testId="interpret-ne">
-              {EXPLORE.interpret.ne.text}
-              {completeness.data ? <> {neRows.length === 1 ? "One category is" : `${neRows.length} categories are`} marked NE {state.sector ? `under ${sectorLabel(labels, state.sector)}` : "in this release"}.</> : null}
-              {completeness.data && <> <Link href="/methods" className="text-accent hover:underline">See the gaps →</Link></>}
-            </Row>
-            <Row label={EXPLORE.interpret.exact.label} testId="interpret-exact">{EXPLORE.interpret.exact.text}</Row>
-          </dl>
-        </Widget>
+          <div className="mt-5 flex flex-wrap items-center gap-1 border-t border-line pt-3" data-testid="actions">
+            <button type="button" onClick={explain} className={ACTION} data-testid="action-explain" data-href={explainHref(shared, defaults)}>
+              <Sparkles size={14} aria-hidden="true" /> {EXPLORE.actions.explain}
+            </button>
+            <button type="button" onClick={() => env && drawer.open(env, "sources")} disabled={!env} className={`${ACTION} disabled:opacity-50`} data-testid="action-evidence">
+              <ScrollText size={14} aria-hidden="true" /> {EXPLORE.actions.evidence}
+            </button>
+            <a href={env ? api.downloadCsvUrl(env.receipt) : undefined} aria-disabled={!env} className={`${ACTION} ${env ? "" : "pointer-events-none opacity-50"}`} data-testid="action-download" title="Download the canonical CSV of this result">
+              <Download size={14} aria-hidden="true" /> {EXPLORE.actions.download}
+            </a>
+            <button type="button" onClick={share} className={ACTION} data-testid="action-share" aria-label={copied ? EXPLORE.actions.copied : "Copy the link to this view"}>
+              <Link2 size={14} aria-hidden="true" /> {copied ? EXPLORE.actions.copied : EXPLORE.actions.share}
+            </button>
+          </div>
+
+          <details className="mt-3 text-sm" open={readingOpen} onToggle={(e) => setReadingOpen((e.currentTarget as HTMLDetailsElement).open)} data-testid="reading">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-muted hover:text-fg">{EXPLORE.reading.title}</summary>
+            <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2">
+              <Row label={state.by === "estimate" ? "Two estimates" : configLabel(labels, state.config)} testId="reading-estimate">
+                {state.by === "estimate"
+                  ? `The reference estimate and the survey-based estimate are two structural readings of the same year; the difference is right minus left, never an uncertainty.`
+                  : `Every number on this page is the ${configWords(labels, state.config)}.${others.length ? ` Structural alternatives (${others.join(", ")}) are selectable under ${EXPLORE.controls.more}.` : ""}`}
+              </Row>
+              <Row label={EXPLORE.reading.notOfficial.label} testId="reading-not-official">{EXPLORE.reading.notOfficial.text}</Row>
+              <Row label={EXPLORE.reading.ne.label} testId="reading-ne">
+                {EXPLORE.reading.ne.text}
+                {neCount !== null ? <> {neCount === 1 ? "One category is" : `${neCount} categories are`} marked NE in this release.</> : null}{" "}
+                <Link href="/methods" className="text-accent hover:underline">See the gaps →</Link>
+              </Row>
+              <Row label={EXPLORE.reading.exact.label} testId="reading-exact">
+                {EXPLORE.reading.exact.text}
+                {plan.kind === "emissions" && plan.filterTo ? ` ${EXPLORE.reading.filtered}` : ""}
+              </Row>
+            </dl>
+          </details>
+        </section>
       </main>
       {drawer.node}
     </div>
   );
 }
 
-function Row({ label, children, testId }: { label: string; children: React.ReactNode; testId?: string }) {
+const B = ({ children }: { children: ReactNode }) => <b className="num whitespace-nowrap">{children}</b>;
+
+function Row({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) {
   return (
-    <div className="rounded-md border border-line bg-surface-3/60 px-3 py-2.5" data-testid={testId}>
+    <div data-testid={testId}>
       <dt className="text-sm font-semibold text-fg">{label}</dt>
       <dd className="mt-0.5 text-xs text-muted">{children}</dd>
     </div>
+  );
+}
+
+/**
+ * The canvas sentence, every figure a server string: the series' `change` ("rose from 372.40
+ * to 452.35 Mt CO₂e, +79.95 Mt (+21.5 %)"), the largest cell's share of a partition, the two
+ * places' values, or the largest difference between the two estimates.
+ */
+function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | null, labels: Parameters<typeof configWords>[0], place: string, owner: string): ReactNode {
+  if (!env || plan.kind === "refused") return null;
+  if (plan.kind === "timeseries") {
+    const change = env.change;
+    const last = topCell({ ...env, values: [...env.values].reverse() });
+    if (!change || !last) return null;
+    return (
+      <>
+        {owner} emissions {change.direction || "changed"} from <B>{change.from_short}</B> to <B>{change.to_short} {change.unit_short ?? cellUnit(last)}</B>, <B>{change.change_short} {magnitudeOf(last)}</B> (<B>{change.change_pct_short} %</B>) between {periodShort(labels, change.from_period)} and {periodShort(labels, change.to_period)}.
+      </>
+    );
+  }
+  if (plan.kind === "compare") {
+    const cells = env.values.filter((c) => typeof c.value === "number");
+    const largest = cells.reduce<Cell | null>((m, c) => (m === null || Math.abs(c.value as number) > Math.abs(m.value as number) ? c : m), null);
+    const sides = largest ? sidesOf(largest) : null;
+    if (!largest || !sides) return null;
+    const key = plan.groupBy;
+    const name = sides.left.group?.[key] ?? "";
+    const left = labels.configurations[String(plan.body.left?.configuration_id ?? "")]?.label ?? "the left estimate";
+    const right = labels.configurations[String(plan.body.right?.configuration_id ?? "")]?.label ?? "the right estimate";
+    return (
+      <>
+        {right} differs most from the {left.toLowerCase()} in <b>{key === "sector_id" || key === "module" ? sectorLabel(labels, name) : key === "gas" ? labels.gases[name] ?? name : name}</b>: <B>{shown(largest)} {cellUnit(largest)}</B> (<B>{shown(sides.left)}</B> → <B>{shown(sides.right)}</B>).
+      </>
+    );
+  }
+  if (plan.filterTo) {
+    const cells = env.values.filter((c) => typeof c.value === "number");
+    if (!cells.length) return null;
+    return (
+      <>
+        {cells.map((c, i) => (
+          <span key={c.group?.[plan.groupBy] ?? i}>
+            {i > 0 ? "; " : ""}
+            <b>{c.group?.[plan.groupBy]}</b>: <B>{shown(c)} {cellUnit(c)}</B>
+            {c.share_pct_short ? <> (<B>{c.share_pct_short} %</B>{i === 0 ? " of the provinces' allocated total" : ""})</> : null}
+          </span>
+        ))}
+        .
+      </>
+    );
+  }
+  const top = topCell(env);
+  if (!top) return null;
+  const key = plan.groupBy;
+  const id = top.group?.[key] ?? "";
+  const name = key === "sector_id" || key === "module" ? sectorLabel(labels, id) : key === "gas" ? labels.gases[id] ?? id : key === "month" ? labels.months[id] ?? id : id;
+  if (!top.share_pct_short) {
+    return (
+      <>
+        {env.values.length} rows in {owner} {periodShort(labels, state.period)} {configWords(labels, state.config)}.
+      </>
+    );
+  }
+  return (
+    <>
+      <b>{name}</b> accounts for <B>{top.share_pct_short} %</B>{top.share_phrase ? ` (${top.share_phrase})` : ""} of {owner} {periodShort(labels, state.period)} {state.level === "national" ? "" : "allocated "}{configWords(labels, state.config)}
+      {state.sector ? ` in ${sectorLabel(labels, state.sector).toLowerCase()}` : ""}.
+    </>
   );
 }

@@ -1,34 +1,46 @@
 /**
- * The words of the Explore page, from the 2026-08-30 mockups. No number is written here: every
- * figure on the page is an envelope's string.
+ * The words of the Explore page. No number is written here: every figure on the page is an
+ * envelope's string.
  */
 
 export const EXPLORE = {
   title: "Explore the inventory",
-  dek: "Build a clear national result, compare sectors and inspect the exact data behind every value.",
-  ask: "Ask about this view",
-  /** What follows the Showing sentence in the seeded question. */
-  askSuffix: "Explain this view.",
-  controls: { period: "Period", by: "Break down by", measure: "Measure", sector: "Sector", more: "More settings", estimate: "Estimate", gwp: "Warming potentials", view: "Spatial view" },
-  measure: "CO₂-equivalent",
-  stats: {
-    national: { label: "National estimate", caption: "Land-use change is excluded" },
-    largestSector: "Largest sector",
-    largestCategory: "Largest category",
-    interval: { label: "95% uncertainty interval", caption: "Structural alternatives shown separately" },
+  dek: "Set the controls; the canvas answers with one query whose every value can show its rows, calculation and sources.",
+  controls: {
+    geography: "Geography",
+    period: "Period",
+    sector: "Sector",
+    category: "Category",
+    gas: "Gas",
+    measure: "Measure",
+    estimate: "Estimate",
+    view: "Spatial view",
+    more: "More",
+    pakistan: "Pakistan",
+    provinces: "Compare provinces",
+    districts: "All districts",
+    district: "A district…",
+    second: "Compare with…",
+    none: "—",
+    range: "All years",
+    months: "Months of",
+    allSectors: "All sectors",
+    wholeSector: "All of",
+    allGases: "All gases",
+    byGas: "By gas",
+    co2e: "CO₂e",
+    share: "Share of total",
+    compare: "Compare estimates",
   },
-  result: {
-    unitLine: "Million tonnes CO₂-equivalent",
-    selectSector: "Select the sector to examine its categories, evidence and sources.",
-    showCalculation: "Show calculation",
-    inspectEvidence: "Inspect evidence",
-    download: "Download these rows",
-  },
-  interpret: {
-    title: "Interpret this result",
-    dek: "Important context before reuse",
+  reps: { chart: "Chart", table: "Table", map: "Map" },
+  question: "Explain this result",
+  actions: { explain: "Explain", evidence: "Evidence", download: "Download", share: "Share", copied: "Link copied" },
+  mapUnavailable: { error: "representation_unavailable", error_class: "RepresentationUnavailable", message: "Map is available for place breakdowns: choose Compare provinces, All districts or two provinces under Geography.", available_at: ["province", "district"] },
+  reading: {
+    title: "Reading this result",
     notOfficial: { label: "Not an official inventory", text: "PakEmis independently reconstructs emissions from public activity data." },
     ne: { label: "Not estimated is not zero", text: "Categories without adequate activity data remain explicitly marked NE." },
     exact: { label: "Exact result available", text: "Every value can expose its data rows, calculation, release and query receipt." },
+    filtered: "The two places are drawn from the envelope of every province; the other provinces are hidden, not removed from the receipt.",
   },
 } as const;
