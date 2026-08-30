@@ -9,9 +9,9 @@
  * beyond estimated / reconstructed / allocated.
  */
 
-/** The opening paragraph of the release's short summary, verbatim; /methods quotes it. */
+/** The opening paragraph of the release's short summary, verbatim but for its opening noun phrase, which named the dataset (the name belongs to the citation, not to the chrome); /methods quotes it. */
 export const SHORT_SUMMARY =
-  "PakEmis is an open dataset of Pakistan's greenhouse-gas emissions, rebuilt from public documents rather than taken from a single official report. It covers nine fiscal years, every sector except land use and forestry, and gives each emission by month and by district as well as by year. Every number is graded by the strength of the evidence behind it, and every one can be traced back to the document and the code that produced it, so others can check, reuse and improve it.";
+  "This is an open dataset of Pakistan's greenhouse-gas emissions, rebuilt from public documents rather than taken from a single official report. It covers nine fiscal years, every sector except land use and forestry, and gives each emission by month and by district as well as by year. Every number is graded by the strength of the evidence behind it, and every one can be traced back to the document and the code that produced it, so others can check, reuse and improve it.";
 
 /** The Ask dock's own empty-state sentences (AskDock.tsx), quoted by /methods so the two never drift. */
 export const ASK_SENTENCES = [
@@ -62,7 +62,7 @@ export const DECK = {
 } as const;
 
 /** The muted line under the opening statement, and the footer's. */
-export const INDEPENDENT_LINE = "PakEmis is an independent public-data reconstruction, not an official inventory; every figure carries its method, evidence grade and source.";
+export const INDEPENDENT_LINE = "This is an independent public-data reconstruction, not an official inventory; every figure carries its method, evidence grade and source.";
 
 /** The deck's sections in order: the opening statement (`summary`) and the four widget cards. The scroll spy watches these ids; the map follows the one in view. */
 export const SECTION_IDS = ["summary", "sectors", "trend", "gases", "places"] as const;

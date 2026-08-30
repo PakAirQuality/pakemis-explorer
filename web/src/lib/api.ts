@@ -154,7 +154,7 @@ export const api = {
   receipt: (receipt: string) => envelope(`/receipt/${receipt}`),
   downloadCsvUrl: (receipt: string) => `${API_BASE}/download/${receipt}.csv`,
   downloadReceiptUrl: (receipt: string) => `${API_BASE}/download/${receipt}.receipt.json`,
-  /** The SSE endpoint of Ask PakEmis (POST). */
+  /** The SSE endpoint of the assistant (POST). */
   askUrl: () => `${API_BASE}/ask`,
   /**
    * The schema and the interactive docs. The API serves both under the prefix

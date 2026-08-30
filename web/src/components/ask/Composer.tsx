@@ -61,7 +61,7 @@ export function Composer({ onSend, onStop, streaming, disabled }: { onSend: (tex
             }
           }}
           rows={2}
-          placeholder={disabled ? "Ask PakEmis is not enabled" : "Ask about a place, a sector, a year or a method…"}
+          placeholder={disabled ? "The assistant is not enabled" : "Ask about a place, a sector, a year or a method…"}
           disabled={disabled}
           aria-label="Question"
           className="min-h-[2.5rem] flex-1 resize-none rounded-card border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"

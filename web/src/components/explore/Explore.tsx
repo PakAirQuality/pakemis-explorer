@@ -1,6 +1,6 @@
 "use client";
 /**
- * Explore data — a Grapher for PakEmis (plan §1). One control row, one dominant canvas, one
+ * Explore data — a Grapher over the release (plan §1). One control row, one dominant canvas, one
  * query: the URL state resolves (lib/explore/query.ts) to exactly one contract call —
  * query_emissions with a single group_by, get_timeseries for a year range, compare_emissions
  * for the two estimates — and the canvas shows that envelope as a chart, a table or a map.

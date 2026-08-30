@@ -1,8 +1,8 @@
-/** Ask PakEmis when the agent is not mounted: the reason from /release.agent (or the 503 body) and the typed-function rule. */
+/** The assistant when it is not mounted: the reason from /release.agent (or the 503 body) and the typed-function rule. */
 export function DisabledCard({ reason, model, functions, rule }: { reason: string; model: string; functions: string[]; rule: string }) {
   return (
     <div className="card m-3 p-4 text-sm" data-testid="disabled-card">
-      <div className="micro">Ask PakEmis</div>
+      <div className="micro">Ask about this view</div>
       <h3 className="mt-1 text-md font-semibold">Not enabled</h3>
       <p className="mt-1 text-muted">
         Reason: <span className="mono">{reason}</span>

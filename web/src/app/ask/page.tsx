@@ -1,6 +1,6 @@
 "use client";
 /**
- * Ask PakEmis as a page (the permalink form of the drawer): the same AskDock at max-w-3xl,
+ * The assistant as a page (the permalink form of the drawer): the same AskDock at max-w-3xl,
  * full height under the nav. `?q=` seeds the composer with a question and sends it once (the
  * Explore page's "Explain" arrives here); the parameter is then cleared so a reload does not
  * send it again. `openAsk()` requests raised on this page (the layout's drawer stays closed

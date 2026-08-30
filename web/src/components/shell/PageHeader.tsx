@@ -1,8 +1,9 @@
 "use client";
 /**
- * The header of a content page: the identity line ("PakEmis · public-data reconstruction of
- * Pakistan's emissions, excluding land use and forestry · 2015–16 to 2023–24", the API's `/release.identity_line`
- * when it sends one, else the same parts from the labels; never a version), the h1, the dek and
+ * The header of a content page: the identity line ("… · public-data reconstruction of
+ * Pakistan's emissions, excluding land use and forestry · 2015–16 to 2023–24", the API's
+ * `/release.identity_line` verbatim when it sends one — a server string, which names the dataset
+ * — else the same parts from the labels under the initiative's name; never a version), the h1, the dek and
  * an action at the right (a link or a control the page passes).
  */
 import type { ReactNode } from "react";

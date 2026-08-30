@@ -1,5 +1,5 @@
 /**
- * The Ask drawer: closed until the nav's Ask PakEmis button or openAsk() opens it; the scope
+ * The Ask drawer: closed until the nav's "Ask about this view" button or openAsk() opens it; the scope
  * line and the suggested questions follow the URL state (Punjab · agriculture, then the
  * national default); an openAsk request sends its question once with the scope it names;
  * Escape closes; on the /ask page the drawer stays out (the page is the panel).
@@ -89,7 +89,7 @@ describe("AskDrawer", () => {
     fireEvent.click(screen.getByTestId("nav-ask"));
     expect(drawer.getAttribute("data-open")).toBe("1");
     expect(screen.getByTestId("ask-dock").getAttribute("data-variant")).toBe("drawer");
-    expect(screen.getByTestId("ask-contract")).toHaveTextContent("The assistant interprets your question; the PakEmis engine supplies every number. It never calculates from documents or prose.");
+    expect(screen.getByTestId("ask-contract")).toHaveTextContent("The assistant interprets your question; the inventory engine supplies every number. It never calculates from documents or prose.");
     expect(screen.getByTestId("ask-scope")).toHaveTextContent("Scope: Punjab · agriculture · 2023–24 · reference estimate");
     expect(screen.getAllByTestId("suggestion").map((b) => b.textContent)).toEqual(["Why is Punjab's estimate high?", "How much comes from livestock?", "Which parts are proxy-allocated?", "Compare Punjab with Sindh", "Download the rows used here."]);
     expect(document.body.textContent).not.toContain("FY");

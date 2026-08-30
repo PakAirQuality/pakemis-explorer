@@ -37,7 +37,7 @@ export function AskFab() {
   }, []);
   if (open || isActive(pathname, "/ask")) return null;
   return (
-    <button type="button" onClick={() => toggleAsk()} className={ASK_FAB_CLASS} aria-label="Ask PakEmis" title="Ask PakEmis: a question to the inventory, answered from receipts" data-testid="ask-fab">
+    <button type="button" onClick={() => toggleAsk()} className={ASK_FAB_CLASS} aria-label="Ask about this view" title="Ask about this view: a question to the inventory, answered from receipts" data-testid="ask-fab">
       <MessageSquare size={24} aria-hidden="true" />
     </button>
   );

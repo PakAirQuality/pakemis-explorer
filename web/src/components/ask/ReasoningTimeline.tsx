@@ -26,7 +26,7 @@ export const ERROR_TITLES: Record<string, string> = {
   budget_exhausted: "Stopped: the token budget is spent",
   model_error: "Model error",
   model_refusal: "The model declined this request",
-  agent_disabled: "Ask PakEmis is not enabled",
+  agent_disabled: "The assistant is not enabled",
   rate_limited: "Too many questions from this address",
   stream_ended: "The stream ended before an answer",
   empty_answer: "No answer: the model returned no answer text after its tool calls",

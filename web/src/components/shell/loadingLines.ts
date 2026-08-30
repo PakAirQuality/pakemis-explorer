@@ -1,5 +1,5 @@
 /**
- * The loading screen's rotating status lines: sentences about how PakEmis works, and nothing
+ * The loading screen's rotating status lines: sentences about how the inventory works, and nothing
  * else. They carry no digit (the rule that every number on screen is a server string holds on
  * the loading screen too), no "FY", no raw id and none of the avoid-list phrases; the tests
  * beside LoadingScreen.tsx assert all four.

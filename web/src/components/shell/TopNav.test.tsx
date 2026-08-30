@@ -9,7 +9,7 @@ const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 describe("TopNav", () => {
-  it("lists Overview, Explore data, Map, Methods & evidence, Downloads; Ask PakEmis toggles the drawer on the bus", () => {
+  it("lists Overview, Explore data, Map, Methods & evidence, Downloads; Ask about this view toggles the drawer on the bus", () => {
     pathname.value = "/";
     resetAskBus();
     const bus = vi.fn();

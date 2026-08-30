@@ -136,7 +136,7 @@ describe("Overview briefing", () => {
   it("opens with the statement assembled from display_short, share_pct_short and share_phrase, the independence line, the eyebrow and no total card, slogan or Ask box", async () => {
     mount();
     expect(await screen.findByTestId("opening-statement")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory, which excludes land use and forestry.");
-    expect(screen.getByTestId("independent-line")).toHaveTextContent("PakEmis is an independent public-data reconstruction, not an official inventory; every figure carries its method, evidence grade and source.");
+    expect(screen.getByTestId("independent-line")).toHaveTextContent("This is an independent public-data reconstruction, not an official inventory; every figure carries its method, evidence grade and source.");
     expect(screen.getByTestId("eyebrow")).toHaveTextContent("Pakistan's explainable emissions inventory");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan");
     expect(screen.queryByTestId("total-card")).toBeNull();

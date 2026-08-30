@@ -38,7 +38,7 @@ export const EXPLORE = {
   mapUnavailable: { error: "representation_unavailable", error_class: "RepresentationUnavailable", message: "Map is available for place breakdowns: choose Compare provinces, All districts or two provinces under Geography.", available_at: ["province", "district"] },
   reading: {
     title: "Reading this result",
-    notOfficial: { label: "Not an official inventory", text: "PakEmis independently reconstructs emissions from public activity data." },
+    notOfficial: { label: "Not an official inventory", text: "This inventory independently reconstructs emissions from public activity data." },
     ne: { label: "Not estimated is not zero", text: "Categories without adequate activity data remain explicitly marked NE." },
     exact: { label: "Exact result available", text: "Every value can expose its data rows, calculation, release and query receipt." },
     filtered: "The two places are drawn from the envelope of every province; the other provinces are hidden, not removed from the receipt.",

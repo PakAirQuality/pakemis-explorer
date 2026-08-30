@@ -81,14 +81,14 @@ export function periodRange(dims: { fiscalPeriods: string[] }, labels: Labels): 
 /** The scope in words the identity line carries when the API sends none. */
 export const IDENTITY_SCOPE = "public-data reconstruction of Pakistan's emissions, excluding land use and forestry";
 /**
- * The sub-header line under every page's title: `/release.identity_line` as the API sends it
- * ("PakEmis · public-data reconstruction of Pakistan's non-LULUCF emissions · 2015–16 to
- * 2023–24"), else the same three parts built from the labels. No version string.
+ * The sub-header line under every page's title: `/release.identity_line` as the API sends it (a
+ * server string, which names the dataset), else the same three parts built from the labels, under
+ * the initiative's name rather than the dataset's. No version string.
  */
 export function identityLine(release: Record<string, unknown> | undefined, dims: { fiscalPeriods: string[] }, labels: Labels): string {
   const sent = release?.identity_line;
   if (typeof sent === "string" && sent.trim()) return sent;
-  return ["PakEmis", IDENTITY_SCOPE, periodRange(dims, labels)].filter(Boolean).join(" · ");
+  return ["Pakistan Air Quality Initiative", IDENTITY_SCOPE, periodRange(dims, labels)].filter(Boolean).join(" · ");
 }
 
 const MAGNITUDE_WORDS: Record<string, string> = { Mt: "million tonnes", Gg: "thousand tonnes", kt: "thousand tonnes", t: "tonnes" };

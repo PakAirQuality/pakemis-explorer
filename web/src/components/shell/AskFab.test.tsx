@@ -14,12 +14,12 @@ afterEach(() => {
 });
 
 describe("AskFab", () => {
-  it("is the blue round button labelled Ask PakEmis and toggles the drawer on the bus", () => {
+  it("is the round oxblood button labelled Ask about this view and toggles the drawer on the bus", () => {
     const bus = vi.fn();
     subscribeAsk(bus);
     render(<AskFab />);
     const fab = screen.getByTestId("ask-fab");
-    expect(fab).toHaveAttribute("aria-label", "Ask PakEmis");
+    expect(fab).toHaveAttribute("aria-label", "Ask about this view");
     expect(fab.className).toContain("fixed bottom-6 right-6");
     expect(fab.className).toContain("rounded-full bg-accent text-on-accent");
     expect(fab.querySelector("svg")).not.toBeNull();

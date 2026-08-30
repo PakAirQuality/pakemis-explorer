@@ -35,7 +35,7 @@ function MapScreen() {
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   useEffect(() => {
-    document.title = `${MAP_PAGE_TITLE} · PakEmis`;
+    document.title = `${MAP_PAGE_TITLE} · Pakistan Air Quality Initiative`;
   }, []);
   return (
     <div className="flex h-dvh w-screen flex-col overflow-hidden bg-surface text-fg" data-testid="explorer">

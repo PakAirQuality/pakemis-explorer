@@ -3,7 +3,7 @@
  * The methodology prose (today's /about text, moved 2026-08-30 and set under the sector cards
  * with id="methodology"; "Read methodology" and /methods#release land here): what the dataset
  * is, what "emissions data" means here, how to read the map, the territories' sector coverage,
- * Ask PakEmis, the release (the one place the version is printed), the licences, a vocabulary
+ * the assistant, the release (the one place the version is printed), the licences, a vocabulary
  * note and links. Every release fact is the API's own text.
  */
 import Link from "next/link";
@@ -131,7 +131,7 @@ export function Methodology() {
         </section>
 
         <section className="card mb-5 p-4 text-sm" data-testid="about-ask">
-          <h2 className="text-md font-semibold">Ask PakEmis</h2>
+          <h2 className="text-md font-semibold">Ask about this view</h2>
           <p className="mt-2 leading-relaxed">{ASK_SENTENCES[0]}</p>
           <p className="mt-2 leading-relaxed">{ASK_SENTENCES[1]}</p>
           {fns.length > 0 && (

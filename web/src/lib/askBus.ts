@@ -1,5 +1,5 @@
 /**
- * The Ask bus: how any page opens the Ask PakEmis drawer (mounted once in app/layout.tsx).
+ * The Ask bus: how any page opens the "Ask about this view" drawer (mounted once in app/layout.tsx).
  * `openAsk({question?, scope?})` asks the drawer to open, apply `scope` (a partial URL state)
  * and send `question` once; `closeAsk()` and `toggleAsk()` do what they say. The drawer
  * subscribes with `subscribeAsk`; a request sent before any subscriber exists (a page that

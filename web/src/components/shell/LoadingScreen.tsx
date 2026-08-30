@@ -2,7 +2,8 @@
 /**
  * The loading screen (mounted once in app/layout.tsx, before the ExplorerProvider so it covers
  * the release fetch): a fixed overlay over everything with the particle field behind, the
- * floating PAQI logo, "PakEmis", "Pakistan Air Quality Initiative", a progress bar and a
+ * floating PAQI logo, "Pakistan Air Quality Initiative", the dataset's one-line description, a
+ * progress bar and a
  * rotating status line. The bar is real, not a timer: it reads the bootstrap store
  * (shell/bootstrap.ts) — the release resolved, the labels applied, the page's first envelope
  * answered, the map loaded on the pages that carry one (stagesFor) — and finishes when the
@@ -106,7 +107,7 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
       className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center transition-opacity duration-700 ${phase === "fading" ? "pointer-events-none opacity-0" : "opacity-100"}`}
       style={{ background: "#f6f4f1" }}
       role="status"
-      aria-label="PakEmis is loading"
+      aria-label="Pakistan Air Quality Initiative is loading"
       data-testid="loading-screen"
       data-phase={phase}
       data-progress={progress}
@@ -117,10 +118,10 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
           <BrandLogo className="h-20 object-contain" style={{ filter: "drop-shadow(0 4px 20px rgba(0,0,0,0.08))" }} />
         </div>
         <h1 className={`mt-6 text-xl font-bold tracking-tight text-fg ${styles.title}`} data-testid="loading-title">
-          PakEmis
+          Pakistan Air Quality Initiative
         </h1>
         <p className={`mt-1 mb-10 text-sm text-muted ${styles.subtitle}`} data-testid="loading-subtitle">
-          Pakistan Air Quality Initiative
+          Pakistan&apos;s greenhouse-gas emissions, reconstructed from public documents
         </p>
         <div className="h-1 w-64 overflow-hidden rounded-full" style={{ background: "#e5e1da" }} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} data-testid="loading-progress">
           <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%`, background: "linear-gradient(90deg, #462e32, #ffb313)" }} data-testid="loading-fill" />

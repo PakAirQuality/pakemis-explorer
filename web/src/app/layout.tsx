@@ -9,7 +9,7 @@ import { AskFab } from "@/components/shell/AskFab";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 
 export const metadata: Metadata = {
-  title: "PakEmis",
+  title: "Pakistan Air Quality Initiative — emissions",
   description: "Pakistan's greenhouse-gas emissions, reconstructed from public documents: every number a server string with a receipt.",
   icons: { icon: "/favicon.svg" },
 };

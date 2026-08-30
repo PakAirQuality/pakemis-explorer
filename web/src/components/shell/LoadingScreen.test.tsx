@@ -40,15 +40,15 @@ function mockMatchMedia(matches: boolean) {
 }
 
 describe("LoadingScreen", () => {
-  it("renders the logo, PakEmis, the initiative, an empty bar and the first line", () => {
+  it("renders the logo, the initiative, its one-line description, an empty bar and the first line", () => {
     render(<LoadingScreen force />);
     const screenEl = screen.getByTestId("loading-screen");
     expect(screenEl).toHaveAttribute("data-phase", "shown");
     expect(screenEl.className).toContain("fixed inset-0 z-[99999]");
     expect(screenEl.style.background).toMatch(/#f6f4f1|rgb\(246, 244, 241\)/);
     expect(screen.getByAltText("Pakistan Air Quality Initiative")).toHaveAttribute("src", "/brand/paqi-logo.png");
-    expect(screen.getByTestId("loading-title")).toHaveTextContent("PakEmis");
-    expect(screen.getByTestId("loading-subtitle")).toHaveTextContent("Pakistan Air Quality Initiative");
+    expect(screen.getByTestId("loading-title")).toHaveTextContent("Pakistan Air Quality Initiative");
+    expect(screen.getByTestId("loading-subtitle")).toHaveTextContent("Pakistan's greenhouse-gas emissions, reconstructed from public documents");
     expect(screen.getByTestId("loading-progress")).toHaveAttribute("aria-valuenow", "0");
     expect(screen.getByTestId("loading-fill").style.width).toBe("0%");
     expect(screen.getByTestId("loading-line")).toHaveTextContent(LOADING_LINES[0]);

@@ -37,7 +37,7 @@ function Bootstrap({ children }: { children: ReactNode }) {
     return (
       <div className="flex h-dvh items-center justify-center p-6">
         <div className="card max-w-md p-5 text-sm" data-testid="api-unreachable">
-          <div className="micro">PakEmis</div>
+          <div className="micro">Pakistan Air Quality Initiative</div>
           <h1 className="mt-1 text-md font-semibold">API unreachable</h1>
           <p className="mt-2 text-muted">
             {String(release.error)} at <span className="mono">{API_BASE}</span>. Nothing numerical is shown without an envelope.

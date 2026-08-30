@@ -1,8 +1,8 @@
 "use client";
 /**
- * The Ask PakEmis drawer, mounted once in app/layout.tsx inside the ExplorerProvider: a
+ * The "Ask about this view" drawer, mounted once in app/layout.tsx inside the ExplorerProvider: a
  * right-side panel (440 px; full-screen under 768 px) over whatever page is open, opened by
- * the nav's Ask PakEmis button and by `openAsk()` (lib/askBus.ts) from any component. It
+ * the nav's "Ask about this view" button and by `openAsk()` (lib/askBus.ts) from any component. It
  * inherits the current URL scope through the AskDock, applies a request's `scope` and sends
  * its `question` once. Escape closes it. On the /ask page the page itself is the panel, so the
  * drawer stays out of the way there (the page takes the bus). The conversation survives page
@@ -48,7 +48,7 @@ export function AskDrawer() {
       className={`fixed z-[60] flex flex-col border-l border-line bg-card shadow-pill transition-transform duration-200 ease-out ${isMobile ? "inset-0 border-l-0" : "bottom-0 right-0 top-0"} ${open ? "translate-x-0" : "translate-x-full"}`}
       style={isMobile ? undefined : { width: DRAWER_WIDTH, maxWidth: "100vw" }}
       aria-hidden={!open}
-      aria-label="Ask PakEmis"
+      aria-label="Ask about this view"
       data-testid="ask-drawer"
       data-open={open ? "1" : "0"}
     >

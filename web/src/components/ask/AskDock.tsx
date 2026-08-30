@@ -2,7 +2,7 @@
 /**
  * The Ask panel: the body of the AskDrawer (every page), of the /ask permalink page and of the
  * Map page's right column when `ask=1`. Header: the title, the one-line contract ("The
- * assistant interprets your question; the PakEmis engine supplies every number…"), the model,
+ * assistant interprets your question; the inventory engine supplies every number…"), the model,
  * New conversation and — in the drawer — Close. Under it the scope line the drawer inherits
  * from the URL state ("Scope: Punjab · agriculture · 2023–24 · reference estimate"). The empty
  * state lists the scope-derived suggested questions (suggestions.ts; a click sends one). The
@@ -24,7 +24,7 @@ import { scopeLine, suggestedQuestions } from "./suggestions";
 import { useAskStream } from "./useAskStream";
 import type { MapActionEvent } from "./types";
 
-export const ASK_CONTRACT = "The assistant interprets your question; the PakEmis engine supplies every number. It never calculates from documents or prose.";
+export const ASK_CONTRACT = "The assistant interprets your question; the inventory engine supplies every number. It never calculates from documents or prose.";
 
 /** The URL state the agent is told about: the scope keys, not the chrome (tab, layer, cam, raster, c). */
 export function uiStateOf(s: ExplorerState): Record<string, unknown> {
@@ -98,7 +98,7 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
       <div className="border-b border-line px-4 pb-3 pt-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-fg">Ask PakEmis</div>
+            <div className="text-sm font-semibold text-fg">Ask about this view</div>
             <div className="mono text-micro normal-case tracking-normal text-muted">
               {agent.enabled ? agent.model : "disabled"}
               {ask.conversationId ? ` · ${ask.conversationId.slice(0, 8)}` : ""}
@@ -109,7 +109,7 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
               <RotateCcw size={12} /> New conversation
             </button>
             {onClose && (
-              <button type="button" onClick={onClose} aria-label="Close Ask PakEmis" className="pill p-1.5 text-muted hover:bg-surface-3 hover:text-fg" data-testid="ask-close">
+              <button type="button" onClick={onClose} aria-label="Close the assistant" className="pill p-1.5 text-muted hover:bg-surface-3 hover:text-fg" data-testid="ask-close">
                 <X size={16} />
               </button>
             )}
