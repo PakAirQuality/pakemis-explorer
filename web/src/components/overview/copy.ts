@@ -43,7 +43,8 @@ export const METHODS_HREF = "/methods#methods";
 
 /** The place header card: the eyebrow, the country, the four icon actions and the province select. */
 export const HEADER = {
-  eyebrow: "Pakistan's explainable emissions inventory",
+  eyebrow: "Pakistan Emissions Explorer",
+  dek: "Explore greenhouse-gas emissions by place, sector and year.",
   country: "Pakistan",
   reset: "Reset view",
   choose: "Choose a province",

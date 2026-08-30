@@ -12,5 +12,5 @@ export const LOADING_LINES = [
   "Two estimates, one question: which structural reading is being made.",
   "Every number on screen is a string the release returned, with a receipt that replays it.",
   "Uncertainty is carried at parameter level and reported as an interval.",
-  "Pakistan's explainable emissions inventory.",
+  "Explore greenhouse-gas emissions by place, sector and year.",
 ] as const;

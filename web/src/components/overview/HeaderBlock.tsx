@@ -3,7 +3,7 @@
  * The place header card, the deck's first card (Global Mangrove Watch's): a `rounded-3xl` card
  * in the nav capsule's warm ivory (`--color-nav`, so the two brand surfaces match) with a
  * decorative saffron wave across its top (an inline SVG at 16–22 %, no image asset: oxblood there
- * greyed the ivory toward beige, saffron keeps it the capsule's yellow), the eyebrow "Pakistan's explainable emissions inventory", the title
+ * greyed the ivory toward beige, saffron keeps it the capsule's yellow), the eyebrow "Pakistan Emissions Explorer" over the title
  * (Pakistan, or the selected province) and a row of four icon actions with labels beneath:
  * Reset view (clears the scope and the map level), Choose a province (focuses and opens the
  * select below), Share (copies the URL), Download (-> /downloads). Under the icons the
@@ -55,6 +55,7 @@ export function HeaderBlock({ geo, place, onGeo, onReset }: { geo: string | null
       <div className="relative p-6">
         <div className="text-micro font-semibold uppercase tracking-[0.06em] text-accent" data-testid="eyebrow">{HEADER.eyebrow}</div>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight text-fg" data-testid="place-title">{place}</h1>
+        <p className="mt-1.5 text-sm text-muted" data-testid="header-dek">{HEADER.dek}</p>
         <div className="mt-5 grid grid-cols-4 gap-1" data-testid="header-toolbar">
           <button type="button" onClick={onReset} className={ACTION} data-testid="header-reset">
             <span className={ICON}><RotateCcw size={18} aria-hidden="true" /></span>
