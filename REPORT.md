@@ -484,3 +484,44 @@ retires them), the rail tabs in the nav slot, the Ask pill duplicated by the nav
 and `SlidingPanel`; `/explore` is not built (its nav link 404s until then); `/methods` has
 the prose but not yet the `EvidenceBrowser`; the legend swatches keep a `border-fg/10` line
 that a darker read would raise to `/25`.
+
+## Explore, Methods & evidence, Downloads & API from the mockups (2026-08-30)
+
+Three commits under `web/`, one per page, after the API's products, citation and
+`/method/{sector}` routes landed (d37f440; `types.gen.ts` regenerated from that
+`openapi.json`).
+
+**What was built.** The shared pieces first, so the Map rework can reuse them: `PageHeader`,
+`Widget` (+ `NoteBox`), `StatCard`, `ControlsCard` (+ `Field`, `Select`), `ShowingLine`,
+`ResultTabs`; `EnvelopeTable` gained the server's Share column and row selection, `Frame` a
+`tableProps` passthrough and a `footer` slot, `EnvelopeDrawer` the `useEnvelopeDrawer` hook
+that opens Result details at a named tab. Then `/explore` (`lib/breakdown.ts`,
+`lib/completeness.ts`), `/methods` (`sectorText.ts`, `evidenceClassText.ts`, the prose moved
+to `Methodology.tsx`) and `/downloads` (`lib/products.ts`). Every number on the three pages is
+a server string; the only client arithmetic is counting rows (NE categories, streams, tables).
+
+**Verification.** `npm test` 123 green (23 files; `explore.test`, `methods.test`,
+`downloads.test` new, each ending with the four audits: decimals ⊆ the mocked server's
+strings, no "FY", no raw id including a version, no avoid-list phrase), `npm run build` with
+`/explore` exported, ESLint clean of errors (two pre-existing warnings in DetailCard and
+BarChart). Browser, against the live API: `/explore` shows 452.35 Mt CO₂e, 49.4 % Agriculture ·
+223.45 Mt CO₂e, 407.28–533.73 Mt and 37 NE categories (screenshots `32-explore.jpg`,
+`32b-explore-result.jpg`); `/methods` shows agriculture's 34 streams, 10 registered rules,
+223.45 Mt CO₂e and its three NE categories (`34-methods.jpg`, `34b-methods-evidence.jpg`);
+`/downloads` lists the four families (12 / 1 / 6 / 6 tables), the citation and the curl line
+(`35-downloads.jpg`, `35b-downloads-cite.jpg`); `GET /products/dim_gas.csv` answers with an
+ETag equal to the catalogue's sha256.
+
+**Found while building.** (1) `npm run build` writes `.next` and the running `next dev` then
+serves 404s for its own chunks and CSS ("Loading release…" on a white page): the dev server
+must be restarted after every build. (2) The nuqs testing adapter freezes the URL unless
+`hasMemory: true`; without it a page that writes `by=ipcc` re-renders with the old value.
+(3) `container.textContent` concatenates text nodes, so a decimals audit over it invents
+tokens across element boundaries ("2023–24." + "223.45" -> "24.223"); the audits walk text
+nodes. (4) `get_uncertainty(scope="national", module=…)` returns the national cells, not the
+module's, so the Methods page words uncertainty from the rules' models and the Explore card
+names the scenario in its tooltip. (5) The mockups' "Reference estimate" row would quote the
+configuration note, which ends in "(L)"; the row is worded from the labels instead.
+
+**Deferred.** The light re-theme (the next agent; the pages use tokens only). The Map page
+(`/map`) still carries the old console; its plan section names the components above.

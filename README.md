@@ -97,10 +97,62 @@ and a right column that is the national context panel or, with `ask=1`, the Ask 
 control reads and writes the URL (`level`, `period`, `month`, `sector`, `gas`, `config`,
 `gwp`, `view`, `geo`, `cell`, `panel`, `ask`, `c`, `cam`, `raster`, `view3d`), so a copied URL
 opens with identical receipts. `/ask` is the dock as a page (`?q=` seeds one question and is
-then cleared; "moved the map" and a tool card's "Show on map" link to `/map?…`). `/methods`
-carries the methodology prose; `/downloads` replays receipts and lists the release identity
-(the one place the version is printed). There is no first-visit modal: the Overview is the
-introduction.
+then cleared; "moved the map" and a tool card's "Show on map" link to `/map?…`). There is no
+first-visit modal: the Overview is the introduction.
+
+`/explore`, `/methods` and `/downloads` (2026-08-30, from the mockups) share one composition:
+`PageHeader` (the identity line, `/release.identity_line` when the API sends it, else the same
+three parts from the labels, never a version; the h1, the dek, an action at the right) and
+`Widget` cards (a small-caps title, a toolbar of round icon buttons top-right: info -> Result
+details on the widget's envelope, download -> the receipt's canonical CSV, share -> the page
+link copied; a sentence with the key figures in bold; the figure; an optional amber `NoteBox`;
+a caption line). The other shared pieces are `StatCard` (label · value · unit · caption ·
+Result details), `ControlsCard` (+ `Field`, `Select`; a grid of selects with a "More settings"
+disclosure), `ShowingLine` ("Showing: …" with an icon) and `ResultTabs` (a segmented tab
+strip). All of them use the semantic token classes only.
+
+`/explore` — Explore the inventory. The controls are Period, Break down by (Sector · IPCC
+category · Gas · Month · Province; `lib/breakdown.ts` maps them to the contract's single-key
+`group_by` values the release answers at national grain, Month sends the period's twelve
+`months`, and Province is offered disabled with the reason since the API refuses it there
+with a typed `grain_unavailable`), Measure (CO₂-equivalent on either warming-potential basis)
+and Sector, with Estimate, Warming potentials and Spatial view under More settings; the
+breakdown key is the URL's `by` (page-local nuqs) beside the shared keys. "Showing:
+Pakistan's 2023–24 reference emissions, all sectors, grouped by sector, using IPCC 2013
+warming factors." is built from labels only. Three stat cards: the national envelope's
+`display_short`, the top cell's `share_pct_short` of the sector breakdown (or of the
+sector's categories when one is chosen), and the 95% interval (`interval_short` of
+`get_uncertainty(scope="national"[, module])` for the reference year, the series draws for
+another year). The result widget shows the breakdown as Chart | Table (the table carries the
+server's Share column), its sentence reads the top cell's share, Show calculation / Inspect
+evidence open Result details at that tab (`useEnvelopeDrawer`), and a sector row or bar sets
+`sector` and switches the breakdown to IPCC categories. "Interpret this result" lists the
+configuration in the release's words, "Not an official inventory", the count of NE rows from
+`get_completeness` (narrowed to the sector's IPCC codes through `lib/completeness.ts`) and
+"Exact result available".
+
+`/methods` — Methods & evidence. A search over the sectors, their IPCC categories, streams,
+sources and sub-categories (`get_evidence(_)`), the Browse sectors grid (the ten modules; the
+selected one is the URL's `sector`) and the sector widget: "IPCC sector n" from the module's
+codes, the status badge from the completeness ledger (Estimated with explicit gaps /
+Estimated / Not estimated), an authored summary and four-step narrative
+(`components/methods/sectorText.ts`, prose without digits) each printed beside the release's
+own lists (source ids as words, sub-categories, the rules from `GET /method/{sector}`, the
+sector envelope's `display_short`), Evidence dimensions worded verbatim from
+`dim_evidence_class` (`evidenceClassText.ts` mirrors the table; `/release.dims` exposes only
+its shape), the module's not-estimated categories, View equations, Inspect sources and Open
+data rows. The methodology prose sits under it (`id="methodology"`; the Release section is
+`#release`, the one place the version is printed).
+
+`/downloads` — Downloads & API. The release widget (the window from the labels, the DOI
+slot's note, Release notes -> `/methods#release`, Verify checksums listing every digest the
+release declares plus the Parquet twins' computed ones), use-case chips highlighting a
+product family with its footnote, the four product cards from `GET /products` (each table
+downloadable per format from `GET /products/{name}.{ext}`, the link carrying the file's sha256
+— the download's ETag — as its hint; View schema lists columns, primary key, rows, digest and
+closure), Cite the release (APA and BibTeX from `/release.citation`, copy buttons; the version
+appears inside these strings only), Query through the API (a curl line for the current view's
+national total, the docs, the manifest) and the receipt replay (`?receipt=`).
 
 The map is hawanama.org's: Mapbox GL JS v3 rendering `mapbox://styles/mapbox/streets-v12`
 with hawanama's flags (maxPitch 45, no drag-rotate, no world copies) and v3's default globe

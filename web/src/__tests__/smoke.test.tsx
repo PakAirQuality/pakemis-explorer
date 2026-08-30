@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * Smoke: the Map page and the Downloads page render against a mocked /release and mocked
- * envelopes under the shared ExplorerProvider, and every number on screen is an envelope's
- * display string. The map and charts are stubbed (no WebGL/canvas in jsdom).
+ * Smoke: the Map page renders against a mocked /release and mocked envelopes under the
+ * shared ExplorerProvider, and every number on screen is an envelope's display string
+ * (the Downloads page has downloads.test.tsx). The map and charts are stubbed (no WebGL/canvas in jsdom).
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -10,7 +10,6 @@ import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import Page from "@/app/map/page";
-import DownloadsPage from "@/app/downloads/page";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 
 vi.mock("@/components/map/ExplorerMap", () => ({ ExplorerMap: () => <div data-testid="map-stub" /> }));
@@ -60,13 +59,6 @@ describe("PakEmis Map page", () => {
     mount(<Page />, "?ask=1");
     expect(await screen.findByTestId("disabled-card")).toHaveTextContent("not mounted");
     expect(screen.getByText("query_emissions")).toBeTruthy();
-  });
-  it("renders /downloads with the release identity (the one place the version is printed) and the sector x gas frame", async () => {
-    mount(<DownloadsPage />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Downloads" })).toBeTruthy();
-    expect(await screen.findByText("Release identity")).toBeTruthy();
-    expect(screen.getByText("PakEmis 1.0.0rc42")).toBeTruthy();
-    expect((await screen.findAllByTestId("frame")).length).toBeGreaterThan(0);
   });
 });
 
