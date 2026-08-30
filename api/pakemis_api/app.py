@@ -70,6 +70,7 @@ CATEGORY_GRAIN_MESSAGE = "category filters are national-grain only in this relea
 CITATION_AUTHOR = "Ahmad, R."
 CITATION_YEAR = "2026"
 DOI_NOTE = "DOI to be inserted at release freeze"
+PUBLISHER = "Pakistan Air Quality Initiative"
 SCOPE_WORDS = "public-data reconstruction of Pakistan's emissions, excluding land use and forestry"
 MIDDLE_DOT = " \u00b7 "
 
@@ -472,11 +473,12 @@ class Service:
         return first if first == last else "%s to %s" % (first, last)
 
     def identity_line(self):
-        """'PakEmis · public-data reconstruction of Pakistan's emissions, excluding land use and forestry · 2015–16 to
-        2023–24': the product's name, the scope in words, the reporting window from the dims; no
-        version string (the web's sub-header)."""
-        product = self.manifest.get("product") or {}
-        return MIDDLE_DOT.join(p for p in (product.get("name") or "PakEmis", SCOPE_WORDS, self.period_span()) if p)
+        """'Pakistan Air Quality Initiative · public-data reconstruction of Pakistan's emissions,
+        excluding land use and forestry · 2015–16 to 2023–24': the publisher, the scope in words
+        and the reporting window from the dims; no version string and not the dataset's short
+        name (the web prints this as its sub-header, where the product is the inventory and the
+        brand is the initiative; the dataset's own name lives in the citation)."""
+        return MIDDLE_DOT.join(p for p in (PUBLISHER, SCOPE_WORDS, self.period_span()) if p)
 
     def citation(self):
         """APA and BibTeX for the served release, from the manifest's product.cite_as, version,

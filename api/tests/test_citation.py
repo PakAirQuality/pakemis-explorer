@@ -18,7 +18,9 @@ def release(client):
 
 
 def test_identity_line(release):
-    assert release["identity_line"] == "PakEmis · public-data reconstruction of Pakistan's emissions, excluding land use and forestry · 2015%s16 to 2023%s24" % (EN_DASH, EN_DASH)
+    assert release["identity_line"] == "Pakistan Air Quality Initiative · public-data reconstruction of Pakistan's emissions, excluding land use and forestry · 2015%s16 to 2023%s24" % (EN_DASH, EN_DASH)
+    assert "PakEmis" not in release["identity_line"]          # the brand is the initiative; the dataset name is the citation's
+    assert "PakEmis" in release["citation"]["apa"]
     assert release["version"] not in release["identity_line"]
     assert not re.search(r"\d\.\d\.\d|rc\d", release["identity_line"])
 
