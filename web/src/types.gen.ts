@@ -21,6 +21,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/emissions/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Claim
+         * @description The claim record behind one number: `?receipt=<r>&cell=<n>` replays the receipt and takes
+         *     cell n; `?row_ids=<a,b,c>` names result rows directly. Every value is a string from a table of
+         *     the release; sections with nothing to show are null and listed under `missing`.
+         */
+        get: operations["claim_api_v1_emissions_claim_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/emissions/download/{receipt}.csv": {
         parameters: {
             query?: never;
@@ -102,6 +124,23 @@ export interface paths {
         };
         /** Every downloadable product of the served release, with digests, schema and families */
         get: operations["products_api_v1_emissions_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emissions/products/complete.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every product file as one streamed zip archive (deflated, SHA256SUMS + FETCH.json inside) */
+        get: operations["product_archive_api_v1_emissions_products_complete_zip_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -633,6 +672,39 @@ export interface operations {
             };
         };
     };
+    claim_api_v1_emissions_claim_get: {
+        parameters: {
+            query?: {
+                receipt?: string;
+                cell?: number;
+                row_ids?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     download_csv_api_v1_emissions_download__receipt__csv_get: {
         parameters: {
             query?: never;
@@ -761,6 +833,26 @@ export interface operations {
         };
     };
     products_api_v1_emissions_products_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    product_archive_api_v1_emissions_products_complete_zip_get: {
         parameters: {
             query?: never;
             header?: never;
