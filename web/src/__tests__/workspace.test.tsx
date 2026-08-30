@@ -327,7 +327,7 @@ describe("the deck's cards", () => {
     expect(switches[1]).toHaveAttribute("aria-checked", "false");
     expect(screen.queryByTestId("card-sectors-sentence")).toBeNull();
     expect(screen.queryByTestId("sectors-bars")).toBeNull();
-    expect(screen.getByTestId("card-sectors")).toHaveTextContent("Where emissions come from");
+    expect(screen.getByTestId("card-sectors")).toHaveTextContent("Emission sources");
     expect(screen.getByTestId("card-trend-sentence")).toBeInTheDocument();
     fireEvent.click(switches[1]);
     expect(await screen.findByTestId("card-sectors-sentence")).toBeInTheDocument();
@@ -344,7 +344,7 @@ describe("the deck's cards", () => {
     await loaded();
     expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory, which excludes land use and forestry.");
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("49.4 % from agriculture");
-    expect(screen.getByTestId("snapshot-meta")).toHaveTextContent("Reference estimate · land use excluded · evidence and uncertainty available");
+    expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
     expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest at 223.45 Mt (49.4 %), followed by power (63.37 Mt, 14.0 %) and transport (41.93 Mt, 9.3 %).");
     expect(screen.getByTestId("card-trend-sentence")).toHaveTextContent("From 2020–21 to 2023–24, Pakistan's emissions rose from 372.40 Mt to 452.35 Mt CO₂e, a change of +79.95 Mt (+21.5 %).");
     expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");

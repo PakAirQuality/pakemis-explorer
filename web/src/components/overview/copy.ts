@@ -48,7 +48,7 @@ export const HEADER = {
   country: "Pakistan",
   reset: "Reset map",
   selectProvince: "Select a province",
-  allProvinces: "Pakistan (all provinces)",
+  allProvinces: "All provinces",
   share: "Share",
   shared: "Link copied",
   download: "Download",
@@ -73,24 +73,22 @@ export const INDEPENDENT_LINE = "This is an independent public-data reconstructi
  * Which cards a scope shows is workspace/cards.ts; these are only their words.
  */
 export const CARD_TITLES: Record<string, string> = {
-  snapshot: "Snapshot",
-  sectors: "Where emissions come from",
-  categories: "What makes it up",
-  trend: "How it changed",
-  places: "Where it is placed",
-  composition: "What it is made of",
-  peers: "How it compares",
-  placement: "What is placed and what is not",
+  snapshot: "Overview",
+  sectors: "Emission sources",
+  categories: "Category breakdown",
+  trend: "Change over time",
+  places: "Spatial distribution",
+  composition: "Composition",
+  peers: "Peer comparison",
+  placement: "Spatial placement",
   evidence: "Evidence",
   sources: "Sources",
-  "national.snapshot": "National snapshot",
-  "national.trend": "How emissions changed",
-  "national.places": "Where they are placed",
-  "sector.snapshot": "Sector snapshot",
-  "gas.snapshot": "Gas snapshot",
-  "gas.sectors": "Which sectors emit it",
-  "province.snapshot": "Province snapshot",
-  "district.snapshot": "District snapshot",
+  "national.snapshot": "National overview",
+  "sector.snapshot": "Sector overview",
+  "gas.snapshot": "Gas overview",
+  "gas.sectors": "Contributing sectors",
+  "province.snapshot": "Province overview",
+  "district.snapshot": "District overview",
 };
 
 /** The title of a card in a scope: the scope's own words where it has them, else the card's. */
@@ -98,10 +96,8 @@ export function cardTitle(scopeKind: string, card: string): string {
   return CARD_TITLES[`${scopeKind}.${card}`] ?? CARD_TITLES[card] ?? card;
 }
 
-/** The snapshot's meta line and the words the cards use for a value's standing in its partition. */
+/** The words the snapshot uses for a value's standing in its partition. */
 export const SNAPSHOT = {
-  /** The third part of the national meta line; it opens Result details on the card's own envelope. */
-  evidence: "evidence and uncertainty available",
   /** "49.4 % from agriculture": the saffron chip on the national snapshot. */
   from: (share: string, what: string) => `${share} % from ${what}`,
   /** The share and rank a partition gives a selected value; both are the server's own strings. */

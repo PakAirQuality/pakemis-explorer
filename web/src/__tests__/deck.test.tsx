@@ -201,40 +201,40 @@ describe("the deck's card set follows the scope", () => {
     await ready();
     expect(shownCards()).toEqual(["snapshot", "sectors", "trend", "places"]);
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "national");
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("National snapshot");
+    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("National overview");
     expect(screen.getByTestId("snapshot-display")).toHaveTextContent("452.35");
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("49.4 % from agriculture");
-    expect(screen.getByTestId("snapshot-meta")).toHaveTextContent("Reference estimate · land use excluded · evidence and uncertainty available");
-    expect(screen.getByTestId("card-sectors")).toHaveTextContent("Where emissions come from");
-    expect(screen.getByTestId("card-trend")).toHaveTextContent("How emissions changed");
-    expect(screen.getByTestId("card-places")).toHaveTextContent("Where they are placed");
+    expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
+    expect(screen.getByTestId("card-sectors")).toHaveTextContent("Emission sources");
+    expect(screen.getByTestId("card-trend")).toHaveTextContent("Change over time");
+    expect(screen.getByTestId("card-places")).toHaveTextContent("Spatial distribution");
     expect(await screen.findByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
   });
   it("a sector chosen: its total against the national partition, its categories, its series, its provincial split", async () => {
     set("?sector=power");
     await ready();
     expect(shownCards()).toEqual(["snapshot", "categories", "trend", "places"]);
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Sector snapshot");
+    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Sector overview");
     expect(screen.getByTestId("snapshot-display")).toHaveTextContent("63.37");
     // the share and the rank are the SERVER's, off the sector partition's own cell
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("14.0 % of the national total · rank 2 of 2");
-    expect(screen.getByTestId("card-categories")).toHaveTextContent("What makes it up");
+    expect(screen.getByTestId("card-categories")).toHaveTextContent("Category breakdown");
     expect(await screen.findByTestId("card-categories-sentence")).toHaveTextContent("enteric fermentation was the largest at 151.66 Mt (67.9 %)");
   });
   it("a gas chosen: its total, which sectors emit it, how it changed — and no placement card", async () => {
     set("?gas=CH4");
     await ready();
     expect(shownCards()).toEqual(["snapshot", "sectors", "trend"]);
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Gas snapshot");
+    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Gas overview");
     expect(screen.getByTestId("snapshot-display")).toHaveTextContent("248.75");
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("55.0 % of the national total · rank 1 of 2");
-    expect(screen.getByTestId("card-sectors")).toHaveTextContent("Which sectors emit it");
+    expect(screen.getByTestId("card-sectors")).toHaveTextContent("Contributing sectors");
   });
   it("a province selected: its total with the province partition's share and rank, its modules, the provinces ranked, what it retains", async () => {
     set("?geo=Punjab");
     await ready();
     expect(shownCards()).toEqual(["snapshot", "composition", "peers", "placement"]);
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Province snapshot");
+    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Province overview");
     expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e.");
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("50.6 % of the national allocated total · rank 1 of 2");
     expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest at 123.30 Mt (53.9 %)");
@@ -248,7 +248,7 @@ describe("the deck's card set follows the scope", () => {
     expect(shownCards()).toEqual(["snapshot", "composition", "peers", "evidence", "sources"]);
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "district");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · LAHORE");
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("District snapshot");
+    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("District overview");
     // the release bounds an ADM2 total: the card prints its interval string and its badge, and no share
     expect(screen.getByTestId("snapshot-display")).toHaveTextContent("[14.30, 14.32]");
     expect(screen.queryByTestId("snapshot-chip")).toBeNull();

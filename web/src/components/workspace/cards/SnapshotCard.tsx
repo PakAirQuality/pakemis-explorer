@@ -4,9 +4,10 @@
  * cell's own unit and, where the release bounds it, its interval badge; then the saffron chip —
  * for Pakistan "49.4 % from agriculture" (the rank-1 cell of the sector partition), for a
  * sector, a gas or a province the share the SERVER attached to that cell in its partition, with
- * the rank beside it; then the opening sentence; then the meta line, "Reference estimate · land
- * use excluded · evidence and uncertainty available", whose last part opens Result details on
- * this card's own envelope.
+ * the rank beside it; then the opening sentence. (The meta line — "Reference estimate · land use
+ * excluded · evidence and uncertainty available" — was removed on 2026-08-31; the estimate, the
+ * basis and the land-use exclusion are stated by the filter panel's Showing line and by
+ * this card's own envelope.)
  *
  * Every number is a server string: `display_short`, `share_pct_short`, `rank`. The share and the
  * rank are read off the partition envelope's own cell — where the release attaches neither (an
@@ -17,11 +18,9 @@ import type { ReactNode } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
 import { shown } from "@/lib/envelope";
-import { cellUnit, configLabel, gasLabel, geographyName, lulucfCompact, lulucfShort, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, gasLabel, geographyName, lulucfShort, periodShort, sectorLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
-import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
-import { RESULT_DETAILS_TITLE } from "@/components/ui/ReceiptFooter";
 import { SNAPSHOT } from "@/components/overview/copy";
 import type { Scope } from "../cards";
 import { DeckCard, Pending, Figure } from "./DeckCard";
@@ -31,7 +30,6 @@ const CHIP = "inline-flex items-center gap-1.5 rounded-full border border-amber/
 
 export function SnapshotCard({ id, scope, deck, place, title, open, onToggle }: { id: string; scope: Scope; deck: Deck; place: string; title: string; open: boolean; onToggle: (open: boolean) => void }) {
   const { state, labels } = useExplorer();
-  const drawer = useEnvelopeDrawer(labels);
   const env = deck.total.data;
   const cell = env?.values[0];
   const period = periodShort(labels, state.period);
@@ -52,7 +50,6 @@ export function SnapshotCard({ id, scope, deck, place, title, open, onToggle }: 
     ) : null;
 
   const sentence: ReactNode = cell ? sentenceOf({ scope, place, period, cell, top, topName, labels }) : null;
-  const meta = [configLabel(labels, state.config), lulucfCompact(labels)].filter(Boolean).join(" · ");
 
   return (
     <DeckCard id={id} title={title} env={env} open={open} onToggle={onToggle} sentence={sentence}>
@@ -64,18 +61,6 @@ export function SnapshotCard({ id, scope, deck, place, title, open, onToggle }: 
             {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           </div>
           {chip && <div className="mt-2">{chip}</div>}
-          <p className="caption mt-3" data-testid="snapshot-meta">
-            {meta}
-            {env ? (
-              <>
-                {" · "}
-                <button type="button" onClick={() => drawer.open(env, "sources")} className="font-semibold text-accent hover:underline" title={RESULT_DETAILS_TITLE} data-testid="snapshot-details">
-                  {SNAPSHOT.evidence}
-                </button>
-              </>
-            ) : null}
-          </p>
-          {drawer.node}
         </div>
       ) : (
         <Pending q={deck.total} what={whatWords(scope, place)} />
