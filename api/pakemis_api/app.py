@@ -38,6 +38,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from pakemis_api import models_gen as G
 from pakemis_api.ask.router import install_ask, router as ask_router
+from pakemis_api.claim import ClaimError, ClaimStore
 from pakemis_api.middleware import HeadAsGetMiddleware, ResponseHeadersMiddleware
 from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate
 from pakemis_api.products import ProductCatalog, router as products_router
@@ -239,6 +240,9 @@ class Service:
         self.products = ProductCatalog(self.release, self.manifest, self.verification, settings.release_dir)
         # the registry's sector column: /method/{sector} pre-filters the rows by it
         self.method_sectors = sorted({r["sector"] for r in self.method_rows if r.get("sector")})
+        # the claim record's joins: the registries under data/registries and the fact tables in a
+        # private read-only DuckDB session (never the engine's connection)
+        self.claims = ClaimStore(self.release, settings.registries_dir, self.fetch.get("files") or {}, self.method_rows, self.labels(), settings.manifest_path)
         # the map's tiles: one reader per archive, the outputs proven against TILES.json's digests
         self.tiles = TileStore(settings.tiles_dir, settings.version)
         if self.tiles.available:
@@ -359,6 +363,19 @@ class Service:
                                            "the receipt is the core's for an unfiltered method request and is not stored for replay" % (len(rows), sector))
         return env
 
+    def claim(self, receipt="", cell=0, row_ids="", base_url=""):
+        """/claim: the record behind cell `cell` of a replayed receipt, or behind a list of result
+        row ids; a ClaimError is the route's typed 4xx."""
+        ids = [i.strip() for i in (row_ids or "").split(",") if i.strip()]
+        if receipt and ids:
+            raise ClaimError(422, "one_selector", "give either receipt (with cell) or row_ids, not both")
+        if receipt:
+            env = self.replay(receipt)
+            return self.claims.record(env=env, cell=cell, base_url=base_url)
+        if ids:
+            return self.claims.record(row_ids=ids, base_url=base_url)
+        raise ClaimError(422, "missing_selector", "give receipt=<receipt>&cell=<n> or row_ids=<a,b,c>")
+
     def replay(self, receipt, decorate_cells=True):
         canonical = self.receipts.get(receipt)
         if canonical is None:
@@ -426,6 +443,7 @@ class Service:
             "known_limitations": c["known_limitations"],
             "labels": labels,
             "agent": dict(self.agent_status) if self.agent_status else {"enabled": False, "model": "", "provider": None, "reason": "not mounted"},
+            "registries": self.claims.summary(),
             "digests": {"semantic_release_json": self.verification["semantic_release_sha256"],
                         "release_manifest_json": self.verification["release_manifest_sha256"],
                         "tables": {name: t["sha256_csv"] for name, t in self.release.tables.items()},
@@ -619,6 +637,17 @@ def create_app(settings=None, model_client=None):
         if x in s.method_sectors:
             return s.method_by_sector(x)
         return s.run(G.to_request(G.MethodRequestModel(category=x)))
+
+    @api.get("/claim", tags=["lineage"])
+    def claim(request: Request, receipt: str = "", cell: int = 0, row_ids: str = ""):
+        """The claim record behind one number: `?receipt=<r>&cell=<n>` replays the receipt and takes
+        cell n; `?row_ids=<a,b,c>` names result rows directly. Every value is a string from a table of
+        the release; sections with nothing to show are null and listed under `missing`."""
+        from pakemis_api.tiles import request_origin
+        try:
+            return svc().claim(receipt=receipt, cell=cell, row_ids=row_ids, base_url=request_origin(request))
+        except ClaimError as exc:
+            raise HTTPException(exc.status, {"error": exc.error, "message": exc.message})
 
     @api.get("/transfers", tags=["lineage"])
     def transfers(ledger_id: str = "", configuration_id: str = ""):

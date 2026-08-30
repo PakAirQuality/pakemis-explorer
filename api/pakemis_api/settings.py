@@ -142,6 +142,11 @@ class Settings:
         return os.path.join(self.release_dir, "data", "method_registry.csv")
 
     @property
+    def registries_dir(self):
+        """fetch_release.py's copies of the registries GET /claim joins (data/registries/<basename>)."""
+        return os.path.join(self.release_dir, "data", "registries")
+
+    @property
     def tiles_dir(self):
         """tiles/build_tiles.py's output inside the release payload: the PMTiles, TILES.json,
         bboxes.json and raster/."""
