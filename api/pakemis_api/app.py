@@ -60,6 +60,11 @@ SPATIAL_TABLES = ("fact_adm1_month", "fact_adm2_month", "fact_unallocated")
 GRAIN_TABLES = (("fact_annual", "national", ""), ("fact_monthly", "national", "with months set"),
                 ("fact_adm1_month", "adm1", ""), ("fact_adm2_month", "adm2", ""))
 BINDER_COLUMN = re.compile(r'Referenced column "([^"]+)"')
+# the query core applies `categories` and `ipcc_codes` at national grain only (engine._filters):
+# at adm1/adm2 grain a category filter would silently answer with every row of the sector, so
+# the service refuses it before the engine runs (a fix in the core is a named follow-up)
+CATEGORY_FILTER_KEYS = ("categories", "ipcc_codes")
+CATEGORY_GRAIN_MESSAGE = "category filters are national-grain only in this release"
 CITATION_AUTHOR = "Ahmad, R."
 CITATION_YEAR = "2026"
 DOI_NOTE = "DOI to be inserted at release freeze"
@@ -262,12 +267,30 @@ class Service:
         envelope untouched, for the downloads. `method_rows` (a MethodRequest only) hands
         get_method a pre-filtered registry (/method/{sector}); such an envelope's receipt is the
         core's for the unfiltered request and is not stored for replay."""
+        self.category_grain_guard(request)
         with self._lock:
             try:
                 env = self._run(request, method_rows)
             except (duckdb.BinderException, duckdb.CatalogException) as exc:
                 raise self.grain_refusal(exc, request) from exc
         return decorate(env) if decorate_cells else env
+
+    @staticmethod
+    def category_grain_guard(request):
+        """A QueryEmissions (alone, or inside a compare or timeseries) that carries `categories` or
+        `ipcc_codes` with a non-national geography_level is refused as the core's GrainUnavailable:
+        engine._filters drops both keys outside national grain, and a Punjab request for one category
+        would otherwise answer with every row of the sector."""
+        queries = [request] + [getattr(request, a) for a in ("left", "right", "query") if getattr(request, a, None) is not None]
+        for q in queries:
+            if type(q).__name__ != "QueryEmissions":
+                continue
+            level = getattr(q, "geography_level", "") or "national"
+            if level == "national":
+                continue
+            keys = [k for k in CATEGORY_FILTER_KEYS if getattr(q, k, ())]
+            if keys:
+                raise E.GrainUnavailable(CATEGORY_GRAIN_MESSAGE, "grain_unavailable", key=keys[0], keys=keys, grain=level, available_at=["national"])
 
     def grain_refusal(self, exc, request):
         """A DuckDB binder or catalog error under a request is the release having no column for a

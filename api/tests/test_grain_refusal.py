@@ -41,3 +41,33 @@ def test_the_known_keys_still_work(client):
     for key in ("sector_id", "ipcc_code", "category", "gas", "component_id", "period_id"):
         r = client.post(PREFIX + "/query/emissions", json={"group_by": [key]})
         assert r.status_code == 200, (key, r.text[:200])
+
+
+# --- category filters outside national grain (plan defect 1) ------------------------------
+
+@pytest.mark.parametrize("level", ["adm1", "adm2"])
+@pytest.mark.parametrize("key,value", [("categories", ["Enteric fermentation"]), ("ipcc_codes", ["3.A"])])
+def test_category_filters_are_refused_outside_national_grain(client, level, key, value):
+    body = {"geography_level": level, "sectors": ["agriculture"], key: value}
+    if level == "adm1":
+        body["geography_ids"] = ["Punjab"]
+    r = client.post(PREFIX + "/query/emissions", json=body)
+    assert r.status_code == 422, r.text
+    out = r.json()
+    assert out["error"] == "grain_unavailable" and out["error_class"] == "GrainUnavailable"
+    assert out["message"] == "category filters are national-grain only in this release"
+    assert out["detail"] == {"key": key, "keys": [key], "grain": level, "available_at": ["national"]}
+    # the same scope without the category filter answers; the filter at national grain answers
+    del body[key]
+    assert client.post(PREFIX + "/query/emissions", json=body).status_code == 200
+    assert client.post(PREFIX + "/query/emissions", json={key: value}).status_code == 200
+
+
+def test_category_guard_reaches_compare_and_timeseries(client):
+    left = {"geography_level": "adm1", "categories": ["Enteric fermentation"]}
+    r = client.post(PREFIX + "/query/compare", json={"left": left, "right": {"geography_level": "adm1"}})
+    assert r.status_code == 422 and r.json()["message"] == "category filters are national-grain only in this release"
+    r = client.post(PREFIX + "/query/timeseries", json={"query": {"geography_level": "adm2", "ipcc_codes": ["3.A"]}})
+    assert r.status_code == 422 and r.json()["detail"]["grain"] == "adm2"
+    r = client.post(PREFIX + "/query/timeseries", json={"query": {"categories": ["Enteric fermentation"]}})
+    assert r.status_code == 200, r.text
