@@ -668,3 +668,17 @@ One deliberate deviation from the plan: `LoadingScreen` mounts *before* `Explore
 because the provider's children do not render until `/release` resolves and the overlay must
 cover that stretch. The status lines are number-free by rule — their app hard-codes fleet
 figures; ours prints numbers only as release strings.
+
+## Basemap, the split frame and the pruned Overview (2026-08-30, the user's five points)
+
+Commits `c556a27` (basemap) and `ea2ca46` (Overview). The basemap is Mapbox `light-v11`
+(grey land, white water, pale borders — the look of emissions.web.app; `ensureAtmosphere` is
+guarded because the style carries its own fog). The Overview is a Global-Mangrove-Watch frame:
+a 560 px dashboard panel with its own scroll and a shadowed right edge over a map that fills the
+remaining width and the full height under the nav. The logo appears once (the nav) — the header
+block's copy was the duplicate. Three widgets the user judged weak are gone (the interval, the
+not-estimated list, the evidence dots) with the routes strip; the tab strip is Summary · Sectors
+· Trend · Gases · Places. The Overview map's legend box is replaced by the compact
+`Low ▬▬ High | Opacity ──● 80 %` pill (the opacity is a display setting applied to the fill
+layers, not a data number); the Map page keeps its full legend. 212 web tests; build green;
+verified in the browser at 1500 px.
