@@ -9,7 +9,9 @@
  * (the cell's spatial-evidence fields, the lineage's allocation statuses and absence reasons,
  * the class definitions) · Sources (lineage rows, provenance tables, the release on
  * /downloads). Every request body comes from drawerBodies.ts; every number is a server string;
- * bars are sized by `value` only. A 420 px column beside the map; a bottom sheet under 768 px.
+ * bars are sized by `value` only. A 420 px column beside the map (a white glass panel; the
+ * page is light, so the drawer inherits the root tokens and re-declares none); a bottom sheet
+ * under 768 px.
  */
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -105,7 +107,7 @@ export function SelectionDrawer({ mobile = false }: { mobile?: boolean }) {
   if (mobile) {
     const h = snap === "peek" ? "22vh" : snap === "half" ? "52vh" : "88vh";
     return (
-      <div className="fixed inset-x-0 bottom-0 z-[50] flex flex-col rounded-t-2xl bg-surface-2 shadow-card transition-[height] duration-250" style={{ height: h }} data-testid="drawer-sheet">
+      <div className="glass fixed inset-x-0 bottom-0 z-[50] flex flex-col rounded-t-2xl transition-[height] duration-250" style={{ height: h }} data-testid="drawer-sheet">
         <button className="flex items-center justify-center py-2" aria-label="Resize" onClick={() => setSnap(snap === "peek" ? "half" : snap === "half" ? "full" : "peek")}>
           <span className="h-1 w-10 rounded-full bg-line" />
         </button>

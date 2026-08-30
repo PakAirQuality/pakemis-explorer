@@ -1,9 +1,10 @@
 "use client";
 /**
- * Map allocated emissions (2026-08-30): the immersive allocation map. A dark chrome
- * (components/map/chrome.ts re-values the theme's tokens on this page) around the light
- * streets-v12 map: [TopNav compact] · [FilterPanel 300 | rail 48] [the full-width map with the
- * layer switch, its legend and the TimelineBar beneath] [SelectionDrawer 420, light]. Under
+ * Map allocated emissions (2026-08-30): the allocation map in the house style. The page is
+ * light like every other (the dark chrome of the first build is gone): white glass panels
+ * (globals.css `glass`) around the light streets-v12 map: [TopNav compact] · [FilterPanel 300 |
+ * rail 48] [the full-width map with the layer switch, its legend and the TimelineBar beneath]
+ * [SelectionDrawer 420]. Under
  * 768 px the filters are a sheet and the drawer a bottom sheet. Everything reads one URL state
  * (lib/urlState.ts: level, geo, cell, period, month, sector, gas, config, gwp, view, layer,
  * tab, raster, view3d, cam), so any view is a shareable link.
@@ -15,8 +16,10 @@ import { TopNav } from "@/components/shell/TopNav";
 import { ExplorerMap } from "@/components/map/ExplorerMap";
 import { FilterPanel } from "@/components/map/FilterPanel";
 import { TimelineBar } from "@/components/map/TimelineBar";
-import { DARK_CHROME, LIGHT_CHROME, MAP_PAGE_TITLE } from "@/components/map/chrome";
 import { DRAWER_WIDTH, SelectionDrawer } from "@/components/detail/SelectionDrawer";
+
+/** The page's title: the map shows allocated emissions, never bare "emissions". */
+const MAP_PAGE_TITLE = "Map allocated emissions";
 
 export default function MapPage() {
   return (
@@ -35,7 +38,7 @@ function MapScreen() {
     document.title = `${MAP_PAGE_TITLE} · PakEmis`;
   }, []);
   return (
-    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-surface text-fg" style={DARK_CHROME} data-testid="explorer">
+    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-surface text-fg" data-testid="explorer">
       <TopNav compact>
         <h1 className="hidden truncate text-sm font-semibold text-fg lg:block" data-testid="page-title">{MAP_PAGE_TITLE}</h1>
       </TopNav>
@@ -52,18 +55,13 @@ function MapScreen() {
           </div>
           <TimelineBar compact={isMobile} />
         </main>
-        {/* the drawer re-declares text-fg and bg-surface-2 so its inherited colour resolves against the light tokens, not the dark wrapper's computed value */}
         {!isMobile && (
-          <aside className="relative z-40 h-full shrink-0 border-l border-line bg-surface-2 text-fg" style={{ width: DRAWER_WIDTH, ...LIGHT_CHROME }} data-testid="right-column">
+          <aside className="relative z-40 h-full shrink-0 border-l border-gray-200/50 bg-white/90 backdrop-blur shadow-md" style={{ width: DRAWER_WIDTH }} data-testid="right-column">
             <SelectionDrawer />
           </aside>
         )}
       </div>
-      {isMobile && (
-        <div className="text-fg" style={LIGHT_CHROME}>
-          <SelectionDrawer mobile />
-        </div>
-      )}
+      {isMobile && <SelectionDrawer mobile />}
     </div>
   );
 }

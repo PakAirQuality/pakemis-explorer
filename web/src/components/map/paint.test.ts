@@ -114,6 +114,17 @@ describe("paint", () => {
     expect(map.states.size).toBe(0);
     expect(map.paints.get("adm1-fill.fill-color")).toBe(NO_CELL);
   });
+  it("the magnitude ramp is YlOrRd, light to dark, eight stops in order, and the interpolate expression walks it", () => {
+    expect([...RAMP]).toEqual(["#ffffcc", "#fed976", "#feb24c", "#fd8d3c", "#fc4e2a", "#e31a1c", "#bd0026", "#800026"]);
+    const expr = fillColorExpression(0, 7) as unknown[];
+    const interp = expr[3] as unknown[];
+    const colours = interp.slice(3).filter((_, i) => i % 2 === 1);
+    expect(colours).toEqual([...RAMP]);
+    const stops = interp.slice(3).filter((_, i) => i % 2 === 0);
+    expect(stops).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    // the categorical layers keep their own palettes: none of their classes is a ramp colour
+    for (const c of [...SPATIAL_CLASSES, ...ALLOCATION_STATUSES]) expect((RAMP as readonly string[]).includes(c.color), c.id).toBe(false);
+  });
   it("a constant colour when every value is equal", () => {
     const expr = fillColorExpression(3, 3) as unknown[];
     expect(expr[3]).toBe(RAMP[RAMP.length - 1]);

@@ -132,6 +132,10 @@ describe("the Map page", () => {
     expect(screen.getByTestId("ask-about")).toHaveAttribute("href", expect.stringContaining("/ask?q="));
     expect(screen.getByTestId("open-rows")).toBeTruthy();
     expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Map")).toHaveAttribute("aria-current", "page");
+    // the light chrome: the page re-values no token (no dark wrapper) and the panels are white glass
+    expect(screen.getByTestId("explorer").getAttribute("style")).toBeNull();
+    expect(screen.getByTestId("right-column").getAttribute("style")).not.toContain("--color");
+    for (const id of ["filter-panel", "time-rail", "right-column"]) expect(screen.getByTestId(id).className).toContain("bg-white/90");
     assertServerDecimals();
     audits();
   });
@@ -258,6 +262,13 @@ describe("the layer legends", () => {
   it("magnitude: the cells' displays; evidence: S1–S4/NA with the definitions and the count; method: statuses and the hatch; unallocated: the province rows' unallocated_short; exceptions: the kinds and the named list", () => {
     let r = mountLegend("magnitude");
     expect(screen.getAllByTestId("legend-label").map((e) => e.textContent)).toEqual([D.district]);
+    // the gradient bar above the classes: the words Low and High and the ramp, no number of its own
+    const bar = screen.getByTestId("legend-gradient");
+    expect(bar).toHaveTextContent(/^LowHigh$/);
+    const gradient = bar.querySelector("span[style]")?.getAttribute("style") ?? ""; // jsdom writes the stops as rgb()
+    expect(gradient).toContain("linear-gradient(90deg, rgb(255, 255, 204)");
+    expect(gradient).toContain("rgb(128, 0, 38))");
+    expect(screen.getByTestId("layer-legend").className).toContain("w-[272px]");
     r.unmount();
     r = mountLegend("evidence");
     const ids = screen.getAllByTestId("legend-category").map((e) => e.getAttribute("data-id"));

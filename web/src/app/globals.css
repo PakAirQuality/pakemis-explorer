@@ -2,45 +2,54 @@
 @import "mapbox-gl/dist/mapbox-gl.css";
 
 /*
- * Design tokens: the light theme (2026-08-30, replacing the dark tokens of the same day).
- * Semantic names only; every component reads these and none carries a literal colour. The
- * names the components already use are kept so a theme is a value change: `surface` is the
- * warm off-white page ground, `surface-2` the card (white), `surface-3` a slightly darker ground for hovers
- * and inputs; `ground` and `card` are the same two values under the plan's names. The map's
- * light streets-v12 basemap sits in a 1 px frame; the outline / halo colours drawn ON the
- * basemap are the `map-*` tokens, read at layer construction (lib/theme.ts).
+ * Design tokens: the PAQI house style (2026-08-30), the palette of emissions.web.app read off
+ * the deployed app. Semantic names only; every component reads these and none carries a literal
+ * colour. The names the components already use are kept so a theme is a value change: `surface`
+ * is the cool grey page ground (#f9fafb), `surface-2` the card (white), `surface-3` the input
+ * ground (#f3f3f5); `ground` and `card` are the same two values under the plan's names. `fg` is
+ * their near-black with a blue cast, `muted` their muted foreground, `line` their rgba(0,0,0,.1)
+ * on white, `accent` blue-600 (hover blue-700), `accent-soft` blue at 8 %, and `brand-gold` the
+ * logo's gold, used sparingly (the active nav underline, a small tick). The map's light
+ * streets-v12 basemap sits in a 1 px frame; the outline / halo / hover / selected colours drawn
+ * ON the basemap are the `map-*` tokens (dark slate, legible on the YlOrRd ramp), read at layer
+ * construction (lib/theme.ts). lib/theme.ts's FALLBACK mirrors every value here; theme.test.ts
+ * holds the two in step.
  */
 @theme {
-  --color-ground: #faf8f4;
+  --color-ground: #f9fafb;
   --color-card: #ffffff;
-  --color-surface: #faf8f4;
+  --color-surface: #f9fafb;
   --color-surface-2: #ffffff;
-  --color-surface-3: #f1eee8;
-  --color-fg: #161a1d;
-  --color-muted: #5c6670;
-  --color-line: #e7e3dc;
-  --color-line-strong: #d6d1c8;
-  /* the green family: links and text, the chart stroke, the filled button (one green on light) */
-  --color-accent: #1f7a5c;
-  --color-accent-bright: #27956f;
-  --color-accent-fill: #1f7a5c;
+  --color-surface-3: #f3f3f5;
+  --color-fg: #030213;
+  --color-muted: #717182;
+  --color-line: #e5e7eb;
+  --color-line-strong: #d1d5db;
+  /* the blue family: links and text, the chart stroke, the filled button and the FAB (one blue on light) */
+  --color-accent: #2563eb;
+  --color-accent-bright: #1d4ed8;
+  --color-accent-fill: #2563eb;
   --color-on-accent: #ffffff;
-  --color-accent-soft: #e6f4ee;
+  --color-accent-soft: rgba(59, 130, 246, 0.08);
+  /* the logo's gold: the active nav underline and small accents only */
+  --color-brand-gold: #ffbb12;
   /* the amber note box and the refusal tint */
   --color-note-bg: #fff8e6;
   --color-note-border: #f0c36d;
   --color-note-text: #7a4b00;
   --color-refusal: #fff1ec;
   --color-warn: #9a4a0c;
-  /* the reference-year marker on charts, the selection outline on the map, the rail's thumb */
+  /* the reference-year marker on charts and the rail's thumb */
   --color-amber: #d97706;
   --color-amber-soft: #b45309;
   --color-panel: rgba(255, 255, 255, 0.9);
-  /* drawn on the light basemap */
-  --color-map-outline: #161a1d;
+  /* drawn on the light basemap: outlines and the hover / selected strokes in dark slate, legible on the ramp */
+  --color-map-outline: #1e293b;
   --color-map-halo: #ffffff;
-  --color-map-hatch: rgba(22, 26, 29, 0.55);
-  --font-sans: var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-map-hatch: rgba(30, 41, 59, 0.55);
+  --color-map-hover: #334155;
+  --color-map-selected: #0f172a;
+  --font-sans: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-card: 0.625rem;
   --text-micro: 11px;
@@ -63,7 +72,8 @@
   --text-4xl: 34px;
   --text-4xl--line-height: 38px;
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
-  --shadow-pill: 0 1px 2px rgba(16, 24, 40, 0.08), 0 4px 12px rgba(16, 24, 40, 0.08);
+  /* Tailwind's shadow-md: the glass pill's shadow */
+  --shadow-pill: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 @layer base {
@@ -79,9 +89,10 @@
   b, strong { font-weight: 600; }
 }
 
-@utility glass { background: var(--color-panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--color-line-strong); box-shadow: var(--shadow-pill); }
-/* the white card on the warm ground: no border (the ground gives the contrast), the card radius, a small shadow */
-@utility card { background: var(--color-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+/* the white glass pill of emissions.web.app: bg-white/90, backdrop-blur (8 px), shadow-md, a hairline at gray-200/50; the radius is the caller's (pill, rounded-card, rounded-xl) */
+@utility glass { background: var(--color-panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(229, 231, 235, 0.5); box-shadow: var(--shadow-pill); }
+/* the white card on the grey ground: a hairline border, the card radius, a small shadow */
+@utility card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 @utility micro { font-size: var(--text-micro); line-height: var(--text-micro--line-height); letter-spacing: var(--text-micro--letter-spacing); text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
 /* a widget's small-caps title */
 @utility widget-title { font-size: 11px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-fg); font-weight: 600; }

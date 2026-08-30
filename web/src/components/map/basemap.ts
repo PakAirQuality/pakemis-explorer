@@ -15,6 +15,7 @@ export type Basemap = { style: string; kind: BasemapKind; token: string | null; 
 
 export const BOUNDARY_ATTRIBUTION = "Boundaries: geoBoundaries gbOpen · values: PakEmis API envelopes (tiles carry none)";
 export const STREETS_STYLE = "mapbox://styles/mapbox/streets-v12";
+// export const STREETS_STYLE = "mapbox://styles/mapbox/light-v11"; // the option: emissions.web.app's grey-land, white-water look; the YlOrRd choropleth reads the same on either
 export const NO_TOKEN_NOTICE = "No map: Mapbox GL JS renders nothing without a token. Put NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (gitignored) and restart the web server.";
 
 export function basemap(): Basemap {

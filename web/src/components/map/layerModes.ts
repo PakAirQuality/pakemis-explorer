@@ -58,7 +58,8 @@ export const EXCEPTION_KINDS: Category[] = [
   { id: "bounded", label: "bounded CH₄ module (hatched)", color: RAMP[2], definition: "the cell's CO₂e is an interval, never a midpoint" },
 ];
 
-export const PLAIN_FILL = RAMP[1];
+/** The exceptions layer's fill for a polygon with no exception: the ramp's palest stop, so only outlines and hatching carry meaning there. */
+export const PLAIN_FILL = RAMP[0];
 
 /** The category a cell falls in on a layer, from the server's field values (a ';'-joined status takes its most exceptional member). */
 export function categoryOf(layer: MapLayer, cell: Cell | undefined): string {

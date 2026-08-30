@@ -26,7 +26,7 @@ export function TimelineBar({ compact = false }: { compact?: boolean }) {
   const refusal = refusalOf(mapQ.error);
   const go = (k: number) => years[k] && setState({ period: years[k] });
   return (
-    <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line bg-surface-2 px-3 ${compact ? "py-1.5" : "py-2"}`} data-testid="time-rail">
+    <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-gray-200/50 bg-white/90 backdrop-blur shadow-md px-3 ${compact ? "py-1.5" : "py-2"}`} data-testid="time-rail">
       <div className="flex items-center gap-1.5">
         <button aria-label="Previous year" disabled={i <= 0} onClick={() => go(i - 1)} className="pill flex h-6 w-6 items-center justify-center bg-fg/5 hover:bg-fg/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
         <div className="scrollbar-none flex gap-0.5 overflow-x-auto" role="tablist" aria-label="Year">

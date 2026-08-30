@@ -1,7 +1,8 @@
 "use client";
 /**
- * The legend. Five swatches at the ranks 0, n/4, n/2, 3n/4, n-1 of the envelope's cells sorted
- * by value, labelled with THOSE cells' display strings (no client-computed breaks), a hatch row
+ * The legend. A compact "Low ▬▬ High" gradient bar of the ramp (emissions.web.app's; two
+ * words, no number) above five swatches at the ranks 0, n/4, n/2, 3n/4, n-1 of the envelope's
+ * cells sorted by value, labelled with THOSE cells' display strings (no client-computed breaks), a hatch row
  * when any cell is bounded, a dotted-outline row when the residual ADM1 unit's members share
  * one cell, a no-cell row only while some polygon still has none, the scope and the
  * ReceiptFooter. A refused map
@@ -45,6 +46,7 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
         <div className="px-2 pb-2 pt-1"><RefusalCard error={error} compact /></div>
       ) : env && index ? (
         <div className="px-3 pb-2 pt-1">
+          <GradientBar />
           <ul className="space-y-0.5">
             {legendRanks(env.values).map((c, i) => (
               <li key={i} className="flex items-center gap-2">
@@ -77,6 +79,17 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
         <div className="px-3 pb-2 pt-1"><Loading what="the map envelope" /></div>
       ) : null}
       {env && state.level !== "grid" && <ReceiptFooter env={env} className="border-t border-line/70 px-3 py-1" />}
+    </div>
+  );
+}
+
+/** The ramp as one bar between the words Low and High; the classes beneath carry the server's strings. */
+export function GradientBar() {
+  return (
+    <div className="mb-1.5 flex items-center gap-2 text-micro normal-case tracking-normal text-muted" data-testid="legend-gradient">
+      <span>Low</span>
+      <span className="h-2 flex-1 rounded-full border border-line" style={{ background: `linear-gradient(90deg, ${RAMP.join(", ")})` }} aria-hidden="true" />
+      <span>High</span>
     </div>
   );
 }

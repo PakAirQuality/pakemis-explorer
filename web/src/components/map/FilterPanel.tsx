@@ -43,7 +43,7 @@ export function FilterPanel({ open, onToggle, mobile = false }: { open: boolean;
   if (mobile) {
     if (!open) return null;
     return (
-      <div className="fixed inset-x-0 bottom-0 top-14 z-[55] flex flex-col bg-surface-2" data-testid="filter-panel">
+      <div className="glass fixed inset-x-0 bottom-0 top-14 z-[55] flex flex-col rounded-t-xl" data-testid="filter-panel">
         <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
           <div className="micro">Filters</div>
           <button aria-label="Close the filters" onClick={() => onToggle(false)} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg"><X size={14} /></button>
@@ -53,7 +53,7 @@ export function FilterPanel({ open, onToggle, mobile = false }: { open: boolean;
     );
   }
   return (
-    <aside className="relative z-30 flex h-full shrink-0 border-r border-line bg-surface-2 transition-[width] duration-250 ease-out" style={{ width: open ? FILTER_WIDTH : RAIL_WIDTH }} data-testid="filter-panel" data-open={open ? "1" : "0"}>
+    <aside className="relative z-30 flex h-full shrink-0 border-r border-gray-200/50 bg-white/90 backdrop-blur shadow-md transition-[width] duration-250 ease-out" style={{ width: open ? FILTER_WIDTH : RAIL_WIDTH }} data-testid="filter-panel" data-open={open ? "1" : "0"}>
       {open ? (
         <div className="flex h-full min-w-0 flex-1 flex-col" style={{ width: FILTER_WIDTH }}>
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
