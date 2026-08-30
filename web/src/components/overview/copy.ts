@@ -66,26 +66,81 @@ export const DECK = {
 /** The muted line under the opening statement, and the footer's. */
 export const INDEPENDENT_LINE = "This is an independent public-data reconstruction, not an official inventory; every figure carries its method, evidence grade and source.";
 
-/** The deck's sections in order: the opening statement (`summary`) and the four widget cards. The scroll spy watches these ids; the map follows the one in view. */
-export const SECTION_IDS = ["summary", "sectors", "trend", "gases", "places"] as const;
-export type SectionId = (typeof SECTION_IDS)[number];
-/** The four widget cards (the sections that collapse); their count is the "Sections (n)" pill. */
-export const WIDGET_IDS = ["sectors", "trend", "gases", "places"] as const;
-export type WidgetId = (typeof WIDGET_IDS)[number];
-
-/** The widget titles (small caps); the place is appended where the widget re-scopes. */
-export const WIDGETS: Record<WidgetId, string> = {
-  sectors: "Emissions by sector",
-  trend: "Emissions over time",
-  gases: "Emissions by gas",
-  places: "Where emissions are placed",
+/**
+ * The insight cards' titles. The default is the card's own; a scope that reads better with its
+ * own words overrides it under "{scope}.{card}". One rule per card — what is selected · what
+ * explains it · how it compares — so a title says what the card answers, never what it holds.
+ * Which cards a scope shows is workspace/cards.ts; these are only their words.
+ */
+export const CARD_TITLES: Record<string, string> = {
+  snapshot: "Snapshot",
+  sectors: "Where emissions come from",
+  categories: "What makes it up",
+  trend: "How it changed",
+  places: "Where it is placed",
+  composition: "What it is made of",
+  peers: "How it compares",
+  placement: "What is placed and what is not",
+  evidence: "Evidence",
+  sources: "Sources",
+  "national.snapshot": "National snapshot",
+  "national.trend": "How emissions changed",
+  "national.places": "Where they are placed",
+  "sector.snapshot": "Sector snapshot",
+  "gas.snapshot": "Gas snapshot",
+  "gas.sectors": "Which sectors emit it",
+  "province.snapshot": "Province snapshot",
+  "district.snapshot": "District snapshot",
 };
+
+/** The title of a card in a scope: the scope's own words where it has them, else the card's. */
+export function cardTitle(scopeKind: string, card: string): string {
+  return CARD_TITLES[`${scopeKind}.${card}`] ?? CARD_TITLES[card] ?? card;
+}
+
+/** The snapshot's meta line and the words the cards use for a value's standing in its partition. */
+export const SNAPSHOT = {
+  /** The third part of the national meta line; it opens Result details on the card's own envelope. */
+  evidence: "evidence and uncertainty available",
+  /** "49.4 % from agriculture": the saffron chip on the national snapshot. */
+  from: (share: string, what: string) => `${share} % from ${what}`,
+  /** The share and rank a partition gives a selected value; both are the server's own strings. */
+  rankOf: (rank: string, n: string, what: string) => `${rank} of ${n} ${what}`,
+} as const;
+
+/** The words the two district cards use for the release's placement vocabulary. */
+export const EVIDENCE = {
+  fields: "Spatial evidence of this district",
+  lineage: "Allocation status of the lineage rows",
+  fallbacks: "Fallbacks and absences",
+  classes: "Spatial placement classes",
+  none: "The served envelope carries no spatial-evidence fields for this cell.",
+  class: "Class",
+  basis: "Basis",
+  stream: "Dominant stream",
+  placement: "Placement",
+  allocation: "Allocation",
+} as const;
+
+export const SOURCES = {
+  lineage: "Lineage rows",
+  product: "Product and tables",
+  release: "Release",
+  noTables: "The envelope lists no tables.",
+  releaseLine: "The served release, its manifest digests and the citation are on",
+} as const;
+
+/** The peers card's own line: the selected place is marked in the ranking, never re-ordered here. */
+export const PEERS = { selected: "the selection", provinces: "provinces", districts: "districts in the same province" } as const;
 
 /** The gas ids as words for running text (a naming dictionary, like COLUMN_NAMES; the release's labels give the formulae). */
 export const GAS_WORDS: Record<string, string> = { CH4: "Methane", CO2: "Carbon dioxide", N2O: "Nitrous oxide" };
 
 export const LINKS = {
   openMap: "Show it on the map →",
+  inventory: "Explore the inventory →",
+  details: "Result details",
+  claim: "Claim record",
 } as const;
 
 export const FOOTER = { product: "A Pakistan Air Quality Initiative product", repository: "Repository", methods: "Methods & evidence", downloads: "Downloads", api: "API" } as const;

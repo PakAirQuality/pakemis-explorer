@@ -6,32 +6,37 @@
  * the cards. The column lets pointer events through (`pointer-events-none`); each card takes
  * them back (`pointer-events-auto`), so the map drags through the gaps.
  *
- * The cards, in order: the place card (HeaderBlock — the eyebrow, Pakistan or the selected
- * province, the four actions and the province select), the deck header ("INSIGHTS · {PLACE}"
- * and Collapse all), the scope chips (sector · gas · year, each clearing to its default), the
- * opening statement, the four widgets (overview/widgets.tsx), each collapsible under its
- * switch, and the footer. Wave 3 replaces the four widgets with the cards the scope selects;
- * the shell keeps them so the page is never empty.
+ * **The deck re-writes itself from the shared selection.** It holds no card list: it resolves the
+ * URL state to a `Scope` (workspace/cards.ts) and renders the cards that scope selects, in that
+ * order. Changing the sector, the gas, the year, the level or the selected place — from the
+ * filter panel, from a chip, from a bar or by clicking the map — changes the scope, and with it
+ * both which cards are shown and what every one of them asks the server for (lib/requests.ts
+ * `deckBodies`, lib/queries.ts `useDeck`). A collapsed card renders nothing and asks for
+ * nothing: its envelopes are dropped from the request plan.
  *
- * Every number in the deck is a server string (`display_short`, `share_pct_short`, `change.*`,
- * `derived.*`, `axis.ticks_short`); the deck computes nothing. Under 1024 px it is a bottom
- * sheet over the map with three snap heights.
+ * Above the cards: the place card (HeaderBlock), the deck header ("INSIGHTS · {PLACE}" and
+ * Collapse all) and the scope chips; below them, the footer.
+ *
+ * Every number in the deck is a server string (`display_short`, `share_pct_short`, `rank`,
+ * `interval_short`, `change.*`, `derived.*`, `axis.ticks_short`); the deck computes nothing.
+ * Under 1024 px it is a bottom sheet over the map with three snap heights.
  */
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronsLeft, ChevronsRight, GripHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import type { Briefing } from "@/lib/queries";
+import { useDeck, type Briefing } from "@/lib/queries";
 import { api } from "@/lib/api";
+import { districtName, geographyName } from "@/lib/labels";
 import { releaseCitation, releaseFacts } from "@/lib/release";
 import { BrandLogo } from "@/components/shell/BrandLogo";
 import { HeaderBlock } from "@/components/overview/HeaderBlock";
 import { DeckControls } from "@/components/overview/DeckControls";
-import { OpeningStatement } from "@/components/overview/OpeningStatement";
-import { GasWidget, PlacesWidget, SectorWidget, TrendWidget } from "@/components/overview/widgets";
-import { FOOTER, INDEPENDENT_LINE, WIDGET_IDS, type WidgetId } from "@/components/overview/copy";
+import { FOOTER, HEADER, INDEPENDENT_LINE } from "@/components/overview/copy";
 import { DECK_CARD } from "@/components/overview/deck";
 import { ScopeChips } from "./ScopeChips";
+import { cardsFor, scopeOf, type CardId } from "./cards";
+import { renderCard, wantsFor } from "./cards/render";
 import { DECK_COLLAPSE, DECK_EXPAND, DECK_TITLE } from "./copy";
 
 /** The deck's column, over the map, clear of the nav capsule above it. */
@@ -43,18 +48,19 @@ export const SNAP_HEIGHT: Record<Snap, string> = { peek: "84px", half: "55dvh", 
 export type Snap = "peek" | "half" | "full";
 const NEXT_SNAP: Record<Snap, Snap> = { peek: "half", half: "full", full: "peek" };
 
-type Collapsed = Record<WidgetId, boolean>;
-const ALL_OPEN: Collapsed = { sectors: false, trend: false, gases: false, places: false };
-
 export type DeckProps = {
-  data: Briefing;
-  /** The selected province (an ADM1 row), or null for Pakistan. */
-  geo: string | null;
-  /** The place as the release names it. */
-  place: string;
+  /**
+   * The Overview briefing's envelopes, where a caller still asks for them. The deck no longer
+   * reads them — it asks for its own scope (`useDeck`) — so this is accepted and ignored.
+   */
+  data?: Briefing;
+  /** The selected province (an ADM1 row), or null for Pakistan; the deck resolves its own scope. */
+  geo?: string | null;
+  /** The place as the release names it; the deck names the scope's own place when it has one. */
+  place?: string;
   onGeo: (name: string | null) => void;
   onReset: () => void;
-  /** The sector the map should follow while the Sectors card is open (hover), and the picked one. */
+  /** The sector the map should follow while a breakdown card is open (hover), and the picked one. */
   onSector?: (id: string | null) => void;
   /** Collapse the deck to its rail (the workspace re-centres the map when it goes). */
   onCollapse?: () => void;
@@ -62,28 +68,37 @@ export type DeckProps = {
   mobile?: boolean;
 };
 
-export function Deck({ data, geo, place, onGeo, onReset, onSector, onCollapse, mobile = false }: DeckProps) {
-  const [collapsed, setCollapsed] = useState<Collapsed>(ALL_OPEN);
+export function Deck({ onGeo, onReset, onSector, onCollapse, mobile = false }: DeckProps) {
+  const { state, labels, dims } = useExplorer();
+  const [collapsed, setCollapsed] = useState<Partial<Record<CardId, boolean>>>({});
   const [picked, setPicked] = useState<string | null>(null);
   const [snap, setSnap] = useState<Snap>("half");
-  const allCollapsed = WIDGET_IDS.every((id) => collapsed[id]);
-  const toggle = (id: WidgetId) => (open: boolean) => setCollapsed((c) => ({ ...c, [id]: !open }));
-  const toggleAll = () => setCollapsed({ sectors: !allCollapsed, trend: !allCollapsed, gases: !allCollapsed, places: !allCollapsed });
-  const pickSector = (id: string) => {
-    setPicked((p) => {
-      const next = p === id ? null : id;
-      onSector?.(next);
-      return next;
-    });
+
+  const scope = useMemo(() => scopeOf(state), [state]);
+  const ids = useMemo(() => cardsFor(scope), [scope]);
+  const isOpen = (id: CardId) => !collapsed[id];
+  const allCollapsed = ids.every((id) => !isOpen(id));
+  const wants = useMemo(() => wantsFor(ids, (id) => !collapsed[id]), [ids, collapsed]);
+  const deck = useDeck(state, wants);
+
+  // the deck's own place: the country, the selected province, or the selected district's shape
+  const province = scope.kind === "province" ? scope.geo : null;
+  const place = scope.kind === "province" ? geographyName(labels, scope.geo) : scope.kind === "district" ? districtName(dims, scope.geo) : HEADER.country;
+
+  const toggle = (id: CardId) => (open: boolean) => setCollapsed((c) => ({ ...c, [id]: !open }));
+  const toggleAll = () => setCollapsed((c) => ({ ...c, ...Object.fromEntries(ids.map((id) => [id, !allCollapsed])) }));
+  const pickSector = (id: string | null) => {
+    setPicked(id);
+    onSector?.(id);
   };
 
   const cards = (
     <>
-      <HeaderBlock geo={geo} place={place} onGeo={onGeo} onReset={onReset} />
+      <HeaderBlock geo={province} place={place} onGeo={onGeo} onReset={onReset} />
       <header className={`${DECK_CARD} flex items-center justify-between gap-3 px-5 py-3`} data-testid="deck-header">
         <h2 className="widget-title min-w-0 truncate">{DECK_TITLE(place)}</h2>
         <div className="flex shrink-0 items-center gap-1.5">
-          <DeckControls count={WIDGET_IDS.length} allCollapsed={allCollapsed} onToggleAll={toggleAll} inline />
+          <DeckControls count={ids.length} allCollapsed={allCollapsed} onToggleAll={toggleAll} inline />
           {onCollapse && (
             <button type="button" onClick={onCollapse} aria-label={DECK_COLLAPSE} title={DECK_COLLAPSE} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg" data-testid="deck-collapse">
               <ChevronsLeft size={14} aria-hidden="true" />
@@ -92,11 +107,7 @@ export function Deck({ data, geo, place, onGeo, onReset, onSector, onCollapse, m
         </div>
       </header>
       <ScopeChips />
-      <OpeningStatement data={data} geo={geo} place={place} />
-      <SectorWidget data={data} geo={geo} place={place} open={!collapsed.sectors} onToggle={toggle("sectors")} onHover={(id) => onSector?.(id ?? picked)} onSelect={pickSector} selected={picked} />
-      <TrendWidget data={data} geo={geo} place={place} open={!collapsed.trend} onToggle={toggle("trend")} />
-      <GasWidget data={data} geo={geo} place={place} open={!collapsed.gases} onToggle={toggle("gases")} />
-      <PlacesWidget data={data} geo={geo} place={place} open={!collapsed.places} onToggle={toggle("places")} onPick={(name) => onGeo(name)} />
+      {ids.map((id) => renderCard({ id, scope, deck, place, open: isOpen(id), onToggle: toggle(id), onSector: pickSector, picked }))}
       <DeckFooter />
     </>
   );
@@ -112,7 +123,7 @@ export function Deck({ data, geo, place, onGeo, onReset, onSector, onCollapse, m
     );
   }
   return (
-    <div className={DECK_CLASS} data-testid="deck">
+    <div className={DECK_CLASS} data-testid="deck" data-scope={scope.kind}>
       {cards}
     </div>
   );
@@ -144,7 +155,11 @@ function DeckFooter(): ReactNode {
           {licences || "Licences as the release states them"}. {INDEPENDENT_LINE}
         </span>
         <span className="flex flex-wrap gap-4">
-          {citation?.repository && <a href={citation.repository} className="hover:text-fg" data-testid="footer-repository">{FOOTER.repository}</a>}
+          {citation?.repository && (
+            <a href={citation.repository} className="hover:text-fg" data-testid="footer-repository">
+              {FOOTER.repository}
+            </a>
+          )}
           <Link href="/methods" className="hover:text-fg">{FOOTER.methods}</Link>
           <Link href="/downloads" className="hover:text-fg">{FOOTER.downloads}</Link>
           <a href={api.docsUrl()} className="hover:text-fg">{FOOTER.api}</a>
