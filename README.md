@@ -68,177 +68,75 @@ firebase.json           Firebase Hosting for web/out: the rewrite /api/v1/emissi
 
 ## The pages (2026-08-30)
 
-Every page carries the `TopNav` (Overview, Explore data, Map, Methods & evidence, Downloads,
-the green Ask PakEmis button) and, where numbers are shown, the `CurrentView` bar ("Current
-view: 2023–24 · Pakistan · Reference estimate · excludes land use and forestry", the IPCC basis
-and the LULUCF note as its tooltip; "Change view" opens the Explore controls, which write the
-same URL state; the Overview replaces it with the province dropdown). The theme is light
-(2026-08-30): a warm off-white ground, white cards without borders (the ground gives the
-contrast), near-black text, one emerald accent for links and primary buttons, sector colours
-inside charts only, an amber note box; `globals.css` holds the semantic tokens (the names the
-components use are kept: `surface` = ground, `surface-2` = card, `surface-3` a darker ground)
-and the utilities `card`, `widget-title`, `note`, `caption`, `toolbar-icon`; the charts and the
-Mapbox outline colours read the tokens through `lib/theme.ts`. Page containers sit at the
-analytical width `max-w-[1500px]`; the Map page stays full-bleed.
+Four surfaces under one floating oxblood **nav capsule** (`components/shell/NavCapsule.tsx`: the
+PAQI logo, then Explore · Data · Methods · Downloads with the active link underlined in saffron,
+then "Ask about this view"). On the workspace the capsule floats over the map, its left edge in
+line with the deck beneath it; on the other three it is a docked header row. The brand is the
+Pakistan Air Quality Initiative and the product is the inventory: the dataset's own name appears
+only in the citation, the identity table, the API examples and the receipts, which a test
+enforces (`__tests__/naming.test.tsx`).
 
-**House style (2026-08-30, from emissions.web.app).** The Explorer carries the Pakistan Air
-Quality Initiative look of the user's Transport Emissions app, read from the deployed site
-(nothing of its source exists locally): the PAQI logo (`web/public/brand/paqi-logo.png`, the
-"Pakistan Air Quality Initiative" wordmark with the golden Urdu mark; origin and sha256 in
-`public/brand/README.md`) in the nav at `h-8`, above the Overview eyebrow at `h-10`, in the
-footer at `h-6` and on the loading screen at `h-20`; the favicon (`public/favicon.svg`,
-`app/icon.svg`) copied from the same site; the palette — ground `#f9fafb`, cards white, text
-`#030213`, muted `#717182`, hairlines `#e5e7eb`, the one accent blue `#2563eb`, a `brand-gold`
-`#ffbb12` for the active nav underline only, radius 0.625rem, white glass pills
-(`bg-white/90 backdrop-blur shadow-md border border-gray-200/50`) over the map, the system font
-stack; the YlOrRd choropleth ramp (`#ffffcc` → `#800026`) for the magnitude layer with a
-"Low ▬▬ High" gradient bar above the class list (the class breaks stay the server's strings);
-and the round blue Ask FAB bottom-right on every page (`components/shell/AskFab.tsx`, toggles
-the drawer). **The loading screen** (`components/shell/LoadingScreen.tsx`) is the app's:
-a `#f8f9fa` overlay with a drifting particle canvas, the floating logo, "PakEmis" over
-"Pakistan Air Quality Initiative", a 256×4 progress bar and a rotating status line — but the
-progress is real (`components/shell/bootstrap.ts`: `/release` resolved 35 %, labels 60 %, the
-page's first envelope 85 %, the map's `load` 100 % on `/` and `/map`; a 6 s ceiling, a 900 ms
-minimum, a 700 ms fade), it shows once per session (`sessionStorage`; `?loading=1` forces it,
-`&stage=<name>` holds it for captures), and its eight lines (`loadingLines.ts`) carry no digit,
-because a number on this site is a string the release returned.
+The palette is PAQI's warm civic one (`globals.css` and `lib/theme.ts`'s `FALLBACK`, held in step
+by `lib/theme.test.ts`): oxblood `#462E32` for primary and selected, saffron `#FFB313` for the
+active state and chips, charcoal `#242128` text, `#666677` secondary, `#F6F4F1` canvas, warm
+hairlines, and the map scale `#FFF0B3 → #FFB313 → #E87832 → #B4453F → #462E32` with `#D7D5D1`
+for no data. Sectors carry no fixed hue any more: bars and lines take the ramp **by rank**
+(`lib/palette.ts` `rampByRank`), so one visual language runs from the map through the charts.
 
-`/` is the public Overview as a country briefing (2026-08-30, in Global Mangrove Watch's
-frame): under the 56 px nav a fixed two-pane app frame — a 560 px dashboard panel on the
-left with its own vertical scroll (white, a right-edge shadow over the map) and the map filling
-the remaining width and the full height on the right; under 1024 px a column, the panel first
-and the map at 60 vh below it. The panel stacks cards with 16 px gutters: the header block
-(eyebrow "Pakistan's explainable emissions inventory" as its first line — the logo is in the
-nav only —, the title Pakistan or the selected province, the "Select a province" dropdown over
-the release's ADM1 rows which writes `geo` so every widget re-scopes and the map flies there,
-Share · Download); the opening statement with the numbers in bold ("In 2023–24, Pakistan
-emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly
-half — of the reconstructed inventory, which excludes land use and forestry.", every figure a
-server string: `display_short`, `unit_short`, `share_pct_short`, `share_phrase`, the LULUCF
-phrase the release's label; province scope: "Punjab's allocated emissions were 228.72 Mt CO₂e
-… of the province's allocated total") and the muted independence line; the sticky tab strip
-(anchors Summary · Sectors · Trend · Gases · Places, the one in view marked); four widgets,
-each a `Widget` card with its envelope's toolbar: Emissions by sector (the sentence from ranks
-1–3, ten bars with an x-axis from the envelope's `axis.ticks_short`, value · share labels),
-Emissions over time (the sentence from the series' server-derived `change`, a column chart
-with a y-axis from its ticks, the reference year in the accent), Emissions by gas (a stacked
-bar with `share_pct_short`), Where emissions are placed (the rank-1 province and the
-`derived.unallocated_total_short` retained at ADM1; five bars; "Open the map"); then the
-footer with the licences, the independence line and the repository. The interval,
-completeness and evidence widgets and the routes strip were removed from the Overview
-(Explore and Methods carry those envelopes). The map is the `ExplorerMap` in its briefing
-variant on the light basemap (Mapbox `light-v11`: grey land, white water, pale borders):
-a Provinces | Districts glass toggle, the frame button and, in the legend's place, a compact
-bottom-left pill — `Low ▬▬▬ High | Opacity ──●── 80%`, the YlOrRd gradient and a slider
-that sets the choropleth's `fill-opacity` (a display setting, local state); the values stay
-in the hover tip, which also explains the shared "Other" cell under its dotted outline. The
-map follows the widget in view (a hovered or selected sector bar filters the choropleth;
-Places shows provinces) and the province dropdown. In province scope the sector breakdown is
-asked by `module` (the release carries `sector_id` at national grain only) and the annual
-series is refused by the release and the refusal is shown by name. The charts
-(`components/charts/`) print axis labels only from `axis.ticks_short` and value labels only
-from `display_short` / `share_pct_short`; the browser computes nothing.
+**`/` — the Explore workspace** (`components/workspace/*`). The map is the whole canvas
+(`ExplorerMap variant="workspace"`, Mapbox `light-v11`, full-bleed); everything else floats over
+it and the map is re-padded (`easeTo({padding})`) whenever a panel opens or collapses, so
+Pakistan stays centred in what is actually visible.
 
-`/map` — Map allocated emissions (2026-08-30, the immersive allocation map). Full-bleed under
-a dark chrome (the tokens re-valued on the page wrapper; the map itself stays the light
-`light-v11`): a collapsible filter panel on the left (Geography level and place, Period,
-Sector, Gas, Estimate and warming potentials, Spatial view; a rail of icons when collapsed),
-the map, a timeline beneath it (the fiscal years as chips, Annual plus the twelve months of the
-reference year; any other year is "national only" and shows the release's typed refusal in its
-own words) and the selected-geography drawer on the right (`components/detail/SelectionDrawer`,
-420 px; a bottom sheet on mobile) with the tabs Summary · Breakdown · Trend · Evidence ·
-Sources on the URL key `tab`. The drawer is titled "{Place} · allocated emissions" (Pakistan
-when nothing is selected) and its Summary reads the cell's `display_short` and the envelope's
-`derived` sentence ("Of this total, 443.34 Mt CO₂e is spatially placed and 9.01 Mt CO₂e remains
-explicitly unallocated"); Breakdown asks `sector_id` nationally and `module` at ADM grain with
-the server's shares, or the spatial views; Trend shows the national series with its `change`
-and, off the national scope, the typed refusal by name; Evidence shows the district cell's
-`spatial_class`, its basis sentence, dominant stream, placement and allocation status with the
-lineage rows; Sources the lineage, the provenance tables and the release. The layer switch
-(URL key `layer`, `components/map/layerModes.ts`) paints five readings of the same envelope,
-each with its own legend and one sentence ending "this is an inventory allocation, not an
-observation": Emission magnitude (the choropleth), Spatial evidence (districts by
-`spatial_class` S1–S4/NA with the class definitions and counts), Allocation method
-(`allocation_status` × `placement_class`), Unallocated mass (provinces shaded by their
-`unallocated_short` over greyed districts) and Known spatial exceptions (the shared "Other"
-cell, shapes shared by several census units, units without a polygon — Larkana's active
-district among them — and the bounded CH₄ modules, hatched or outlined, with a named list from
-`dim_geography` and `known_limitations`). Every control reads and writes the URL (`level`,
-`period`, `month`, `sector`, `gas`, `config`, `gwp`, `view`, `geo`, `cell`, `layer`, `tab`,
-`c`, `cam`, `raster`, `view3d`), so a copied URL opens with identical receipts.
+- **The insight deck**, left, 420 px, its own scroll, the map draggable through the gaps between
+  cards: the place card (eyebrow, the place's name, Reset view · Choose a province · Share ·
+  Download), `INSIGHTS · {PLACE}` with "Collapse all", the saffron scope chips (sector, gas,
+  year — each clears back to its default), then the cards, then the footer. Every card carries
+  its own switch, its info icon (Result details on that card's envelope), download (its receipt
+  CSV) and share, and a collapsed card asks for nothing.
+- **The cards are chosen by what is selected** (`components/workspace/cards.ts`: `scopeOf` then
+  `cardsFor`, a pure selector with its own test): Pakistan → snapshot · sectors · trend ·
+  places; a sector → snapshot · its IPCC categories · its trend · its placement; a gas →
+  snapshot · which sectors emit it · trend; a province → snapshot · composition · how it
+  compares · what is placed and what is not; a district → snapshot · composition · peers ·
+  evidence · sources (the old map drawer's Evidence and Sources tabs). One request map serves
+  them (`lib/requests.ts` `deckBodies`, `lib/queries.ts` `useDeck`).
+- **The filter panel**, right, 340 px, collapsing to a rail: Provinces | Districts, Sector,
+  Gas / metric, the nine-year slider, the active-view line and Reset filters. Everything else —
+  map layer, scale mode, opacity, grid raster, basemap, boundaries, month, estimate, warming
+  potentials, spatial view — lives in **Map settings**, the popover at the bottom right.
+- **The legend is one line**, bottom left: `Relative · Lower ▬▬▬▬ Higher`. The default scale is
+  **relative** — the browser bands the cells by quantile rank and prints no number at all;
+  exact values belong to the cards, the hover tip and the claim record. **Fixed** locks the
+  domain to the reference year's all-sector envelope so a sector change does not rescale;
+  **Absolute** restores the server's break strings. A categorical layer shows its own name and
+  opens its panel; a refused request shows the release's own message.
+- **Off the reference year** the map greys ("Not mapped · spatial products exist for 2023–24
+  only", the API's own words) while the deck keeps answering nationally; the slider's
+  non-reference ticks are hollow.
 
-Ask PakEmis (2026-08-30) is a right-side drawer on every page (`components/ask/AskDrawer`,
-mounted once in the layout; the nav button and `lib/askBus.ts`'s `openAsk({question, scope})`
-open it; `/ask` remains the permalink form with `?q=`). It inherits the page's scope ("Scope:
-Punjab · agriculture · 2023–24 · reference estimate"), offers suggested questions generated
-from that scope (`suggestions.ts`: with Punjab and agriculture selected — Why is Punjab's
-estimate high? · How much comes from livestock? · Which parts are proxy-allocated? · Compare
-Punjab with Sindh · Download the rows used here) and renders every answer as a structured card
-(`AnswerCard`): the answer with its server-inserted figures, the applied scope and filters
-(from `answer.scope`), the principal result as a figure, bars or a table sized from the
-replayed envelope, the uncertainty rows the API attaches (`tool_result.uncertainty`, else
-"Uncertainty not requested" with a one-click follow-up), the evidence qualification
-(limitations hit, exactness), the exact source rows (`n_rows` per cell, Open rows), the
-expandable query and calculation receipt, and Open in Explore · Download CSV · Reproduce.
-Explore's Explain action opens the drawer with the canvas scope and "Explain this result".
+**`/data` — the Grapher** (`components/explore/*`, formerly `/explore`): one control row
+(Geography · Period · Sector · Gas · Measure · More), one canvas with Chart · Table · Map over
+the same query, and exactly four actions — Explain (opens the assistant with this scope),
+Evidence (the claim record), Download, Share. `lib/explore/query.ts` maps the controls to
+exactly one contract call or to a typed refusal.
 
-`/explore` — Explore data as a Grapher (2026-08-30): one control row (Geography: Pakistan · a
-province · Compare provinces · a district · All districts; Period: a year · All years · Months
-of 2023–24; Sector and, nationally, its Category; Gas: All · By gas · one gas; Measure: CO₂e on
-either warming-potential basis · Share of total; More: Estimate incl. Compare estimates,
-Spatial view), one canvas with a Chart · Table · Map switch over the same query, and exactly
-four actions under it: Explain · Evidence · Download · Share. `lib/explore/query.ts` maps the
-control state to exactly one contract call — `query_emissions` with a single `group_by`
-inferred from the control varied last (`sector_id` nationally, `module` at ADM grain,
-`category`, `gas`, `month`, `province`, `shape_id`), `get_timeseries` for a year range,
-`compare_emissions` for the two estimates — or a typed `GrainUnavailable` for a category
-filter off the national grain; two provinces are the ADM1-by-province envelope kept to the
-two (a filter, never arithmetic). The five model questions work by controls alone: the
-nine-year change (a line with the server's `change` sentence), what makes up agriculture
-(its categories), which gases dominate (a stacked bar with `share_pct_short`), Punjab against
-Sindh, and the reference against the survey-based estimate (grouped bars with the difference
-cells). The "Showing:" sentence stays as the canvas subtitle; the notes fold into one
-"Reading this result" line.
+**`/methods` — Methods & evidence**: the sector cards, the search, the methodology prose and the
+claim-record browser (Sector → Category → Gas → Place → Period → the record, `?claim=` as its
+permalink). Every number anywhere opens the same record: Reported estimate · Calculation ·
+Activity data · Emission factors · Monthly basis · Spatial basis · Uncertainty · Sources ·
+Validation · Known limitation · Exact rows, each filled from the payload or reading "Not carried
+by this release".
 
-`/methods` — Methods & evidence, the inventory microscope (2026-08-30). Every number on every
-page opens a claim record: the Result details drawer's first tab, Evidence, fetches
-`GET /claim?receipt=…&cell=n` for the chosen cell and renders `components/claim/ClaimRecord`
-— a breadcrumb header (Agriculture → Enteric fermentation → CH₄ → Pakistan → 2023–24) and
-the sections Reported estimate · Calculation · Activity data · Emission factors · Monthly
-allocation basis · Spatial allocation basis · Uncertainty · Source documents and pages ·
-Validation tests · Known limitation · Exact machine-readable rows, each filled from the
-payload's tables and registries as strings, or reading "Not carried by this release" with the
-API's reason (today only source page numbers). The page keeps the sector cards, the search and
-the methodology prose, and adds the claim-record browser: Sector → Category → Gas → Place →
-Period issue one `query_emissions` and open its cell's record inline (`?claim=<receipt>:<cell>`
-is the permalink); a category with a province is sent as asked and the `GrainUnavailable`
-refusal is shown by name.
+**`/downloads` — Downloads & API**: purpose-first ("What do you want to study?" → seven
+purposes → the matching products with CSV · Parquet · NetCDF, schema, checksums, the complete
+archive), then the citation and identity table — the one place the version string appears —
+the API card and the receipt replay.
 
-`/downloads` — Downloads & API, purpose-first (2026-08-30). "What do you want to study?" leads
-with seven purposes — National and sector totals · Monthly emissions · Province and district
-allocations · Gridded emissions · Uncertainty and configurations · Evidence and provenance ·
-Complete release — mapped to the API's product families (`?purpose=`); only after a choice do
-the matching products appear with CSV · Parquet · NetCDF buttons where each format exists, the
-schema panel, the checksums, the complete-archive button (`GET /products/complete.zip`) and
-the citation and identity table, the one place the version string appears. The API card and
-the receipt replay sit below.
-
-The map is Mapbox GL JS v3 rendering `mapbox://styles/mapbox/light-v11` (emissions.web.app's
-look: light grey land, white water, pale borders, few labels; `basemap.ts`) with hawanama's flags (maxPitch 45, no drag-rotate, no world copies) and v3's default globe
-projection, so the national view is a globe with the atmosphere halo below zoom ~5 and flattens
-as you zoom into a province; the choropleth, hatch and grid raster sit below the style's label
-layers. The 3D button (`view3d=1`) applies the ops dashboard's recipe: `mapbox-dem` terrain
-(exaggeration 1.5 tapering to 1.0), fog, pitch 30, bearing -10, with the choropleth draped. Spatial products exist for FY2023-24 only: other years drive national numbers and
-show the typed refusal in the legend's place.
-
-The territories at province level: the release's ADM1 table has one row without a polygon
-(`has_polygon: no`, named `Other`) while the boundary file draws Gilgit-Baltistan, Azad
-Kashmir and Islamabad Capital Territory separately. `src/lib/geography.ts` derives the
-members (the drawn ADM1 polygons no province row claims; nothing is hard-coded), the map
-paints the row's one cell on each member verbatim with a dotted outline (feature-state
-`shared`, `shared_with`), the hover and legend say the cell is shared, and clicking a member
-selects `geo=Other`, the release's own id, which the detail card and the API answer as one
-unit. Coverage of the three differs by sector; `/methods` says how.
+**Ask about this view** is a right-side drawer on every page (`components/ask/*`): it inherits
+the current scope, suggests questions from it, and answers in eight parts (answer · applied
+scope · chart or table · uncertainty · evidence · exact rows · receipt · permalink and
+download). `/map` and `/explore` redirect to `/` and `/data`.
 
 ## Fetch and verify a release
 

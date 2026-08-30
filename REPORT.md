@@ -682,3 +682,45 @@ not-estimated list, the evidence dots) with the routes strip; the tab strip is S
 `Low ▬▬ High | Opacity ──● 80 %` pill (the opacity is a display setting applied to the fill
 layers, not a data number); the Map page keeps its full legend. 212 web tests; build green;
 verified in the browser at 1500 px.
+
+
+## The PAQI Explore workspace (2026-08-30): Overview and Map merged
+
+The user settled the product from a mockup: one full-bleed map as the application canvas, a
+floating insight deck that re-writes itself from the selection, a floating filter panel that
+drives everything, and PAQI's warm civic palette instead of the cobalt blue. Five waves:
+
+- **Wave 0** (`1687c80`) — the floating deck base: the place card, the sections/collapse-all
+  controls, `ui/Switch`, a `Widget` whose collapsed face is its header row.
+- **Wave 1** (`72297c7`, `2ad0c77`, `4a1c1f7`, `32f1acf`) — the palette (oxblood `#462E32`,
+  saffron `#FFB313`, charcoal, warm white, the five-stop ramp, `#D7D5D1` no-data), the fixed
+  sector hues retired for `rampByRank`, and the naming sweep. Two standing guards were added:
+  `theme.test.ts` fails on any retired cobalt literal or any colour whose blue channel leads,
+  and `naming.test.tsx` fails if the dataset's name reaches the chrome. The API's
+  `identity_line` now names the publisher, not the dataset (the web prints it verbatim).
+- **Wave 2** (`00eacb5`…`7ea0ea9`) — the workspace shell: `NavCapsule` (and `TopNav` deleted),
+  the deck, the filter panel, the legend capsule, Map settings, `ExplorerMap`'s `padding` prop
+  and `workspace` variant; `/` is the workspace, `/map` → `/`, `/explore` → `/data`, `/data` is
+  the Grapher.
+- **Wave 3** (`5c92037`, `3e20794`, `fb9859e`) — the reactive cards: `scopeOf`/`cardsFor` as a
+  pure selector, `deckBodies`/`useDeck` as one request map, the old `SelectionDrawer` absorbed
+  into the district's Evidence and Sources cards, and the briefing envelopes retired.
+- **Wave 4** (`f7e5cdd`…`5e4c09b`) — the scale modes (`scale` in the URL; relative bands cells
+  by quantile **rank** written as feature state, so the default legend prints no number; fixed
+  locks the domain to the reference year's all-sector envelope; absolute keeps the server's
+  breaks), the five-face legend capsule, Map settings, and the year slider's national-only
+  state with the API's own refusal. `TimelineBar` and `OpacityPill` retired (the months moved
+  into Map settings).
+
+293 tests, ESLint clean, `tsc` clean, the static export green. Verified in the browser at
+1520 px: the workspace opens with Pakistan centred between the panels; choosing Agriculture
+re-writes the deck to the sector snapshot ("49.4 % of the national total · rank 1 of 10") and
+its categories while the map repaints; a district gives the bounded interval with its evidence
+and sources; 2020–21 greys the map with the release's sentence while the cards still answer;
+`/data`, `/methods` and `/downloads` render under the docked capsule.
+
+Judgement calls worth knowing: a district snapshot prints no share or rank, because the server
+attaches none to a partition of bounded intervals and the browser will not divide; the
+categorical map layers keep one warm violet among their qualitative hues (four
+distinguishable colours is one more than the warm family yields); and `rampByRank` uses the
+full ramp, so the tenth sector's bar is the palest stop.
