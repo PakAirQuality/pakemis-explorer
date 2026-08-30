@@ -387,6 +387,68 @@
     ]
    }
   },
+  "/api/v1/emissions/claim": {
+   "get": {
+    "description": "The claim record behind one number: `?receipt=<r>&cell=<n>` replays the receipt and takes\ncell n; `?row_ids=<a,b,c>` names result rows directly. Every value is a string from a table of\nthe release; sections with nothing to show are null and listed under `missing`.",
+    "operationId": "claim_api_v1_emissions_claim_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "receipt",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Receipt",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "cell",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "title": "Cell",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "row_ids",
+      "required": false,
+      "schema": {
+       "default": "",
+       "title": "Row Ids",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Claim",
+    "tags": [
+     "lineage"
+    ]
+   }
+  },
   "/api/v1/emissions/download/{receipt}.csv": {
    "get": {
     "operationId": "download_csv_api_v1_emissions_download__receipt__csv_get",
@@ -584,6 +646,25 @@
      }
     },
     "summary": "Every downloadable product of the served release, with digests, schema and families",
+    "tags": [
+     "products"
+    ]
+   }
+  },
+  "/api/v1/emissions/products/complete.zip": {
+   "get": {
+    "operationId": "product_archive_api_v1_emissions_products_complete_zip_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Every product file as one streamed zip archive (deflated, SHA256SUMS + FETCH.json inside)",
     "tags": [
      "products"
     ]

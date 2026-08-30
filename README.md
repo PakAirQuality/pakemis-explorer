@@ -316,6 +316,7 @@ answer under the legacy `/v1` prefix for one more release, out of the schema, wi
 | `POST /query/completeness` | `get_completeness` |
 | `GET /evidence/{stream_id}` | `get_evidence` (`_` for every stream; `?module=` `?category=`) |
 | `GET /method/{method_id_or_category_or_sector}` | `get_method`; a sector name (`agriculture`, `power`, ...) answers with every rule of that sector |
+| `GET /claim?receipt=&cell=n` or `?row_ids=a,b,c` | the claim record behind one number: breadcrumb, reported estimate, calculation, activity, emission factors, method, monthly and spatial basis, uncertainty, sources, validation, limitations, completeness, rows, provenance (see below) |
 | `GET /transfers?ledger_id=` | `get_cross_sector_transfer` |
 | `GET /spatial/lineage/{shape_id_or_province}` | `get_spatial_lineage` |
 | `POST /spatial/grid` | `get_grid_cell` (reads the NetCDF cube) |
@@ -326,8 +327,9 @@ answer under the legacy `/v1` prefix for one more release, out of the schema, wi
 | `GET /tiles/{adm1\|adm2\|grid}` | TileJSON 3.0.0 from the archive's header and metadata, absolute tile URLs on the request's (forwarded) origin |
 | `GET /tiles/{name}/{z}/{x}/{y}.mvt` | one vector tile as stored (`Content-Encoding: gzip` passed through, `Cache-Control: immutable`; 204 when the archive holds none, 404 for an unknown name) |
 | `GET /tiles/raster/{config}/{gas}/{frame}.png` | one visual-only grid shading PNG |
-| `GET /products` | every downloadable file of the release with digests, schema and the four families |
+| `GET /products` | every downloadable file of the release (the tables, the cubes, the metadata, the registries) with digests, schema and the six families |
 | `GET /products/{name}.{ext}` | one product file from the release payload (attachment; `ETag` = sha256; immutable; ranges) |
+| `GET /products/complete.zip` | every product file as one streamed zip (deflated, `SHA256SUMS` and `FETCH.json` inside) |
 | `GET /healthz` (also at the root) | liveness: the release id and the receipt count |
 
 The tiles come from `data/releases/<v>/tiles/` (`tiles/build_tiles.py`); the service refuses to
@@ -350,11 +352,18 @@ and Parquet, the two grid cubes as NetCDF, and `semantic_release.json` and `rele
 as themselves. Every digest is the release's own (`identity`: the contract's `sha256_csv` for a
 CSV, the manifest's for a cube, the verified digest for a metadata file); the Parquet twins, which
 the contract leaves unhashed because the CSV is the identity, are hashed once at startup
-(`identity: computed`). `families` groups the names into `annual`, `monthly`, `spatial` and
-`uncertainty` with a title, a description and the formats offered. `GET /products/{name}.{ext}`
-streams the file from the payload with `Content-Disposition: attachment`, `ETag` equal to the
-sha256, `Cache-Control: public, max-age=31536000, immutable` and range requests; the filename is
-looked up in that catalogue and nothing else is served (a 404 for every other path).
+(`identity: computed`). The twenty-one registries `fetch_release.py` copies under
+`data/registries/` are products of kind `registry` (digest and `identity` from `FETCH.json`:
+`manifest_sources`, `manifest_products` or `fetch`, with `source_path`). `families` groups the
+names into `annual`, `monthly`, `spatial`, `uncertainty`, `evidence` (fact_evidence,
+dim_evidence_class, dim_stream, the completeness ledgers and every registry) and `complete` (every
+file, with `archive: {filename, url, members}`), each with a title, a description and the formats
+offered. `GET /products/{name}.{ext}` streams the file from the payload with `Content-Disposition:
+attachment`, `ETag` equal to the sha256, `Cache-Control: public, max-age=31536000, immutable` and
+range requests; the filename is looked up in that catalogue and nothing else is served (a 404 for
+every other path). `GET /products/complete.zip` streams every catalogued file deflated under its
+payload path, member by member, with a `SHA256SUMS` member in `sha256sum` format (the catalogue's
+digests) and `FETCH.json`; the archive itself carries no digest, its members do.
 
 `/release` carries `identity_line` ("PakEmis · public-data reconstruction of Pakistan's
 non-LULUCF emissions · 2015–16 to 2023–24", no version: the web's sub-header) and `citation`
@@ -373,6 +382,55 @@ release has no column for at the request's grain (`spatial_view`, `province`, `m
 `shape_id`, `month` at national grain) is a typed 422 `grain_unavailable` / `GrainUnavailable`
 naming the grains that carry it ("available at adm1/adm2 grain"), where DuckDB's binder error
 used to surface as a 500.
+
+### The claim record
+
+`GET /claim?receipt=<r>&cell=<n>` replays the receipt through the service and takes cell n's
+`result_row_ids`; `GET /claim?row_ids=<a,b,c>` names result rows directly (24-hex ids, found in
+the calculation's table or the first fact table that carries them all). The record is built in
+`api/pakemis_api/claim.py` from the explorer's own read-only DuckDB session over the fact tables
+(loaded as text) and Python indexes over the registries; the query core is not touched, and no
+value is computed: every field is a string from a table (the only renderings are the two-decimal
+`_short` twins beside an exact). Its sections:
+
+| section | from |
+|---|---|
+| `breadcrumb` | `[{level, id, label}]` for sector, category, gas, geography, period; `id: null` with `label: "All sectors"`, `n`, `ids` where the rows span several |
+| `reported` | the cell (`display`, `display_short`, `exact`, `unit`, `unit_short`, `exactness`, `n_rows`) with `gwp`, `configuration`, `period`, `geography`, `release` from the envelope's context |
+| `calculation` | `sql`, `table`, `column`, `formula`, `rows`, `result_sha256`, `receipt`, the canonical `request` |
+| `activity` | per stream × period: `dim_stream` descriptors, the `fact_annual` atom's `native_mass`, `native_unit`, `activity_status`, `method_id`; `activity_uncertainty` by `dependency_group` |
+| `emission_factors` | `dim_stream.factor_parameter_ids` (`ef:` stripped) → `emission_factors.csv` (`value`, `unit`, `uncert_pct`, `vintage`, `source`, `note`), `national_uncertainty_parameters.csv` by `dependency_group`, `parameters.csv`; `found_in` names the registries |
+| `method` | `data/method_registry.csv` rows by the atoms' `method_id` (`tier`, `equation`, `notes`) |
+| `monthly_basis` | `fact_evidence` T-class, profile id, grade; `temporal_profiles.csv` prose; `fact_monthly` closure basis; the twelve profile weights for a single stream-year |
+| `spatial_basis` | `fact_evidence` measured S-class, placement class, surface, fallback events and mass (`_short` beside); `geometry_sets.csv`, `release_heights.csv`, `pakemis_grid_fallbacks.csv` joined to `allowed_grid_fallbacks.csv`; rationale rows from `stream_geometry.csv` / `stream_grid_proxy.csv` |
+| `uncertainty` | every `fact_uncertainty` row of the categories (all resolutions, all strings) |
+| `sources` | `source_documents.csv` + `pakemis_source_register.csv` per document id (`document_sha256`, `how_to_obtain`, licence); `public_documents.csv` by `read_by` |
+| `validation` | validation catalogue and sector scorecard rows by module (declared absences included), `benchmarks.csv` by engine category; `kind` names the source |
+| `limitations` | the envelope's hits, the adm2 three, `completeness:<gap>` ids in scope, each with its `worded` message |
+| `completeness` | the `fact_completeness` row for the category × gas with its `data_gaps.csv` row; every row under the scope's codes; the mass ledger |
+| `rows` | table, digest, ids, up to 100 records, download and replay urls |
+| `class_definitions` | `dim_evidence_class` for the classes present |
+| `provenance` | every table and registry read, with its contract / manifest / FETCH digest |
+| `missing` | the sections that are `null`, each with "not carried by this release" (page numbers always: no register carries them) |
+
+The basis sections carry the one value the streams share at the top level and `null` where they
+differ, with `by_stream` listing each; a mass is never summed across streams. `fact_adm2_month`
+and `fact_annual_calendar` carry no stream column, so their streams are the module × gas streams
+of `dim_stream` (`stream_basis` says so). Typed 4xx: `unknown_cell`, `no_rows` (a compare
+difference cell), `invalid_row_id`, `unknown_rows`, `missing_selector`, `one_selector`,
+`unknown_receipt`. `/release.registries` lists the registries the payload carries.
+
+Two guards sit beside it. `categories` or `ipcc_codes` with a non-national `geography_level`
+(alone or inside a compare or timeseries) is a typed 422 `GrainUnavailable` ("category filters
+are national-grain only in this release"): the core applies both filters at national grain
+only, and a Punjab request for one category would otherwise silently answer with every row of
+the sector. And every cell of an adm2 envelope carries the map's evidence fields
+`allocation_status`, `spatial_class`, `placement_class`, `allocation_surface`, `dominant_module`,
+`dominant_stream` and `spatial_class_basis` under the rule declared as
+`rounding.presentation.derived.spatial_class` (the measured class of the cell's dominant stream:
+the cell's module, else the request's one sector, else the module with the largest mass among the
+rows summed; the module's largest reference-year atom, compared as decimals); an adm1 envelope's
+province rows and cells carry `unallocated_short` (`derived.unallocated_short`).
 
 ### Presentation rounding
 
@@ -446,10 +504,10 @@ download, and no receipt moves.
 | `status` | `{phase: model \| tool \| correction \| tool_limit, turn?, k?, name?, reason?}` |
 | `thinking` | `{text}` summarised reasoning deltas |
 | `tool_call` | `{k, id, name, input}` k = the 1-based tool call of this turn |
-| `tool_result` | `{k, id, name, receipt, request_type, context, n_values, cells: [{i, display, unit, group?, exactness?, attrs?}], limitations_hit, unallocated?, truncated?, download?}` |
+| `tool_result` | `{k, id, name, receipt, request_type, context, n_values, cells: [{i, display, display_short, unit, n_rows, group?, exactness?, attrs?}], limitations_hit, uncertainty, unallocated?, truncated?, download?}`; `uncertainty` is `{rows, interpretation, source: envelope\|fact_uncertainty, resolution?}` (the fact_uncertainty rows for a query_emissions scope at its resolution) or null; `n_rows` and `uncertainty` are on the event only, the model's view is unchanged |
 | `refusal` | `{k, id, name, error, error_class, limitation_id, message, detail}` the typed refusal, verbatim |
 | `map_action` | `{level?, geo?, period?, month?, sector?, gas?, config?, gwp?, view?}` from `set_map_view` |
-| `answer` | `{text, receipts, citations, elapsed_s}`; every number in `text` is `<cite k cell receipt>display</cite>` |
+| `answer` | `{text, receipts, citations, scope, elapsed_s}`; every number in `text` is `<cite k cell receipt>display</cite>`; `scope` is the last tool result's compact context plus `k`, `request_type`, `receipt`, `name`, or null |
 | `error` | `{code, message}`: `bare_numbers`, `placeholder_error`, `turn_limit`, `budget_exhausted`, `model_error`, `model_refusal` |
 | `done` | `{conversation_id, usage, cost_estimate_usd}` |
 
