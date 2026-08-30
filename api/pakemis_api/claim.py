@@ -335,8 +335,14 @@ class ClaimStore:
 
     def _calculation(self, env, value, table, rows, ids):
         calc = dict((env or {}).get("calculation") or {})
+        formula = (value or {}).get("formula")
+        # The core's per-cell formula bakes a 0 into "over 0 <table> rows" (the count substitution
+        # is dead code in pakemis_query.engine; a named follow-up in the emissions repo). The
+        # claim record states the count it summed, and marks the wording as its own.
+        if isinstance(formula, str) and " over 0 " in formula and ids:
+            formula = formula.replace(" over 0 ", " over %d " % len(ids), 1)
         out = {"kind": calc.get("kind", "rows"), "sql": calc.get("sql"), "table": table, "column": calc.get("column"),
-               "formula": (value or {}).get("formula"), "rows": len(ids),
+               "formula": formula, "rows": len(ids),
                "result_sha256": (env or {}).get("result_sha256"), "receipt": (env or {}).get("receipt"),
                "request": (env or {}).get("request"), "request_type": (env or {}).get("request_type")}
         return out

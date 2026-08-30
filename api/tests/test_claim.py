@@ -234,3 +234,14 @@ def test_release_lists_the_registries(client, settings):
     assert reg["emission_factors"]["identity"] == "manifest_sources" and reg["emission_factors"]["rows"] == 420
     assert reg["uncertainty_parameters"]["identity"] == "fetch"
     assert all(os.path.exists(os.path.join(settings.release_dir, r["path"])) for r in reg.values())
+
+
+def test_the_formula_states_the_rows_it_summed(client):
+    """The core's cell formula reads "over 0 fact_annual rows" (its count substitution never runs);
+    the claim record's formula names the count that `rows` reports."""
+    env = client.post(PREFIX + "/query/emissions", json=dict(ENTERIC, group_by=["gas"])).json()
+    rec = client.get(PREFIX + "/claim", params={"receipt": env["receipt"], "cell": 0}).json()
+    calc = rec["calculation"]
+    assert calc["rows"] == len(env["values"][0]["result_row_ids"]) > 0
+    assert " over 0 " not in calc["formula"]
+    assert (" over %d " % calc["rows"]) in calc["formula"]
