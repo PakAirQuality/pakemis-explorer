@@ -238,7 +238,7 @@ describe("ClaimPanel, the Evidence tab and ClaimLink", () => {
     );
     expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
     const picker = screen.getByTestId("evidence-cell");
-    expect(within(picker).getAllByRole("option").map((o) => o.textContent)).toEqual(["Agriculture · 223.45", "power · 63.37"]);
+    expect(within(picker).getAllByRole("option").map((o) => o.textContent)).toEqual(["Agriculture · 223.45", "Power · 63.37"]);
     expect(await screen.findByTestId("claim-record")).toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining("/claim?receipt=060bde899b5bb984553b61722584952a&cell=0"));
     fireEvent.change(picker, { target: { value: "1" } });
