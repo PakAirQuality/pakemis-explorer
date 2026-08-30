@@ -150,7 +150,7 @@ function ExceptionRows({ present, items }: { present: Set<string>; items: Except
       <ul className="space-y-1" data-testid="legend-exceptions">
         {EXCEPTION_KINDS.map((k) => (
           <li key={k.id} className={`flex items-start gap-2 ${present.has(k.id) ? "" : "opacity-60"}`} title={k.definition} data-testid="legend-category" data-id={k.id}>
-            <span className={`mt-0.5 inline-block h-3 w-5 shrink-0 rounded-sm ${k.id === "bounded" ? "hatch-swatch border border-line-strong" : k.id === "no_cell" ? "border-2 border-dashed border-[#d1495b]" : k.id === "other_unit" ? "border-2 border-dotted border-fg/80" : "border-2 border-dashed border-amber-soft"}`} style={{ backgroundColor: k.color }} />
+            <span className={`mt-0.5 inline-block h-3 w-5 shrink-0 rounded-sm ${k.id === "bounded" ? "hatch-swatch border border-line-strong" : k.id === "no_cell" ? "border-2 border-dashed border-[#c04a3a]" : k.id === "other_unit" ? "border-2 border-dotted border-fg/80" : "border-2 border-dashed border-amber-soft"}`} style={{ backgroundColor: k.color }} />
             <span className="min-w-0 flex-1 text-fg">{k.label}{present.has(k.id) ? "" : <span className="text-muted"> · none at this level</span>}</span>
           </li>
         ))}

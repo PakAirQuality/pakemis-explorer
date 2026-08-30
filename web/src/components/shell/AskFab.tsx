@@ -1,6 +1,6 @@
 "use client";
 /**
- * The round blue Ask button every page carries at the bottom right (their chat button): it
+ * The round oxblood Ask button every page carries at the bottom right (their chat button): it
  * toggles the Ask drawer over the bus (lib/askBus.ts). Hidden while the drawer is open and on
  * the /ask page, where the dock is the page. The drawer also closes itself (its X, Escape)
  * without the bus, so the button follows the drawer's `data-open` attribute as well.
@@ -11,7 +11,7 @@ import { MessageSquare } from "lucide-react";
 import { subscribeAsk, toggleAsk } from "@/lib/askBus";
 import { isActive } from "./TopNav";
 
-export const ASK_FAB_CLASS = "fixed bottom-6 right-6 z-[90] flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-colors hover:bg-[#1d4ed8]";
+export const ASK_FAB_CLASS = "fixed bottom-6 right-6 z-[90] flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg transition-colors hover:bg-accent-bright";
 
 export function AskFab() {
   const pathname = usePathname();

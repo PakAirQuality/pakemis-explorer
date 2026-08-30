@@ -13,8 +13,9 @@ import { buildColumnOption } from "./ColumnChart";
 import { IntervalBar } from "./IntervalBar";
 import { StackedBar } from "./StackedBar";
 import { FALLBACK } from "@/lib/theme";
+import { GAS_HUES, rampByRank } from "@/lib/palette";
 
-const T = { surface: FALLBACK["--color-card"], fg: FALLBACK["--color-fg"], muted: FALLBACK["--color-muted"], line: FALLBACK["--color-line-strong"], grid: FALLBACK["--color-line"], accent: FALLBACK["--color-accent"], accentSoft: "rgba(31, 122, 92, 0.18)", accentBright: FALLBACK["--color-accent-bright"], amber: FALLBACK["--color-amber"], amberSoft: FALLBACK["--color-amber-soft"], font: "Inter" };
+const T = { surface: FALLBACK["--color-card"], fg: FALLBACK["--color-fg"], muted: FALLBACK["--color-muted"], line: FALLBACK["--color-line-strong"], grid: FALLBACK["--color-line"], accent: FALLBACK["--color-accent"], accentSoft: "rgba(70, 46, 50, 0.18)", accentBright: FALLBACK["--color-accent-bright"], amber: FALLBACK["--color-amber"], amberSoft: FALLBACK["--color-amber-soft"], font: "Inter" };
 const TICKS = ["0", "50", "100", "150", "200", "250"];
 
 function decimals(el: HTMLElement): string[] {
@@ -44,8 +45,9 @@ describe("axisFromTicks", () => {
 
 describe("ECharts option builders", () => {
   const items = [
-    { id: "agriculture", name: "Agriculture", value: 223.45447, label: "223.45 · 49.4 %", color: "#4C9F70" },
-    { id: "power", name: "Power", value: 63.36998, label: "63.37 · 14.0 %", color: "#D1495B" },
+    // the bars are the PAQI ramp by rank: darkest first, in the order the envelope returned
+    { id: "agriculture", name: "Agriculture", value: 223.45447, label: "223.45 · 49.4 %", color: rampByRank(0, 2) },
+    { id: "power", name: "Power", value: 63.36998, label: "63.37 · 14.0 %", color: rampByRank(1, 2) },
   ];
   it("BarsWithAxis: the x-axis labels only the server's ticks, the bar labels only the items' labels", () => {
     const o = buildBarsOption(items, TICKS, T);
@@ -102,9 +104,9 @@ describe("HTML figures", () => {
   });
   it("StackedBar prints only the segments' labels and shares", () => {
     const segments = [
-      { id: "CH4", name: "CH₄", value: 248.7475, label: "248.75", share: "55.0", color: "#1f7a5c" },
-      { id: "CO2", name: "CO₂", value: 161.4564, label: "161.46", share: "35.7", color: "#4c6a8a" },
-      { id: "N2O", name: "N₂O", value: 42.1427, label: "42.14", share: "9.3", color: "#c98a2b" },
+      { id: "CH4", name: "CH₄", value: 248.7475, label: "248.75", share: "55.0", color: GAS_HUES.CH4 },
+      { id: "CO2", name: "CO₂", value: 161.4564, label: "161.46", share: "35.7", color: GAS_HUES.CO2 },
+      { id: "N2O", name: "N₂O", value: 42.1427, label: "42.14", share: "9.3", color: GAS_HUES.N2O },
     ];
     const { container } = render(<StackedBar segments={segments} unit="Mt" />);
     const allowed = new Set(["248.75", "55.0", "161.46", "35.7", "42.14", "9.3"]);

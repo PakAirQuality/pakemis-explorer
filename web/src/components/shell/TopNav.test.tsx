@@ -36,7 +36,7 @@ describe("TopNav", () => {
     const underlines = screen.getAllByTestId("nav-underline");
     expect(underlines).toHaveLength(1);
     expect(links[0]).toContainElement(underlines[0]);
-    expect(underlines[0].style.background).toContain("#ffbb12");
+    expect(underlines[0].style.background).toContain("#ffb313");
     expect(document.body.textContent).not.toContain("1.0.0rc");
   });
   it("marks the current page with or without the export's trailing slash", () => {

@@ -164,7 +164,7 @@ export function ensureRaster(map: MBMap, url: string, coordinates: [[number, num
 
 /** The ops dashboard's atmosphere (the globe's halo at low zoom, the horizon haze when tilted); the space around the globe is the theme's ground so the globe sits in the frame. */
 export function atmosphere() {
-  return { range: [0.5, 10] as [number, number], color: "#ffffff", "high-color": "#b8d4e8", "space-color": mapTheme().space, "horizon-blend": 0.08, "star-intensity": 0 };
+  return { range: [0.5, 10] as [number, number], color: "#ffffff", "high-color": "#e8d5c0", "space-color": mapTheme().space, "horizon-blend": 0.08, "star-intensity": 0 };
 }
 
 /** A style without fog (streets-v12 had none; light-v11 may carry its own) would show v3's globe with a bare edge: the atmosphere is set once unless the style has one, and a style that cannot take fog is left alone. */

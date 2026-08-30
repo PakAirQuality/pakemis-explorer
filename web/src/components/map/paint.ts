@@ -156,7 +156,7 @@ export function exceptionKindOf(level: Level, id: string, cell: Cell | undefined
   return isBoundedCell(cell) ? "bounded" : "none";
 }
 
-const OUTLINE: Record<string, string> = { other_unit: "#1e293b", shared_shape: "#b45309", no_cell: "#d1495b" };
+const OUTLINE: Record<string, string> = { other_unit: "#242128", shared_shape: "#8a5a0c", no_cell: "#c04a3a" };
 
 export type LayerPaint = { layer: MapLayer; index: CellIndex | null; ids: string[]; residual?: Residual | null; exceptions?: ExceptionIndex | null; unallocated?: UnallocatedIndex | null; adm1Ids?: string[] };
 

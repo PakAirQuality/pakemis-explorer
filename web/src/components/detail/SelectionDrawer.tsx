@@ -33,7 +33,7 @@ import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { NoteBox } from "@/components/ui/Widget";
 import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
-import { sectorColor } from "@/lib/palette";
+import { rampByRank } from "@/lib/palette";
 import { joinNames, residualUnit } from "@/lib/geography";
 import { useBboxes } from "@/components/map/tiles";
 import { SPATIAL_CLASSES, statusWords } from "@/components/map/layerModes";
@@ -330,9 +330,9 @@ function Evidence({ sel, total, lineage }: { sel: DrawerBodies["selection"]; tot
                 <table className="mt-2 w-full text-xs" data-testid="unallocated-table">
                   <thead><tr className="text-left text-muted"><th className="py-1">Unallocated · sector</th><th className="py-1">Gas</th><th className="py-1 text-right">Exact</th></tr></thead>
                   <tbody>
-                    {u.by_module_gas.map((r) => (
+                    {u.by_module_gas.map((r, i, rows) => (
                       <tr key={`${r.module}|${r.gas}`} className="border-t border-line">
-                        <td className="py-1"><span className="mr-1 inline-block h-2 w-2 rounded-sm" style={{ background: sectorColor(r.module) }} />{sectorLabel(labels, r.module)}</td>
+                        <td className="py-1"><span className="mr-1 inline-block h-2 w-2 rounded-sm" style={{ background: rampByRank(i, rows.length) }} />{sectorLabel(labels, r.module)}</td>
                         <td className="py-1">{gasLabel(labels, r.gas)}</td>
                         <td className="mono num py-1 text-right">{r.exact}</td>
                       </tr>

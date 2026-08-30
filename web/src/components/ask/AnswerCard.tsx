@@ -23,7 +23,7 @@ import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { api, apiUrl, receiptHref } from "@/lib/api";
 import type { Envelope } from "@/lib/envelope";
 import { cellUnit, columnLabel, functionLabel, limitationText } from "@/lib/labels";
-import { ACCENT, gasColor, sectorColor } from "@/lib/palette";
+import { gasColor, rampByRank } from "@/lib/palette";
 import { stateFromRequest } from "@/lib/requests";
 import { applyPatch, hrefForState } from "@/lib/urlState";
 import { renderAnswer } from "./answerText";
@@ -116,8 +116,9 @@ export function AnswerCard({ answer, items, onCite, onFollowUp }: { answer: Answ
   const cb = release.context_bar;
   const rows = scopeRows(labels, dims, context, principal.input, cb.basis_label ? { basis: cb.basis, label: cb.basis_label } : undefined);
   const ticks = env?.axis?.ticks_short ?? null;
-  const colorOf = (c: ToolResultCell) => (key === "module" || key === "sector_id" ? sectorColor(c.group?.[key]) : key === "gas" ? gasColor(c.group?.[key]) : ACCENT);
-  const bars: BarItem[] = shownCells.map((c) => ({ id: String(c.i), name: cellName(labels, dims, c), value: sizeOf(c, env), label: barLabel(c, env), color: colorOf(c) }));
+  // the gases keep their three hues; every other set is the PAQI ramp by rank (the cell's order in the envelope), a visual encoding that prints nothing
+  const colorOf = (c: ToolResultCell, i: number) => (key === "gas" ? gasColor(c.group?.[key]) : rampByRank(i, shownCells.length));
+  const bars: BarItem[] = shownCells.map((c, i) => ({ id: String(c.i), name: cellName(labels, dims, c), value: sizeOf(c, env), label: barLabel(c, env), color: colorOf(c, i) }));
   const columns: ColumnPoint[] = shownCells.map((c) => ({ id: String(c.i), name: cellName(labels, dims, c), value: sizeOf(c, env), label: c.display_short ?? c.display ?? "", reference: key === "period_id" && c.group?.period_id === defaults.period_id }));
   const uncRows = r.uncertainty?.rows ?? [];
   const uncCells = unc?.result?.cells ?? [];

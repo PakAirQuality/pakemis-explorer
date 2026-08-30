@@ -2,12 +2,13 @@
 /**
  * An ECharts bar chart of an envelope's cells. Bar length = the envelope's own `value` (the
  * float the engine returned beside `exact`); every printed label is the `display` string.
- * Sector colours when the cells are grouped by module / sector_id; a diagonal decal on
- * bounded cells. Nothing is summed, rounded or converted here.
+ * The PAQI ramp by rank (the cell's order in the envelope) when `colorBy` is "sector"; a
+ * diagonal decal on bounded cells. Nothing is summed, rounded or converted here, and a rank
+ * picks a colour and prints nothing.
  */
 import { useEffect, useRef } from "react";
 import { cellLabel, type Cell, type Envelope, shown } from "@/lib/envelope";
-import { sectorColor } from "@/lib/palette";
+import { rampByRank } from "@/lib/palette";
 import { chartTheme } from "@/lib/theme";
 import { cellUnit, groupValueLabel, type Dims } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
@@ -24,11 +25,6 @@ export type BarChartProps = {
   selectedIndex?: number | null;
   compact?: boolean;
 };
-
-function sectorOf(cell: Cell): string | null {
-  const g = cell.group ?? ((cell as Record<string, unknown>).left as { group?: Record<string, string | null> } | undefined)?.group ?? {};
-  return g.module ?? g.sector_id ?? null;
-}
 
 export function BarChart({ env, horizontal = false, height = 220, labels, dims, colorBy = "sector", onClick, selectedIndex = null, compact = false }: BarChartProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -52,7 +48,7 @@ export function BarChart({ env, horizontal = false, height = 220, labels, dims, 
       const unit = cellUnit(env.values[0]);
       const data = env.values.map((v, i) => {
         const value = typeof v.value === "number" ? v.value : 0;
-        const color = colorBy === "sector" ? sectorColor(sectorOf(v)) : t.accent;
+        const color = colorBy === "sector" ? rampByRank(i, env.values.length) : t.accent;
         const bounded = isBounded(v);
         const dim = selectedIndex !== null && selectedIndex !== i;
         return {

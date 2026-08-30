@@ -47,7 +47,7 @@ export function TopNav({ compact = false, onAsk, children }: { compact?: boolean
         data-testid="nav-link"
       >
         {label}
-        {active && !block && <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full" style={{ background: "var(--color-brand-gold, #ffbb12)" }} aria-hidden="true" data-testid="nav-underline" />}
+        {active && !block && <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full" style={{ background: "var(--color-brand-gold, #ffb313)" }} aria-hidden="true" data-testid="nav-underline" />}
       </Link>
     );
   };

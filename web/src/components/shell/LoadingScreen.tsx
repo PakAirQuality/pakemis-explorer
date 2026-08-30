@@ -104,7 +104,7 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
   return (
     <div
       className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center transition-opacity duration-700 ${phase === "fading" ? "pointer-events-none opacity-0" : "opacity-100"}`}
-      style={{ background: "#f8f9fa" }}
+      style={{ background: "#f6f4f1" }}
       role="status"
       aria-label="PakEmis is loading"
       data-testid="loading-screen"
@@ -122,8 +122,8 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
         <p className={`mt-1 mb-10 text-sm text-muted ${styles.subtitle}`} data-testid="loading-subtitle">
           Pakistan Air Quality Initiative
         </p>
-        <div className="h-1 w-64 overflow-hidden rounded-full" style={{ background: "#e5e7eb" }} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} data-testid="loading-progress">
-          <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%`, background: "linear-gradient(90deg, #94a3b8, #64748b)" }} data-testid="loading-fill" />
+        <div className="h-1 w-64 overflow-hidden rounded-full" style={{ background: "#e5e1da" }} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} data-testid="loading-progress">
+          <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%`, background: "linear-gradient(90deg, #462e32, #ffb313)" }} data-testid="loading-fill" />
         </div>
         <p key={lineIx} className={`mt-4 min-h-[36px] max-w-xs text-center text-[12px] leading-relaxed text-muted ${styles.line}`} data-testid="loading-line">
           {LOADING_LINES[lineIx]}

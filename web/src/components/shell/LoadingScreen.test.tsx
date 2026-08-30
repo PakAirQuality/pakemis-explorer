@@ -45,7 +45,7 @@ describe("LoadingScreen", () => {
     const screenEl = screen.getByTestId("loading-screen");
     expect(screenEl).toHaveAttribute("data-phase", "shown");
     expect(screenEl.className).toContain("fixed inset-0 z-[99999]");
-    expect(screenEl.style.background).toMatch(/#f8f9fa|rgb\(248, 249, 250\)/);
+    expect(screenEl.style.background).toMatch(/#f6f4f1|rgb\(246, 244, 241\)/);
     expect(screen.getByAltText("Pakistan Air Quality Initiative")).toHaveAttribute("src", "/brand/paqi-logo.png");
     expect(screen.getByTestId("loading-title")).toHaveTextContent("PakEmis");
     expect(screen.getByTestId("loading-subtitle")).toHaveTextContent("Pakistan Air Quality Initiative");

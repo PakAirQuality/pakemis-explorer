@@ -21,7 +21,7 @@ describe("AskFab", () => {
     const fab = screen.getByTestId("ask-fab");
     expect(fab).toHaveAttribute("aria-label", "Ask PakEmis");
     expect(fab.className).toContain("fixed bottom-6 right-6");
-    expect(fab.className).toContain("rounded-full bg-accent text-white");
+    expect(fab.className).toContain("rounded-full bg-accent text-on-accent");
     expect(fab.querySelector("svg")).not.toBeNull();
     fireEvent.click(fab);
     expect(bus).toHaveBeenCalledWith({ type: "toggle" });

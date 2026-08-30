@@ -13,7 +13,7 @@ import type { Cell, Envelope } from "@/lib/envelope";
 import { shown } from "@/lib/envelope";
 import { cellUnit, groupValueLabel, monthTiny, periodShort, type Dims as GeoDims } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
-import { ACCENT, gasColor, sectorColor } from "@/lib/palette";
+import { gasColor, rampByRank } from "@/lib/palette";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
@@ -94,10 +94,10 @@ function nameOf(labels: Labels, dims: GeoDims, key: string, id: string | null | 
   return groupValueLabel(labels, dims, key, id) || (id ?? "");
 }
 
-function colorOf(key: string, id: string | null | undefined): string {
-  if (key === "sector_id" || key === "module") return sectorColor(id);
+/** The gases keep their three hues; every other set takes the PAQI ramp by rank — the cell's own order in the envelope. A colour here prints nothing. */
+function colorOf(key: string, id: string | null | undefined, index: number, count: number): string {
   if (key === "gas") return gasColor(id);
-  return ACCENT;
+  return rampByRank(index, count);
 }
 
 /** The bar label: the value, with the server's share when the cells partition a total; the share alone under Measure = Share of total. */
@@ -113,7 +113,7 @@ function Figure({ state, plan, ctx, env, labels, dims, dispatch }: Omit<CanvasPr
   const ticks = env.axis?.ticks_short;
   switch (plan.chart) {
     case "stacked": {
-      const segments: Segment[] = cells.map((c) => ({ id: c.group?.[key] ?? "", name: nameOf(labels, dims, key, c.group?.[key]), value: c.value as number, label: shown(c), share: c.share_pct_short, color: colorOf(key, c.group?.[key]) }));
+      const segments: Segment[] = cells.map((c, i) => ({ id: c.group?.[key] ?? "", name: nameOf(labels, dims, key, c.group?.[key]), value: c.value as number, label: shown(c), share: c.share_pct_short, color: colorOf(key, c.group?.[key], i, cells.length) }));
       return (
         <div className="py-2">
           <StackedBar segments={segments} unit={magnitudeOf(cells[0])} />
@@ -140,9 +140,9 @@ function Figure({ state, plan, ctx, env, labels, dims, dispatch }: Omit<CanvasPr
       return <GroupedBars rows={rows} leftName={left} rightName={right} unit={cellUnit(env.values[0])} />;
     }
     default: {
-      const items: BarItem[] = cells.map((c) => {
+      const items: BarItem[] = cells.map((c, i) => {
         const id = c.group?.[key] ?? "";
-        return { id, name: nameOf(labels, dims, key, id), value: c.value as number, label: labelOf(c, state.share), color: colorOf(key, id) };
+        return { id, name: nameOf(labels, dims, key, id), value: c.value as number, label: labelOf(c, state.share), color: colorOf(key, id, i, cells.length) };
       });
       return <BarsWithAxis items={items} ticks={ticks} onSelect={(id) => select({ ...cells[0], group: { [key]: id } } as Cell, key, dispatch)} />;
     }

@@ -1,14 +1,15 @@
 "use client";
 /**
- * The loading screen's backdrop: a full-bleed canvas of slow-drifting soft dots in the palette
- * greys with a faint blue tint, gently drawn towards the pointer (mouse or touch). One
+ * The loading screen's backdrop: a full-bleed canvas of slow-drifting soft dots in the palette's
+ * warm greys, a fifth of them tinted the oxblood, gently drawn towards the pointer (mouse or
+ * touch). One
  * requestAnimationFrame loop; the resize and pointer listeners and the frame are removed on
  * unmount. Under prefers-reduced-motion one static frame is painted and nothing moves. Purely
  * decorative: aria-hidden, no text, no number.
  */
 import { useEffect, useRef } from "react";
 
-type Dot = { x: number; y: number; vx: number; vy: number; r: number; a: number; blue: boolean };
+type Dot = { x: number; y: number; vx: number; vy: number; r: number; a: number; tinted: boolean };
 
 const DRIFT = 0.25; // px per frame, at most
 const PULL_RADIUS = 160; // px around the pointer that attracts
@@ -34,7 +35,7 @@ function seed(count: number, w: number, h: number): Dot[] {
       vy: (Math.random() - 0.5) * DRIFT * 2,
       r: 1 + Math.random() * 2.2,
       a: 0.12 + Math.random() * 0.3,
-      blue: Math.random() < 0.22,
+      tinted: Math.random() < 0.22,
     });
   }
   return dots;
@@ -68,7 +69,7 @@ export function ParticleCanvas({ count = 90 }: { count?: number }) {
       for (const d of dots) {
         ctx.beginPath();
         ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = d.blue ? `rgba(59, 130, 246, ${d.a * 0.6})` : `rgba(100, 116, 139, ${d.a})`;
+        ctx.fillStyle = d.tinted ? `rgba(70, 46, 50, ${d.a * 0.6})` : `rgba(122, 112, 104, ${d.a})`;
         ctx.fill();
       }
     };

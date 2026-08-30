@@ -3,7 +3,10 @@
  * states ("Colour shows …; this is an inventory allocation, not an observation"), the levels it
  * paints, and the categorical palettes the paint and the legend share. The categories are the
  * server's own field values (spatial_class, allocation_status, placement_class) read off the
- * cells; nothing here derives a number. Hues are used inside the map and its legend only.
+ * cells; nothing here derives a number. The palettes are the PAQI warm family — sequential for
+ * the ordered evidence classes, qualitative but mutually distinguishable for the statuses and the
+ * exception kinds, and never a stop of the magnitude RAMP. Hues are used inside the map and its
+ * legend only.
  */
 import type { Cell } from "@/lib/envelope";
 import type { Level, MapLayer } from "@/lib/urlState";
@@ -33,27 +36,27 @@ export type Category = { id: string; label: string; color: string; definition?: 
 
 /** S1–S4 and NA, darkest for the strongest evidence; the definitions are the release's dim_evidence_class wording. */
 export const SPATIAL_CLASSES: Category[] = [
-  { id: "S1", label: "S1 · native geometry", color: "#0f3d66", definition: EVIDENCE_CLASS_TEXT.S1.definition },
-  { id: "S2", label: "S2 · facility or network proxy", color: "#3f88ad", definition: EVIDENCE_CLASS_TEXT.S2.definition },
-  { id: "S3", label: "S3 · administrative statistic", color: "#a8cfd4", definition: EVIDENCE_CLASS_TEXT.S3.definition },
-  { id: "S4", label: "S4 · population or area fallback", color: "#e9c46a", definition: EVIDENCE_CLASS_TEXT.S4.definition },
-  { id: "NA", label: "NA · held at province level", color: "#c9ced3", definition: EVIDENCE_CLASS_TEXT.NA.definition },
+  { id: "S1", label: "S1 · native geometry", color: "#4a2c2a", definition: EVIDENCE_CLASS_TEXT.S1.definition },
+  { id: "S2", label: "S2 · facility or network proxy", color: "#9c5a3c", definition: EVIDENCE_CLASS_TEXT.S2.definition },
+  { id: "S3", label: "S3 · administrative statistic", color: "#d99b5a", definition: EVIDENCE_CLASS_TEXT.S3.definition },
+  { id: "S4", label: "S4 · population or area fallback", color: "#f2d38a", definition: EVIDENCE_CLASS_TEXT.S4.definition },
+  { id: "NA", label: "NA · held at province level", color: "#cfc9c1", definition: EVIDENCE_CLASS_TEXT.NA.definition },
 ];
 
 /** The allocation statuses the lineage vocabulary carries; a ';'-joined value takes its most exceptional member. */
 export const ALLOCATION_STATUSES: Category[] = [
-  { id: "one_to_one", label: "one-to-one", color: "#6faec5", definition: "one release row per polygon" },
-  { id: "shared_shape", label: "shared shape", color: "#e9c46a", definition: "several census units drawn as one polygon; the polygon shows their sum" },
-  { id: "shape_missing", label: "missing shape", color: "#d1495b", definition: "a row whose polygon the boundary file does not draw; its mass is retained at province level" },
-  { id: "outside", label: "outside the frame", color: "#8d6a9f", definition: "a row placed outside the district frame" },
+  { id: "one_to_one", label: "one-to-one", color: "#8c6f5e", definition: "one release row per polygon" },
+  { id: "shared_shape", label: "shared shape", color: "#e0a53c", definition: "several census units drawn as one polygon; the polygon shows their sum" },
+  { id: "shape_missing", label: "missing shape", color: "#c04a3a", definition: "a row whose polygon the boundary file does not draw; its mass is retained at province level" },
+  { id: "outside", label: "outside the frame", color: "#7a5d86", definition: "a row placed outside the district frame" },
 ];
 
 export const NOT_SERVED: Category = { id: "not_served", label: "not served on this cell", color: NO_CELL, definition: "the envelope carries no such field for this cell" };
 
 /** The exception kinds the exceptions layer draws (fill or outline) and lists. */
 export const EXCEPTION_KINDS: Category[] = [
-  { id: "other_unit", label: "shared 'Other' cell", color: "#d7e8e4", definition: "territories the release carries as one province row" },
-  { id: "shared_shape", label: "shape shared by several census units", color: "#f4e3a1", definition: "one polygon, several rows; the polygon shows their sum" },
+  { id: "other_unit", label: "shared 'Other' cell", color: "#ece2d4", definition: "territories the release carries as one province row" },
+  { id: "shared_shape", label: "shape shared by several census units", color: "#f6e2ae", definition: "one polygon, several rows; the polygon shows their sum" },
   { id: "no_cell", label: "polygon without a release row", color: NO_CELL, definition: "the boundary file draws it; the release has no row placed on it" },
   { id: "bounded", label: "bounded CH₄ module (hatched)", color: RAMP[2], definition: "the cell's CO₂e is an interval, never a midpoint" },
 ];

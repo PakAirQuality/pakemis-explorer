@@ -17,7 +17,7 @@ import type { Briefing } from "@/lib/queries";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
 import { cellUnit, configLabel, gasLabel, geographyName, gwpLabel, gwpTooltip, lulucfCompact, periodShort, periodSpanWords, sectorLabel, viewLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
-import { gasColor, sectorColor, ACCENT } from "@/lib/palette";
+import { gasColor, rampByRank } from "@/lib/palette";
 import { hrefForState } from "@/lib/urlState";
 import { Widget } from "@/components/ui/Widget";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
@@ -66,7 +66,7 @@ export function SectorWidget({ data, place, open, onToggle, onHover, onSelect, s
       {c ? <> and {lowerName(sectorLabel(labels, id(c)))} (<Figure cell={c} />{c.share_pct_short ? <>, <Share cell={c} /></> : null})</> : null}.
     </>
   ) : null;
-  const items: BarItem[] = cells.map((x) => ({ id: id(x), name: sectorLabel(labels, id(x)), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: sectorColor(id(x)), dim: !!selected && selected !== id(x) }));
+  const items: BarItem[] = cells.map((x, i) => ({ id: id(x), name: sectorLabel(labels, id(x)), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: rampByRank(i, cells.length), dim: !!selected && selected !== id(x) }));
   const caption = [configLabel(labels, state.config), `${gwpLabel(labels, state.gwp)} warming potentials`, lulucfCompact(labels)].filter(Boolean).join(" · ");
   return (
     <Widget id="sectors" chrome={DECK_CARD} open={open} onToggle={onToggle} title={`${WIDGETS.sectors} in ${place}`} env={env} labels={labels} sentence={sentence} caption={<span title={gwpTooltip(labels, state.gwp)}>{caption}</span>} testId="sector-widget">
@@ -156,7 +156,7 @@ export function PlacesWidget({ data, geo, open, onToggle, onPick }: WidgetProps 
       {retained ? <>; <b className="num whitespace-nowrap">{retained} {magnitudeOf(chosen)}</b> was retained at provincial level and placed no finer</> : null}.
     </>
   ) : null;
-  const items: BarItem[] = cells.map((x) => ({ id: name(x), name: geographyName(labels, name(x)), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: ACCENT, dim: !!geo && name(x) !== geo }));
+  const items: BarItem[] = cells.map((x, i) => ({ id: name(x), name: geographyName(labels, name(x)), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: rampByRank(i, cells.length), dim: !!geo && name(x) !== geo }));
   const view = viewLabel(labels, state.view);
   return (
     <Widget id="places" chrome={DECK_CARD} open={open} onToggle={onToggle} title={WIDGETS.places} env={env} labels={labels} sentence={sentence} caption={`Allocated at province level · ${view.split(":")[0]}`} testId="places-widget">
