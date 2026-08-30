@@ -60,6 +60,8 @@ export type DeckProps = {
   place?: string;
   onGeo: (name: string | null) => void;
   onReset: () => void;
+  /** Whether the place card offers "Reset map": only once a move or a selection has something to undo. */
+  showReset?: boolean;
   /** The sector the map should follow while a breakdown card is open (hover), and the picked one. */
   onSector?: (id: string | null) => void;
   /** Collapse the deck to its rail (the workspace re-centres the map when it goes). */
@@ -68,7 +70,7 @@ export type DeckProps = {
   mobile?: boolean;
 };
 
-export function Deck({ onGeo, onReset, onSector, onCollapse, mobile = false }: DeckProps) {
+export function Deck({ onGeo, onReset, onSector, onCollapse, showReset = false, mobile = false }: DeckProps) {
   const { state, labels, dims } = useExplorer();
   const [collapsed, setCollapsed] = useState<Partial<Record<CardId, boolean>>>({});
   const [picked, setPicked] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, mobile = false }: D
 
   const cards = (
     <>
-      <HeaderBlock geo={province} place={place} onGeo={onGeo} onReset={onReset} />
+      <HeaderBlock geo={province} place={place} onGeo={onGeo} onReset={onReset} showReset={showReset} />
       <header className={`${DECK_CARD} flex items-center justify-between gap-3 px-5 py-3`} data-testid="deck-header">
         <h2 className="widget-title min-w-0 truncate">{DECK_TITLE(place)}</h2>
         <div className="flex shrink-0 items-center gap-1.5">

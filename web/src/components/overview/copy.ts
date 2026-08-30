@@ -41,13 +41,12 @@ export const VERSIONED_LINE = "Releases are versioned so that published results 
 /** Where "View methodology" goes: the methods section of /methods. */
 export const METHODS_HREF = "/methods#methods";
 
-/** The place header card: the eyebrow, the country, the four icon actions and the province select. */
+/** The place card: the eyebrow, the dek, the country, the province select and the utility row. */
 export const HEADER = {
   eyebrow: "Pakistan Emissions Explorer",
-  dek: "Explore greenhouse-gas emissions by place, sector and year.",
+  dek: "Explore emissions by place, sector and year.",
   country: "Pakistan",
-  reset: "Reset view",
-  choose: "Choose a province",
+  reset: "Reset map",
   selectProvince: "Select a province",
   allProvinces: "Pakistan (all provinces)",
   share: "Share",

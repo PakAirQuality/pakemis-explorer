@@ -68,6 +68,8 @@ export function Workspace() {
   const { state, setState, labels, dims } = useExplorer();
   const wide = useMediaQuery("(min-width: 1024px)");
   const [map, setMap] = useState<MBMap | null>(null);
+  // "Reset map" appears only once there is something to reset: a user-driven move, or a picked place or level
+  const [moved, setMoved] = useState(false);
   const [deckOpen, setDeckOpen] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -109,7 +111,20 @@ export function Workspace() {
   const onReset = useCallback(() => {
     setState({ geo: null, cell: null, level: "adm1" });
     setSector(null);
+    setMoved(false);
   }, [setState]);
+  // Mapbox marks a user gesture with originalEvent; the initial framing carries none
+  useEffect(() => {
+    if (!map) return;
+    const onMoveEnd = (e: { originalEvent?: unknown }) => {
+      if (e.originalEvent) setMoved(true);
+    };
+    map.on("moveend", onMoveEnd);
+    return () => {
+      map.off("moveend", onMoveEnd);
+    };
+  }, [map]);
+  const showReset = moved || !!state.geo || !!state.cell || state.level !== "adm1";
   const fitAll = () => {
     const u = bboxes.data ? unionBbox(bboxes.data.adm1) : null;
     if (u && map) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding, duration: 500 });
@@ -129,7 +144,7 @@ export function Workspace() {
       <NavCapsule floating />
 
       {!wide || deckOpen ? (
-        <Deck geo={geo} place={place} onGeo={onGeo} onReset={onReset} onSector={setSector} onCollapse={wide ? () => setDeckOpen(false) : undefined} mobile={!wide} />
+        <Deck geo={geo} place={place} onGeo={onGeo} onReset={onReset} showReset={showReset} onSector={setSector} onCollapse={wide ? () => setDeckOpen(false) : undefined} mobile={!wide} />
       ) : (
         <DeckRail onExpand={() => setDeckOpen(true)} />
       )}

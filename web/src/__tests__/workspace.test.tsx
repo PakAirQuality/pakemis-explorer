@@ -282,6 +282,11 @@ describe("the workspace's state", () => {
     expect(screen.getByTestId("sectors-link")).toHaveAttribute("href", "/data?sector=power");
     fireEvent.click(bars[1]);
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
+    // the card offers no reset until there is something to reset, and no "Choose a province" button
+    expect(screen.queryByTestId("header-reset")).toBeNull();
+    expect(screen.queryByTestId("header-choose")).toBeNull();
+    expect(screen.getByTestId("header-utilities")).toHaveTextContent("Share");
+    expect(screen.getByTestId("header-utilities")).toHaveTextContent("Download");
     // the province select writes `geo`, and the deck re-writes itself to the province's cards
     fireEvent.change(screen.getByTestId("province-select"), { target: { value: "Punjab" } });
     await waitFor(() => expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
@@ -290,7 +295,8 @@ describe("the workspace's state", () => {
     expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PUNJAB");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Punjab");
     expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest at 123.30 Mt");
-    // Reset view returns the deck and the map to Pakistan
+    // now a place is picked, "Reset map" appears, and it returns the deck and the map to Pakistan
+    expect(screen.getByTestId("header-reset")).toHaveTextContent("Reset map");
     fireEvent.click(screen.getByTestId("header-reset"));
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan"));
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "PK");
