@@ -26,7 +26,7 @@ import { useBriefing } from "@/lib/queries";
 import { geographyName } from "@/lib/labels";
 import { releaseCitation, releaseFacts } from "@/lib/release";
 import { api } from "@/lib/api";
-import { TopNav } from "@/components/shell/TopNav";
+import { NavHeader } from "@/components/shell/NavCapsule";
 import { BrandLogo } from "@/components/shell/BrandLogo";
 import { markStage } from "@/components/shell/bootstrap";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
@@ -97,7 +97,7 @@ export function Overview() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface" data-testid="overview" data-scope={geo ?? "PK"}>
-      <TopNav compact />
+      <NavHeader />
       <div className="relative flex flex-col lg:block lg:h-[calc(100dvh-56px)]" data-testid="app-frame">
         <div ref={deckRef} className="scrollbar-thin flex flex-col gap-3 p-4 lg:pointer-events-none lg:absolute lg:bottom-5 lg:left-5 lg:top-5 lg:z-10 lg:w-[520px] lg:overflow-y-auto lg:overscroll-contain lg:p-0 lg:pr-2" data-testid="dashboard-deck">
           <HeaderBlock geo={geo} place={place} onGeo={onGeo} onReset={onReset} />

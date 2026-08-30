@@ -1,6 +1,6 @@
 "use client";
 /**
- * A client-side redirect for a route that moved (/about -> /methods, /data -> /downloads).
+ * A client-side redirect for a route that moved (about to methods, map to the workspace, explore to data).
  * The static export has no server redirects, so the old page renders this stub, which replaces
  * itself with the new path and carries the query string (`?receipt=`) and hash across.
  */

@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useExplorer } from "@/components/ExplorerContext";
-import { isActive } from "@/components/shell/TopNav";
+import { isActive } from "@/components/shell/NavCapsule";
 import { closeAsk, subscribeAsk, type AskRequest } from "@/lib/askBus";
 import { AskDock } from "./AskDock";
 

@@ -5,11 +5,11 @@
  * Explore page's "Explain" arrives here); the parameter is then cleared so a reload does not
  * send it again. `openAsk()` requests raised on this page (the layout's drawer stays closed
  * here) are sent by the page itself. A "moved the map" chip and a tool card's "Show on map"
- * link to /map with that state.
+ * link to the workspace with that state.
  */
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { parseAsString, useQueryState } from "nuqs";
-import { TopNav } from "@/components/shell/TopNav";
+import { NavHeader } from "@/components/shell/NavCapsule";
 import { AskDock } from "@/components/ask/AskDock";
 import { subscribeAsk, type AskRequest } from "@/lib/askBus";
 
@@ -37,7 +37,7 @@ function Ask() {
   const seed = request?.req.question ?? q;
   return (
     <div className="flex h-dvh flex-col bg-surface" data-testid="ask-page">
-      <TopNav onAsk={() => document.querySelector<HTMLTextAreaElement>('[data-testid="question"]')?.focus()} />
+      <NavHeader onAsk={() => document.querySelector<HTMLTextAreaElement>('[data-testid="question"]')?.focus()} />
       <div className="mx-auto min-h-0 w-full max-w-3xl flex-1 border-x border-line bg-card">
         <AskDock seed={seed} seedScope={request?.req.scope ?? null} seedKey={request ? request.key : q ? -1 : 0} onSeeded={onSeeded} />
       </div>

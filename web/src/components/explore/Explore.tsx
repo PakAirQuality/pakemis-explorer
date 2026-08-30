@@ -23,7 +23,7 @@ import { openAsk } from "@/lib/askBus";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { canvasTitle, placeWords, possessive, showingWords, type ExploreState, type QueryPlan } from "@/lib/explore/query";
 import { useExploreState } from "@/lib/explore/useExploreState";
-import { TopNav } from "@/components/shell/TopNav";
+import { NavHeader } from "@/components/shell/NavCapsule";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { ShowingLine } from "@/components/ui/ShowingLine";
 import { ResultTabs } from "@/components/ui/ResultTabs";
@@ -99,7 +99,7 @@ export function Explore() {
 
   return (
     <div className="min-h-dvh bg-surface" data-testid="explore-page">
-      <TopNav />
+      <NavHeader />
       <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
         <PageHeader title={EXPLORE.title} dek={EXPLORE.dek} />
         <div className="mt-6">

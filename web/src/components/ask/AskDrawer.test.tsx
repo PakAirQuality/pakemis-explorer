@@ -8,7 +8,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/components/Providers";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
-import { TopNav } from "@/components/shell/TopNav";
+import { NavCapsule } from "@/components/shell/NavCapsule";
 import { openAsk, resetAskBus } from "@/lib/askBus";
 import { releaseDims, releaseLabels } from "@/lib/release";
 import { resolveState, type ExplorerState } from "@/lib/urlState";
@@ -50,7 +50,7 @@ function mount(value: ExplorerContextValue) {
   return render(
     <Providers>
       <ExplorerContext.Provider value={value}>
-        <TopNav />
+        <NavCapsule />
         <AskDrawer />
       </ExplorerContext.Provider>
     </Providers>,
@@ -108,7 +108,7 @@ describe("AskDrawer", () => {
     rerender(
       <Providers>
         <ExplorerContext.Provider value={ctx(national)}>
-          <TopNav />
+          <NavCapsule />
           <AskDrawer />
         </ExplorerContext.Provider>
       </Providers>,

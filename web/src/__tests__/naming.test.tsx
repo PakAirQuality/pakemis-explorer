@@ -17,7 +17,7 @@ import { EXPLORE } from "@/components/explore/copy";
 import { ASK_SENTENCES, INDEPENDENT_LINE, SHORT_SUMMARY } from "@/components/overview/copy";
 import { AskFab } from "@/components/shell/AskFab";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
-import { TopNav } from "@/components/shell/TopNav";
+import { NavCapsule } from "@/components/shell/NavCapsule";
 import { identityLine } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import { RELEASE } from "./fixtures";
@@ -39,7 +39,7 @@ describe("the chrome carries the initiative's name, not the dataset's", () => {
     expect(namesDataset(layout)).toBe(false);
   });
   it("the nav: the sections, the brand mark and the Ask button", () => {
-    const { container } = render(<TopNav />);
+    const { container } = render(<NavCapsule />);
     expect(namesDataset(renderedText(container))).toBe(false);
     expect(screen.getByTestId("nav-ask")).toHaveTextContent(ASK_LABEL);
     expect(screen.getByTestId("brand")).toHaveAttribute("title", INITIATIVE_NAME);

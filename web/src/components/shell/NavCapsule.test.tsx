@@ -1,0 +1,82 @@
+import "@testing-library/jest-dom/vitest";
+/**
+ * The nav capsule: the oxblood pill with the PAQI logo alone as the brand mark (no wordmark),
+ * the four sections — Explore · Data · Methods · Downloads — in order with the current one
+ * marked and underlined in saffron, and "Ask about this view" at its right end, which toggles
+ * the drawer on the bus or calls a page's own handler. On the workspace it floats at the deck's
+ * own left inset; everywhere else the same pill sits in a header row.
+ */
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { resetAskBus, subscribeAsk } from "@/lib/askBus";
+import { ASK_LABEL, CAPSULE_CLASS, isActive, NAV_LINKS, NavCapsule, NavHeader } from "./NavCapsule";
+
+const pathname = vi.hoisted(() => ({ value: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+
+describe("NavCapsule", () => {
+  it("lists Explore, Data, Methods, Downloads; Ask about this view toggles the drawer on the bus", () => {
+    pathname.value = "/";
+    resetAskBus();
+    const bus = vi.fn();
+    subscribeAsk(bus);
+    render(<NavCapsule />);
+    const links = screen.getAllByTestId("nav-link");
+    expect(links.map((a) => a.textContent)).toEqual(["Explore", "Data", "Methods", "Downloads"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/", "/data", "/methods", "/downloads"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_LINKS.map((l) => l.href));
+    expect(links[0]).toHaveAttribute("aria-current", "page");
+    expect(links[1]).not.toHaveAttribute("aria-current");
+    expect(screen.getByTestId("nav-ask")).toHaveTextContent(ASK_LABEL);
+    fireEvent.click(screen.getByTestId("nav-ask"));
+    expect(bus).toHaveBeenCalledWith({ type: "toggle" });
+    // the brand mark is the logo alone: a link to /, no wordmark
+    const brand = screen.getByTestId("brand");
+    expect(brand).toHaveAttribute("href", "/");
+    expect(brand.textContent).toBe("");
+    expect(brand.children).toHaveLength(1);
+    const logo = screen.getByAltText("Pakistan Air Quality Initiative");
+    expect(logo).toHaveAttribute("src", "/brand/paqi-logo.png");
+    expect(logo.className).toContain("h-7");
+    // the active section carries the 2 px saffron underline, and only it
+    const underlines = screen.getAllByTestId("nav-underline");
+    expect(underlines).toHaveLength(1);
+    expect(links[0]).toContainElement(underlines[0]);
+    expect(underlines[0].className).toContain("h-0.5");
+    expect(underlines[0].style.background).toContain("#ffb313");
+    expect(document.body.textContent).not.toContain("1.0.0rc");
+  });
+  it("the pill is oxblood with white text, and floats at the deck's left inset on the workspace", () => {
+    pathname.value = "/";
+    const { unmount } = render(<NavCapsule floating />);
+    const capsule = screen.getByTestId("nav-capsule");
+    for (const c of ["absolute", "left-5", "top-5", "z-30", "rounded-full", "bg-accent", "text-white", "shadow-lg", "px-5", "py-2.5", "flex", "items-center", "gap-6"]) expect(capsule.className, c).toContain(c);
+    unmount();
+    // docked: the same pill, in a normal header row at the top of the page
+    render(<NavHeader />);
+    const docked = screen.getByTestId("nav-capsule");
+    expect(docked.className).not.toContain("absolute");
+    for (const c of CAPSULE_CLASS.split(" ")) expect(docked.className, c).toContain(c);
+    expect(screen.getByTestId("top-nav")).toContainElement(docked);
+  });
+  it("marks the current page with or without the export's trailing slash", () => {
+    expect(isActive("/data/", "/data")).toBe(true);
+    expect(isActive("/data", "/data")).toBe(true);
+    expect(isActive("/", "/")).toBe(true);
+    expect(isActive("/data", "/")).toBe(false);
+    expect(isActive(null, "/")).toBe(true);
+    pathname.value = "/methods/";
+    render(<NavCapsule />);
+    const methods = screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods")!;
+    expect(methods).toHaveAttribute("aria-current", "page");
+    expect(methods).toContainElement(screen.getByTestId("nav-underline"));
+  });
+  it("a page may own the Ask action (the workspace's drawer)", () => {
+    pathname.value = "/";
+    const onAsk = vi.fn();
+    render(<NavHeader onAsk={onAsk}><span data-testid="slot">slot</span></NavHeader>);
+    fireEvent.click(screen.getByTestId("nav-ask"));
+    expect(onAsk).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("slot")).toBeInTheDocument();
+  });
+});

@@ -21,7 +21,7 @@ import { cellUnit, configWords, periodShort, sectorLabel } from "@/lib/labels";
 import { shown, type Cell } from "@/lib/envelope";
 import { useCompleteness, useEmissions, useEvidence, useMethod } from "@/lib/queries";
 import { scopeBody } from "@/lib/requests";
-import { TopNav } from "@/components/shell/TopNav";
+import { NavHeader } from "@/components/shell/NavCapsule";
 import { CurrentView } from "@/components/shell/CurrentView";
 import { ACTION_CLASS, PageHeader } from "@/components/shell/PageHeader";
 import { Widget, ICON_BUTTON, WIDGET_TITLE } from "@/components/ui/Widget";
@@ -111,7 +111,7 @@ export function Methods() {
 
   return (
     <div className="min-h-dvh bg-surface" data-testid="methods-page">
-      <TopNav compact />
+      <NavHeader />
       <CurrentView compact />
       <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
         <PageHeader
@@ -155,7 +155,7 @@ export function Methods() {
           infoTab="sources"
           testId="sector-card"
           tools={
-            <Link href={`/explore?sector=${encodeURIComponent(sector)}`} className={ICON_BUTTON} aria-label={METHODS.rows} title={METHODS.rows} data-testid="open-rows-icon">
+            <Link href={`/data?sector=${encodeURIComponent(sector)}`} className={ICON_BUTTON} aria-label={METHODS.rows} title={METHODS.rows} data-testid="open-rows-icon">
               <Table2 size={14} />
             </Link>
           }
@@ -177,7 +177,7 @@ export function Methods() {
               <button type="button" className={TEXT_BUTTON} onClick={() => evidence.data && drawer.open(evidence.data, "sources")} disabled={!evidence.data} data-testid="inspect-sources">
                 <ScrollText size={12} /> {METHODS.sources}
               </button>
-              <Link href={`/explore?sector=${encodeURIComponent(sector)}`} className={TEXT_BUTTON} data-testid="open-rows">
+              <Link href={`/data?sector=${encodeURIComponent(sector)}`} className={TEXT_BUTTON} data-testid="open-rows">
                 <Table2 size={12} /> {METHODS.rows}
               </Link>
             </span>

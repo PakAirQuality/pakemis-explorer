@@ -4,7 +4,7 @@
  * result the server streamed back: the first cells as `display unit` with their group label,
  * the interval badge on a bounded cell, limitation chips, the ReceiptFooter, and "Show on map"
  * which puts the call's request on the URL through stateFromRequest (on the Map page) or links
- * to /map with that state (anywhere else). A refusal renders the shared RefusalCard. Nothing
+ * to the workspace with that state (anywhere else). A refusal renders the shared RefusalCard. Nothing
  * here is computed: every string is the event's.
  */
 import { useState } from "react";
@@ -15,7 +15,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { cellUnit, functionLabel, groupText, inputChips, limitationText } from "@/lib/labels";
 import { stateFromRequest } from "@/lib/requests";
 import { applyPatch, hrefForState } from "@/lib/urlState";
-import { isActive } from "@/components/shell/TopNav";
+import { isActive } from "@/components/shell/NavCapsule";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
 import { RefusalCard } from "@/components/ui/RefusalCard";
@@ -27,7 +27,7 @@ type ToolItem = Extract<TimelineItem, { kind: "tool" }>;
 
 export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlight: Highlight; pending: boolean }) {
   const { labels, dims, state, defaults, setState } = useExplorer();
-  const onMap = isActive(usePathname(), "/map");
+  const onMap = isActive(usePathname(), "/"); // the workspace carries the map
   const [open, setOpen] = useState(true);
   const chips = inputChips(labels, dims, item.input);
   const hit = highlight?.k === item.k;
@@ -63,7 +63,7 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
           </button>
         )}
         {canShow && !onMap && (
-          <Link href={hrefForState(applyPatch(state, patch), defaults, "/map")} className="pill flex shrink-0 items-center gap-1 border border-line px-2 py-0.5 text-xs text-accent hover:bg-accent-soft" title={JSON.stringify(patch)} data-testid="show-on-map">
+          <Link href={hrefForState(applyPatch(state, patch), defaults, "/")} className="pill flex shrink-0 items-center gap-1 border border-line px-2 py-0.5 text-xs text-accent hover:bg-accent-soft" title={JSON.stringify(patch)} data-testid="show-on-map">
             <MapPin size={12} /> Show on map
           </Link>
         )}

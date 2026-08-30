@@ -24,7 +24,7 @@ import { releaseCitation, releaseDoi, type Citation } from "@/lib/release";
 import { useReferencePeriod } from "@/lib/queries";
 import { curlLine, scopeBody, stateFromEnvelopeRequest } from "@/lib/requests";
 import { hrefForState } from "@/lib/urlState";
-import { TopNav } from "@/components/shell/TopNav";
+import { NavHeader } from "@/components/shell/NavCapsule";
 import { CurrentView } from "@/components/shell/CurrentView";
 import { ACTION_CLASS, PageHeader } from "@/components/shell/PageHeader";
 import { Widget, WIDGET_TITLE } from "@/components/ui/Widget";
@@ -63,7 +63,7 @@ export function Downloads() {
   const mapHref = useMemo(() => {
     if (!replay.data) return null;
     const patch = stateFromEnvelopeRequest(replay.data.request);
-    return Object.keys(patch).length ? hrefForState({ ...state, ...patch }, defaults, "/map") : null;
+    return Object.keys(patch).length ? hrefForState({ ...state, ...patch }, defaults, "/") : null;
   }, [replay.data, state, defaults]);
   const months = Object.values(dims.monthsByPeriod).reduce((n, m) => n + m.length, 0);
   const range = periodRange(dims, labels);
@@ -82,7 +82,7 @@ export function Downloads() {
 
   return (
     <div className="min-h-dvh bg-surface" data-testid="downloads-page">
-      <TopNav compact />
+      <NavHeader />
       <CurrentView compact />
       <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
         <PageHeader
