@@ -155,8 +155,8 @@ describe("the workspace frame", () => {
     expect(screen.getAllByTestId("nav-link").map((a) => a.textContent)).toEqual(["Explore", "Data", "Methods", "Downloads"]);
     // the deck: 420 px, inset 20, under the capsule, its own scroll, letting pointer events through
     const deck = screen.getByTestId("deck");
-    // 420 px exactly, so the nav capsule above it shares both edges; it stops above the Ask button's corner
-    for (const c of ["absolute", "left-5", "top-[84px]", "bottom-[108px]", "w-[420px]", "z-20", "overflow-y-auto", "overscroll-contain", "scrollbar-none", "pointer-events-none", "flex flex-col gap-3"]) expect(deck.className, c).toContain(c);
+    // 420 px exactly, so the nav capsule above it shares both edges
+    for (const c of ["absolute", "left-5", "top-[84px]", "bottom-5", "w-[420px]", "z-20", "overflow-y-auto", "overscroll-contain", "scrollbar-none", "pointer-events-none", "flex flex-col gap-3"]) expect(deck.className, c).toContain(c);
     expect(deck.className).not.toContain("pr-2");
     expect(screen.getByTestId("nav-capsule").className).toContain("w-[420px]");
     expect(deck.className).not.toMatch(/(^|\s)bg-/); // the map shows between the cards

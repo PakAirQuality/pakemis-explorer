@@ -1,9 +1,9 @@
 "use client";
 /**
- * The navigation capsule every page carries (it replaced TopNav on 2026-08-30): one oxblood
- * `rounded-full` pill holding the PAQI logo (a link to /, no wordmark), the four sections
- * — Explore · Data · Methods · Downloads — in white with the current one underlined 2 px in
- * saffron. The assistant is not here: one entry only, the round button at the bottom left
+ * The navigation capsule every page carries (it replaced TopNav on 2026-08-30): one warm ivory
+ * `rounded-full` pill (`--color-nav`, a soft saffron hairline) holding the PAQI logo (a link to
+ * /, no wordmark) and the four sections — Explore · Data · Methods · Downloads — in charcoal,
+ * the current one in oxblood and underlined 2 px in the same. The assistant is not here: one entry only, the round button at the bottom left
  * (components/shell/AskFab.tsx), so the same action is not offered twice.
  *
  * On the workspace (`floating`) the capsule is `absolute left-5 top-5 z-30`, sharing the deck's
@@ -33,7 +33,7 @@ export function isActive(pathname: string | null, href: string): boolean {
 }
 
 /** The pill itself: the classes the deck's left inset and radius family are matched to. */
-export const CAPSULE_CLASS = "rounded-full bg-accent text-white shadow-lg px-5 py-2.5 flex items-center gap-6";
+export const CAPSULE_CLASS = "rounded-full bg-nav text-nav-fg border border-nav-line shadow-lg px-5 py-2.5 flex items-center gap-6";
 /** Floating, the capsule is exactly the deck's width, so its left AND right edges line up with the cards beneath it. */
 export const CAPSULE_WIDTH = "w-[420px] justify-between";
 /** The floating placement on the workspace: the same left inset (20 px) and width as the deck beneath it. */
@@ -48,11 +48,11 @@ export function NavCapsule({ floating = false, children }: { floating?: boolean;
         key={href}
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`relative shrink-0 py-0.5 text-sm transition-colors ${active ? "font-semibold text-white" : "text-white/75 hover:text-white"}`}
+        className={`relative shrink-0 py-0.5 text-sm transition-colors ${active ? "font-semibold text-accent" : "text-nav-fg/65 hover:text-nav-fg"}`}
         data-testid="nav-link"
       >
         {label}
-        {active && <span className="absolute inset-x-0 -bottom-1.5 h-0.5 rounded-full" style={{ background: "var(--color-brand-gold, #ffb313)" }} aria-hidden="true" data-testid="nav-underline" />}
+        {active && <span className="absolute inset-x-0 -bottom-1.5 h-0.5 rounded-full bg-accent" aria-hidden="true" data-testid="nav-underline" />}
       </Link>
     );
   };

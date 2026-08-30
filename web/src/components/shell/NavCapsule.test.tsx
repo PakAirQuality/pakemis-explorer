@@ -39,19 +39,19 @@ describe("NavCapsule", () => {
     const logo = screen.getByAltText("Pakistan Air Quality Initiative");
     expect(logo).toHaveAttribute("src", "/brand/paqi-logo.png");
     expect(logo.className).toContain("h-7");
-    // the active section carries the 2 px saffron underline, and only it
+    // the active section carries the 2 px oxblood underline, and only it
     const underlines = screen.getAllByTestId("nav-underline");
     expect(underlines).toHaveLength(1);
     expect(links[0]).toContainElement(underlines[0]);
     expect(underlines[0].className).toContain("h-0.5");
-    expect(underlines[0].style.background).toContain("#ffb313");
+    expect(underlines[0].className).toContain("bg-accent");   // oxblood, legible on the ivory pill
     expect(document.body.textContent).not.toContain("1.0.0rc");
   });
-  it("the pill is oxblood with white text, and floats at the deck's left inset on the workspace", () => {
+  it("the pill is warm ivory with charcoal text, and floats at the deck's left inset on the workspace", () => {
     pathname.value = "/";
     const { unmount } = render(<NavCapsule floating />);
     const capsule = screen.getByTestId("nav-capsule");
-    for (const c of ["absolute", "left-5", "top-5", "z-30", "rounded-full", "bg-accent", "text-white", "shadow-lg", "px-5", "py-2.5", "flex", "items-center", "gap-6"]) expect(capsule.className, c).toContain(c);
+    for (const c of ["absolute", "left-5", "top-5", "z-30", "rounded-full", "bg-nav", "text-nav-fg", "border-nav-line", "shadow-lg", "px-5", "py-2.5", "flex", "items-center", "gap-6"]) expect(capsule.className, c).toContain(c);
     unmount();
     // docked: the same pill, in a normal header row at the top of the page
     render(<NavHeader />);

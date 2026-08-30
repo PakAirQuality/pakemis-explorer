@@ -39,6 +39,10 @@
   --color-accent-soft: rgba(94, 26, 42, 0.08);
   /* the saffron: the true accent (the active nav underline, chips, small marks), charcoal on it */
   --color-brand-gold: #ffb313;
+  /* the navigation capsule: the lightest warm yellow, a soft saffron hairline, charcoal text; the nav capsule and the deck's place card share it */
+  --color-nav: #fdf6e3;
+  --color-nav-fg: #242128;
+  --color-nav-line: #efdfb4;
   --color-accent-2: #ffb313;
   --color-on-accent-2: #242128;
   /* a polygon the release has no row for */

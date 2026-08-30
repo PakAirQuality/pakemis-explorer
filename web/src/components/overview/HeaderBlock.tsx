@@ -1,8 +1,9 @@
 "use client";
 /**
- * The place header card, the deck's first card (Global Mangrove Watch's): an accent-blue
- * `rounded-3xl` card with a decorative white wave across its top (an inline SVG at 10–12 %,
- * no image asset), the eyebrow "Pakistan's explainable emissions inventory", the title
+ * The place header card, the deck's first card (Global Mangrove Watch's): a `rounded-3xl` card
+ * in the nav capsule's warm ivory (`--color-nav`, so the two brand surfaces match) with a
+ * decorative saffron wave across its top (an inline SVG at 16–22 %, no image asset: oxblood there
+ * greyed the ivory toward beige, saffron keeps it the capsule's yellow), the eyebrow "Pakistan's explainable emissions inventory", the title
  * (Pakistan, or the selected province) and a row of four icon actions with labels beneath:
  * Reset view (clears the scope and the map level), Choose a province (focuses and opens the
  * select below), Share (copies the URL), Download (-> /downloads). Under the icons the
@@ -15,8 +16,8 @@ import { ChevronDown, Download, Link2, MapPin, RotateCcw } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { HEADER } from "./copy";
 
-const ACTION = "flex flex-col items-center gap-1.5 rounded-2xl px-1 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-white/15";
-const ICON = "flex h-10 w-10 items-center justify-center rounded-full bg-white/15";
+const ACTION = "flex flex-col items-center gap-1.5 rounded-2xl px-1 py-2 text-center text-xs font-medium text-fg transition-colors hover:bg-accent-soft";
+const ICON = "flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent";
 const SELECT_ID = "province-select";
 
 export function HeaderBlock({ geo, place, onGeo, onReset }: { geo: string | null; place: string; onGeo: (name: string | null) => void; onReset: () => void }) {
@@ -46,14 +47,14 @@ export function HeaderBlock({ geo, place, onGeo, onReset }: { geo: string | null
     }
   };
   return (
-    <header className="pointer-events-auto relative shrink-0 overflow-hidden rounded-3xl bg-accent text-white shadow-lg" data-testid="header-block">
+    <header className="pointer-events-auto relative shrink-0 overflow-hidden rounded-3xl border border-nav-line bg-nav text-nav-fg shadow-lg" data-testid="header-block">
       <svg className="pointer-events-none absolute inset-x-0 top-0 h-28 w-full" viewBox="0 0 520 112" preserveAspectRatio="none" aria-hidden="true" data-testid="header-wave">
-        <path d="M0 58 C 90 14, 170 98, 262 56 S 432 12, 520 58 V0 H0 Z" fill="#ffffff" fillOpacity="0.12" />
-        <path d="M0 92 C 110 48, 210 122, 310 86 S 452 40, 520 90 V0 H0 Z" fill="#ffffff" fillOpacity="0.1" />
+        <path d="M0 58 C 90 14, 170 98, 262 56 S 432 12, 520 58 V0 H0 Z" fill="var(--color-brand-gold)" fillOpacity="0.22" />
+        <path d="M0 92 C 110 48, 210 122, 310 86 S 452 40, 520 90 V0 H0 Z" fill="var(--color-brand-gold)" fillOpacity="0.16" />
       </svg>
       <div className="relative p-6">
-        <div className="text-micro font-semibold uppercase tracking-[0.06em] text-white/80" data-testid="eyebrow">{HEADER.eyebrow}</div>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white" data-testid="place-title">{place}</h1>
+        <div className="text-micro font-semibold uppercase tracking-[0.06em] text-accent" data-testid="eyebrow">{HEADER.eyebrow}</div>
+        <h1 className="mt-2 text-4xl font-semibold tracking-tight text-fg" data-testid="place-title">{place}</h1>
         <div className="mt-5 grid grid-cols-4 gap-1" data-testid="header-toolbar">
           <button type="button" onClick={onReset} className={ACTION} data-testid="header-reset">
             <span className={ICON}><RotateCcw size={18} aria-hidden="true" /></span>
@@ -74,7 +75,7 @@ export function HeaderBlock({ geo, place, onGeo, onReset }: { geo: string | null
         </div>
         <label className="relative mt-4 block">
           <span className="sr-only">{HEADER.selectProvince}</span>
-          <select ref={selectRef} id={SELECT_ID} className="w-full cursor-pointer appearance-none rounded-full bg-white py-2 pl-4 pr-10 text-sm font-medium text-fg shadow-sm outline-none focus:ring-2 focus:ring-white/60" value={geo ?? ""} onChange={(e) => onGeo(e.target.value || null)} aria-label={HEADER.selectProvince} data-testid="province-select">
+          <select ref={selectRef} id={SELECT_ID} className="w-full cursor-pointer appearance-none rounded-full border border-line bg-card py-2 pl-4 pr-10 text-sm font-medium text-fg shadow-sm outline-none focus:ring-2 focus:ring-accent/40" value={geo ?? ""} onChange={(e) => onGeo(e.target.value || null)} aria-label={HEADER.selectProvince} data-testid="province-select">
             <option value="">{HEADER.allProvinces}</option>
             {dims.adm1.map((r) => (
               <option key={r.geography_id} value={r.name}>{labels.geographies[r.geography_id] ?? r.name}</option>
