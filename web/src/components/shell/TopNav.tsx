@@ -1,7 +1,7 @@
 "use client";
 /**
- * The top navigation every page carries: the PAQI logo, a hairline and the "PakEmis" wordmark,
- * the five sections (Overview, Explore data,
+ * The top navigation every page carries: the PAQI logo alone as the brand mark (a link to /;
+ * no wordmark, no hairline), the five sections (Overview, Explore data,
  * Map, Methods & evidence, Downloads) with the current one highlighted, and the green Ask
  * PakEmis button: it toggles the AskDrawer (lib/askBus.ts; mounted once in the layout) on every
  * page, or calls `onAsk` when a page supplies its own toggle (the Map page's right column).
@@ -59,10 +59,8 @@ export function TopNav({ compact = false, onAsk, children }: { compact?: boolean
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-card/90 backdrop-blur" data-testid="top-nav">
       <div className={`flex h-14 items-center gap-3 px-4 ${compact ? "" : "mx-auto max-w-[1500px] md:px-6"}`}>
-        <Link href="/" className="mr-2 flex shrink-0 items-center gap-2.5 text-sm font-semibold text-fg" data-testid="brand" title="PakEmis">
+        <Link href="/" className="mr-2 flex shrink-0 items-center" data-testid="brand" title="PakEmis">
           <BrandLogo className="h-8 object-contain" />
-          <span className="h-5 w-px border-l border-line" aria-hidden="true" />
-          <span>PakEmis</span>
         </Link>
         <nav className="hidden items-center gap-0.5 md:flex" aria-label="Sections">
           {NAV_LINKS.map((l) => link(l.href, l.label))}

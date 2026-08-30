@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-/** The TopNav: the PAQI logo and the wordmark, the five sections in order, the current one marked and underlined, the Ask button as a link or the Map page's toggle, the mobile menu. */
+/** The TopNav: the PAQI logo alone as the brand mark (no wordmark, no hairline), the five sections in order, the current one marked and underlined, the Ask button as a link or the Map page's toggle, the mobile menu. */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { resetAskBus, subscribeAsk } from "@/lib/askBus";
@@ -23,8 +23,12 @@ describe("TopNav", () => {
     expect(screen.getByTestId("nav-ask").tagName).toBe("BUTTON");
     fireEvent.click(screen.getByTestId("nav-ask"));
     expect(bus).toHaveBeenCalledWith({ type: "toggle" });
-    expect(screen.getByTestId("brand")).toHaveTextContent("PakEmis");
-    expect(screen.getByTestId("brand").textContent).not.toContain("PE" + "PakEmis");
+    // the brand mark is the logo alone: a link to /, no wordmark and no hairline beside it
+    const brand = screen.getByTestId("brand");
+    expect(brand).toHaveAttribute("href", "/");
+    expect(brand.textContent).toBe("");
+    expect(brand.querySelectorAll("span")).toHaveLength(0);
+    expect(brand.children).toHaveLength(1);
     const logo = screen.getByAltText("Pakistan Air Quality Initiative");
     expect(logo).toHaveAttribute("src", "/brand/paqi-logo.png");
     expect(logo.className).toContain("h-8");
