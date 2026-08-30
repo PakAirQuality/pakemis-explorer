@@ -420,7 +420,8 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
           <LayerLegend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} hasCells={anyNoCell} shared={legendShared} unallocated={{ env: provinceQ.data, index: unallocIdx, error: provinceQ.error, isLoading: provinceQ.isLoading }} exceptions={{ present: exPresent, items: exItems }} />
         )}
         {briefing && <BriefingOpacity value={opacity} onChange={setPillOpacity} />}
-        {!full && mapQ.error ? <div className="mt-1 max-w-[272px]" data-testid="briefing-refusal"><RefusalCard error={mapQ.error} compact /></div> : null}
+        {/* the workspace has the legend capsule for this; only the /data canvas needs it here */}
+        {briefing && mapQ.error ? <div className="mt-1 max-w-[272px]" data-testid="briefing-refusal"><RefusalCard error={mapQ.error} compact /></div> : null}
       </div>
       {full && !isMobile && (
         <div className="glass pill absolute bottom-8 right-3 z-20 max-w-[420px] truncate px-3 py-1 text-micro normal-case tracking-normal text-muted" data-testid="context-pill" title={pill.title}>

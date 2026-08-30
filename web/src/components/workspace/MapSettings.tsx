@@ -70,7 +70,7 @@ export function MapSettings({ open, onToggle, opacity, onOpacity, basemap, onBas
           <div className="flex flex-col gap-3.5">
             <div>
               <div className="micro mb-1.5">{SETTINGS.layer}</div>
-              <LayerSwitch compact />
+              <LayerSwitch compact wrap />
             </div>
             <div>
               <div className="micro mb-1.5">{SETTINGS.scale}</div>
