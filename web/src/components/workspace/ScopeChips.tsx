@@ -11,7 +11,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { gasLabel, periodShort, sectorLabel } from "@/lib/labels";
 import { CHIPS } from "./copy";
 
-const CHIP = "inline-flex max-w-full items-center gap-1.5 rounded-full border border-amber/50 bg-amber/15 py-1 pl-3 text-xs font-medium text-fg";
+const CHIP = "inline-flex max-w-full items-center gap-1.5 rounded-full border border-nav-line bg-nav py-1 pl-3 text-xs font-medium text-fg shadow-sm";
 
 type Chip = { id: string; label: string; what: string; onClear: (() => void) | null };
 
@@ -28,7 +28,7 @@ export function ScopeChips({ className = "" }: { className?: string }) {
         <span key={c.id} className={`${CHIP} ${c.onClear ? "pr-1" : "pr-3"}`} data-testid={`chip-${c.id}`} data-default={c.onClear ? "0" : "1"}>
           <span className="truncate">{c.label}</span>
           {c.onClear && (
-            <button type="button" onClick={c.onClear} aria-label={CHIPS.clear(c.what)} title={CHIPS.clear(c.what)} className="flex h-5 w-5 items-center justify-center rounded-full text-fg/70 hover:bg-amber/40 hover:text-fg" data-testid={`chip-${c.id}-clear`}>
+            <button type="button" onClick={c.onClear} aria-label={CHIPS.clear(c.what)} title={CHIPS.clear(c.what)} className="flex h-5 w-5 items-center justify-center rounded-full text-fg/70 hover:bg-accent-soft hover:text-fg" data-testid={`chip-${c.id}-clear`}>
               <X size={12} aria-hidden="true" />
             </button>
           )}

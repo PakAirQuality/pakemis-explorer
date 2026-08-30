@@ -36,10 +36,10 @@ export function HeaderBlock({ geo, place, onGeo, onReset, showReset = false }: {
     <header className="pointer-events-auto relative shrink-0 overflow-hidden rounded-[20px] border border-nav-line bg-nav text-nav-fg shadow-lg" data-testid="header-block">
       <div className="h-1 w-full bg-brand-gold" aria-hidden="true" data-testid="header-edge" />
       <div className="relative px-6 pb-5 pt-5">
-        {/* one wave, drawn as fine saffron strokes in the top right; no image asset */}
+        {/* one wave, a whisper of fine saffron strokes in the top right; no image asset */}
         <svg className="pointer-events-none absolute right-0 top-0 h-32 w-56" viewBox="0 0 224 128" fill="none" preserveAspectRatio="none" aria-hidden="true" data-testid="header-wave">
           {[0, 7, 14, 21, 28, 35, 42].map((d) => (
-            <path key={d} d={`M40 ${128 - d} C 96 ${112 - d}, 120 ${52 - d}, 224 ${34 - d}`} stroke="var(--color-brand-gold)" strokeOpacity="0.5" strokeWidth="1.25" />
+            <path key={d} d={`M40 ${128 - d} C 96 ${112 - d}, 120 ${52 - d}, 224 ${34 - d}`} stroke="var(--color-brand-gold)" strokeOpacity="0.28" strokeWidth="1" />
           ))}
         </svg>
         <div className="relative">

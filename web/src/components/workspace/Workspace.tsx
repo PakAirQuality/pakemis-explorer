@@ -113,15 +113,17 @@ export function Workspace() {
     setSector(null);
     setMoved(false);
   }, [setState]);
-  // Mapbox marks a user gesture with originalEvent; the initial framing carries none
+  // A gesture on the canvas is the only unambiguous "the user moved the map": the automatic
+  // framings (the initial fitBounds, the padding easeTo, a flyTo to a selection) fire moveend
+  // too, and not all of them carry Mapbox's originalEvent.
   useEffect(() => {
     if (!map) return;
-    const onMoveEnd = (e: { originalEvent?: unknown }) => {
-      if (e.originalEvent) setMoved(true);
-    };
-    map.on("moveend", onMoveEnd);
+    const el = map.getCanvasContainer();
+    const mark = () => setMoved(true);
+    const events = ["wheel", "mousedown", "touchstart", "dblclick"] as const;
+    for (const e of events) el.addEventListener(e, mark, { passive: true });
     return () => {
-      map.off("moveend", onMoveEnd);
+      for (const e of events) el.removeEventListener(e, mark);
     };
   }, [map]);
   const showReset = moved || !!state.geo || !!state.cell || state.level !== "adm1";
