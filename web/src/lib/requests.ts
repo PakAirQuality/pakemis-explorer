@@ -283,39 +283,7 @@ export function contextBodies(s: ExplorerState, survey: { reference: string; sur
   };
 }
 
-export type BriefingBodies = {
-  /** The national total, or the province's allocated total (ADM1, one geography). */
-  total: QueryEmissions;
-  /** The one-key sector breakdown: `sector_id` nationally, `module` at ADM1 grain (the release carries `sector_id` at national grain only). */
-  bySector: QueryEmissions;
-  sectorKey: "sector_id" | "module";
-  byGas: QueryEmissions;
-  /** Every province, ordered by value (the Places widget and the map share the same ADM1 view). */
-  provinces: QueryEmissions;
-  /** The annual series in the same scope; off the national scope the release refuses it by name. */
-  series: TimeseriesRequest;
-};
 
-/**
- * The Overview briefing's requests for a scope: the period, configuration, GWP basis and
- * spatial view of the URL state, and `geo` (a province name) when a province is selected.
- * Sector, gas and month filters are not part of the briefing. Pure: same state => same bodies.
- */
-export function briefingBodies(s: ExplorerState, geo: string | null): BriefingBodies {
-  const whole = { ...s, sector: null, gas: null, month: null };
-  const base = scopeBody(whole);
-  const place = geo ? { geography_level: "adm1", geography_ids: [geo], spatial_view: s.view } : {};
-  const scoped = compact({ ...base, ...place });
-  const sectorKey: "sector_id" | "module" = geo ? "module" : "sector_id";
-  return {
-    total: scoped,
-    sectorKey,
-    bySector: compact({ ...scoped, group_by: [sectorKey], order_by: "value desc" }),
-    byGas: compact({ ...scoped, group_by: ["gas"], order_by: "value desc" }),
-    provinces: compact({ ...adm1Body(whole), order_by: "value desc" }),
-    series: { query: compact({ configuration_id: s.config, gwp_basis: s.gwp, ...place }), step: "annual" },
-  };
-}
 
 export type NamedRequest = { name: string; body: Record<string, unknown> };
 

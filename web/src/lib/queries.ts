@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type CompareRequest, type GridCellRequest, type QueryEmissions, type TimeseriesRequest, type UncertaintyRequest, type CompletenessRequest } from "./api";
-import { briefingBodies, deckBodies, sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
+import { deckBodies, sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
 import { provinceOfShape } from "./labels";
 import type { ExplorerState } from "./urlState";
 import { useExplorer } from "@/components/ExplorerContext";
@@ -83,27 +83,6 @@ export function useSeriesUncertainty(periodId: string | null | undefined) {
 export function useNationalUncertainty(enabled = true) {
   return useUncertainty({ scope: "national" }, enabled);
 }
-
-/**
- * The Overview briefing's envelopes for a scope (`geo`: a province name, or null for
- * Pakistan): the total, the sector and gas breakdowns, every province and the annual series
- * (refused by the release off the national scope). Bodies from lib/requests.ts
- * briefingBodies; nothing here computes. The interval, completeness and evidence envelopes
- * are no longer asked here (their widgets left the Overview); Explore and Methods ask them.
- */
-export function useBriefing(geo: string | null) {
-  const { state } = useExplorer();
-  const bodies = useMemo(() => briefingBodies(state, geo), [state, geo]);
-  return {
-    bodies,
-    total: useEmissions(bodies.total),
-    bySector: useEmissions(bodies.bySector),
-    byGas: useEmissions(bodies.byGas),
-    provinces: useEmissions(bodies.provinces),
-    series: useTimeseries(bodies.series),
-  };
-}
-export type Briefing = ReturnType<typeof useBriefing>;
 
 /**
  * Which of the deck's envelopes are wanted right now. A collapsed card renders nothing and must

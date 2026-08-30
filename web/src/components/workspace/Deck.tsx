@@ -21,11 +21,12 @@
  * `interval_short`, `change.*`, `derived.*`, `axis.ticks_short`); the deck computes nothing.
  * Under 1024 px it is a bottom sheet over the map with three snap heights.
  */
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronsLeft, ChevronsRight, GripHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { useDeck, type Briefing } from "@/lib/queries";
+import { useDeck } from "@/lib/queries";
+import { markStage } from "@/components/shell/bootstrap";
 import { api } from "@/lib/api";
 import { districtName, geographyName } from "@/lib/labels";
 import { releaseCitation, releaseFacts } from "@/lib/release";
@@ -53,7 +54,6 @@ export type DeckProps = {
    * The Overview briefing's envelopes, where a caller still asks for them. The deck no longer
    * reads them — it asks for its own scope (`useDeck`) — so this is accepted and ignored.
    */
-  data?: Briefing;
   /** The selected province (an ADM1 row), or null for Pakistan; the deck resolves its own scope. */
   geo?: string | null;
   /** The place as the release names it; the deck names the scope's own place when it has one. */
@@ -80,6 +80,10 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, mobile = false }: D
   const allCollapsed = ids.every((id) => !isOpen(id));
   const wants = useMemo(() => wantsFor(ids, (id) => !collapsed[id]), [ids, collapsed]);
   const deck = useDeck(state, wants);
+  // the loading screen's third stage: the deck's first envelope answered (or was refused)
+  useEffect(() => {
+    if (deck.total.data || deck.total.isError) markStage("envelope");
+  }, [deck.total.data, deck.total.isError]);
 
   // the deck's own place: the country, the selected province, or the selected district's shape
   const province = scope.kind === "province" ? scope.geo : null;

@@ -27,9 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MBMap } from "mapbox-gl";
 import { Locate, Maximize2, Minimize2, Minus, Plus, SlidersHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { useBriefing } from "@/lib/queries";
 import { geographyName } from "@/lib/labels";
-import { markStage } from "@/components/shell/bootstrap";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { NavCapsule } from "@/components/shell/NavCapsule";
 import { ExplorerMap, type MapPadding } from "@/components/map/ExplorerMap";
@@ -85,11 +83,6 @@ export function Workspace() {
   // the deck's scope is a province name (an ADM1 row); any other `geo` reads as Pakistan
   const geo = state.geo && dims.adm1.some((r) => r.name === state.geo) ? state.geo : null;
   const place = geo ? geographyName(labels, geo) : HEADER.country;
-  const data = useBriefing(geo);
-  // the loading screen's third stage: the deck's first envelope answered (or refused)
-  useEffect(() => {
-    if (data.total.data || data.total.isError) markStage("envelope");
-  }, [data.total.data, data.total.isError]);
 
   const padding = useMemo(() => chromePadding({ deck: deckOpen, filters: filtersOpen, wide }), [deckOpen, filtersOpen, wide]);
   // Pakistan stays centred in what is visible: the camera is re-padded whenever a panel toggles.
@@ -136,7 +129,7 @@ export function Workspace() {
       <NavCapsule floating />
 
       {!wide || deckOpen ? (
-        <Deck data={data} geo={geo} place={place} onGeo={onGeo} onReset={onReset} onSector={setSector} onCollapse={wide ? () => setDeckOpen(false) : undefined} mobile={!wide} />
+        <Deck geo={geo} place={place} onGeo={onGeo} onReset={onReset} onSector={setSector} onCollapse={wide ? () => setDeckOpen(false) : undefined} mobile={!wide} />
       ) : (
         <DeckRail onExpand={() => setDeckOpen(true)} />
       )}
