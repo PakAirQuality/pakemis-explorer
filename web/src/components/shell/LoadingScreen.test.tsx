@@ -80,8 +80,10 @@ describe("LoadingScreen", () => {
     act(() => vi.advanceTimersByTime(MIN_SHOW_MS));
     expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "fading");
     expect(screen.getByTestId("loading-screen").className).toContain("opacity-0");
+    expect(document.body.style.overflow).toBe("hidden");
     act(() => vi.advanceTimersByTime(FADE_MS));
     expect(screen.queryByTestId("loading-screen")).toBeNull();
+    expect(document.body.style.overflow).toBe("");
   });
   it("on the home page the map's load is the last stage; the six-second ceiling finishes the bar regardless", () => {
     vi.useFakeTimers();

@@ -76,6 +76,16 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
     };
   }, [phase === "gone"]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // the page beneath does not scroll while the overlay covers it
+  useEffect(() => {
+    if (phase === "gone") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [phase === "gone"]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const stages = stagesFor(pathname);
   const finished = finishedFor(reached, stages) || ceiling;
   const progress = pinned ? STAGE_PERCENT[pinned] : ceiling ? 100 : progressFor(reached, stages);
