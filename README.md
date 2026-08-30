@@ -103,43 +103,45 @@ minimum, a 700 ms fade), it shows once per session (`sessionStorage`; `?loading=
 `&stage=<name>` holds it for captures), and its eight lines (`loadingLines.ts`) carry no digit,
 because a number on this site is a string the release returned.
 
-`/` is the public Overview as a country briefing (2026-08-30, in the manner of Global Nature
-Watch's country pages): two columns, the briefing left (58 %) and a sticky map right (42 %;
-under 1024 px the map is a widget after the opening block). Left, top to bottom: the header
-block (eyebrow "Pakistan's explainable emissions inventory", the title Pakistan or the
-selected province, the "Select a province" dropdown over the release's ADM1 rows which writes
-`geo` so every widget re-scopes and the map flies there, Share · Download); the opening
-statement with the numbers in bold ("In 2023–24, Pakistan emitted an estimated 452.35 Mt
-CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed
-inventory, which excludes land use and forestry.", every figure a server string:
-`display_short`, `unit_short`, `share_pct_short`, `share_phrase`, the LULUCF phrase the
-release's label; province scope: "Punjab's allocated emissions were 228.72 Mt CO₂e … of the
-province's allocated total") and the muted independence line; the sticky tab strip (anchors
-Summary · Sectors · Trend · Gases · Places · Uncertainty · Evidence, the one in view marked);
-seven widgets, each a `Widget` card with its envelope's toolbar: Emissions by sector (the
-sentence from ranks 1–3, ten bars with an x-axis from the envelope's `axis.ticks_short`,
-value · share labels), Emissions over time (the sentence from the series' server-derived
-`change`, a column chart with a y-axis from its ticks, the reference year in the accent),
-Emissions by gas (a stacked bar with `share_pct_short`), Where emissions are placed (the
-rank-1 province and the `derived.unallocated_total_short` retained at ADM1; five bars; "Open
-the map"), How certain is the estimate (both scenarios as interval bars from
-`quantiles_short`, the median tick, the reference estimate marked), What is not estimated
-(37 of 89 rows of the completeness ledger, the first eight NE categories, the amber "Not
-estimated is not zero" note), Evidence behind the numbers (189 streams as dot rows per E /
-T / S class with the class definitions on hover); the routes strip (Explore tests · Map
-locates · Methods proves · Downloads releases); the footer with the licences, the
-independence line and the repository. Right: the `ExplorerMap` in its briefing variant
-(legend, frame button, a Provinces | Districts toggle) following the widget in view (a
-hovered or selected sector bar filters the choropleth; Places shows provinces) and the
-province dropdown. In province scope the sector breakdown is asked by `module` (the release
-carries `sector_id` at national grain only), the annual series is refused by the release and
-the refusal is shown by name, and the interval stays national with a caption saying so. The
-charts (`components/charts/`) print axis labels only from `axis.ticks_short` and value labels
-only from `display_short` / `share_pct_short`; the browser computes nothing but row counts.
+`/` is the public Overview as a country briefing (2026-08-30, in Global Mangrove Watch's
+frame): under the 56 px nav a fixed two-pane app frame — a 560 px dashboard panel on the
+left with its own vertical scroll (white, a right-edge shadow over the map) and the map filling
+the remaining width and the full height on the right; under 1024 px a column, the panel first
+and the map at 60 vh below it. The panel stacks cards with 16 px gutters: the header block
+(eyebrow "Pakistan's explainable emissions inventory" as its first line — the logo is in the
+nav only —, the title Pakistan or the selected province, the "Select a province" dropdown over
+the release's ADM1 rows which writes `geo` so every widget re-scopes and the map flies there,
+Share · Download); the opening statement with the numbers in bold ("In 2023–24, Pakistan
+emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly
+half — of the reconstructed inventory, which excludes land use and forestry.", every figure a
+server string: `display_short`, `unit_short`, `share_pct_short`, `share_phrase`, the LULUCF
+phrase the release's label; province scope: "Punjab's allocated emissions were 228.72 Mt CO₂e
+… of the province's allocated total") and the muted independence line; the sticky tab strip
+(anchors Summary · Sectors · Trend · Gases · Places, the one in view marked); four widgets,
+each a `Widget` card with its envelope's toolbar: Emissions by sector (the sentence from ranks
+1–3, ten bars with an x-axis from the envelope's `axis.ticks_short`, value · share labels),
+Emissions over time (the sentence from the series' server-derived `change`, a column chart
+with a y-axis from its ticks, the reference year in the accent), Emissions by gas (a stacked
+bar with `share_pct_short`), Where emissions are placed (the rank-1 province and the
+`derived.unallocated_total_short` retained at ADM1; five bars; "Open the map"); then the
+footer with the licences, the independence line and the repository. The interval,
+completeness and evidence widgets and the routes strip were removed from the Overview
+(Explore and Methods carry those envelopes). The map is the `ExplorerMap` in its briefing
+variant on the light basemap (Mapbox `light-v11`: grey land, white water, pale borders):
+a Provinces | Districts glass toggle, the frame button and, in the legend's place, a compact
+bottom-left pill — `Low ▬▬▬ High | Opacity ──●── 80%`, the YlOrRd gradient and a slider
+that sets the choropleth's `fill-opacity` (a display setting, local state); the values stay
+in the hover tip, which also explains the shared "Other" cell under its dotted outline. The
+map follows the widget in view (a hovered or selected sector bar filters the choropleth;
+Places shows provinces) and the province dropdown. In province scope the sector breakdown is
+asked by `module` (the release carries `sector_id` at national grain only) and the annual
+series is refused by the release and the refusal is shown by name. The charts
+(`components/charts/`) print axis labels only from `axis.ticks_short` and value labels only
+from `display_short` / `share_pct_short`; the browser computes nothing.
 
 `/map` — Map allocated emissions (2026-08-30, the immersive allocation map). Full-bleed under
 a dark chrome (the tokens re-valued on the page wrapper; the map itself stays the light
-`streets-v12`): a collapsible filter panel on the left (Geography level and place, Period,
+`light-v11`): a collapsible filter panel on the left (Geography level and place, Period,
 Sector, Gas, Estimate and warming potentials, Spatial view; a rail of icons when collapsed),
 the map, a timeline beneath it (the fiscal years as chips, Annual plus the twelve months of the
 reference year; any other year is "national only" and shows the release's typed refusal in its
@@ -221,8 +223,8 @@ schema panel, the checksums, the complete-archive button (`GET /products/complet
 the citation and identity table, the one place the version string appears. The API card and
 the receipt replay sit below.
 
-The map is hawanama.org's: Mapbox GL JS v3 rendering `mapbox://styles/mapbox/streets-v12`
-with hawanama's flags (maxPitch 45, no drag-rotate, no world copies) and v3's default globe
+The map is Mapbox GL JS v3 rendering `mapbox://styles/mapbox/light-v11` (emissions.web.app's
+look: light grey land, white water, pale borders, few labels; `basemap.ts`) with hawanama's flags (maxPitch 45, no drag-rotate, no world copies) and v3's default globe
 projection, so the national view is a globe with the atmosphere halo below zoom ~5 and flattens
 as you zoom into a province; the choropleth, hatch and grid raster sit below the style's label
 layers. The 3D button (`view3d=1`) applies the ops dashboard's recipe: `mapbox-dem` terrain
@@ -263,7 +265,7 @@ make web      # http://localhost:3000; the page calls the API at NEXT_PUBLIC_API
               # resolves for one release, with the prefix appended). CORS is open on the API, so
               # nothing is proxied: every route, tile and raster is fetched from the base directly.
               # basemap: NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN in web/.env.local (gitignored, never committed)
-              # renders Mapbox streets-v12 on v3's globe. Mapbox GL JS v3 authenticates every map
+              # renders Mapbox light-v11 on v3's globe. Mapbox GL JS v3 authenticates every map
               # load and renders NOTHING without a valid token, whatever the style, so there is no
               # keyless map: without it the screen shows a one-line notice and no map (legend, panels
               # and the dock still work). NEXT_PUBLIC_BASEMAP_STYLE=<style URL> overrides the style
@@ -652,6 +654,7 @@ first screen and `16b-welcome-3.jpg` its third, with the number and "View source
 tile, raster and envelope from the API at `/api/v1/emissions`;
 `17-other-territories.jpg` the hover on Gilgit-Baltistan showing the shared `Other` cell and
 `17b-other-card.jpg` its detail card; `18-about.jpg` the `/about` page, now `/methods`;
-`30-overview.jpg` the Overview briefing's first screen and `30b-overview-scroll.jpg` its
-widgets, `36-light-explore.jpg` the Explore page under the light theme, `33-ask.jpg` the `/ask`
+`30-overview.jpg` the Overview's two-pane frame (the dashboard panel, the light basemap, the
+opacity pill; `31-map.jpg` the Map page on the same basemap) and `30b-overview-scroll.jpg` its
+widgets in the earlier single-column layout, `36-light-explore.jpg` the Explore page under the light theme, `33-ask.jpg` the `/ask`
 page).

@@ -1,7 +1,7 @@
 /**
  * The Pakistan Air Quality Initiative logo (public/brand/paqi-logo.png; origin and digest in
  * public/brand/README.md). A plain img: the static export serves the file as it is, and the
- * four places that show it (loading screen, nav, Overview header and footer) size it by class.
+ * three places that show it (loading screen, nav and the Overview footer) size it by class.
  */
 import type { CSSProperties } from "react";
 

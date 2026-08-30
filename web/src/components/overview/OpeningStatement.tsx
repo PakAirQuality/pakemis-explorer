@@ -29,7 +29,7 @@ export function OpeningStatement({ data, geo, place }: { data: Briefing; geo: st
   const top = rankedCells(data.bySector.data)[0];
   const period = periodShort(labels, state.period);
   return (
-    <section id="summary" className="scroll-mt-28 pt-6" data-testid="opening">
+    <section id="summary" className="card scroll-mt-16 p-4" data-testid="opening">
       {total ? (
         <p className="text-lg text-fg" data-testid="opening-statement">
           In <b>{period}</b>, {geo ? <>{place}&apos;s allocated emissions were</> : <>{place} emitted an estimated</>} <b className="num whitespace-nowrap">{shown(total)} {cellUnit(total)}</b>.

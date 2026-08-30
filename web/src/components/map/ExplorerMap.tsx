@@ -1,7 +1,7 @@
 "use client";
 /**
- * The map: Mapbox GL JS v3 over the basemap (basemap.ts; hawanama.org's streets-v12 with v3's
- * globe and atmosphere when the token exists), the layer stack inserted below the basemap's
+ * The map: Mapbox GL JS v3 over the basemap (basemap.ts; Mapbox light-v11, emissions.web.app's
+ * grey land and white water, with v3's globe and atmosphere when the token exists), the layer stack inserted below the basemap's
  * labels (layers.ts), the PMTiles served as TileJSON by the API's /tiles routes, the envelope painted
  * through feature-state (paint.ts), hover and click (useMapInteractions), the floating chrome
  * (the layer switch, raster / 3D / frame buttons, the layer legend, the context pill) and the
@@ -13,10 +13,13 @@
  * the province rows' retained mass (the ADM1 envelope's unallocated block) or the known
  * spatial exceptions (exceptions.ts), each with its legend (LayerLegend).
  *
- * `variant="briefing"` (the Overview's sticky map) keeps the magnitude legend and the frame
- * button only, flies with a small padding, and reads `override` merged over the URL state (a
- * hovered sector, the Provinces | Districts toggle) so the briefing can steer the map without
- * writing the URL; `onPick` replaces the click's default (writing `geo` / `cell`).
+ * `variant="briefing"` (the Overview's map pane) keeps the frame button and, in the legend's
+ * place, the bottom-left pill (OpacityPill: the Low–High gradient and an Opacity slider that
+ * sets the choropleth's fill-opacity, local state, never the URL); it flies with a small
+ * padding and reads `override` merged over the URL state (a hovered sector, the Provinces |
+ * Districts toggle) so the briefing can steer the map without writing the URL; `onPick`
+ * replaces the click's default (writing `geo` / `cell`). The shared "Other" cell keeps its
+ * dotted outline; the hover tip's line explains it.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -28,7 +31,7 @@ import { adm1Body, mapBody, parseCell } from "@/lib/requests";
 import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap } from "./basemap";
-import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setSelected, setView3d } from "./layers";
+import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, RASTER_OPACITY, setFillOpacity, setSelected, setView3d } from "./layers";
 import { anyWithoutCell, cellForFeature, exceptionKindOf, exceptionKindsPresent, indexCells, indexUnallocated, paintLayer } from "./paint";
 import { rasterFile, rasterUrl, unionBbox, useBboxes, useTilesInfo } from "./tiles";
 import { residualUnit, unionOf } from "@/lib/geography";
@@ -37,8 +40,9 @@ import { emitMapPick } from "@/components/ask/mentions";
 import { markStage } from "@/components/shell/bootstrap";
 import { View3dToggle } from "./View3dToggle";
 import { HoverTip } from "./HoverTip";
-import { Legend } from "./Legend";
+import { OpacityPill, OPACITY_DEFAULT } from "./OpacityPill";
 import { LayerLegend } from "./LayerLegend";
+import { RefusalCard } from "@/components/ui/RefusalCard";
 import { LayerSwitch } from "./LayerSwitch";
 import { exceptionIndex, exceptionItems } from "./exceptions";
 import { categoryOf, EXCEPTION_KINDS, SPATIAL_CLASSES, statusWords } from "./layerModes";
@@ -89,6 +93,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
   const [mapError, setMapError] = useState("");
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [legendOpen, setLegendOpen] = useState(true);
+  const [opacity, setOpacity] = useState(OPACITY_DEFAULT); // the briefing pill's slider, percent; a display setting
   const setStateRef = useRef(setState);
   setStateRef.current = setState;
   const stateRef = useRef(state);
@@ -141,7 +146,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
         zoom: initial && initial.length === 3 && Number.isFinite(initial[2]) ? initial[2] : 4.8,
         minZoom: 3.5,
         maxZoom: 12,
-        // hawanama.org's flags; no `projection`, so v3's globe and atmosphere apply to streets-v12
+        // hawanama.org's flags; no `projection`, so v3's globe and atmosphere apply to light-v11
         attributionControl: false,
         logoPosition: "bottom-left",
         maxPitch: 45,
@@ -200,6 +205,11 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
   useEffect(() => {
     if (map) applyLevel(map, state.level, state.raster, layer);
   }, [map, state.level, state.raster, layer]);
+
+  // --- the briefing's opacity slider: the fills' opacity, re-applied when the level's layer changes
+  useEffect(() => {
+    if (map && !full) setFillOpacity(map, opacity);
+  }, [map, full, opacity, state.level]);
 
   // --- the 3D view: terrain, atmosphere and the tilted camera
   useEffect(() => {
@@ -290,7 +300,7 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
         </button>
       </div>
       <div className={`absolute left-3 z-20 ${full && isMobile ? "bottom-3" : "bottom-8"}`}>
-        {isMobile && (
+        {isMobile && full && (
           <button onClick={() => setLegendOpen((o) => !o)} className="glass pill mb-1 px-2.5 py-1 text-micro normal-case tracking-normal">
             {legendOpen ? "hide legend" : "legend"}
           </button>
@@ -298,7 +308,8 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
         {legendOpen && full && (
           <LayerLegend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} hasCells={anyNoCell} shared={legendShared} unallocated={{ env: provinceQ.data, index: unallocIdx, error: provinceQ.error, isLoading: provinceQ.isLoading }} exceptions={{ present: exPresent, items: exItems }} />
         )}
-        {legendOpen && !full && <Legend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} rasterOn={state.raster} hasCells={anyNoCell} shared={legendShared} />}
+        {!full && <OpacityPill value={opacity} onChange={setOpacity} />}
+        {!full && mapQ.error ? <div className="mt-1 max-w-[272px]" data-testid="briefing-refusal"><RefusalCard error={mapQ.error} compact /></div> : null}
       </div>
       {full && !isMobile && (
         <div className="glass pill absolute bottom-8 right-3 z-20 max-w-[420px] truncate px-3 py-1 text-micro normal-case tracking-normal text-muted" data-testid="context-pill" title={pill.title}>

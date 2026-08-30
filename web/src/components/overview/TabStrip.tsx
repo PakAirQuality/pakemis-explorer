@@ -1,10 +1,10 @@
 "use client";
-/** The anchor tabs (Summary · Sectors · Trend · Gases · Places · Uncertainty · Evidence), sticky under the nav; the one in view is marked. Anchors, not filters. */
+/** The anchor tabs (Summary · Sectors · Trend · Gases · Places), sticky at the top of the dashboard panel's own scroll; the one in view is marked. Anchors, not filters. */
 import { TABS, type TabId } from "./copy";
 
 export function TabStrip({ active }: { active: TabId }) {
   return (
-    <nav className="sticky top-14 z-30 -mx-4 mt-6 border-b border-line bg-surface/95 px-4 backdrop-blur md:-mx-8 md:px-8" aria-label="Sections of the briefing" data-testid="tab-strip">
+    <nav className="sticky top-0 z-30 -mx-4 border-b border-line bg-card/95 px-4 backdrop-blur" aria-label="Sections of the briefing" data-testid="tab-strip">
       <ul className="scrollbar-none flex gap-1 overflow-x-auto">
         {TABS.map(([id, label]) => (
           <li key={id}>

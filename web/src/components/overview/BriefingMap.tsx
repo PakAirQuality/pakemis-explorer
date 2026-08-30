@@ -1,9 +1,9 @@
 "use client";
 /**
- * The briefing's map: the ExplorerMap in its briefing variant (legend, frame button, the
- * choropleth of the scope the page passes) with a Provinces | Districts toggle top-left. A
- * click on a province re-scopes the briefing (writes `geo`); a district click does nothing to
- * the briefing's scope.
+ * The briefing's map, filling its pane (`absolute inset-0`): the ExplorerMap in its briefing
+ * variant (the opacity pill, the frame button, the choropleth of the scope the page passes)
+ * with a Provinces | Districts glass toggle top-left. A click on a province re-scopes the
+ * briefing (writes `geo`); a district click does nothing to the briefing's scope.
  */
 import type { Level } from "@/lib/urlState";
 import { ExplorerMap } from "@/components/map/ExplorerMap";
@@ -17,7 +17,7 @@ export function BriefingMap({ scope, level, onLevel, onPickProvince }: { scope: 
     if (lvl === "adm1") onPickProvince(id);
   };
   return (
-    <div className="relative h-full w-full" data-testid="briefing-map">
+    <div className="absolute inset-0" data-testid="briefing-map">
       <ExplorerMap variant="briefing" override={scope} onPick={onPick} />
       <div className="absolute left-3 top-3 z-20">
         <ResultTabs<MapLevel> tabs={[{ id: "adm1", label: "Provinces" }, { id: "adm2", label: "Districts" }]} value={level} onChange={onLevel} ariaLabel="Map level" className="glass" testId="map-level" />

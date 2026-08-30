@@ -1,6 +1,7 @@
 "use client";
 /**
- * The legend. A compact "Low ▬▬ High" gradient bar of the ramp (emissions.web.app's; two
+ * The Map page's magnitude legend (LayerLegend composes it; the Overview's briefing map shows
+ * the OpacityPill instead). A compact "Low ▬▬ High" gradient bar of the ramp (emissions.web.app's; two
  * words, no number) above five swatches at the ranks 0, n/4, n/2, 3n/4, n-1 of the envelope's
  * cells sorted by value, labelled with THOSE cells' display strings (no client-computed breaks), a hatch row
  * when any cell is bounded, a dotted-outline row when the residual ADM1 unit's members share

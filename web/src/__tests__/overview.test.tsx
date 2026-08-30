@@ -2,12 +2,13 @@ import "@testing-library/jest-dom/vitest";
 /**
  * The Overview briefing against mocked envelopes that carry the server's presentation fields
  * (`display_short`, `share_pct_short`, `share_phrase`, `rank`, `axis.ticks_short`, `change`,
- * `derived`, `interval_short`, `quantiles_short`): the opening statement assembled from them,
- * each widget's sentence, the axis ticks passed to the charts equal to the envelopes' ticks,
- * the province dropdown re-scoping the statement (a `module` breakdown, the series refused
- * by name), the anchors, and the four audits: every decimal on the page is a server string
- * (ticks and quantiles included), no "FY", no raw id (bare AR5, "(NE)", "LULUCF", a version),
- * no avoid-list phrase.
+ * `derived`): the opening statement assembled from them, each widget's sentence, the axis
+ * ticks passed to the charts equal to the envelopes' ticks, the province dropdown re-scoping
+ * the statement (a `module` breakdown, the series refused by name), the five anchors, the
+ * two-pane frame (the dashboard panel, the map pane, one logo in the nav and none in the
+ * header), the absence of the interval / completeness / evidence widgets and the routes
+ * strip, and the four audits: every decimal on the page is a server string (ticks
+ * included), no "FY", no raw id (bare AR5, "(NE)", "LULUCF", a version), no avoid-list phrase.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -70,23 +71,6 @@ const SERIES = [
 ];
 const SERIES_AXIS = { ticks_short: ["0", "100", "200", "300", "400", "500"], unit_short: "Mt CO₂e" };
 const CHANGE = { from_period: "FY2020-21", to_period: "FY2023-24", from_short: "372.40", to_short: "452.35", change_short: "+79.95", change_pct_short: "+21.5", direction: "rose", unit_short: "Mt CO₂e" };
-const UNCERTAINTY = [
-  { display: "456.940", display_short: "456.94", ...U, value: 456.94, extra: { kind: "parametric_reference", scenario: "within_sector", scenario_label: "factors shared within a module", quantiles_short: { "P2.5": "407.42", "P97.5": "533.41" }, interval_short: "407.42–533.41" } },
-  { display: "456.910", display_short: "456.91", ...U, value: 456.91, extra: { kind: "parametric_reference", scenario: "cross_sector", scenario_label: "factors shared across modules", quantiles_short: { "P2.5": "407.28", "P97.5": "533.73" }, interval_short: "407.28–533.73" } },
-];
-const UNC_AXIS = { ticks_short: ["0", "200", "400", "600"], unit_short: "Mt CO₂e" };
-const COMPLETENESS = [
-  { display: "NE", unit: "notation_key", value: undefined, extra: { code: "3.D", category: "Agricultural soils - N from SOC mineralisation", gas: "N2O", notation_key: "NE", justification: "no series" } },
-  { display: "NE", unit: "notation_key", value: undefined, extra: { code: "2.A.2", category: "Lime production", gas: "CO2", notation_key: "NE", justification: "no series" } },
-  { display: "NE", unit: "notation_key", value: undefined, extra: { code: "(air)", category: "Air pollutants - road transport cold-start excess", gas: "CO", notation_key: "NE", justification: "no series" } },
-  { display: "E", unit: "notation_key", value: undefined, extra: { code: "3.A", category: "Enteric fermentation", gas: "CH4", notation_key: "E", justification: "" } },
-  { display: "E", unit: "notation_key", value: undefined, extra: { code: "1.A.1", category: "Power", gas: "CO2", notation_key: "E", justification: "" } },
-];
-const EVIDENCE = [
-  { display: "E2 / T4 / S3", unit: "evidence", value: undefined, extra: { source_stream_id: "agriculture|enteric-fermentation|buffalo|ch4", module: "agriculture", evidence_class: "E2", temporal_class: "T4", spatial_class_measured: "S3" } },
-  { display: "E3 / T3 / S3", unit: "evidence", value: undefined, extra: { source_stream_id: "agriculture|rice|ch4", module: "agriculture", evidence_class: "E3", temporal_class: "T3", spatial_class_measured: "S3" } },
-  { display: "E1 / T2 / S1", unit: "evidence", value: undefined, extra: { source_stream_id: "power|grid|coal|co2", module: "power", evidence_class: "E1", temporal_class: "T2", spatial_class_measured: "S1" } },
-];
 const NATIONAL = [{ display: "452.34662", display_short: "452.35", ...U }];
 const PUNJAB = [{ display: "228.7168", display_short: "228.72", ...U, group: { province: "Punjab" } }];
 const SERIES_REFUSAL = refusal("grain_unavailable", "GrainUnavailable", "spatial products exist for the reference year only");
@@ -100,9 +84,6 @@ beforeEach(() => {
       fetchSpy(url, body);
       if (url.endsWith("/release")) return RELEASE;
       if (url.endsWith("/openapi.json")) return { paths: { "/api/v1/emissions/release": {} }, components: { schemas: { QueryEmissions: { properties: { gwp_basis: { description: "AR5 | AR6" }, spatial_view: { description: "all | physical | origin | accounting" } } }, GridCellRequest: { properties: { gas: { default: "CO2" }, month: { description: 'YYYYMM or "annual"' } } } } } };
-      if (url.includes("/query/uncertainty")) return envelope(UNCERTAINTY, { request_type: "get_uncertainty", axis: UNC_AXIS });
-      if (url.includes("/query/completeness")) return envelope(COMPLETENESS, { request_type: "get_completeness" });
-      if (url.includes("/evidence/")) return envelope(EVIDENCE, { request_type: "get_evidence" });
       if (url.includes("/timeseries")) {
         const q = (body as { query?: { geography_ids?: string[] } } | undefined)?.query;
         if (q?.geography_ids?.length) return SERIES_REFUSAL;
@@ -135,8 +116,8 @@ function mount(search = "") {
 function serverDecimals(): Set<string> {
   const out = new Set<string>();
   const add = (s: string) => (s.match(/\d+\.\d+/g) ?? []).forEach((t) => out.add(t));
-  for (const c of [...SECTORS, ...PUNJAB_SECTORS, ...GASES, ...PROVINCES, ...SERIES, ...UNCERTAINTY, ...COMPLETENESS, ...EVIDENCE, ...NATIONAL, ...PUNJAB]) add(JSON.stringify(c));
-  for (const o of [AXIS_250, SERIES_AXIS, UNC_AXIS, CHANGE, DERIVED_PK, DERIVED_PB, RELEASE]) add(JSON.stringify(o));
+  for (const c of [...SECTORS, ...PUNJAB_SECTORS, ...GASES, ...PROVINCES, ...SERIES, ...NATIONAL, ...PUNJAB]) add(JSON.stringify(c));
+  for (const o of [AXIS_250, SERIES_AXIS, CHANGE, DERIVED_PK, DERIVED_PB, RELEASE]) add(JSON.stringify(o));
   return out;
 }
 
@@ -144,11 +125,8 @@ async function loaded() {
   await screen.findByTestId("opening-statement");
   await screen.findByTestId("sector-widget-sentence");
   await screen.findByTestId("trend-widget-sentence");
-  await screen.findByTestId("uncertainty-widget-sentence");
   await screen.findByTestId("gas-widget-sentence");
   await screen.findByTestId("places-widget-sentence");
-  await screen.findByTestId("completeness-widget-sentence");
-  await screen.findByTestId("evidence-widget-sentence");
 }
 
 describe("Overview briefing", () => {
@@ -162,11 +140,45 @@ describe("Overview briefing", () => {
     expect(screen.queryByTestId("question-input")).toBeNull();
     expect(screen.getByTestId("nav-ask").tagName).toBe("BUTTON"); // toggles the AskDrawer on the bus
     expect(screen.getByTestId("header-download")).toHaveAttribute("href", "/downloads");
-    // the national total was asked without a geography; the national interval with scope national only
+    // the national total was asked without a geography; the interval, completeness and evidence envelopes are not asked at all (their widgets left the page)
     const totals = fetchSpy.mock.calls.filter(([u, b]) => String(u).includes("/query/emissions") && !b?.group_by);
     expect(totals.length).toBeGreaterThan(0);
     for (const [, b] of totals) expect(b?.geography_ids).toBeUndefined();
-    for (const [, b] of fetchSpy.mock.calls.filter(([u]) => String(u).includes("/query/uncertainty"))) expect(b).toEqual({ scope: "national" });
+    expect(fetchSpy.mock.calls.filter(([u]) => /\/query\/uncertainty|\/query\/completeness|\/evidence\//.test(String(u)))).toEqual([]);
+  });
+  it("the two-pane frame: the 560 px dashboard panel with its own scroll and shadow over the map pane, no page-width container, one logo in the nav and none in the header block, the widgets as cards", async () => {
+    mount();
+    await loaded();
+    const panel = screen.getByTestId("dashboard-panel");
+    expect(panel.className).toContain("lg:w-[560px]");
+    expect(panel.className).toContain("lg:overflow-y-auto");
+    expect(panel.className).toContain("shadow-[8px_0_24px_rgba(0,0,0,0.06)]");
+    expect(panel.className).toContain("z-10");
+    expect(screen.getByTestId("app-frame").className).toContain("lg:h-[calc(100dvh-56px)]");
+    const pane = screen.getByTestId("map-pane");
+    expect(pane.className).toContain("flex-1");
+    expect(pane).toContainElement(screen.getByTestId("briefing-map"));
+    expect(screen.getByTestId("briefing-map").className).toContain("absolute inset-0");
+    expect(screen.getByTestId("overview").querySelector(".max-w-\\[1500px\\]")).toBeNull();
+    expect(panel).toContainElement(screen.getByTestId("header-block"));
+    expect(panel).toContainElement(screen.getByTestId("tab-strip"));
+    expect(screen.getByTestId("tab-strip").className).toContain("sticky top-0");
+    for (const id of ["sector-widget", "trend-widget", "gas-widget", "places-widget"]) expect(screen.getByTestId(id).className).toContain("card");
+    // the logo: the nav and the footer, not the header block (it was shown twice)
+    const logos = screen.getAllByTestId("brand-logo");
+    expect(logos).toHaveLength(2);
+    expect(screen.getByTestId("header-block").querySelector("img")).toBeNull();
+    expect(screen.getByTestId("top-nav")).toContainElement(logos[0]);
+    expect(screen.getByTestId("footer")).toContainElement(logos[1]);
+    expect(screen.getByTestId("eyebrow")).toHaveTextContent("Pakistan's explainable emissions inventory");
+  });
+  it("the interval, completeness and evidence widgets and the routes strip are gone", async () => {
+    mount();
+    await loaded();
+    for (const id of ["uncertainty-widget", "completeness-widget", "evidence-widget", "routes", "route-card", "ne-list", "interval-bar", "evidence-rows"]) expect(screen.queryByTestId(id), id).toBeNull();
+    const text = document.body.textContent ?? "";
+    for (const phrase of ["How certain is the estimate", "What is not estimated", "Evidence behind the numbers", "Explore tests", "Map locates", "Methods proves", "Downloads releases", "Not estimated is not zero"]) expect(text, phrase).not.toContain(phrase);
+    expect(screen.getByTestId("footer")).toHaveTextContent("A Pakistan Air Quality Initiative product");
   });
   it("each widget's sentence is built from the envelope's server strings, period first", async () => {
     mount();
@@ -175,38 +187,20 @@ describe("Overview briefing", () => {
     expect(screen.getByTestId("sector-widget-caption")).toHaveTextContent("Reference estimate · IPCC 2013 (AR5) warming potentials · land use excluded");
     expect(screen.getByTestId("trend-widget-sentence")).toHaveTextContent("From 2020–21 to 2023–24, Pakistan's emissions rose from 372.40 Mt to 452.35 Mt CO₂e, a change of +79.95 Mt (+21.5 %).");
     expect(screen.getByTestId("trend-widget-caption")).toHaveTextContent("Annual totals · years run July–June");
-    expect(screen.getByTestId("uncertainty-widget-sentence")).toHaveTextContent("The 95 % interval spans 407.28–533.73 Mt CO₂e when emission factors are shared across modules; the Monte-Carlo median is 456.91 Mt.");
-    expect(screen.getByTestId("uncertainty-widget-caption")).toHaveTextContent("factors shared across modules · factors shared within a module. The reference estimate is marked; the interval bounds the national total.");
     expect(screen.getByTestId("gas-widget-sentence")).toHaveTextContent("Methane made up 248.75 Mt (55.0 %) of Pakistan's CO₂-equivalent total; carbon dioxide 161.46 Mt (35.7 %) and nitrous oxide 42.14 Mt (9.3 %).");
     expect(screen.getByTestId("places-widget-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
     expect(screen.getByTestId("places-link")).toHaveAttribute("href", "/map");
-    expect(screen.getByTestId("completeness-widget-sentence")).toHaveTextContent("3 of 5 category–gas combinations are not estimated; a blank is not a zero.");
-    expect(screen.getByTestId("completeness-widget-note")).toHaveTextContent("Not estimated is not zero.");
-    expect(within(screen.getByTestId("ne-list")).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["3.DAgricultural soils - N from SOC mineralisationN2O", "2.A.2Lime productionCO2", "(air)Air pollutants - road transport cold-start excessCO"]);
-    expect(screen.queryByTestId("ne-more")).toBeNull();
-    expect(screen.getByTestId("evidence-widget-sentence")).toHaveTextContent("The inventory rests on 3 source streams, each graded on annual activity, monthly timing and spatial placement.");
-    const classes = screen.getAllByTestId("evidence-class").map((el) => `${el.getAttribute("data-class")}:${el.getAttribute("data-count")}`);
-    expect(classes).toEqual(["E1:1", "E2:1", "E3:1", "T2:1", "T3:1", "T4:1", "S1:1", "S3:2"]);
-    expect(screen.getAllByTestId("evidence-class")[0]).toHaveAttribute("title", "E1 — measured or metered quantity for this source and period");
-    // the stacked gas bar and the interval figure print the server's strings
+    // the stacked gas bar prints the server's strings
     const bar = screen.getByTestId("stacked-bar");
     expect(bar).toHaveTextContent("CH₄");
     expect(bar).toHaveTextContent("248.75");
     expect(bar).toHaveTextContent("55.0 %");
-    const rows = screen.getAllByTestId("interval-row");
-    expect(rows.map((r) => r.getAttribute("data-scenario"))).toEqual(["cross_sector", "within_sector"]);
-    expect(within(rows[0]).getByTestId("interval-low")).toHaveTextContent("407.28");
-    expect(within(rows[0]).getByTestId("interval-high")).toHaveTextContent("533.73");
-    expect(within(rows[0]).getByTestId("interval-median")).toHaveTextContent("456.91");
-    expect(screen.getByTestId("interval-marker")).toHaveTextContent("reference estimate 452.35");
     // every widget carries its toolbar (Result details, download, share) on its envelope
-    for (const id of ["sector-widget", "trend-widget", "uncertainty-widget", "gas-widget", "places-widget", "completeness-widget", "evidence-widget"]) {
+    for (const id of ["sector-widget", "trend-widget", "gas-widget", "places-widget"]) {
       expect(screen.getByTestId(`${id}-info`)).toBeInTheDocument();
       expect(screen.getByTestId(`${id}-download`)).toBeInTheDocument();
       expect(screen.getByTestId(`${id}-share`)).toBeInTheDocument();
     }
-    // the routes strip names each surface with its job
-    expect(screen.getAllByTestId("route-card").map((a) => `${a.getAttribute("href")} ${a.querySelector("div > div")?.textContent}`)).toEqual(["/explore Explore tests", "/map Map locates", "/methods Methods proves", "/downloads Downloads releases"]);
   });
   it("the charts' axis labels are the envelopes' axis.ticks_short and nothing else", async () => {
     mount();
@@ -215,7 +209,6 @@ describe("Overview briefing", () => {
     expect(within(screen.getByTestId("bars-with-axis")).getAllByTestId("axis-tick").map((t) => t.textContent)).toEqual(AXIS_250.ticks_short);
     expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));
     expect(within(screen.getByTestId("column-chart")).getAllByTestId("column").map((c) => c.textContent)).toEqual(["2020–21 372.40", "2023–24 452.35"]);
-    expect(within(screen.getByTestId("interval-bar")).getAllByTestId("axis-tick").map((t) => t.textContent)).toEqual(UNC_AXIS.ticks_short);
     expect(screen.getByTestId("places-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(within(screen.getByTestId("bars-with-axis")).getAllByTestId("bar-item").map((b) => b.textContent)).toEqual(["Agriculture 223.45 · 49.4 %", "Power 63.37 · 14.0 %", "transport 41.93 · 9.3 %", "waste 37.91 · 8.4 %"]);
   });
@@ -234,7 +227,7 @@ describe("Overview briefing", () => {
     fireEvent.click(screen.getByTestId("map-level-adm2"));
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-level", "adm2");
   });
-  it("the province dropdown re-scopes the statement (allocated emissions, a module breakdown), names the series refusal and keeps the national interval", async () => {
+  it("the province dropdown re-scopes the statement (allocated emissions, a module breakdown) and names the series refusal", async () => {
     mount();
     await loaded();
     fireEvent.change(screen.getByTestId("province-select"), { target: { value: "Punjab" } });
@@ -251,21 +244,22 @@ describe("Overview briefing", () => {
     expect(trend).toHaveTextContent("spatial products exist for the reference year only");
     await waitFor(() => expect(screen.getByTestId("places-widget-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 4.84 Mt was retained at provincial level and placed no finer."));
     expect(screen.getByTestId("places-link")).toHaveAttribute("href", "/map?geo=Punjab");
-    expect(screen.getByTestId("uncertainty-widget-caption")).toHaveTextContent("no provincial interval is published");
-    expect(screen.queryByTestId("interval-marker")).toBeNull();
     fireEvent.change(screen.getByTestId("province-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan"));
   });
-  it("the tab strip's anchors exist on the page", async () => {
+  it("the tab strip is Summary · Sectors · Trend · Gases · Places and every anchor exists on the page", async () => {
     mount();
     await loaded();
-    for (const id of ["summary", "sectors", "trend", "gases", "places", "uncertainty", "evidence"]) {
+    const tabs = within(screen.getByTestId("tab-strip")).getAllByRole("link");
+    expect(tabs.map((a) => a.textContent)).toEqual(["Summary", "Sectors", "Trend", "Gases", "Places"]);
+    for (const id of ["summary", "sectors", "trend", "gases", "places"]) {
       expect(document.getElementById(id), id).not.toBeNull();
       expect(screen.getByTestId(`tab-${id}`)).toHaveAttribute("href", `#${id}`);
     }
+    for (const id of ["uncertainty", "evidence"]) expect(screen.queryByTestId(`tab-${id}`), id).toBeNull();
     expect(screen.getByTestId("tab-summary")).toHaveAttribute("aria-current", "location");
   });
-  it("audits: every decimal is a server string (ticks and quantiles included); no FY; no raw id; no avoid-list phrase; the footer names the licences and no version", async () => {
+  it("audits: every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase; the footer names the licences and no version", async () => {
     mount();
     await loaded();
     const allowed = serverDecimals();

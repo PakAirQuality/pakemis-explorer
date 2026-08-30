@@ -84,10 +84,10 @@ export function useNationalUncertainty(enabled = true) {
 
 /**
  * The Overview briefing's envelopes for a scope (`geo`: a province name, or null for
- * Pakistan): the total, the sector and gas breakdowns, every province, the annual series
- * (refused by the release off the national scope), plus the national interval, the whole
- * completeness ledger (NE counted by the page) and every evidence stream. Bodies from
- * lib/requests.ts briefingBodies; nothing here computes.
+ * Pakistan): the total, the sector and gas breakdowns, every province and the annual series
+ * (refused by the release off the national scope). Bodies from lib/requests.ts
+ * briefingBodies; nothing here computes. The interval, completeness and evidence envelopes
+ * are no longer asked here (their widgets left the Overview); Explore and Methods ask them.
  */
 export function useBriefing(geo: string | null) {
   const { state } = useExplorer();
@@ -99,9 +99,6 @@ export function useBriefing(geo: string | null) {
     byGas: useEmissions(bodies.byGas),
     provinces: useEmissions(bodies.provinces),
     series: useTimeseries(bodies.series),
-    uncertainty: useNationalUncertainty(),
-    completeness: useCompleteness({}),
-    evidence: useEvidence("_"),
   };
 }
 export type Briefing = ReturnType<typeof useBriefing>;

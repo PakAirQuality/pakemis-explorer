@@ -1,8 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * The filter panel's controls, the legend's scope line and the Explore panel's selects print
- * the release's labels ("Reference estimate", "IPCC 2013 (AR5)"), never the raw ids; the ids
- * stay as secondary text in the Explore panel only.
+ * The filter panel's controls, the Map page's legend scope line (Legend, the magnitude panel
+ * LayerLegend composes; the Overview's map carries the opacity pill instead) and the Explore
+ * panel's selects print the release's labels ("Reference estimate", "IPCC 2013 (AR5)"), never
+ * the raw ids; the ids stay as secondary text in the Explore panel only.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

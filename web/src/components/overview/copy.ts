@@ -2,7 +2,7 @@
  * The words of the public Overview (the country briefing) and of the Methods page, in one
  * place so the two never drift: the release's short summary (paper_national/short_summary.txt,
  * verbatim), the Ask dock's own empty-state sentences, the explore / open terms the
- * introduction used, and the briefing's fixed copy (eyebrow, widget titles, notes, routes).
+ * introduction used, and the briefing's fixed copy (eyebrow, tabs, widget titles).
  * No number is written here; every figure on the Overview is an envelope's string. Tone rule
  * for every sentence: the period first, numbers bold, present-tense facts, no adjective
  * beyond estimated / reconstructed / allocated.
@@ -61,8 +61,6 @@ export const TABS = [
   ["trend", "Trend"],
   ["gases", "Gases"],
   ["places", "Places"],
-  ["uncertainty", "Uncertainty"],
-  ["evidence", "Evidence"],
 ] as const;
 export type TabId = (typeof TABS)[number][0];
 
@@ -70,33 +68,15 @@ export type TabId = (typeof TABS)[number][0];
 export const WIDGETS = {
   sectors: "Emissions by sector",
   trend: "Emissions over time",
-  uncertainty: "How certain is the estimate",
   gases: "Emissions by gas",
   places: "Where emissions are placed",
-  completeness: "What is not estimated",
-  evidence: "Evidence behind the numbers",
 } as const;
 
 /** The gas ids as words for running text (a naming dictionary, like COLUMN_NAMES; the release's labels give the formulae). */
 export const GAS_WORDS: Record<string, string> = { CH4: "Methane", CO2: "Carbon dioxide", N2O: "Nitrous oxide" };
 
-export const NOTES = {
-  notEstimated: "Not estimated is not zero. A category marked NE has no series in this release: its mass is absent from every total, not counted as nothing.",
-  intervalNational: "The interval bounds the national total; no provincial interval is published.",
-} as const;
-
 export const LINKS = {
   openMap: "Open the map →",
-  methods: "Methods & evidence →",
-  more: (n: number) => `and ${n} more →`,
 } as const;
-
-/** The routes strip: each surface named with its job. */
-export const ROUTES = [
-  { href: "/explore", title: "Explore tests", text: "Build a result, change the breakdown, inspect the exact rows behind every value." },
-  { href: "/map", title: "Map locates", text: "Allocated emissions by province, district and grid cell, with the evidence for each placement." },
-  { href: "/methods", title: "Methods proves", text: "Every registered equation, source stream, evidence grade and declared gap." },
-  { href: "/downloads", title: "Downloads releases", text: "Every table with its digest, the citation and the API that answers with receipts." },
-] as const;
 
 export const FOOTER = { product: "A Pakistan Air Quality Initiative product", repository: "Repository", methods: "Methods & evidence", downloads: "Downloads", api: "API" } as const;

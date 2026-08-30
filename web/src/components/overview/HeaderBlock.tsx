@@ -1,6 +1,6 @@
 "use client";
 /**
- * The header block: the eyebrow, the title (Pakistan, or the selected province), the
+ * The header block (the logo lives in the nav only): the eyebrow, the title (Pakistan, or the selected province), the
  * "Select a province" dropdown (the ADM1 rows of the release's dims; choosing one writes `geo`
  * and every widget re-scopes, the map flies there) and the Share (copies the URL) · Download
  * (-> /downloads) toolbar.
@@ -11,7 +11,6 @@ import { Download, Link2 } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { ACTION_CLASS } from "@/components/shell/PageHeader";
-import { BrandLogo } from "@/components/shell/BrandLogo";
 import { HEADER } from "./copy";
 
 export function HeaderBlock({ geo, place, onGeo }: { geo: string | null; place: string; onGeo: (name: string | null) => void }) {
@@ -28,14 +27,13 @@ export function HeaderBlock({ geo, place, onGeo }: { geo: string | null; place: 
   };
   return (
     <header data-testid="header-block">
-      <BrandLogo className="mb-3 h-10 object-contain" />
       <div className="micro text-accent" data-testid="eyebrow">{HEADER.eyebrow}</div>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-fg" data-testid="place-title">{place}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-fg" data-testid="place-title">{place}</h1>
           <label className="mt-3 block">
             <span className="micro mb-1 block">{HEADER.selectProvince}</span>
-            <select className={`${SELECT_CLASS} w-auto min-w-[260px]`} value={geo ?? ""} onChange={(e) => onGeo(e.target.value || null)} aria-label={HEADER.selectProvince} data-testid="province-select">
+            <select className={`${SELECT_CLASS} w-auto min-w-[220px]`} value={geo ?? ""} onChange={(e) => onGeo(e.target.value || null)} aria-label={HEADER.selectProvince} data-testid="province-select">
               <option value="">{HEADER.allProvinces}</option>
               {dims.adm1.map((r) => (
                 <option key={r.geography_id} value={r.name}>{labels.geographies[r.geography_id] ?? r.name}</option>
