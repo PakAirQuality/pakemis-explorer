@@ -1,9 +1,11 @@
 /**
- * The words of the public Overview and of the Methods page, in one place so the two never
- * drift: the release's short summary (paper_national/short_summary.txt, verbatim), the Ask
- * dock's own empty-state sentences, the explore / open terms the introduction used, and the
- * Overview's hero, explainer and call-to-action copy from the 2026-08-30 mockups. No number
- * is written here; every figure on the Overview is an envelope's string.
+ * The words of the public Overview (the country briefing) and of the Methods page, in one
+ * place so the two never drift: the release's short summary (paper_national/short_summary.txt,
+ * verbatim), the Ask dock's own empty-state sentences, the explore / open terms the
+ * introduction used, and the briefing's fixed copy (eyebrow, widget titles, notes, routes).
+ * No number is written here; every figure on the Overview is an envelope's string. Tone rule
+ * for every sentence: the period first, numbers bold, present-tense facts, no adjective
+ * beyond estimated / reconstructed / allocated.
  */
 
 /** The opening paragraph of the release's short summary, verbatim; /methods quotes it. */
@@ -38,47 +40,63 @@ export const VERSIONED_LINE = "Releases are versioned so that published results 
 /** Where "View methodology" goes: the methods section of /methods. */
 export const METHODS_HREF = "/methods#methods";
 
-/** The hero. */
-export const HERO = {
-  eyebrow: "Pakistan greenhouse-gas emissions",
-  title: "Understand where emissions come from—and how certain we are.",
-  dek: "Explore national, monthly and spatial estimates. Every result carries its method, evidence grade, uncertainty and source trail.",
+/** The header block. */
+export const HEADER = {
+  eyebrow: "Pakistan's explainable emissions inventory",
+  country: "Pakistan",
+  selectProvince: "Select a province",
+  allProvinces: "Pakistan (all provinces)",
+  share: "Share",
+  shared: "Link copied",
+  download: "Download",
 } as const;
 
-/** The national total card. */
-export const TOTAL_CARD = {
-  title: "Estimated national total",
-  intervalLead: "Uncertainty interval: approximately",
+/** The muted line under the opening statement, and the footer's. */
+export const INDEPENDENT_LINE = "PakEmis is an independent public-data reconstruction, not an official inventory; every figure carries its method, evidence grade and source.";
+
+/** The anchor tabs, in order. */
+export const TABS = [
+  ["summary", "Summary"],
+  ["sectors", "Sectors"],
+  ["trend", "Trend"],
+  ["gases", "Gases"],
+  ["places", "Places"],
+  ["uncertainty", "Uncertainty"],
+  ["evidence", "Evidence"],
+] as const;
+export type TabId = (typeof TABS)[number][0];
+
+/** The widget titles (small caps); the place is appended where the widget re-scopes. */
+export const WIDGETS = {
+  sectors: "Emissions by sector",
+  trend: "Emissions over time",
+  uncertainty: "How certain is the estimate",
+  gases: "Emissions by gas",
+  places: "Where emissions are placed",
+  completeness: "What is not estimated",
+  evidence: "Evidence behind the numbers",
 } as const;
 
-/** The question box. */
-export const QUESTION = {
-  placeholder: "Ask a question, such as “What is Pakistan’s largest source?”",
-  button: "Ask PakEmis",
+/** The gas ids as words for running text (a naming dictionary, like COLUMN_NAMES; the release's labels give the formulae). */
+export const GAS_WORDS: Record<string, string> = { CH4: "Methane", CO2: "Carbon dioxide", N2O: "Nitrous oxide" };
+
+export const NOTES = {
+  notEstimated: "Not estimated is not zero. A category marked NE has no series in this release: its mass is absent from every total, not counted as nothing.",
+  intervalNational: "The interval bounds the national total; no provincial interval is published.",
 } as const;
 
-/** The two figure cards. */
-export const SECTORS_CARD = { title: "Where emissions come from", link: "View all sectors →", explain: "Select any sector for a plain-language explanation." } as const;
-export const TREND_CARD = { title: "How emissions changed", link: "Explore trend →" } as const;
+export const LINKS = {
+  openMap: "Open the map →",
+  methods: "Methods & evidence →",
+  more: (n: number) => `and ${n} more →`,
+} as const;
 
-/** The three explainer cards. */
-export const EXPLAINERS = [
-  { title: "Estimate, not a live reading", text: "PakEmis reconstructs annual and monthly emissions from activity data and registered methods." },
-  { title: "Location has an evidence grade", text: "Some emissions are placed at facilities; others are distributed using administrative data or proxy surfaces." },
-  { title: "Every answer is traceable", text: "Inspect the source rows, method, uncertainty, release and exact calculation behind a result." },
+/** The routes strip: each surface named with its job. */
+export const ROUTES = [
+  { href: "/explore", title: "Explore tests", text: "Build a result, change the breakdown, inspect the exact rows behind every value." },
+  { href: "/map", title: "Map locates", text: "Allocated emissions by province, district and grid cell, with the evidence for each placement." },
+  { href: "/methods", title: "Methods proves", text: "Every registered equation, source stream, evidence grade and declared gap." },
+  { href: "/downloads", title: "Downloads releases", text: "Every table with its digest, the citation and the API that answers with receipts." },
 ] as const;
 
-/** The closing call to action. */
-export const DEEPER = {
-  title: "Ready to go deeper?",
-  text: "Move from the public overview into the map, detailed tables or complete data release.",
-  map: "Open map explorer",
-  download: "Download data",
-} as const;
-
-/** The number words a caption uses for a count of dimension rows ("Nine fiscal years"); digits beyond the list. */
-const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"] as const;
-export function countWords(n: number, noun: string): string {
-  const word = Number.isInteger(n) && n >= 0 && n < NUMBER_WORDS.length ? NUMBER_WORDS[n] : String(n);
-  return `${word.replace(/^\w/, (c) => c.toUpperCase())} ${n === 1 ? noun : `${noun}s`}`;
-}
+export const FOOTER = { repository: "Repository", methods: "Methods & evidence", downloads: "Downloads", api: "API" } as const;

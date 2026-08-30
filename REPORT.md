@@ -525,3 +525,66 @@ configuration note, which ends in "(L)"; the row is worded from the labels inste
 
 **Deferred.** The light re-theme (the next agent; the pages use tokens only). The Map page
 (`/map`) still carries the old console; its plan section names the components above.
+
+## The light theme and the Overview as a country briefing (2026-08-30)
+
+Two commits under `web/`, after the API's derived presentation fields landed (75d75fe:
+`axis.ticks_short`, `change`, `share_phrase`, `rank`, `derived`).
+
+**The theme (88aeb32).** A value change plus a sweep: `globals.css` now carries the light
+tokens the user chose (warm off-white ground `#faf8f4`, white cards, near-black text
+`#161a1d`, muted `#5c6670`, hairlines `#e7e3dc` used sparingly, one emerald accent `#1f7a5c`
+for links and primary buttons, the amber note box, the refusal tint) under the names the
+components already used (`surface` = ground, `surface-2` = card, `surface-3` a darker ground),
+the utilities `card` (no border: the ground gives the contrast), `widget-title`, `note`,
+`caption`, `toolbar-icon`, and `color-scheme: light`; `lib/theme.ts` reads them for ECharts
+and the Mapbox outlines (gridlines dashed on the line token, axis text muted, the accent at
+18 % as an area fill). The sweep replaced the dark-only literals (`bg-fg text-surface`
+inverted pills -> `bg-fg text-card`, legend swatch borders on `line-strong`, the nav white,
+the Current-view bar a slim ground strip) and widened the page containers to the analytical
+width `max-w-[1500px]`; the Map page keeps its structure and its chrome.
+
+**The Overview (this commit).** `components/overview/` rewritten as the briefing:
+`Overview` (two columns, the sticky map column, an IntersectionObserver that marks the widget
+in view and steers the map), `HeaderBlock`, `OpeningStatement`, `TabStrip`, the seven widgets
+in `widgets.tsx`, `RoutesStrip`, `BriefingMap`; `components/charts/` new (`axis.ts`,
+`BarsWithAxis`, `ColumnChart` on ECharts SVG with exported pure option builders,
+`IntervalBar`, `StackedBar` as HTML). `ExplorerMap` gained three optional props (`variant`,
+`override`, `onPick`) so the briefing can steer the map without writing the URL; the console
+passes nothing and is unchanged. `lib/requests.ts` `briefingBodies` (pure), `lib/queries.ts`
+`useBriefing`, `lib/uncertainty.ts` (`headlineCell` moved out of the deleted `TotalCard`),
+typed `axis` / `change` / `partition` / `derived` on the envelope schema.
+
+**Verification.** `npm test` 130 green (24 files; `overview.test` rewritten: the opening
+sentence and every widget sentence assembled from mocked `display_short` /
+`share_pct_short` / `share_phrase` / `change` / `derived`, the ticks passed to the charts equal
+to the envelopes' `axis.ticks_short`, the province dropdown re-scoping with a `module`
+breakdown and the series refusal named, the anchors, the four audits with ticks and quantiles
+in the allowed set; `charts.test`: every axis label a tick or nothing, every series label an
+item's label, the HTML figures carrying only their strings), ESLint 0 errors, `npm run build`
+green. Browser against the live API (`?hidden=render`, 1440 px): the first screen shows the
+statement with 452.35 / 223.45 / 49.4 % / "nearly half", the sector bars on the 0–250 axis,
+the sticky map; the trend on the 0–500 axis with "+79.95 Mt (+21.5 %)"; the interval
+407.28–533.73 with the 456.91 median and the 452.35 marker; 37 of 89 NE; 189 streams; the
+dropdown -> Punjab re-scopes (228.72; agriculture 123.30, 53.9 %; 4.84 retained) and flies
+the map (`30-overview.jpg`, `30b-overview-scroll.jpg`, `36-light-explore.jpg`).
+
+**Found while building.** (1) `sector_id` is not a column at ADM1 grain: a province's sector
+breakdown must be asked by `module` (the API refuses the other by name); the briefing's bodies
+switch the key with the scope. (2) The annual series is refused off the national scope
+("spatial products exist for FY2023-24 only"); the widget shows the typed refusal rather than
+a national series under a province title — and that refusal message is the one string on the
+page that carries a period id, since it is the API's own. (3) The plan's opening sentence said
+"non-LULUCF inventory", which the audits forbid as a raw token; the sentence reads "which
+excludes land use and forestry" from `labels.lulucf.short`. (4) The build clobbered the dev
+server again; it was restarted after each build. (5) A native `<select>` in a hidden Chrome
+window cannot be opened by clicking; the browser check dispatched the change event.
+
+**For the Map page (agent E).** Tokens: use `bg-surface` (ground), `card` (white), `text-fg`,
+`text-muted`, `border-line`, `text-accent` / `bg-accent text-on-accent` (primary), `note`,
+`caption`, `toolbar-icon`; nothing dark remains except what `/map` chooses for its own chrome.
+`Widget {title, env, labels, infoTab, downloadHref, share, tools, sentence, note, caption, id}`
+gives the toolbar for free. `ExplorerMap` accepts `variant="briefing"`, `override` (a partial
+state merged over the URL state for the choropleth, level, fly-to and legend) and `onPick`;
+the fly-to now looks a province up at either level. `headlineCell` / `magnitudeOf` live in
+`lib/uncertainty.ts`.

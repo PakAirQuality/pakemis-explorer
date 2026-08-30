@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type CompareRequest, type GridCellRequest, type QueryEmissions, type TimeseriesRequest, type UncertaintyRequest, type CompletenessRequest } from "./api";
-import { sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
+import { briefingBodies, sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
 import { useExplorer } from "@/components/ExplorerContext";
 
 const opts = { retry: false as const, staleTime: 5 * 60 * 1000 };
@@ -81,3 +81,27 @@ export function useSeriesUncertainty(periodId: string | null | undefined) {
 export function useNationalUncertainty(enabled = true) {
   return useUncertainty({ scope: "national" }, enabled);
 }
+
+/**
+ * The Overview briefing's envelopes for a scope (`geo`: a province name, or null for
+ * Pakistan): the total, the sector and gas breakdowns, every province, the annual series
+ * (refused by the release off the national scope), plus the national interval, the whole
+ * completeness ledger (NE counted by the page) and every evidence stream. Bodies from
+ * lib/requests.ts briefingBodies; nothing here computes.
+ */
+export function useBriefing(geo: string | null) {
+  const { state } = useExplorer();
+  const bodies = useMemo(() => briefingBodies(state, geo), [state, geo]);
+  return {
+    bodies,
+    total: useEmissions(bodies.total),
+    bySector: useEmissions(bodies.bySector),
+    byGas: useEmissions(bodies.byGas),
+    provinces: useEmissions(bodies.provinces),
+    series: useTimeseries(bodies.series),
+    uncertainty: useNationalUncertainty(),
+    completeness: useCompleteness({}),
+    evidence: useEvidence("_"),
+  };
+}
+export type Briefing = ReturnType<typeof useBriefing>;

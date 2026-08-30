@@ -72,24 +72,48 @@ Every page carries the `TopNav` (Overview, Explore data, Map, Methods & evidence
 the green Ask PakEmis button) and, where numbers are shown, the `CurrentView` bar ("Current
 view: 2023–24 · Pakistan · Reference estimate · excludes land use and forestry", the IPCC basis
 and the LULUCF note as its tooltip; "Change view" opens the Explore controls, which write the
-same URL state). The theme is dark (`globals.css` semantic tokens; the charts and the Mapbox
-outline colours read them through `lib/theme.ts`); the map keeps the light `streets-v12`
-basemap inside a framed dark container because the choropleth ramp and the raster colormap
-are calibrated on light.
+same URL state; the Overview replaces it with the province dropdown). The theme is light
+(2026-08-30): a warm off-white ground, white cards without borders (the ground gives the
+contrast), near-black text, one emerald accent for links and primary buttons, sector colours
+inside charts only, an amber note box; `globals.css` holds the semantic tokens (the names the
+components use are kept: `surface` = ground, `surface-2` = card, `surface-3` a darker ground)
+and the utilities `card`, `widget-title`, `note`, `caption`, `toolbar-icon`; the charts and the
+Mapbox outline colours read the tokens through `lib/theme.ts`. Page containers sit at the
+analytical width `max-w-[1500px]`; the Map page stays full-bleed.
 
-`/` is the public Overview: the hero beside the Estimated national total card (the KPI as the
-server's `display_short` with `unit_short`; "Uncertainty interval: approximately
-407.28–533.73 Mt" is `get_uncertainty(scope="national")`'s `cross_sector` cell's
-`interval_short`, the scenario named by its `scenario_label`, the draws' median set beside the
-reference-estimate headline, each envelope with its Result details; the interval is shown only
-while the view is the release's own national scope), the question box (to `/ask?q=`; three
-chips from `useSuggestions("overview")`), "Where emissions come from" (the five largest
-sectors, bars sized by `value`, labelled with `display_short`; the caption reads the top
-cell's `share_pct_short`, a server field, and carries no share when the server sends none;
-selecting a sector explains it from `get_evidence` -> `ipcc_category` -> `get_method`, with
-its evidence classes and a link to the Map filtered to it), "How emissions changed" (the
-national series as the TrendChart), three explainer cards, "Ready to go deeper?" and a footer
-with the licences and no version.
+`/` is the public Overview as a country briefing (2026-08-30, in the manner of Global Nature
+Watch's country pages): two columns, the briefing left (58 %) and a sticky map right (42 %;
+under 1024 px the map is a widget after the opening block). Left, top to bottom: the header
+block (eyebrow "Pakistan's explainable emissions inventory", the title Pakistan or the
+selected province, the "Select a province" dropdown over the release's ADM1 rows which writes
+`geo` so every widget re-scopes and the map flies there, Share · Download); the opening
+statement with the numbers in bold ("In 2023–24, Pakistan emitted an estimated 452.35 Mt
+CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed
+inventory, which excludes land use and forestry.", every figure a server string:
+`display_short`, `unit_short`, `share_pct_short`, `share_phrase`, the LULUCF phrase the
+release's label; province scope: "Punjab's allocated emissions were 228.72 Mt CO₂e … of the
+province's allocated total") and the muted independence line; the sticky tab strip (anchors
+Summary · Sectors · Trend · Gases · Places · Uncertainty · Evidence, the one in view marked);
+seven widgets, each a `Widget` card with its envelope's toolbar: Emissions by sector (the
+sentence from ranks 1–3, ten bars with an x-axis from the envelope's `axis.ticks_short`,
+value · share labels), Emissions over time (the sentence from the series' server-derived
+`change`, a column chart with a y-axis from its ticks, the reference year in the accent),
+Emissions by gas (a stacked bar with `share_pct_short`), Where emissions are placed (the
+rank-1 province and the `derived.unallocated_total_short` retained at ADM1; five bars; "Open
+the map"), How certain is the estimate (both scenarios as interval bars from
+`quantiles_short`, the median tick, the reference estimate marked), What is not estimated
+(37 of 89 rows of the completeness ledger, the first eight NE categories, the amber "Not
+estimated is not zero" note), Evidence behind the numbers (189 streams as dot rows per E /
+T / S class with the class definitions on hover); the routes strip (Explore tests · Map
+locates · Methods proves · Downloads releases); the footer with the licences, the
+independence line and the repository. Right: the `ExplorerMap` in its briefing variant
+(legend, frame button, a Provinces | Districts toggle) following the widget in view (a
+hovered or selected sector bar filters the choropleth; Places shows provinces) and the
+province dropdown. In province scope the sector breakdown is asked by `module` (the release
+carries `sector_id` at national grain only), the annual series is refused by the release and
+the refusal is shown by name, and the interval stays national with a caption saying so. The
+charts (`components/charts/`) print axis labels only from `axis.ticks_short` and value labels
+only from `display_short` / `share_pct_short`; the browser computes nothing but row counts.
 
 `/map` is the console: the framed map with floating scope chips, the Ask pill, raster / 3D /
 frame buttons, time rail, legend and context pill, the detail card over the map's right edge,
@@ -527,4 +551,6 @@ first screen and `16b-welcome-3.jpg` its third, with the number and "View source
 tile, raster and envelope from the API at `/api/v1/emissions`;
 `17-other-territories.jpg` the hover on Gilgit-Baltistan showing the shared `Other` cell and
 `17b-other-card.jpg` its detail card; `18-about.jpg` the `/about` page, now `/methods`;
-`30-overview.jpg` the public Overview and `33-ask.jpg` the `/ask` page, both dark).
+`30-overview.jpg` the Overview briefing's first screen and `30b-overview-scroll.jpg` its
+widgets, `36-light-explore.jpg` the Explore page under the light theme, `33-ask.jpg` the `/ask`
+page).

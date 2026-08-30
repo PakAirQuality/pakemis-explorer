@@ -26,6 +26,12 @@ export const AMBER = "#d97706";
 export const NO_CELL = "#e2e6ea";
 export const RAMP = ["#f1f5f4", "#d7e8e4", "#a8cfd4", "#6faec5", "#3f88ad", "#23618f", "#0f3d66"] as const;
 
+/** The three gases' hues, used inside charts only (the stacked gas bar). */
+export const GAS_HUES: Record<string, string> = { CH4: "#1f7a5c", CO2: "#4c6a8a", N2O: "#c98a2b" };
+export function gasColor(id: string | null | undefined): string {
+  return (id && GAS_HUES[id.toUpperCase()]) || ACCENT;
+}
+
 export function sectorColor(id: string | null | undefined): string {
   return (id && SECTOR_HUES[id]) || ACCENT;
 }

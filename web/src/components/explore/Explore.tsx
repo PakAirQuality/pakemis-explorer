@@ -33,7 +33,7 @@ import { EnvelopeTable } from "@/components/ui/EnvelopeTable";
 import { BarChart } from "@/components/ui/BarChart";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
-import { headlineCell, magnitudeOf } from "@/components/overview/TotalCard";
+import { headlineCell, magnitudeOf } from "@/lib/uncertainty";
 import { EXPLORE } from "./copy";
 
 type ShareCell = Cell & { share_pct_short?: string };

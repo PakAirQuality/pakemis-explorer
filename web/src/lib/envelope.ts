@@ -23,8 +23,22 @@ export const CellSchema = z
     unit_words: z.string().optional(),
     /** The unit as a reader sees it beside the number ("Mt CO₂e"; no GWP basis token). */
     unit_short: z.string().optional(),
+    /** On a one-key breakdown: the cell's share of the partition ("49.4"), its phrase ("nearly half") and its 1-based rank by value. */
+    share_pct_short: z.string().optional(),
+    share_phrase: z.string().optional(),
+    rank: z.number().optional(),
+    /** On an uncertainty cell: the 95 % interval as one string ("407.28–533.73"), the quantiles at reading precision, the scenario and its label. */
+    interval_short: z.string().optional(),
+    quantiles_short: z.record(z.string(), z.string()).optional(),
+    scenario: z.string().optional(),
+    scenario_label: z.string().optional(),
   })
   .passthrough();
+
+/** Round tick labels the server declares for a chart of the envelope's cells: labels, not data (rounding.presentation.derived). */
+export const AxisSchema = z.object({ ticks_short: z.array(z.string()), min_short: z.string().optional(), max_short: z.string().optional(), unit_short: z.string().optional(), note: z.string().optional() }).passthrough();
+/** The first-to-last change of an annual timeseries, server-derived: signed strings at reading precision. */
+export const ChangeSchema = z.object({ from_period: z.string(), to_period: z.string(), from_short: z.string(), to_short: z.string(), change_short: z.string(), change_pct_short: z.string(), direction: z.string().optional(), unit_short: z.string().optional(), note: z.string().optional() }).passthrough();
 
 export const EnvelopeSchema = z
   .object({
@@ -57,9 +71,17 @@ export const EnvelopeSchema = z
     citation: z.string(),
     result_sha256: z.string(),
     receipt: z.string(),
+    axis: AxisSchema.optional(),
+    change: ChangeSchema.optional(),
+    /** The partition rule behind `share_pct_short` (one-key breakdowns). */
+    partition: z.record(z.string(), z.unknown()).optional(),
+    /** Server-derived strings beside the cells (`unallocated_total_short`, `placed_short` on ADM1 envelopes). */
+    derived: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 
+export type Axis = z.infer<typeof AxisSchema>;
+export type Change = z.infer<typeof ChangeSchema>;
 export type Cell = z.infer<typeof CellSchema>;
 export type Envelope = z.infer<typeof EnvelopeSchema>;
 

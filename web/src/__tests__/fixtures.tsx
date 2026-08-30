@@ -136,10 +136,18 @@ export function envelope(cells: MockCell[], overrides: Record<string, unknown> =
 }
 
 export type MockBody = { group_by?: string[]; configuration_id?: string; periods?: string[]; geography_level?: string; geography_ids?: string[]; sectors?: string[]; gases?: string[]; months?: string[]; [k: string]: unknown };
+/** A typed refusal the mocked API answers with a 422 (`mockFetch` reads the marker). */
+export function refusal(error: string, error_class: string, message: string, limitation_id: string | null = null) {
+  return { __status: 422, body: { error, error_class, message, limitation_id, detail: {} } };
+}
 export function mockFetch(route: (url: string, body: MockBody | undefined) => unknown) {
   return vi.fn(async (url: string, init?: RequestInit) => {
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
     const payload = route(String(url), body as MockBody | undefined);
+    if (payload && typeof payload === "object" && "__status" in payload) {
+      const p = payload as { __status: number; body: unknown };
+      return { ok: false, status: p.__status, statusText: "Unprocessable Entity", json: async () => p.body } as Response;
+    }
     return { ok: true, status: 200, statusText: "OK", json: async () => payload } as Response;
   });
 }

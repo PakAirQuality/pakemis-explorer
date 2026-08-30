@@ -7,11 +7,18 @@
  * (ScopeChips, the Ask pill, raster / 3D / frame buttons, TimeRail, Legend, context
  * pill) and the camera written to `cam`. The choropleth's request is mapBody(state); a refused
  * request leaves outlines and puts the refusal in the legend.
+ *
+ * `variant="briefing"` (the Overview's sticky map) keeps the legend and the frame button only,
+ * flies with a small padding, and reads `override` merged over the URL state (a hovered sector,
+ * the Provinces | Districts toggle) so the briefing can steer the map without writing the
+ * URL; `onPick` replaces the click's default (writing `geo` / `cell`). The console (`/map`)
+ * passes nothing and behaves as before.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layers, Locate } from "lucide-react";
 import type { Map as MBMap } from "mapbox-gl";
+import type { ExplorerState, Level } from "@/lib/urlState";
 import { api } from "@/lib/api";
 import { mapBody, parseCell } from "@/lib/requests";
 import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, viewLabel } from "@/lib/labels";
@@ -32,8 +39,14 @@ import { ScopeChips } from "./ScopeChips";
 
 const LEVEL_WORD = { adm1: "Provinces", adm2: "Districts", grid: "Grid" } as const;
 
-export function ExplorerMap() {
-  const { state, setState, labels, dims, release, defaults, isMobile } = useExplorer();
+export type ExplorerMapProps = { variant?: "console" | "briefing"; override?: Partial<ExplorerState>; onPick?: (level: Level, id: string) => void };
+
+export function ExplorerMap({ variant = "console", override, onPick }: ExplorerMapProps = {}) {
+  const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
+  const state = useMemo(() => (override ? { ...urlState, ...override } : urlState), [urlState, override]);
+  const full = variant === "console";
+  const onPickRef = useRef(onPick);
+  onPickRef.current = onPick;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MBMap | null>(null);
   const [map, setMap] = useState<MBMap | null>(null);
@@ -168,9 +181,11 @@ export function ExplorerMap() {
     const key = `${state.level}:${state.geo}`;
     if (lastFlown.current === key) return;
     lastFlown.current = key;
-    const box = state.level === "adm1" ? (residual && state.geo === residual.name ? unionOf(bboxes.data.adm1, residual.members) : bboxes.data.adm1[state.geo]) : state.level === "adm2" ? bboxes.data.adm2[state.geo] : null;
-    if (box) map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding: isMobile ? { top: 60, bottom: 260, left: 16, right: 16 } : { top: 90, bottom: 120, left: 60, right: 420 }, maxZoom: 9, duration: 700 });
-  }, [map, bboxes.data, state.geo, state.level, isMobile, residual]);
+    // a province name flies to its box at either level (the briefing's Districts toggle keeps the province)
+    const box = residual && state.geo === residual.name ? unionOf(bboxes.data.adm1, residual.members) : state.level === "grid" ? null : (bboxes.data.adm1[state.geo] ?? bboxes.data.adm2[state.geo] ?? null);
+    const padding = !full ? { top: 48, bottom: 48, left: 40, right: 40 } : isMobile ? { top: 60, bottom: 260, left: 16, right: 16 } : { top: 90, bottom: 120, left: 60, right: 420 };
+    if (box) map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding, maxZoom: 9, duration: 700 });
+  }, [map, bboxes.data, state.geo, state.level, isMobile, residual, full]);
 
   // --- the grid raster (visual only): one image source, updated per frame, opacity 0 when off
   const raster = tiles.data?.raster;
@@ -185,7 +200,8 @@ export function ExplorerMap() {
     // a member of the residual unit selects the release's own id for it (the API answers geography_ids: [<row name>])
     const r = residualRef.current;
     const geo = lvl === "adm1" && r && r.members.includes(id) ? r.name : id;
-    if (lvl === "grid") setStateRef.current({ cell: `${props.lat},${props.lon}` });
+    if (onPickRef.current) onPickRef.current(lvl, lvl === "grid" ? `${props.lat},${props.lon}` : geo);
+    else if (lvl === "grid") setStateRef.current({ cell: `${props.lat},${props.lon}` });
     else setStateRef.current({ geo });
     if (stateRef.current.ask) emitMapPick({ level: lvl, id: geo, props }); // an @mention for the Ask composer
   }, []);
@@ -212,32 +228,38 @@ export function ExplorerMap() {
       {mapError && <div className="absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded bg-refusal px-3 py-1 text-xs text-warn" data-testid="map-error">Map: {mapError}</div>}
       <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} residual={residual} />
 
-      <div className={`absolute left-3 z-20 ${bm.notice ? "top-8" : "top-3"}`}>
-        <ScopeChips />
-      </div>
+      {full && (
+        <div className={`absolute left-3 z-20 ${bm.notice ? "top-8" : "top-3"}`}>
+          <ScopeChips />
+        </div>
+      )}
       <div className={`absolute right-3 z-20 flex flex-col items-end gap-1.5 ${bm.notice ? "top-8" : "top-3"}`}>
-        <AskPill />
-        <button title={state.raster ? "Hide the grid raster (visual only)" : "Show the grid raster (visual only)"} aria-pressed={state.raster} onClick={() => setState({ raster: !state.raster })} className={`glass flex h-9 w-9 items-center justify-center rounded-xl ${state.raster ? "text-accent" : "text-muted"}`} data-testid="raster-toggle">
-          <Layers size={16} />
-        </button>
-        <View3dToggle />
+        {full && <AskPill />}
+        {full && (
+          <button title={state.raster ? "Hide the grid raster (visual only)" : "Show the grid raster (visual only)"} aria-pressed={state.raster} onClick={() => setState({ raster: !state.raster })} className={`glass flex h-9 w-9 items-center justify-center rounded-xl ${state.raster ? "text-accent" : "text-muted"}`} data-testid="raster-toggle">
+            <Layers size={16} />
+          </button>
+        )}
+        {full && <View3dToggle />}
         <button title="Frame Pakistan" onClick={fitAll} className="glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-fg">
           <Locate size={16} />
         </button>
       </div>
-      <div className={`absolute left-3 z-20 ${isMobile ? "bottom-[92px]" : "bottom-8"}`}>
+      <div className={`absolute left-3 z-20 ${full && isMobile ? "bottom-[92px]" : full ? "bottom-8" : "bottom-3"}`}>
         {isMobile && (
           <button onClick={() => setLegendOpen((o) => !o)} className="glass pill mb-1 px-2.5 py-1 text-micro normal-case tracking-normal">
             {legendOpen ? "hide legend" : "legend"}
           </button>
         )}
         {legendOpen && <Legend state={state} scope={scope} env={mapQ.data} index={index} error={mapQ.error} isLoading={mapQ.isLoading} raster={raster} rasterOn={state.raster} hasCells={anyNoCell} shared={legendShared} />}
-        {!isMobile && <div className="mt-1.5 text-micro normal-case tracking-normal text-muted/90">PakEmis Explorer</div>}
+        {full && !isMobile && <div className="mt-1.5 text-micro normal-case tracking-normal text-muted/90">PakEmis Explorer</div>}
       </div>
-      <div className={`absolute z-20 flex justify-center ${isMobile ? "bottom-2 left-2 right-2" : "bottom-8 left-[296px] right-[300px]"}`}>
-        <TimeRail compact={isMobile} />
-      </div>
-      {!isMobile && (
+      {full && (
+        <div className={`absolute z-20 flex justify-center ${isMobile ? "bottom-2 left-2 right-2" : "bottom-8 left-[296px] right-[300px]"}`}>
+          <TimeRail compact={isMobile} />
+        </div>
+      )}
+      {full && !isMobile && (
         <div className="glass pill absolute bottom-8 right-3 z-20 max-w-[420px] truncate px-3 py-1 text-micro normal-case tracking-normal text-muted" data-testid="context-pill" title={pill.title}>
           {pill.words}
         </div>
