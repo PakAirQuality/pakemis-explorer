@@ -195,7 +195,7 @@ describe("the workspace frame", () => {
     await loaded();
     const stub = () => screen.getByTestId("map-stub");
     // the chrome's own widths plus FRAME_MARGIN_PX all round, so the country stands off the panels
-    const M = 48;
+    const M = 12;
     expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16 + M));
     expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16 + M));
     fireEvent.click(screen.getByTestId("filters-collapse"));

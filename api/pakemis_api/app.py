@@ -520,6 +520,33 @@ class Service:
                 "author": CITATION_AUTHOR, "year": CITATION_YEAR, "title": title, "repository": repository,
                 "commit": commit, "period_span": span}
 
+    # The release's ADM1 frame reports five units, the fifth a residual the payload names "Other":
+    # the territories its provincial sources do not separate. "Other" tells a reader nothing, so
+    # the label names them. The membership is the payload's own — the residual's ADM2 children are
+    # the AJK, GB and ICT rows (RESIDUAL_FAMILIES, their id prefixes) — and a test asserts it, so a
+    # release that changes the membership fails rather than mislabels.
+    RESIDUAL_LABEL = "ICT, AJK & Gilgit-Baltistan (combined)"
+    RESIDUAL_FAMILIES = ("ajk", "gb", "ict")
+
+    def residual_adm1_id(self):
+        """The ADM1 row the release draws no polygon for, if it has one."""
+        for r in self.release.dim("dim_geography"):
+            if (r.get("level") or "").lower() == "adm1" and r.get("has_polygon") == "no":
+                return r["geography_id"]
+        return None
+
+    def geography_labels(self):
+        """Every geography id worded: the payload's own names, except the residual ADM1 unit and
+        the residual ADM2 row, which are named by their members rather than "Other"."""
+        residual = self.residual_adm1_id()
+        out = {}
+        for r in self.release.dim("dim_geography"):
+            gid, name = r["geography_id"], r["name"]
+            if gid == residual or r.get("unit_kind") == "residual":
+                name = self.RESIDUAL_LABEL
+            out[gid] = name
+        return out
+
     def word(self, message):
         """A message that names a period or a configuration by its id, worded with the release's
         labels ("FY2023-24" -> "2023\u201324", "S_2023_24" -> "the survey-based estimate"). The
@@ -572,7 +599,7 @@ class Service:
             "limitations": {l["id"]: worded(l["message"]) for l in c["known_limitations"]},
             "gases": {g: g.translate(SUBSCRIPT_DIGITS) for g in sorted(self.release.dim_values("dim_gas", "gas"))},
             "sectors": {m: ACRONYMS.get(m, humanise(m)) for m in sorted(self.release.dim_values("dim_stream", "module"))},
-            "geographies": {r["geography_id"]: r["name"] for r in self.release.dim("dim_geography")},
+            "geographies": self.geography_labels(),
         }
 
 

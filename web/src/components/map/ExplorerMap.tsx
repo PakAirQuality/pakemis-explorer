@@ -193,7 +193,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: layered && layer === "unallocated", retry: false });
   const unallocIdx = useMemo(() => (layer === "unallocated" ? indexUnallocated(provinceQ.data) : null), [layer, provinceQ.data]);
   // the release's residual ADM1 unit ("Other": one cell, several polygons), derived from the dims and the boundary file
-  const residual = useMemo(() => residualUnit(dims, bboxes.data), [dims, bboxes.data]);
+  const residual = useMemo(() => residualUnit(dims, bboxes.data, labels), [dims, bboxes.data, labels]);
   const residualRef = useRef(residual);
   residualRef.current = residual;
   const exIdx = useMemo(() => (layered ? exceptionIndex(dims, residual?.name ?? null) : null), [layered, dims, residual]);

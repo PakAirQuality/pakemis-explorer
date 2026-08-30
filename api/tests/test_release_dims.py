@@ -210,3 +210,18 @@ def test_context_bar_carries_the_worded_labels(release):
     assert cb["gwp_label"] == labels["gwp"][cb["gwp_basis"]]["label"] == "IPCC 2013 (AR5)"
     # the ids stay beside the labels: the URL, the request and the receipt still speak them
     assert cb["configuration_id"] == "REF_2023_24" and cb["gwp_basis"] == "AR5"
+
+
+def test_the_residual_adm1_unit_is_named_by_its_members(client, release):
+    """The payload names its fifth ADM1 unit "Other"; the label names the territories it holds.
+    The membership is asserted here, so a release that changes it fails rather than mislabels."""
+    service = client.app.state.service
+    labels = release["labels"]["geographies"]
+    residual = service.residual_adm1_id()
+    assert residual == "ADM1:Other"
+    assert labels[residual] == service.RESIDUAL_LABEL == "ICT, AJK & Gilgit-Baltistan (combined)"
+    families = sorted({r["geography_id"].split(":", 1)[1].split("_", 1)[0] for r in service.release.dim("dim_geography") if r.get("parent_id") == residual and r.get("unit_kind") != "residual"})
+    assert tuple(families) == service.RESIDUAL_FAMILIES        # ajk, gb, ict: the label's three
+    assert labels["ADM2:other_residual"] == service.RESIDUAL_LABEL
+    # every other geography keeps the payload's own name
+    assert labels["ADM1:Punjab"] == "Punjab"

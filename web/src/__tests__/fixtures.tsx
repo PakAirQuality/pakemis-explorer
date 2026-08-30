@@ -66,7 +66,7 @@ export const RELEASE = {
     },
     gases: { CH4: "CH₄", CO2: "CO₂", N2O: "N₂O" },
     sectors: { agriculture: "Agriculture", power: "Power", residential: "Residential" },
-    geographies: { "ADM1:Punjab": "Punjab", "ADM1:Other": "Other" },
+    geographies: { "ADM1:Punjab": "Punjab", "ADM1:Other": "ICT, AJK & Gilgit-Baltistan (combined)" },
   },
   release: {
     release_id: "PakEmis 1.0.0rc42",

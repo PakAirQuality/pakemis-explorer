@@ -52,7 +52,7 @@ const ADM2 = envelope([
 ]) as unknown as Envelope;
 
 const ADM1_IDS = ["Punjab", "Sindh", "Balochistan", "Khyber Pakhtunkhwa", "Gilgit-Baltistan", "Azad Kashmir", "Islamabad Capital Territory"];
-const OTHER = { name: "Other", members: ["Azad Kashmir", "Gilgit-Baltistan", "Islamabad Capital Territory"] };
+const OTHER = { name: "Other", label: "ICT, AJK & Gilgit-Baltistan (combined)", members: ["Azad Kashmir", "Gilgit-Baltistan", "Islamabad Capital Territory"] };
 
 describe("paint", () => {
   it("paints the residual unit's one cell on each member polygon, verbatim and marked shared", () => {

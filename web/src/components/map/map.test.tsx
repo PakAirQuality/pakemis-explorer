@@ -101,7 +101,7 @@ function LegendHost({ state, env, provinces }: { state: ExplorerState; env: Enve
   const { dims, release } = useExplorer();
   const index = indexCells(env, state.level);
   const ex = exceptionIndex(dims, "Other");
-  const residual = { name: "Other", members: ["Azad Kashmir"] };
+  const residual = { name: "Other", label: "ICT, AJK & Gilgit-Baltistan (combined)", members: ["Azad Kashmir"] };
   return <LayerLegend state={state} scope="Districts · 2023–24 · reference estimate · all sectors" env={env} index={index} error={null} isLoading={false} raster={undefined} hasCells={false} shared={null} unallocated={{ env: provinces, index: indexUnallocated(provinces), error: null, isLoading: false }} exceptions={{ present: new Set(["shared_shape", "bounded"]), items: exceptionItems(release, ex, residual) }} />;
 }
 

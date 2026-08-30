@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { Adm1Row } from "./release";
+import { RELEASE } from "@/__tests__/fixtures";
 import { joinNames, residualMembers, residualRow, residualUnit, unionOf } from "./geography";
 
 const adm1: Adm1Row[] = [
@@ -24,7 +25,9 @@ describe("geography", () => {
   });
   it("the members are the drawn polygons no province row claims, in the boundary file's order", () => {
     expect(residualMembers({ adm1 }, bboxes)).toEqual(["Azad Kashmir", "Gilgit-Baltistan", "Islamabad Capital Territory"]);
-    expect(residualUnit({ adm1 }, bboxes)).toEqual({ name: "Other", members: ["Azad Kashmir", "Gilgit-Baltistan", "Islamabad Capital Territory"] });
+    // without labels the row's own name stands; with them it is worded by the release's label map
+    expect(residualUnit({ adm1 }, bboxes)).toEqual({ name: "Other", label: "Other", members: ["Azad Kashmir", "Gilgit-Baltistan", "Islamabad Capital Territory"] });
+    expect(residualUnit({ adm1 }, bboxes, RELEASE.labels)?.label).toBe("ICT, AJK & Gilgit-Baltistan (combined)");
   });
   it("no residual row, no boxes, or nothing left over: no unit", () => {
     expect(residualMembers({ adm1: adm1.filter((r) => r.has_polygon === "yes") }, bboxes)).toEqual([]);

@@ -6,7 +6,8 @@
  * name is not a `has_polygon: "yes"` row belongs to the residual unit. One envelope cell, several
  * polygons; the map paints the cell on each member and says so.
  */
-import type { Adm1Row } from "./release";
+import type { Adm1Row, Labels } from "./release";
+import { geographyName } from "./labels";
 
 export type Adm1Dims = { adm1: Adm1Row[] };
 export type Adm1Boxes = { adm1?: Record<string, unknown> } | null | undefined;
@@ -24,14 +25,15 @@ export function residualMembers(dims: Adm1Dims, bboxes: Adm1Boxes): string[] {
   return polygons.filter((name) => !drawn.has(name));
 }
 
-export type Residual = { name: string; members: string[] };
+/** `name` is the release's own row name (the geography id a query uses); `label` is how it is worded. */
+export type Residual = { name: string; label: string; members: string[] };
 
 /** The residual unit as the map consumes it, or null when the release has no such row or the boundary file draws no member. */
-export function residualUnit(dims: Adm1Dims, bboxes: Adm1Boxes): Residual | null {
+export function residualUnit(dims: Adm1Dims, bboxes: Adm1Boxes, labels?: Labels): Residual | null {
   const row = residualRow(dims);
   if (!row) return null;
   const members = residualMembers(dims, bboxes);
-  return members.length ? { name: row.name, members } : null;
+  return members.length ? { name: row.name, label: labels ? geographyName(labels, row.name) : row.name, members } : null;
 }
 
 /** "A, B and C" from the member names (the sentence is built, not typed). */

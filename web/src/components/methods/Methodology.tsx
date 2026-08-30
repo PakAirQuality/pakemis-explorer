@@ -26,7 +26,7 @@ export function Methodology() {
   const dims = useMemo(() => releaseDims(rel), [rel]);
   const facts = releaseFacts(rel);
   const agent = releaseAgent(rel);
-  const residual = residualUnit(dims, bboxes.data);
+  const residual = residualUnit(dims, bboxes.data, labels);
   const fns = (rel?.query_contract.functions as string[] | undefined) ?? [];
   const lim = (id: string) => (labels.limitations[id] ? limitationText(labels, id) : null);
   const gases = dims.gases.map((g) => gasLabel(labels, g));
@@ -34,7 +34,7 @@ export function Methodology() {
   // the reporting period's label is a period id ("FY2023-24"); a person reads its short label
   const rpShort = rp ? periodShort(labels, rp.label) : "";
   const rpLong = rp ? periodLabel(labels, rp.label) : "";
-  const unitName = residual?.name ?? "Other";
+  const unitName = residual?.label ?? "the residual unit";
   return (
     <div id="methodology" className="scroll-mt-20" data-testid="methodology">
       <div className="max-w-3xl">
@@ -107,7 +107,7 @@ export function Methodology() {
             <b>Hatch</b> marks a bounded interval: the cell prints &ldquo;[low, high]&rdquo; and is never collapsed to a midpoint.{lim("adm2_co2e_bounded_power_residential") ? <> {lim("adm2_co2e_bounded_power_residential")}.</> : null}
           </p>
           <p className="mt-2 leading-relaxed">
-            <b>A dotted outline</b> marks polygons that share one cell. {residual ? <>{joinNames(residual.members)} are one unit in the release, named &ldquo;{residual.name}&rdquo;; the map paints its single cell on each of them and the hover says so.</> : <>The release&apos;s residual territories unit is drawn as several polygons that carry its single cell.</>}
+            <b>A dotted outline</b> marks polygons that share one cell. {residual ? <>{joinNames(residual.members)} are one unit in the release, named &ldquo;{residual.label}&rdquo;; the map paints its single cell on each of them and the hover says so.</> : <>The release&apos;s residual territories unit is drawn as several polygons that carry its single cell.</>}
             {lim("no_polygon_units") ? <> {lim("no_polygon_units")}.</> : null}
           </p>
           <p className="mt-2 leading-relaxed"><b>Unallocated</b> mass is named, not lost: what the allocation cannot place in a district stays at the province as a row of its own, shown on the detail card and in the lineage.</p>

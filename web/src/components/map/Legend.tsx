@@ -64,7 +64,7 @@ export function Legend({ state, scope, env, index, error, isLoading, raster, ras
             {shared && (
               <li className="flex items-center gap-2" data-testid="legend-shared">
                 <span className="inline-block h-3 w-5 rounded-sm border-2 border-dotted border-fg/80" style={{ background: typeof shared.cell.value === "number" ? rampColor(shared.cell.value, index.min, index.max) : NO_CELL }} />
-                <span className="text-muted">{shared.name}: {shared.members.join(" + ")} share one cell</span>
+                <span className="text-muted">{shared.label}: one cell covers all {shared.members.length}</span>
               </li>
             )}
             {hasCells && (

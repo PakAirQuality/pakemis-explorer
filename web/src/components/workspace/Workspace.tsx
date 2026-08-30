@@ -44,8 +44,12 @@ import { FILTERS, MAP_BUTTONS } from "./copy";
 
 /** The gap the deck keeps from the map's own chrome, and the chrome above and below it. */
 export const DECK_GAP_PX = 16;
-/** Breathing room around the framed country, on top of the chrome's own insets. */
-export const FRAME_MARGIN_PX = 48;
+/**
+ * Breathing room around the framed country, on top of the chrome's own insets. Small on
+ * purpose: every pixel of it costs zoom, and the country should open filling the canvas the
+ * panels leave rather than sitting small inside it.
+ */
+export const FRAME_MARGIN_PX = 12;
 export const TOP_CHROME_PX = 84;
 export const BOTTOM_CHROME_PX = 56;
 

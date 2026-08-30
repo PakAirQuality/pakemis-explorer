@@ -57,7 +57,7 @@ export function useLayerLegendData(): LegendData {
   const fixedBody = useMemo(() => (state.scale === "fixed" ? mapBody({ ...state, sector: null, gas: null, month: null, period: referencePeriod }) : null), [state, referencePeriod]);
   const fixedQ = useQuery({ queryKey: ["map", fixedBody], queryFn: () => api.queryEmissions(fixedBody!), enabled: !!fixedBody, retry: false });
 
-  const residual = useMemo(() => residualUnit(dims, bboxes.data), [dims, bboxes.data]);
+  const residual = useMemo(() => residualUnit(dims, bboxes.data, labels), [dims, bboxes.data, labels]);
   const exIdx = useMemo(() => exceptionIndex(dims, residual?.name ?? null), [dims, residual]);
   const exItems = useMemo(() => (exIdx ? exceptionItems(release, exIdx, residual) : []), [exIdx, release, residual]);
   const ids = useMemo(() => (state.level === "adm1" ? Object.keys(bboxes.data?.adm1 ?? {}) : state.level === "adm2" ? Object.keys(bboxes.data?.adm2 ?? {}) : []), [state.level, bboxes.data]);
