@@ -30,7 +30,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { geographyName } from "@/lib/labels";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { NavCapsule } from "@/components/shell/NavCapsule";
-import { ExplorerMap, type MapPadding } from "@/components/map/ExplorerMap";
+import { ExplorerMap, OPENING_MAX_ZOOM, type MapPadding } from "@/components/map/ExplorerMap";
 import { unionBbox, useBboxes } from "@/components/map/tiles";
 import { OPACITY_DEFAULT } from "@/components/map/layers";
 import { BASEMAP_DEFAULT, type BasemapChoice } from "@/components/map/basemap";
@@ -119,6 +119,7 @@ export function Workspace() {
     setState({ geo: null, cell: null, level: "adm1" });
     setSector(null);
     setMoved(false);
+    fitAllRef.current?.();          // and the camera returns to the view the app opened at
   }, [setState]);
   // A gesture on the canvas is the only unambiguous "the user moved the map": the automatic
   // framings (the initial fitBounds, the padding easeTo, a flyTo to a selection) fire moveend
@@ -134,10 +135,12 @@ export function Workspace() {
     };
   }, [map]);
   const showReset = moved || !!state.geo || !!state.cell || state.level !== "adm1";
+  const fitAllRef = useRef<(() => void) | null>(null);
   const fitAll = () => {
     const u = bboxes.data ? unionBbox(bboxes.data.adm1) : null;
-    if (u && map) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding, duration: 500 });
+    if (u && map) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding, maxZoom: OPENING_MAX_ZOOM, duration: 500 });
   };
+  fitAllRef.current = fitAll;
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen?.();
     else void document.documentElement.requestFullscreen?.();

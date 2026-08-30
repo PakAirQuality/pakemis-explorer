@@ -54,6 +54,16 @@ import { basemap as buildBasemap, styleFor, type BasemapChoice } from "./basemap
 import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, OPACITY_DEFAULT, RASTER_OPACITY, setFillOpacity, setSelected, setView3d } from "./layers";
 import { anyWithoutCell, cellForFeature, clearPaint, exceptionKindOf, exceptionKindsPresent, indexCells, indexUnallocated, paintLayer, type ScalePaint } from "./paint";
 import { rasterFile, rasterUrl, unionBbox, useBboxes, useTilesInfo } from "./tiles";
+
+/**
+ * The zoom the country opens at: a ceiling, not a fit. Fitting the bounding box into whatever
+ * the panels leave makes the opening view depend on the window — wide screens got a tight
+ * country filling the canvas. The ceiling gives every window the same first impression, Pakistan
+ * with its region around it; a window too small to fit the country at this zoom still fits it,
+ * lower. `fitAll()` and the place card's Reset map use it too, so a reset returns to the view
+ * the app opened at, while a selection keeps its own closer maxZoom.
+ */
+export const OPENING_MAX_ZOOM = 3.8;
 import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
@@ -290,7 +300,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
     framed.current = true;
     if (stateRef.current.cam) return;
     const u = unionBbox(bboxes.data.adm1);
-    if (u) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: padRef.current ?? (isMobile ? 16 : 40), duration: 0 });
+    if (u) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: padRef.current ?? (isMobile ? 16 : 40), maxZoom: OPENING_MAX_ZOOM, duration: 0 });
   }, [map, bboxes.data, isMobile]);
 
   // --- the basemap Map settings chose: the style is swapped and `style.load` re-adds our stack
