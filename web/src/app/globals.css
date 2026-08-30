@@ -104,6 +104,8 @@
 @utility toolbar-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 9999px; background: var(--color-ground); color: var(--color-muted); border: 1px solid transparent; &:hover { color: var(--color-accent); background: var(--color-accent-soft); } }
 @utility pill { border-radius: 9999px; }
 @utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+/* the Overview deck's thin scrollbar on its right edge, over the map */
+@utility scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgba(3, 2, 19, 0.28) transparent; &::-webkit-scrollbar { width: 6px; } &::-webkit-scrollbar-thumb { background: rgba(3, 2, 19, 0.28); border-radius: 9999px; } }
 /* the framed map viewport: a 1 px line and the card radius around the basemap */
 @utility map-frame { border: 1px solid var(--color-line-strong); border-radius: var(--radius-card); overflow: hidden; background: var(--color-card); }
 

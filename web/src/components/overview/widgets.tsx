@@ -1,8 +1,10 @@
 "use client";
 /**
- * The briefing's four widgets (Sectors, Trend, Gases, Places), each a Widget card (title,
- * toolbar: info -> Result details on the widget's envelope, download -> its CSV, share -> the
- * link; a sentence with bold server strings; the figure; an optional amber note; a caption).
+ * The briefing's four widgets (Sectors, Trend, Gases, Places), each a Widget in the deck's card
+ * chrome (title, toolbar: info -> Result details on the widget's envelope, download -> its CSV,
+ * share -> the link, then the switch that collapses the card to its header row; a sentence
+ * with bold server strings; the figure; an optional amber note; a caption). `open` and
+ * `onToggle` are the Overview's per-card state (the deck's collapse-all flips them together).
  * Every printed number is a server string: `display_short`, `share_pct_short`,
  * `share_phrase`, `change.*`, `derived.*`, `axis.ticks_short`; the client computes nothing. A
  * refused scope shows the API's typed refusal. The interval, completeness and evidence
@@ -23,9 +25,10 @@ import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import { StackedBar, type Segment } from "@/components/charts/StackedBar";
 import { GAS_WORDS, LINKS, WIDGETS } from "./copy";
+import { DECK_CARD } from "./deck";
 import { lowerName } from "./OpeningStatement";
 
-export type WidgetProps = { data: Briefing; geo: string | null; place: string };
+export type WidgetProps = { data: Briefing; geo: string | null; place: string; open: boolean; onToggle: (open: boolean) => void };
 
 const LINK = "inline-flex items-center text-xs font-semibold text-accent hover:underline";
 
@@ -49,7 +52,7 @@ function Share({ cell }: { cell: Cell }) {
 }
 
 // --- EMISSIONS BY SECTOR
-export function SectorWidget({ data, place, onHover, onSelect, selected }: WidgetProps & { onHover: (id: string | null) => void; onSelect: (id: string) => void; selected: string | null }) {
+export function SectorWidget({ data, place, open, onToggle, onHover, onSelect, selected }: WidgetProps & { onHover: (id: string | null) => void; onSelect: (id: string) => void; selected: string | null }) {
   const { state, labels, defaults } = useExplorer();
   const env = data.bySector.data;
   const key = data.bodies.sectorKey;
@@ -66,7 +69,7 @@ export function SectorWidget({ data, place, onHover, onSelect, selected }: Widge
   const items: BarItem[] = cells.map((x) => ({ id: id(x), name: sectorLabel(labels, id(x)), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: sectorColor(id(x)), dim: !!selected && selected !== id(x) }));
   const caption = [configLabel(labels, state.config), `${gwpLabel(labels, state.gwp)} warming potentials`, lulucfCompact(labels)].filter(Boolean).join(" · ");
   return (
-    <Widget id="sectors" className="scroll-mt-16" title={`${WIDGETS.sectors} in ${place}`} env={env} labels={labels} sentence={sentence} caption={<span title={gwpTooltip(labels, state.gwp)}>{caption}</span>} testId="sector-widget">
+    <Widget id="sectors" chrome={DECK_CARD} open={open} onToggle={onToggle} title={`${WIDGETS.sectors} in ${place}`} env={env} labels={labels} sentence={sentence} caption={<span title={gwpTooltip(labels, state.gwp)}>{caption}</span>} testId="sector-widget">
       {env ? (
         <>
           <BarsWithAxis items={items} ticks={env.axis?.ticks_short} onHover={onHover} onSelect={onSelect} />
@@ -82,7 +85,7 @@ export function SectorWidget({ data, place, onHover, onSelect, selected }: Widge
 }
 
 // --- EMISSIONS OVER TIME
-export function TrendWidget({ data, place }: WidgetProps) {
+export function TrendWidget({ data, place, open, onToggle }: WidgetProps) {
   const { labels, release, dims } = useExplorer();
   const env = data.series.data;
   const change = env?.change;
@@ -98,14 +101,14 @@ export function TrendWidget({ data, place }: WidgetProps) {
   const limitation = release.known_limitations.find((l) => /longitudinal|trend/i.test(String(l.id ?? "")));
   const span = periodSpanWords(labels, reference);
   return (
-    <Widget id="trend" className="scroll-mt-16" title={WIDGETS.trend} env={env} labels={labels} sentence={sentence} note={limitation ? String(limitation.message ?? limitation.id) : undefined} caption={["Annual totals", span].filter(Boolean).join(" · ")} testId="trend-widget">
+    <Widget id="trend" chrome={DECK_CARD} open={open} onToggle={onToggle} title={WIDGETS.trend} env={env} labels={labels} sentence={sentence} note={limitation ? String(limitation.message ?? limitation.id) : undefined} caption={["Annual totals", span].filter(Boolean).join(" · ")} testId="trend-widget">
       {env ? <ColumnChart points={points} ticks={env.axis?.ticks_short} /> : <Pending q={data.series} what="the annual series" />}
     </Widget>
   );
 }
 
 // --- EMISSIONS BY GAS
-export function GasWidget({ data, place }: WidgetProps) {
+export function GasWidget({ data, place, open, onToggle }: WidgetProps) {
   const { state, labels } = useExplorer();
   const env = data.byGas.data;
   const cells = rankedCells(env);
@@ -132,14 +135,14 @@ export function GasWidget({ data, place }: WidgetProps) {
   ) : null;
   const segments: Segment[] = cells.map((x) => ({ id: gasId(x), name: gasLabel(labels, gasId(x)), value: x.value as number, label: shown(x), share: x.share_pct_short, color: gasColor(gasId(x)) }));
   return (
-    <Widget id="gases" className="scroll-mt-16" title={`${WIDGETS.gases} in ${place}`} env={env} labels={labels} sentence={sentence} caption={<span title={gwpTooltip(labels, state.gwp)}>CO₂-equivalent on {gwpLabel(labels, state.gwp)} warming potentials</span>} testId="gas-widget">
+    <Widget id="gases" chrome={DECK_CARD} open={open} onToggle={onToggle} title={`${WIDGETS.gases} in ${place}`} env={env} labels={labels} sentence={sentence} caption={<span title={gwpTooltip(labels, state.gwp)}>CO₂-equivalent on {gwpLabel(labels, state.gwp)} warming potentials</span>} testId="gas-widget">
       {env ? <StackedBar segments={segments} unit={a ? magnitudeOf(a) : ""} /> : <Pending q={data.byGas} what="the gases" />}
     </Widget>
   );
 }
 
 // --- WHERE EMISSIONS ARE PLACED
-export function PlacesWidget({ data, geo, onPick }: WidgetProps & { onPick: (name: string) => void }) {
+export function PlacesWidget({ data, geo, open, onToggle, onPick }: WidgetProps & { onPick: (name: string) => void }) {
   const { state, labels, defaults } = useExplorer();
   const env = data.provinces.data;
   const cells = rankedCells(env);
@@ -156,7 +159,7 @@ export function PlacesWidget({ data, geo, onPick }: WidgetProps & { onPick: (nam
   const items: BarItem[] = cells.map((x) => ({ id: name(x), name: geographyName(labels, name(x)), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: ACCENT, dim: !!geo && name(x) !== geo }));
   const view = viewLabel(labels, state.view);
   return (
-    <Widget id="places" className="scroll-mt-16" title={WIDGETS.places} env={env} labels={labels} sentence={sentence} caption={`Allocated at province level · ${view.split(":")[0]}`} testId="places-widget">
+    <Widget id="places" chrome={DECK_CARD} open={open} onToggle={onToggle} title={WIDGETS.places} env={env} labels={labels} sentence={sentence} caption={`Allocated at province level · ${view.split(":")[0]}`} testId="places-widget">
       {env ? (
         <>
           <BarsWithAxis items={items} ticks={env.axis?.ticks_short} onSelect={onPick} testId="places-bars" />

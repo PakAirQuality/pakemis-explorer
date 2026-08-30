@@ -4,11 +4,14 @@ import "@testing-library/jest-dom/vitest";
  * (`display_short`, `share_pct_short`, `share_phrase`, `rank`, `axis.ticks_short`, `change`,
  * `derived`): the opening statement assembled from them, each widget's sentence, the axis
  * ticks passed to the charts equal to the envelopes' ticks, the province dropdown re-scoping
- * the statement (a `module` breakdown, the series refused by name), the five anchors, the
- * two-pane frame (the dashboard panel, the map pane, one logo in the nav and none in the
- * header), the absence of the interval / completeness / evidence widgets and the routes
- * strip, and the four audits: every decimal on the page is a server string (ticks
- * included), no "FY", no raw id (bare AR5, "(NE)", "LULUCF", a version), no avoid-list phrase.
+ * the statement (a `module` breakdown, the series refused by name), the floating deck over the
+ * full-bleed map (the map pane absolute under the frame, the 520 px column without a
+ * background, the map toggle top-right, one logo in the nav and one in the footer card), the
+ * place header card (eyebrow, title, the four actions, Reset view clearing the scope), the deck
+ * pills (Sections (4), collapse-all flipping every switch), each widget's switch collapsing its
+ * body, the absence of the tab strip and of the interval / completeness / evidence widgets, and
+ * the four audits: every decimal on the page is a server string (ticks included), no "FY", no
+ * raw id (bare AR5, "(NE)", "LULUCF", a version), no avoid-list phrase.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -146,31 +149,123 @@ describe("Overview briefing", () => {
     for (const [, b] of totals) expect(b?.geography_ids).toBeUndefined();
     expect(fetchSpy.mock.calls.filter(([u]) => /\/query\/uncertainty|\/query\/completeness|\/evidence\//.test(String(u)))).toEqual([]);
   });
-  it("the two-pane frame: the 560 px dashboard panel with its own scroll and shadow over the map pane, no page-width container, one logo in the nav and none in the header block, the widgets as cards", async () => {
+  it("the floating deck: the map pane absolute under the frame, the 520 px column inset 20 px with no background and a thin scrollbar letting pointer events through, each card taking them back; one logo in the nav and one in the footer card", async () => {
     mount();
     await loaded();
-    const panel = screen.getByTestId("dashboard-panel");
-    expect(panel.className).toContain("lg:w-[560px]");
-    expect(panel.className).toContain("lg:overflow-y-auto");
-    expect(panel.className).toContain("shadow-[8px_0_24px_rgba(0,0,0,0.06)]");
-    expect(panel.className).toContain("z-10");
     expect(screen.getByTestId("app-frame").className).toContain("lg:h-[calc(100dvh-56px)]");
+    expect(screen.getByTestId("app-frame").className).toContain("relative");
     const pane = screen.getByTestId("map-pane");
-    expect(pane.className).toContain("flex-1");
+    expect(pane.className).toContain("lg:absolute lg:inset-0");
+    expect(pane.className).toContain("h-[60vh]"); // the column layout under 1024 px
     expect(pane).toContainElement(screen.getByTestId("briefing-map"));
     expect(screen.getByTestId("briefing-map").className).toContain("absolute inset-0");
+    const deck = screen.getByTestId("dashboard-deck");
+    for (const c of ["lg:absolute", "lg:left-5", "lg:top-5", "lg:bottom-5", "lg:w-[520px]", "lg:overflow-y-auto", "lg:overscroll-contain", "scrollbar-thin", "flex flex-col gap-3", "lg:pr-2", "lg:pointer-events-none"]) expect(deck.className, c).toContain(c);
+    expect(deck.className).not.toMatch(/(^|\s)(lg:)?bg-/); // the map shows between the cards
+    expect(screen.queryByTestId("dashboard-panel")).toBeNull();
     expect(screen.getByTestId("overview").querySelector(".max-w-\\[1500px\\]")).toBeNull();
-    expect(panel).toContainElement(screen.getByTestId("header-block"));
-    expect(panel).toContainElement(screen.getByTestId("tab-strip"));
-    expect(screen.getByTestId("tab-strip").className).toContain("sticky top-0");
-    for (const id of ["sector-widget", "trend-widget", "gas-widget", "places-widget"]) expect(screen.getByTestId(id).className).toContain("card");
-    // the logo: the nav and the footer, not the header block (it was shown twice)
+    // the cards in order, each a separate rounded white card catching pointer events
+    const cards = Array.from(deck.children).map((el) => el.getAttribute("data-testid"));
+    expect(cards).toEqual(["header-block", "deck-controls", "opening", "sector-widget", "trend-widget", "gas-widget", "places-widget", "footer"]);
+    for (const id of ["opening", "sector-widget", "trend-widget", "gas-widget", "places-widget"]) {
+      const el = screen.getByTestId(id);
+      expect(el.className, id).toContain("rounded-2xl bg-white");
+      expect(el.className, id).toContain("shadow-md");
+      expect(el.className, id).toContain("pointer-events-auto");
+      expect(el.className, id).toContain("shrink-0"); // a fixed-height flex column shrinks a card with min-height 0 to nothing
+      expect(el.className, id).not.toContain("card");
+    }
+    for (const id of ["header-block", "deck-controls", "footer"]) expect(screen.getByTestId(id).className, id).toContain("shrink-0");
+    expect(screen.getByTestId("footer").className).toContain("rounded-2xl bg-white/90");
+    expect(screen.getByTestId("footer").className).toContain("pointer-events-auto");
+    expect(screen.getByTestId("footer")).toHaveTextContent("A Pakistan Air Quality Initiative product");
+    // the map's chrome: the level toggle at the top-right, left of the frame button; nothing at the top-left
+    const box = screen.getByTestId("map-level-box");
+    expect(box.className).toContain("right-14 top-3");
+    expect(box.className).not.toContain("left-");
+    expect(box).toContainElement(screen.getByTestId("map-level-adm1"));
+    // the logo: the nav and the footer card, not the header card
     const logos = screen.getAllByTestId("brand-logo");
     expect(logos).toHaveLength(2);
     expect(screen.getByTestId("header-block").querySelector("img")).toBeNull();
     expect(screen.getByTestId("top-nav")).toContainElement(logos[0]);
     expect(screen.getByTestId("footer")).toContainElement(logos[1]);
+    expect(logos[1].className).toContain("h-6");
+  });
+  it("the place header card: accent blue with the wave, the eyebrow, the title, four labelled icon actions; Reset view clears a chosen province", async () => {
+    mount("?geo=Punjab");
+    await screen.findByTestId("opening-statement");
+    const head = screen.getByTestId("header-block");
+    for (const c of ["rounded-3xl", "bg-accent", "text-white", "shadow-lg", "overflow-hidden"]) expect(head.className, c).toContain(c);
+    expect(head.querySelector("svg[data-testid=header-wave] path")).not.toBeNull();
+    expect(head.querySelector("img")).toBeNull();
     expect(screen.getByTestId("eyebrow")).toHaveTextContent("Pakistan's explainable emissions inventory");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Punjab");
+    expect(screen.getByRole("heading", { level: 1 }).className).toContain("text-4xl");
+    const actions = Array.from(screen.getByTestId("header-toolbar").children);
+    expect(actions.map((a) => a.textContent)).toEqual(["Reset view", "Choose a province", "Share", "Download"]);
+    for (const a of actions) expect(a.querySelector("svg"), a.textContent ?? "").not.toBeNull();
+    expect(screen.getByTestId("header-download")).toHaveAttribute("href", "/downloads");
+    // the province select is a white pill inside the card; Choose a province focuses it
+    const select = screen.getByTestId("province-select");
+    expect(head).toContainElement(select);
+    expect(select.className).toContain("rounded-full bg-white");
+    expect(select).toHaveValue("Punjab");
+    fireEvent.click(screen.getByTestId("header-choose"));
+    expect(document.activeElement).toBe(select);
+    // Reset view clears the scope: Pakistan again, the national total asked
+    fireEvent.click(screen.getByTestId("header-reset"));
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan"));
+    expect(screen.getByTestId("overview")).toHaveAttribute("data-scope", "PK");
+    expect(select).toHaveValue("");
+  });
+  it("the deck pills: Sections (4) counts the widget cards; collapse-all flips every switch and its own label; each widget's switch collapses its body to the header row", async () => {
+    mount();
+    await loaded();
+    expect(screen.getByTestId("deck-sections")).toHaveTextContent("Sections (4)");
+    expect(screen.getByTestId("deck-sections").className).toContain("rounded-full bg-white");
+    expect(screen.getByTestId("deck-sections").className).toContain("text-accent");
+    const all = screen.getByTestId("deck-collapse-all");
+    expect(all).toHaveTextContent("Collapse all sections");
+    const ids = ["sector-widget", "trend-widget", "gas-widget", "places-widget"];
+    const switches = ids.map((id) => screen.getByTestId(`${id}-switch`));
+    for (const sw of switches) {
+      expect(sw).toHaveAttribute("role", "switch");
+      expect(sw).toHaveAttribute("aria-checked", "true");
+      expect(sw.className).toContain("bg-accent");
+    }
+    expect(screen.getAllByRole("switch")).toHaveLength(4);
+    // one card: the switch hides the sentence, figure and caption; the header row (title, toolbar) stays
+    fireEvent.click(switches[0]);
+    expect(switches[0]).toHaveAttribute("aria-checked", "false");
+    expect(switches[0].className).not.toContain("bg-accent");
+    expect(screen.queryByTestId("sector-widget-sentence")).toBeNull();
+    expect(screen.queryByTestId("sector-widget-caption")).toBeNull();
+    expect(screen.queryByTestId("bars-with-axis")).toBeNull();
+    expect(screen.getByTestId("sector-widget")).toHaveTextContent("Emissions by sector in Pakistan");
+    expect(screen.getByTestId("sector-widget-info")).toBeInTheDocument();
+    expect(screen.getByTestId("sector-widget")).toHaveAttribute("data-open", "0");
+    expect(screen.getByTestId("trend-widget-sentence")).toBeInTheDocument();
+    expect(all).toHaveTextContent("Collapse all sections"); // three still open
+    fireEvent.click(switches[0]);
+    expect(await screen.findByTestId("sector-widget-sentence")).toBeInTheDocument();
+    // collapse all: every switch off, every body gone, the label flips; expand all brings them back
+    fireEvent.click(all);
+    for (const sw of switches) expect(sw).toHaveAttribute("aria-checked", "false");
+    for (const id of ids) expect(screen.queryByTestId(`${id}-sentence`), id).toBeNull();
+    expect(screen.queryByTestId("column-chart")).toBeNull();
+    expect(screen.queryByTestId("stacked-bar")).toBeNull();
+    expect(all).toHaveTextContent("Expand all sections");
+    expect(all).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("opening-statement")).toBeInTheDocument(); // the statement is not a section
+    fireEvent.click(all);
+    for (const sw of switches) expect(sw).toHaveAttribute("aria-checked", "true");
+    for (const id of ids) expect(await screen.findByTestId(`${id}-sentence`)).toBeInTheDocument();
+    expect(all).toHaveTextContent("Collapse all sections");
+    // the tab strip is gone; the section ids stay for the scroll spy
+    expect(screen.queryByTestId("tab-strip")).toBeNull();
+    for (const id of ["summary", "sectors", "trend", "gases", "places"]) expect(document.getElementById(id), id).not.toBeNull();
+    expect(document.body.textContent).not.toContain("Summary");
   });
   it("the interval, completeness and evidence widgets and the routes strip are gone", async () => {
     mount();
@@ -226,6 +321,12 @@ describe("Overview briefing", () => {
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-level", "adm1");
     fireEvent.click(screen.getByTestId("map-level-adm2"));
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-level", "adm2");
+    // Reset view returns the map to provinces and clears the picked sector
+    fireEvent.click(bars[1]);
+    expect(screen.getByTestId("sectors-link")).toHaveAttribute("href", "/explore?sector=power");
+    fireEvent.click(screen.getByTestId("header-reset"));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-level", "adm1");
+    expect(screen.getByTestId("sectors-link")).toHaveAttribute("href", "/explore");
   });
   it("the province dropdown re-scopes the statement (allocated emissions, a module breakdown) and names the series refusal", async () => {
     mount();
@@ -246,18 +347,6 @@ describe("Overview briefing", () => {
     expect(screen.getByTestId("places-link")).toHaveAttribute("href", "/map?geo=Punjab");
     fireEvent.change(screen.getByTestId("province-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan"));
-  });
-  it("the tab strip is Summary · Sectors · Trend · Gases · Places and every anchor exists on the page", async () => {
-    mount();
-    await loaded();
-    const tabs = within(screen.getByTestId("tab-strip")).getAllByRole("link");
-    expect(tabs.map((a) => a.textContent)).toEqual(["Summary", "Sectors", "Trend", "Gases", "Places"]);
-    for (const id of ["summary", "sectors", "trend", "gases", "places"]) {
-      expect(document.getElementById(id), id).not.toBeNull();
-      expect(screen.getByTestId(`tab-${id}`)).toHaveAttribute("href", `#${id}`);
-    }
-    for (const id of ["uncertainty", "evidence"]) expect(screen.queryByTestId(`tab-${id}`), id).toBeNull();
-    expect(screen.getByTestId("tab-summary")).toHaveAttribute("aria-current", "location");
   });
   it("audits: every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase; the footer names the licences and no version", async () => {
     mount();

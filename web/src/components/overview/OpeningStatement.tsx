@@ -7,7 +7,8 @@
  * breakdown's rank-1 cell (`display_short`, `share_pct_short`, `share_phrase`); the LULUCF
  * phrase is the release's label. Province scope: "In 2023–24, Punjab's allocated emissions
  * were 228.72 Mt CO₂e. Agriculture accounted for … of the province's allocated total." Under
- * it, the muted independence line.
+ * it, the muted independence line. A deck card (DECK_CARD) with the `summary` id the scroll spy
+ * watches.
  */
 import type { Briefing } from "@/lib/queries";
 import { shown } from "@/lib/envelope";
@@ -17,6 +18,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { rankedCells } from "./widgets";
 import { INDEPENDENT_LINE } from "./copy";
+import { DECK_CARD } from "./deck";
 
 /** "agriculture" in running text: the label with its initial lowered unless it is an acronym. */
 export function lowerName(name: string): string {
@@ -29,7 +31,7 @@ export function OpeningStatement({ data, geo, place }: { data: Briefing; geo: st
   const top = rankedCells(data.bySector.data)[0];
   const period = periodShort(labels, state.period);
   return (
-    <section id="summary" className="card scroll-mt-16 p-4" data-testid="opening">
+    <section id="summary" className={DECK_CARD} data-testid="opening">
       {total ? (
         <p className="text-lg text-fg" data-testid="opening-statement">
           In <b>{period}</b>, {geo ? <>{place}&apos;s allocated emissions were</> : <>{place} emitted an estimated</>} <b className="num whitespace-nowrap">{shown(total)} {cellUnit(total)}</b>.

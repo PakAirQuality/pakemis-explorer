@@ -14,7 +14,7 @@
  * spatial exceptions (exceptions.ts), each with its legend (LayerLegend).
  *
  * `variant="briefing"` (the Overview's map pane) keeps the frame button and, in the legend's
- * place, the bottom-left pill (OpacityPill: the Low–High gradient and an Opacity slider that
+ * place, the bottom-left pill, offset right of the Overview deck on wide screens (OpacityPill: the Low–High gradient and an Opacity slider that
  * sets the choropleth's fill-opacity, local state, never the URL); it flies with a small
  * padding and reads `override` merged over the URL state (a hovered sector, the Provinces |
  * Districts toggle) so the briefing can steer the map without writing the URL; `onPick`
@@ -299,7 +299,8 @@ export function ExplorerMap({ variant = "console", override, onPick }: ExplorerM
           <Locate size={16} />
         </button>
       </div>
-      <div className={`absolute left-3 z-20 ${full && isMobile ? "bottom-3" : "bottom-8"}`}>
+      {/* the briefing's pill sits right of the Overview deck on wide screens (20 px inset + 520 px column + 16 px; deck.ts) */}
+      <div className={`absolute z-20 ${full ? (isMobile ? "bottom-3 left-3" : "bottom-8 left-3") : "bottom-8 left-3 lg:left-[calc(20px+520px+16px)]"}`} data-testid="map-bottom-left">
         {isMobile && full && (
           <button onClick={() => setLegendOpen((o) => !o)} className="glass pill mb-1 px-2.5 py-1 text-micro normal-case tracking-normal">
             {legendOpen ? "hide legend" : "legend"}

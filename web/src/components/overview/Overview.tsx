@@ -1,18 +1,23 @@
 "use client";
 /**
- * The public Overview as a country briefing (2026-08-30, in Global Mangrove Watch's frame): under
- * the 56 px TopNav (compact: edge-aligned, no centred container) a fixed two-pane app frame — LEFT a 560 px dashboard panel with its own
- * vertical scroll (white, a right-edge shadow, above the map), stacking as cards with 16 px
- * gutters the header block (the eyebrow "Pakistan's explainable emissions inventory", Pakistan
- * / the province, "Select a province", Share · Download), the opening statement, the sticky tab
- * strip (Summary · Sectors · Trend · Gases · Places; anchors) and the four widgets, then the
- * footer; RIGHT the map filling all remaining width and the full height (the ExplorerMap's
- * briefing variant: the opacity pill, the frame button, a Provinces | Districts glass toggle)
- * that follows the widget in view (Sectors: a hovered or selected sector filters the
- * choropleth; Places: provinces; otherwise every sector) and the province dropdown. Under
- * 1024 px the frame is a column: the panel first, the map at 60 vh below it, then the footer.
- * No slogan, no total card, no Ask box (Ask is the nav button). Every number on the page is a
- * server string; the page computes nothing.
+ * The public Overview as a country briefing (2026-08-30, Global Mangrove Watch's floating
+ * dashboard): under the 56 px TopNav (compact: edge-aligned) the map runs FULL-BLEED behind
+ * everything (the map pane `absolute inset-0` in a frame `relative h-[calc(100dvh-56px)]`) and
+ * the dashboard is a floating stack of separate rounded white cards over the map's left side —
+ * a 520 px column inset 20 px, its own thin scrollbar, no background of its own (the map shows
+ * between the cards); the column lets pointer events through to the map, each card takes them
+ * back. The cards, in order: the place header (accent blue, the wave, the eyebrow, Pakistan /
+ * the province, Reset view · Choose a province · Share · Download, the province select as a
+ * white pill), the deck controls (Sections (n) · Collapse / Expand all sections), the opening
+ * statement, the four widgets (Emissions by sector · over time · by gas · Where emissions are
+ * placed), each with a switch that collapses it to its header row, then the footer card. The
+ * map (the ExplorerMap's briefing variant: the frame button and the Provinces | Districts
+ * toggle top-right, the opacity pill bottom-left clear of the deck) follows the widget in view
+ * when that card is open (Sectors: a hovered or selected sector filters the choropleth;
+ * Places: provinces; otherwise every sector) and the province select. Under 1024 px the deck is
+ * a normal stacked column above the map at 60 vh. No slogan, no total card, no Ask box (Ask is
+ * the nav button), no tab strip (the collapsing cards replace it). Every number on the page is
+ * a server string; the page computes nothing.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -26,16 +31,17 @@ import { BrandLogo } from "@/components/shell/BrandLogo";
 import { markStage } from "@/components/shell/bootstrap";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { HeaderBlock } from "./HeaderBlock";
+import { DeckControls } from "./DeckControls";
 import { OpeningStatement } from "./OpeningStatement";
-import { TabStrip } from "./TabStrip";
 import { BriefingMap, type MapLevel } from "./BriefingMap";
 import { GasWidget, PlacesWidget, SectorWidget, TrendWidget } from "./widgets";
-import { FOOTER, HEADER, INDEPENDENT_LINE, TABS, type TabId } from "./copy";
+import { FOOTER, HEADER, INDEPENDENT_LINE, SECTION_IDS, WIDGET_IDS, type SectionId, type WidgetId } from "./copy";
 
 /** The nav is 56 px (h-14); the frame takes the rest of the viewport. */
 export const NAV_PX = 56;
-/** The dashboard panel's width on wide screens. */
-export const PANEL_PX = 560;
+
+type Collapsed = Record<WidgetId, boolean>;
+const ALL_OPEN: Collapsed = { sectors: false, trend: false, gases: false, places: false };
 
 export function Overview() {
   const { state, setState, labels, dims, release } = useExplorer();
@@ -48,29 +54,38 @@ export function Overview() {
   useEffect(() => {
     if (data.total.data || data.total.isError) markStage("envelope");
   }, [data.total.data, data.total.isError]);
-  const [active, setActive] = useState<TabId>("summary");
+  const [active, setActive] = useState<SectionId>("summary");
   const [hovered, setHovered] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [level, setLevel] = useState<MapLevel>("adm1");
-  const panelRef = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsed] = useState<Collapsed>(ALL_OPEN);
+  const deckRef = useRef<HTMLDivElement>(null);
   const onGeo = useCallback((name: string | null) => setState({ geo: name, level: "adm1" }), [setState]);
   const onPickSector = useCallback((id: string) => setPicked((p) => (p === id ? null : id)), []);
+  const onReset = useCallback(() => {
+    setState({ geo: null, level: "adm1" });
+    setLevel("adm1");
+    setPicked(null);
+  }, [setState]);
+  const allCollapsed = WIDGET_IDS.every((id) => collapsed[id]);
+  const toggle = (id: WidgetId) => (open: boolean) => setCollapsed((c) => ({ ...c, [id]: !open }));
+  const toggleAll = () => setCollapsed({ sectors: !allCollapsed, trend: !allCollapsed, gases: !allCollapsed, places: !allCollapsed });
 
-  // the map follows the widget in view
-  const mapSector = active === "sectors" ? (hovered ?? picked) : null;
-  const mapLevel: MapLevel = active === "places" ? "adm1" : level;
+  // the map follows the widget in view, while that card is open
+  const mapSector = active === "sectors" && !collapsed.sectors ? (hovered ?? picked) : null;
+  const mapLevel: MapLevel = active === "places" && !collapsed.places ? "adm1" : level;
   const scope = useMemo(() => ({ level: mapLevel, sector: mapSector, gas: null, month: null, cell: null }), [mapLevel, mapSector]);
 
-  // the scroll spy: on wide screens the panel is the scroll container, so it is the observer's root
+  // the scroll spy: on wide screens the deck is the scroll container, so it is the observer's root
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
-    const els = TABS.map(([id]) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
+    const els = SECTION_IDS.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
     const io = new IntersectionObserver(
       (entries) => {
         const seen = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (seen[0]) setActive(seen[0].target.id as TabId);
+        if (seen[0]) setActive(seen[0].target.id as SectionId);
       },
-      { root: wide ? panelRef.current : null, rootMargin: `-${(wide ? 0 : NAV_PX) + 60}px 0px -55% 0px`, threshold: 0 },
+      { root: wide ? deckRef.current : null, rootMargin: `-${(wide ? 0 : NAV_PX) + 40}px 0px -55% 0px`, threshold: 0 },
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
@@ -79,49 +94,41 @@ export function Overview() {
   const facts = releaseFacts(release);
   const citation = releaseCitation(release);
   const licences = [facts.licences.data_and_text ? `Data and text ${facts.licences.data_and_text}` : "", facts.licences.code ? `code ${facts.licences.code}` : "", facts.licences.odbl_carveouts.length ? "OSM-derived tables ODbL" : ""].filter(Boolean).join(" · ");
-  const footer = (
-    <footer className="border-t border-line bg-card" data-testid="footer">
-      <div className="flex flex-col gap-2 px-4 py-5 text-xs text-muted">
-        <span className="flex shrink-0 items-center gap-2 text-fg" data-testid="footer-brand">
-          <BrandLogo className="h-6 object-contain" />
-          {FOOTER.product}
-        </span>
-        <span>
-          {licences || "Licences as the release states them"}. {INDEPENDENT_LINE}
-        </span>
-        <span className="flex flex-wrap gap-4">
-          {citation?.repository && <a href={citation.repository} className="hover:text-fg" data-testid="footer-repository">{FOOTER.repository}</a>}
-          <Link href="/methods" className="hover:text-fg">{FOOTER.methods}</Link>
-          <Link href="/downloads" className="hover:text-fg">{FOOTER.downloads}</Link>
-          <a href={api.docsUrl()} className="hover:text-fg">{FOOTER.api}</a>
-        </span>
-      </div>
-    </footer>
-  );
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface" data-testid="overview" data-scope={geo ?? "PK"}>
       <TopNav compact />
-      <div className="flex flex-col lg:h-[calc(100dvh-56px)] lg:flex-row" data-testid="app-frame">
-        <div ref={panelRef} className="relative z-10 flex w-full shrink-0 flex-col bg-card shadow-[8px_0_24px_rgba(0,0,0,0.06)] lg:h-full lg:w-[560px] lg:overflow-y-auto" data-testid="dashboard-panel">
-          <main className="flex min-w-0 flex-1 flex-col gap-4 p-4">
-            <div className="card p-4">
-              <HeaderBlock geo={geo} place={place} onGeo={onGeo} />
+      <div className="relative flex flex-col lg:block lg:h-[calc(100dvh-56px)]" data-testid="app-frame">
+        <div ref={deckRef} className="scrollbar-thin flex flex-col gap-3 p-4 lg:pointer-events-none lg:absolute lg:bottom-5 lg:left-5 lg:top-5 lg:z-10 lg:w-[520px] lg:overflow-y-auto lg:overscroll-contain lg:p-0 lg:pr-2" data-testid="dashboard-deck">
+          <HeaderBlock geo={geo} place={place} onGeo={onGeo} onReset={onReset} />
+          <DeckControls count={WIDGET_IDS.length} allCollapsed={allCollapsed} onToggleAll={toggleAll} />
+          <OpeningStatement data={data} geo={geo} place={place} />
+          <SectorWidget data={data} geo={geo} place={place} open={!collapsed.sectors} onToggle={toggle("sectors")} onHover={setHovered} onSelect={onPickSector} selected={picked} />
+          <TrendWidget data={data} geo={geo} place={place} open={!collapsed.trend} onToggle={toggle("trend")} />
+          <GasWidget data={data} geo={geo} place={place} open={!collapsed.gases} onToggle={toggle("gases")} />
+          <PlacesWidget data={data} geo={geo} place={place} open={!collapsed.places} onToggle={toggle("places")} onPick={(name) => onGeo(name)} />
+          <footer className="pointer-events-auto shrink-0 rounded-2xl bg-white/90 p-4 text-xs text-muted shadow-md" data-testid="footer">
+            <div className="flex flex-col gap-2">
+              <span className="flex shrink-0 items-center gap-2 text-fg" data-testid="footer-brand">
+                <BrandLogo className="h-6 object-contain" />
+                {FOOTER.product}
+              </span>
+              <span>
+                {licences || "Licences as the release states them"}. {INDEPENDENT_LINE}
+              </span>
+              <span className="flex flex-wrap gap-4">
+                {citation?.repository && <a href={citation.repository} className="hover:text-fg" data-testid="footer-repository">{FOOTER.repository}</a>}
+                <Link href="/methods" className="hover:text-fg">{FOOTER.methods}</Link>
+                <Link href="/downloads" className="hover:text-fg">{FOOTER.downloads}</Link>
+                <a href={api.docsUrl()} className="hover:text-fg">{FOOTER.api}</a>
+              </span>
             </div>
-            <OpeningStatement data={data} geo={geo} place={place} />
-            <TabStrip active={active} />
-            <SectorWidget data={data} geo={geo} place={place} onHover={setHovered} onSelect={onPickSector} selected={picked} />
-            <TrendWidget data={data} geo={geo} place={place} />
-            <GasWidget data={data} geo={geo} place={place} />
-            <PlacesWidget data={data} geo={geo} place={place} onPick={(name) => onGeo(name)} />
-          </main>
-          {wide && footer}
+          </footer>
         </div>
-        <div className="relative h-[60vh] min-w-0 flex-1 lg:h-full" data-testid="map-pane">
+        <div className="relative h-[60vh] min-w-0 lg:absolute lg:inset-0 lg:h-auto" data-testid="map-pane">
           <BriefingMap scope={scope} level={level} onLevel={setLevel} onPickProvince={(name) => onGeo(name)} />
         </div>
       </div>
-      {!wide && footer}
     </div>
   );
 }
