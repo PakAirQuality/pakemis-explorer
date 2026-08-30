@@ -2,9 +2,10 @@
 /**
  * The downloadable products of the served release: `GET {base}/products` lists every file
  * the payload publishes (the semantic tables as CSV and Parquet, the two grid cubes, the two
- * metadata files) with the digest that is each file's identity, the schema fields the contract
- * carries (columns, primary key, rows, aggregation rule, closure) and the four families the
- * Downloads page shows. `GET {base}/products/{name}.{ext}` serves one file with `ETag` equal
+ * metadata files, the registries the claim record joins) with the digest that is each file's
+ * identity, the schema fields the contract carries (columns, primary key, rows, aggregation
+ * rule, closure) and the six families the Downloads page maps its purposes to (`complete`
+ * carries the zip archive). `GET {base}/products/{name}.{ext}` serves one file with `ETag` equal
  * to its sha256. Validated with zod at the boundary; shown as received.
  */
 import { useQuery } from "@tanstack/react-query";
@@ -35,8 +36,13 @@ export const ProductSchema = z
     primary_key: z.array(z.string()).optional(),
     aggregation_rule: z.string().optional(),
     closure: z.string().optional(),
+    /** A registry's path in the emissions repository (kind `registry`). */
+    source_path: z.string().optional(),
   })
   .passthrough();
+
+/** The `complete` family's zip: every catalogued file streamed with SHA256SUMS and FETCH.json inside; the archive itself carries no digest. */
+export const ArchiveSchema = z.object({ filename: z.string(), url: z.string(), members: z.number().optional(), note: z.string().optional() }).passthrough();
 
 export const FamilySchema = z
   .object({
@@ -45,6 +51,7 @@ export const FamilySchema = z
     description: z.string(),
     tables: z.array(z.string()),
     formats: z.array(z.string()),
+    archive: ArchiveSchema.nullable().optional(),
   })
   .passthrough();
 
@@ -59,6 +66,7 @@ export const ProductsSchema = z
   })
   .passthrough();
 
+export type ProductArchive = z.infer<typeof ArchiveSchema>;
 export type ProductFormat = z.infer<typeof ProductFormatSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ProductFamily = z.infer<typeof FamilySchema>;
@@ -88,6 +96,12 @@ export function familyProducts(products: Products | undefined, family: ProductFa
   if (!products) return [];
   const byName = new Map(products.products.map((p) => [p.name, p]));
   return family.tables.map((t) => byName.get(t)).filter((p): p is Product => !!p);
+}
+
+/** The family's products narrowed to the grid cubes, or to everything but them; the family's order is kept. */
+export function narrowProducts(products: Product[], only: "cubes" | "tables" | undefined): Product[] {
+  if (!only) return products;
+  return products.filter((p) => (only === "cubes" ? p.kind === "cube" : p.kind !== "cube"));
 }
 
 /** "7.4 MB" is a derived number; the API sends bytes, so a size is shown as the API's integer with its unit. */
