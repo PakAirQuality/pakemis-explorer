@@ -34,6 +34,13 @@ def by_name(listing):
     return {p["name"]: p for p in listing["products"]}
 
 
+REGISTRIES = ("emission_factors", "parameters", "national_uncertainty_parameters", "source_documents", "pakemis_source_register",
+              "public_documents", "temporal_profiles", "pakemis_temporal_profiles", "stream_grid_proxy", "stream_geometry",
+              "allowed_grid_fallbacks", "geometry_sets", "release_heights", "pakemis_grid_fallbacks", "validation_catalog",
+              "pakemis_validation_catalog", "pakemis_validation_scorecard", "pakemis_validation_sector_scorecard", "benchmarks",
+              "data_gaps", "pakemis_source_streams")
+
+
 def test_listing_shape(listing, contract):
     assert set(listing) == {"release", "version", "count", "products", "families", "note"}
     products = by_name(listing)
@@ -42,7 +49,8 @@ def test_listing_shape(listing, contract):
     assert len(tables) == 22
     assert {n for n, p in products.items() if p["kind"] == "cube"} == {"pakemis_grid_0p05_monthly", "pakemis_grid_0p05_monthly_survey"}
     assert {n for n, p in products.items() if p["kind"] == "metadata"} == {"semantic_release", "release_manifest"}
-    assert listing["count"] == 26 == len(listing["products"])
+    assert {n for n, p in products.items() if p["kind"] == "registry"} == set(REGISTRIES)
+    assert listing["count"] == 26 + 21 == len(listing["products"])
     for p in listing["products"]:
         for f in p["formats"]:
             assert set(f) == {"ext", "filename", "bytes", "sha256", "identity", "url"}
@@ -83,10 +91,10 @@ def test_cube_and_metadata_digests(listing, manifest, settings):
 
 def test_families(listing):
     fam = {f["id"]: f for f in listing["families"]}
-    assert list(fam) == ["annual", "monthly", "spatial", "uncertainty"]
+    assert list(fam) == ["annual", "monthly", "spatial", "uncertainty", "evidence", "complete"]
     names = set(by_name(listing))
     for f in fam.values():
-        assert set(f) == {"id", "title", "description", "tables", "formats"}
+        assert set(f) - {"archive"} == {"id", "title", "description", "tables", "formats"}
         assert set(f["tables"]) <= names and f["tables"]
     assert {"fact_annual", "fact_annual_calendar", "dim_gas", "dim_period", "dim_configuration"} <= set(fam["annual"]["tables"])
     assert all(t.startswith("dim_") for t in fam["annual"]["tables"] if t not in ("fact_annual", "fact_annual_calendar"))
@@ -152,3 +160,60 @@ def test_allowlist_is_the_listing(client, listing):
     assert set(catalog.files) == listed
     for filename, (path, sha256, _) in catalog.files.items():
         assert os.path.basename(path) == filename and os.path.isfile(path)
+
+
+# --- the registries, the evidence and complete families, the streamed archive -----------------
+
+def test_registry_entries_carry_fetch_identities(listing, manifest, settings, client):
+    products = by_name(listing)
+    with open(os.path.join(settings.release_dir, "FETCH.json"), encoding="utf-8") as handle:
+        fetch = json.load(handle)["files"]
+    sources = {s["path"]: s["sha256"] for s in manifest["sources"]}
+    for name in REGISTRIES:
+        p = products[name]
+        assert p["kind"] == "registry" and len(p["formats"]) == 1 and p["formats"][0]["ext"] == "csv"
+        rec = fetch["data/registries/%s.csv" % name]
+        assert p["formats"][0]["sha256"] == rec["sha256"] and p["formats"][0]["identity"] == rec["identity"] and p["source_path"] == rec["source_path"]
+    ef = products["emission_factors"]["formats"][0]
+    assert ef["identity"] == "manifest_sources" and ef["sha256"] == sources["data/emission_factors.csv"]
+    assert products["national_uncertainty_parameters"]["formats"][0]["identity"] == "fetch"
+    r = client.get(PREFIX + "/products/emission_factors.csv")
+    assert r.status_code == 200 and hashlib.sha256(r.content).hexdigest() == ef["sha256"] and r.headers["etag"] == '"%s"' % ef["sha256"]
+    assert r.text.startswith("ef_id,category,item,value,unit,uncert_pct,vintage,source,note")
+
+
+def test_evidence_and_complete_families(listing):
+    fam = {f["id"]: f for f in listing["families"]}
+    evidence = fam["evidence"]
+    assert evidence["tables"][:5] == ["fact_evidence", "dim_evidence_class", "dim_stream", "fact_completeness", "fact_completeness_mass"]
+    assert set(evidence["tables"][5:]) == set(REGISTRIES) and evidence["formats"] == ["csv", "parquet"]
+    complete = fam["complete"]
+    assert complete["tables"] == [p["name"] for p in listing["products"]] and len(complete["tables"]) == 47
+    assert complete["formats"] == ["csv", "parquet", "nc", "json", "zip"]
+    assert complete["archive"]["filename"] == "complete.zip" and complete["archive"]["url"].endswith(PREFIX + "/products/complete.zip")
+    assert complete["archive"]["members"] == len({f["filename"] for p in listing["products"] for f in p["formats"]}) + 2
+
+
+def test_complete_zip_streams_every_file_with_sums(client, listing, settings):
+    import io
+    import zipfile
+    r = client.get(PREFIX + "/products/complete.zip")
+    assert r.status_code == 200, r.text[:200]
+    assert r.headers["content-type"] == "application/zip"
+    assert r.headers["content-disposition"] == 'attachment; filename="pakemis_%s_complete.zip"' % settings.version
+    assert "etag" not in r.headers and r.headers["cache-control"] == "no-store"
+    zf = zipfile.ZipFile(io.BytesIO(r.content))
+    assert zf.testzip() is None
+    names = zf.namelist()
+    digests = {f["filename"]: f["sha256"] for p in listing["products"] for f in p["formats"]}
+    members = [n for n in names if n not in ("SHA256SUMS", "FETCH.json")]
+    assert len(members) == len(digests) and "SHA256SUMS" in names and "FETCH.json" in names
+    assert {os.path.basename(n) for n in members} == set(digests)
+    assert "outputs/semantic/fact_annual.csv" in names and "data/registries/emission_factors.csv" in names and "outputs/pakemis_grid_0p05_monthly.nc" in names
+    sums = dict(line.split("  ", 1)[::-1] for line in zf.read("SHA256SUMS").decode().splitlines())
+    assert set(sums) == set(members)
+    for arcname in members:
+        info = zf.getinfo(arcname)
+        assert info.compress_type == zipfile.ZIP_DEFLATED
+        assert hashlib.sha256(zf.read(arcname)).hexdigest() == sums[arcname] == digests[os.path.basename(arcname)], arcname
+    assert json.loads(zf.read("FETCH.json"))["version"] == settings.version

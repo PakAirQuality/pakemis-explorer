@@ -238,7 +238,7 @@ class Service:
         with open(os.path.join(settings.release_dir, "FETCH.json"), encoding="utf-8") as handle:
             self.fetch = json.load(handle)
         # the downloadable products: an allowlist built from the contract, the manifest and the verification
-        self.products = ProductCatalog(self.release, self.manifest, self.verification, settings.release_dir)
+        self.products = ProductCatalog(self.release, self.manifest, self.verification, settings.release_dir, self.fetch.get("files") or {})
         # the registry's sector column: /method/{sector} pre-filters the rows by it
         self.method_sectors = sorted({r["sector"] for r in self.method_rows if r.get("sector")})
         # the claim record's joins: the registries under data/registries and the fact tables in a
