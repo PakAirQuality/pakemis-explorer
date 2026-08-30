@@ -18,7 +18,8 @@ import { createSseParser, parseSse } from "./useAskStream";
 import { timelineOf } from "./timeline";
 import { STORE_PREFIX } from "./store";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+const pathname = vi.hoisted(() => ({ value: "/map" }));
+vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const RECEIPT = "8328128a5bd1eca6b1a29ad79cf6d910";
 const DISPLAY = "123.3050";
@@ -208,15 +209,50 @@ describe("AskDock", () => {
     expect(stored.turns[0].events.map((e: { name: string }) => e.name)).toEqual(EVENTS.map(([n]) => n));
     // usage and elapsed as received
     expect(screen.getByTestId("usage-line")).toHaveTextContent("in 400 · out 80 · ≈ $0.0031 · 4.213 s");
-    // "Show on map" maps the call's input to URL state through stateFromRequest
+    // "Show on map" maps the call's input to URL state through stateFromRequest (this is the Map page)
     fireEvent.click(within(cards[0]).getByTestId("show-on-map"));
     expect(setState).toHaveBeenLastCalledWith(expect.objectContaining({ level: "adm1", period: "FY2023-24", geo: "Punjab", sector: "agriculture" }));
+    // the "moved the map" chip links to /map with the action's state
+    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab&ask=1");
     // every decimal on screen is a string the stream carried
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const tokens: string[] = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
     expect(tokens.length).toBeGreaterThan(0);
     for (const t of tokens) expect([DISPLAY, SHORT, "0.0031", "4.213"]).toContain(t);
+  });
+
+  it("off the Map page, Show on map and the map chip are links to /map with the state, and ?q= seeds one send", async () => {
+    pathname.value = "/ask";
+    const fetchSpy = vi.fn(async () => sseResponse(sseBody(EVENTS)));
+    vi.stubGlobal("fetch", fetchSpy);
+    const onSeeded = vi.fn();
+    const value = ctx();
+    const { rerender } = render(
+      <Providers>
+        <ExplorerContext.Provider value={value}>
+          <AskDock seed="  What is Punjab's largest sector?  " onSeeded={onSeeded} />
+        </ExplorerContext.Provider>
+      </Providers>,
+    );
+    await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String((fetchSpy.mock.calls[0] as unknown as [string, RequestInit])[1].body)).message).toBe("What is Punjab's largest sector?");
+    expect(onSeeded).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("user-message")).toHaveTextContent("What is Punjab's largest sector?");
+    rerender(
+      <Providers>
+        <ExplorerContext.Provider value={value}>
+          <AskDock seed="What is Punjab's largest sector?" onSeeded={onSeeded} />
+        </ExplorerContext.Provider>
+      </Providers>,
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1); // sent once, never again
+    const link = within(screen.getAllByTestId("tool-card")[0]).getByTestId("show-on-map");
+    expect(link.tagName).toBe("A");
+    expect(link).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab&ask=1");
+    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/map?sector=agriculture&geo=Punjab&ask=1");
+    pathname.value = "/map";
   });
 
   it("restores a conversation from the c parameter and sends it as client_history", async () => {

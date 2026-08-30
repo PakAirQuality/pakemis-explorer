@@ -398,3 +398,89 @@ and 16d, 20, 20b, 21 added from the headless render.
 Not done: the Ask dock's tool card was not exercised against a live Gemini turn (its
 `display_short` path is covered by `ask.test`); `next build` again left the running dev server
 answering 500 until restarted (as recorded above).
+
+
+## The public Overview, the shared shell and the dark theme (2026-08-30)
+
+Three commits under `web/`, in the order a second agent could build on: the shell, the
+Overview, then `/ask` and the redirects.
+
+**Shell.** The release/contract bootstrap that `app/page.tsx` used to own is
+`components/shell/ExplorerProvider.tsx`, mounted in `layout.tsx` inside `NuqsAdapter` and
+`Providers`, so every route (and every test that wraps a page in it) has the one
+`ExplorerContext`; `body` scrolls again and the Map page sets its own `h-dvh overflow-hidden`.
+`TopNav` (the five sections, the current one by `usePathname` with the export's trailing slash
+tolerated, the green Ask PakEmis link or, given `onAsk`, the Map page's toggle, a slot for a
+page's controls, a menu under 768 px) and `CurrentView` (`currentViewWords`: period short
+label · place · configuration label · the GWP basis only when not the default · the LULUCF
+status · a chosen sector, gas, month; the IPCC sentence and the LULUCF note as the tooltip;
+"Change view" opens the ExplorePanel in a popover that Escape and an outside click close).
+The console moved to `/map` unchanged in substance; the rail's four tabs sit in the nav slot
+until the filter bar and drawer replace them. `/about` -> `/methods` and `/data` ->
+`/downloads` are client `router.replace` stubs that carry `?receipt=` and the hash; every
+internal link and `receiptHref` point at the new paths (a `links.test` case forbids the old
+ones outside the stubs). Deleted: `IconRail`, `SlidingPanel` stays (still used), the
+`WelcomeModal` and its test, the Ask hint; its copy went to `components/overview/copy.ts`,
+its hooks to `lib/queries.ts`, `figureUnitLine` to `lib/labels.ts`.
+
+**Theme.** `globals.css` is now semantic tokens with the dark values (`surface`, `surface-2`,
+`surface-3`, `fg`, `muted`, `line`, `line-strong`, the accent family `accent` #34d399 for text
+and links / `accent-bright` #4ade80 for the chart stroke / `accent-fill` #1f6f4a with
+`on-accent` white for filled buttons, `accent-soft`, `warn`, `refusal`, `amber`, `panel`, and
+the `map-outline` / `map-halo` / `map-hatch` colours drawn on the light basemap); `card`,
+`glass`, `micro`, `pill` and the new `map-frame` utilities are expressed in them, and the
+~135 literal `bg-white|text-white|bg-ink|bg-canvas|text-ink` sites were swept to tokens
+(`bg-ink text-white` -> `bg-fg text-surface`, `bg-accent text-white` ->
+`bg-accent-fill text-on-accent`). `lib/theme.ts` reads the CSS variables at render, with the
+token values as fallbacks for jsdom, so `TrendChart`, `BarChart` and `map/layers.ts` (outline,
+halo, hover, selection, the globe's space colour) follow the theme without a literal colour.
+The light `streets-v12` basemap stays inside the dark frame on purpose (the ramp and the
+raster colormap are calibrated on light). The sector hues were kept; industry's grey and
+railways' sienna are the two lowest-contrast fills on dark, still readable as bars.
+
+**Overview.** `/` renders the hero beside the Estimated national total card: the KPI as the
+server's `display_short` with `unit_short`, the contract `display` and `exact` in its title;
+the scope line in the release's words; "Uncertainty interval: approximately 407.28–533.73 Mt"
+from `get_uncertainty(scope="national")`'s `cross_sector` cell's `interval_short` (the
+coordinator's correction: the series envelope's `annual_level` cells bound the parametric
+total, not the KPI's scope), the scenario named by `scenario_label`, the draws' median
+`display_short` set beside the reference-estimate headline, both envelopes with Result
+details; the interval is shown only while the view is the release's own national scope. The
+question box goes to `/ask?q=`, its chips come from `useSuggestions("overview")`. "Where
+emissions come from" lists the five largest sectors (bars sized by `value`, labels
+`display_short`) and captions the top cell's `share_pct_short` ("Agriculture accounts for
+49.4% of the reference estimate."); without the field the caption carries no share, the browser
+computes none. Selecting a sector explains it from `get_evidence(module)` -> the first
+stream's `ipcc_category` -> `get_method` (notes, equation, tier) with the evidence classes of
+its streams and "Show on map" -> `/map?sector=…` — `/method/<sector>` returns no cell, so the
+route goes through the evidence table. "How emissions changed" is the TrendChart with "Nine
+fiscal years · reference estimate" counted from the dims. Then the three explainer cards,
+"Ready to go deeper?" and a footer naming the licences from `/release` and no version.
+
+**/ask.** The dock as a page at max-w-3xl; `?q=` is sent once as the first message (a ref
+guards the re-render, the parameter is cleared with a history replace); the "moved the map"
+chip and, off the Map page, a tool card's "Show on map" are links to `/map?…` built by
+`hrefForState` (the chrome keys travel too, so a map opened from an answer keeps `ask=1` and
+its conversation `c`).
+
+**Tests.** 110 green: `overview.test` (the KPI, the interval line and its scenario, the
+five sectors and the share caption, the no-share case, the sector explanation, the chips and
+the question box, the trend subtitle, and the four audits: every decimal is a server string,
+no "FY", no raw id, no avoid-list phrase), `TopNav.test`, `CurrentView.test`,
+`redirects.test`, the `ask.test` seed-and-links case; `smoke`, `links`, `noFY`, `methods`
+(was `about`) and `AskEntry` updated to the new routes. `next build` exports `/`, `/map/`,
+`/ask/`, `/methods/`, `/downloads/`, `/about/`, `/data/`; ESLint clean (the two pre-existing
+warnings). Browser (`?hidden=render`): the Overview dark with 452.35 Mt CO₂e, the interval
+line, the 49.4% caption, the trend and the agriculture explanation (34 streams, E2 and E3);
+`/map` the old screen, dark chrome around the light map; `/about` -> `/methods`; screenshots
+`30-overview.jpg` and `33-ask.jpg`. The live `/ask?q=` turn was not completed: the seed was
+sent once and `q` cleared, the API logged `POST /api/v1/emissions/ask 200` and then nothing
+for over 100 s (no tool call, no event reached the dock; `33-ask.jpg` shows the "sending…"
+state), so the answer path is covered by `ask.test`'s scripted stream only. `next build`
+again left the running dev server answering 500 on `/` until restarted.
+
+**Not achieved / for agent B.** The Map page keeps `panel` and `ask` (the drawer's `tab`
+retires them), the rail tabs in the nav slot, the Ask pill duplicated by the nav's button,
+and `SlidingPanel`; `/explore` is not built (its nav link 404s until then); `/methods` has
+the prose but not yet the `EvidenceBrowser`; the legend swatches keep a `border-fg/10` line
+that a darker read would raise to `/25`.

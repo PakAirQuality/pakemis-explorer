@@ -5,9 +5,11 @@
  * whose cites link back to the cards, an error card), then the UsageLine.
  */
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { inputChips } from "@/lib/labels";
+import { applyPatch, hrefForState, type ExplorerState } from "@/lib/urlState";
 import { AnswerBubble } from "./AnswerBubble";
 import { ThinkingCard } from "./ThinkingCard";
 import { ToolCard, type Highlight } from "./ToolCard";
@@ -35,13 +37,22 @@ export function errorTitle(code: string): string {
 
 const PHASE_TEXT: Record<string, string> = { model: "thinking…", tool: "querying…", correction: "rewriting the draft with placeholders…", tool_limit: "tool-call limit reached" };
 
+/** The URL state a map_action event names (its string fields are URL keys), applied over the current state. */
+export function stateOfAction(state: ExplorerState, action: MapActionEvent): ExplorerState {
+  const patch: Partial<ExplorerState> = {};
+  for (const [k, v] of Object.entries(action)) if (typeof v === "string" && v) (patch as Record<string, unknown>)[k] = v;
+  return applyPatch(state, patch);
+}
+
+/** "moved the map" links to /map with the action's state, so the chip opens the map from the /ask page too. */
 function MapActionChip({ action }: { action: MapActionEvent }) {
-  const { labels, dims } = useExplorer();
+  const { labels, dims, state, defaults } = useExplorer();
   const chips = inputChips(labels, dims, action);
+  const href = hrefForState(stateOfAction(state, action), defaults, "/map");
   return (
     <div className="flex flex-wrap items-center gap-1 text-xs text-muted" data-testid="map-action">
       <MapPin size={12} className="text-accent" />
-      <span>moved the map</span>
+      <Link href={href} className="text-accent hover:underline" data-testid="map-action-link">moved the map</Link>
       {chips.map((c) => (
         <span key={c.key} className="pill border border-line bg-surface px-2 py-px" title={`${c.key} = ${c.raw}`}>
           <span className="text-muted">{c.label}</span> {c.value}

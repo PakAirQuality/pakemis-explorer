@@ -1,9 +1,11 @@
 "use client";
 /**
- * The right column when `ask=1`: header (model, New conversation), the turns (ReasoningTimeline
- * each), the Composer. Disabled (no key: /release.agent.enabled false, or a 503 on send)
- * shows the DisabledCard with the API's reason and the contract's functions. `map_action`
- * events are applied to the URL state as they arrive; the conversation id is written to `c`.
+ * The Ask dock (the /ask page, and the Map page's right column when `ask=1`): header (model,
+ * New conversation), the turns (ReasoningTimeline each), the Composer. Disabled (no key:
+ * /release.agent.enabled false, or a 503 on send) shows the DisabledCard with the API's reason
+ * and the contract's functions. `map_action` events are applied to the URL state as they
+ * arrive; the conversation id is written to `c`. A `seed` (the page's `?q=`) is sent once as
+ * the first message, then `onSeeded` is called so the caller clears it.
  */
 import { useCallback, useEffect, useRef } from "react";
 import { RotateCcw } from "lucide-react";
@@ -22,7 +24,7 @@ export function uiStateOf(s: ExplorerState): Record<string, unknown> {
   return out;
 }
 
-export function AskDock() {
+export function AskDock({ seed = null, onSeeded }: { seed?: string | null; onSeeded?: () => void } = {}) {
   const { state, setState, release, agent } = useExplorer();
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -45,6 +47,17 @@ export function AskDock() {
   const fns = (release.query_contract.functions as string[] | undefined) ?? [];
   const rule = (release.query_contract.placeholder_rule as string | undefined) ?? "";
   const disabled = ask.disabled ? ask.disabled.reason : !agent.enabled ? agent.reason : null;
+  // the seeded question: sent once, on the first render that can send it
+  const seeded = useRef(false);
+  const sendRef = useRef(ask.send);
+  sendRef.current = ask.send;
+  useEffect(() => {
+    const text = seed?.trim();
+    if (!text || seeded.current || disabled !== null || ask.streaming) return;
+    seeded.current = true;
+    sendRef.current(text);
+    onSeeded?.();
+  }, [seed, disabled, ask.streaming, onSeeded]);
   const reset = () => {
     ask.reset();
     setState({ c: null }, { history: "replace" });

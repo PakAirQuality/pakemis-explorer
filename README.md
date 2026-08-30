@@ -51,26 +51,56 @@ tiles/build_tiles.py    ADM1, ADM2 and 0.05 degree grid PMTiles keyed by name / 
                         bboxes.json; --raster: visual-only shading PNGs of the two grid cubes; all
                         written into data/releases/<v>/tiles/, where the API serves them from
 web/                    Next.js 15 + TypeScript, a static export (next.config.ts: output
-                        "export"), map-first: one screen (/) whose state lives in the URL
-                        (lib/urlState.ts), request bodies as pure functions of it
-                        (lib/requests.ts), Mapbox GL JS v3 choropleth painted through
-                        feature-state (components/map; the tiles reach it as TileJSON from the
-                        API's /tiles routes), detail card and rail panels (components/detail,
-                        components/panels), the Ask dock (components/ask), /data (receipt replay
-                        at /data?receipt=<hash>, downloads, digests, evidence browser), /about
+                        "export"): the public Overview (/, components/overview), the Map page
+                        (/map: the Mapbox GL JS v3 choropleth painted through feature-state,
+                        components/map; the tiles reach it as TileJSON from the API's /tiles
+                        routes; detail card and panels, components/detail, components/panels),
+                        Ask PakEmis (/ask, components/ask), Methods & evidence (/methods) and
+                        Downloads (/downloads: receipt replay at /downloads?receipt=<hash>,
+                        downloads, digests, evidence browser); /about and /data redirect there.
+                        Every page reads one URL state (lib/urlState.ts) through the shared
+                        ExplorerProvider (components/shell); request bodies are pure functions
+                        of it (lib/requests.ts); the dark theme is globals.css tokens read by
+                        lib/theme.ts for the charts and the map layers
 firebase.json           Firebase Hosting for web/out: the rewrite /api/v1/emissions/** -> Cloud Run
                         service `pakemis`; .firebaserc names the project and the `pakemis` target
 ```
 
-## The screen
+## The pages (2026-08-30)
 
-`/` is one map-first screen: a 48 px rail (Explore, Inventory, Compare, Evidence, Data, Ask),
-a sliding 370 px panel, the full-bleed map with floating scope chips, the Ask PakEmis pill,
-raster / 3D / frame buttons, time rail, legend and context pill, a detail card that slides in
-over the map's right edge, and a right column that is the national context panel or, with
-`ask=1`, the Ask dock. Every control reads and writes the URL (`level`, `period`, `month`,
-`sector`, `gas`, `config`, `gwp`, `view`, `geo`, `cell`, `panel`, `ask`, `c`, `cam`, `raster`,
-`view3d`), so a copied URL opens with identical receipts.
+Every page carries the `TopNav` (Overview, Explore data, Map, Methods & evidence, Downloads,
+the green Ask PakEmis button) and, where numbers are shown, the `CurrentView` bar ("Current
+view: 2023–24 · Pakistan · Reference estimate · excludes land use and forestry", the IPCC basis
+and the LULUCF note as its tooltip; "Change view" opens the Explore controls, which write the
+same URL state). The theme is dark (`globals.css` semantic tokens; the charts and the Mapbox
+outline colours read them through `lib/theme.ts`); the map keeps the light `streets-v12`
+basemap inside a framed dark container because the choropleth ramp and the raster colormap
+are calibrated on light.
+
+`/` is the public Overview: the hero beside the Estimated national total card (the KPI as the
+server's `display_short` with `unit_short`; "Uncertainty interval: approximately
+407.28–533.73 Mt" is `get_uncertainty(scope="national")`'s `cross_sector` cell's
+`interval_short`, the scenario named by its `scenario_label`, the draws' median set beside the
+reference-estimate headline, each envelope with its Result details; the interval is shown only
+while the view is the release's own national scope), the question box (to `/ask?q=`; three
+chips from `useSuggestions("overview")`), "Where emissions come from" (the five largest
+sectors, bars sized by `value`, labelled with `display_short`; the caption reads the top
+cell's `share_pct_short`, a server field, and carries no share when the server sends none;
+selecting a sector explains it from `get_evidence` -> `ipcc_category` -> `get_method`, with
+its evidence classes and a link to the Map filtered to it), "How emissions changed" (the
+national series as the TrendChart), three explainer cards, "Ready to go deeper?" and a footer
+with the licences and no version.
+
+`/map` is the console: the framed map with floating scope chips, the Ask pill, raster / 3D /
+frame buttons, time rail, legend and context pill, the detail card over the map's right edge,
+and a right column that is the national context panel or, with `ask=1`, the Ask dock. Every
+control reads and writes the URL (`level`, `period`, `month`, `sector`, `gas`, `config`,
+`gwp`, `view`, `geo`, `cell`, `panel`, `ask`, `c`, `cam`, `raster`, `view3d`), so a copied URL
+opens with identical receipts. `/ask` is the dock as a page (`?q=` seeds one question and is
+then cleared; "moved the map" and a tool card's "Show on map" link to `/map?…`). `/methods`
+carries the methodology prose; `/downloads` replays receipts and lists the release identity
+(the one place the version is printed). There is no first-visit modal: the Overview is the
+introduction.
 
 The map is hawanama.org's: Mapbox GL JS v3 rendering `mapbox://styles/mapbox/streets-v12`
 with hawanama's flags (maxPitch 45, no drag-rotate, no world copies) and v3's default globe
@@ -80,21 +110,6 @@ layers. The 3D button (`view3d=1`) applies the ops dashboard's recipe: `mapbox-d
 (exaggeration 1.5 tapering to 1.0), fog, pitch 30, bearing -10, with the choropleth draped. Spatial products exist for FY2023-24 only: other years drive national numbers and
 show the typed refusal in the legend's place.
 
-First visit: a four-screen explainer (`WelcomeModal`, a product hero rather than
-documentation: what is this, what can I explore, why should I trust it, what makes this open)
-opens over the screen until it is dismissed (`localStorage['pakemis.intro.dismissed']`), and
-re-opens from the "?" on the rail's brand square or from `/about`, which carries the
-methodology prose (what "emissions data" means here, how to read the map, the territories'
-sector coverage, the licences, a vocabulary note). The explainer's visual is the national
-timeseries envelope drawn as an area chart (values size the shape; only the first and last
-points are labelled, with their `display` strings); the one number in its copy, from the third
-screen on, is the national total's `display` printed whole with the integer part large and the
-fraction lighter (typography, never rounding), with a "View source" that opens the envelope's
-evidence drawer; the facts row is words ("Nine fiscal years", counted from the dims). Tests
-assert screen 1 carries no version, receipt, GWP or configuration string, that every decimal
-on any screen is an envelope display, and that no phrase from the manuscript's "avoid" list
-appears.
-
 The territories at province level: the release's ADM1 table has one row without a polygon
 (`has_polygon: no`, named `Other`) while the boundary file draws Gilgit-Baltistan, Azad
 Kashmir and Islamabad Capital Territory separately. `src/lib/geography.ts` derives the
@@ -102,7 +117,7 @@ members (the drawn ADM1 polygons no province row claims; nothing is hard-coded),
 paints the row's one cell on each member verbatim with a dotted outline (feature-state
 `shared`, `shared_with`), the hover and legend say the cell is shared, and clicking a member
 selects `geo=Other`, the release's own id, which the detail card and the API answer as one
-unit. Coverage of the three differs by sector; `/about` says how.
+unit. Coverage of the three differs by sector; `/methods` says how.
 
 ## Fetch and verify a release
 
@@ -146,8 +161,9 @@ docker compose up   # api (:8080, the Cloud Run image with the release mounted r
 ### Deploying the web app
 
 The web app is a static export: `cd web && npm run export` (the same as `npm run build`) writes
-`web/out/` with `/`, `/data/`, `/about/` and `404.html`; there are no server routes, so a
-receipt's URL is `/data?receipt=<hash>`. Build it with the production base baked in, then
+`web/out/` with `/`, `/map/`, `/ask/`, `/methods/`, `/downloads/`, the `/about/` and `/data/`
+redirect stubs and `404.html`; there are no server routes, so a receipt's URL is
+`/downloads?receipt=<hash>`. Build it with the production base baked in, then
 deploy the `pakemis` Firebase Hosting target from the repository root:
 
 ```
@@ -383,8 +399,8 @@ Licences: code MIT; data and text CC-BY-4.0; OSM-derived tables ODbL (see the re
   coordinate the envelope returned), and in the dock a stream's `display`/`unit` or a `<cite>`;
   `DetailCard.test.tsx` and `ask.test.tsx` walk every text node for decimals.
 - Every request body is a pure function of the URL state (`src/lib/requests.ts`), so the same
-  URL yields the same receipts; `stateFromRequest` is the inverse (`/data?receipt=` and the
-  dock's "Show on map"). `src/lib/urlState.test.tsx` round-trips it.
+  URL yields the same receipts; `stateFromRequest` is the inverse (`/downloads?receipt=` and
+  the dock's "Show on map"). `src/lib/urlState.test.tsx` round-trips it.
 - Labels come from `/v1/release.labels` and the dims; the enumerations (AR5 | AR6, views,
   levels) from `openapi.json` field descriptions; nothing is a hard-coded list.
 - The legend's five labels are real cells' displays at ranks 0, n/4, n/2, 3n/4, n-1 (no
@@ -400,4 +416,5 @@ first screen and `16b-welcome-3.jpg` its third, with the number and "View source
 `19-static-export.jpg` the static export (`web/out`, served by a plain file server) reading every
 tile, raster and envelope from the API at `/api/v1/emissions`;
 `17-other-territories.jpg` the hover on Gilgit-Baltistan showing the shared `Other` cell and
-`17b-other-card.jpg` its detail card; `18-about.jpg` the `/about` page).
+`17b-other-card.jpg` its detail card; `18-about.jpg` the `/about` page, now `/methods`;
+`30-overview.jpg` the public Overview and `33-ask.jpg` the `/ask` page, both dark).
