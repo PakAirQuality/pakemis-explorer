@@ -10,10 +10,15 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { districtName, geographyName, periodShort, sectorLabel } from "@/lib/labels";
 import { subscribeMapPick, type MapPick } from "./mentions";
 
-export function useSuggestions(): string[] {
+/**
+ * Suggested questions worded from the URL state and the release's labels. The dock's list
+ * names the period and the place; the Overview's three chips (the mockup's) name the place.
+ */
+export function useSuggestions(variant: "dock" | "overview" = "dock"): string[] {
   const { state, labels, dims } = useExplorer();
   const period = periodShort(labels, state.period);
   const place = state.geo ? (state.level === "adm2" ? districtName(dims, state.geo) : geographyName(labels, state.geo)) : "Pakistan";
+  if (variant === "overview") return [`What is ${place}'s largest source?`, "Have emissions increased?", "How certain is this estimate?"];
   const out = [`What is ${place}'s largest sector in ${period}?`, "How uncertain is the national total?", "Which categories are not estimated?"];
   if (state.sector) out.push(`How has ${sectorLabel(labels, state.sector)} changed across the nine years?`);
   else out.push(`Compare the survey and reference configurations for ${period}.`);
