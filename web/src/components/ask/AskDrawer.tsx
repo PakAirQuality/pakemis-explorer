@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useExplorer } from "@/components/ExplorerContext";
 import { isActive } from "@/components/shell/TopNav";
-import { subscribeAsk, type AskRequest } from "@/lib/askBus";
+import { closeAsk, subscribeAsk, type AskRequest } from "@/lib/askBus";
 import { AskDock } from "./AskDock";
 
 export const DRAWER_WIDTH = 440;
@@ -38,7 +38,7 @@ export function AskDrawer() {
   );
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeAsk();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
@@ -52,7 +52,7 @@ export function AskDrawer() {
       data-testid="ask-drawer"
       data-open={open ? "1" : "0"}
     >
-      <AskDock variant="drawer" onClose={() => setOpen(false)} seed={request?.req.question ?? null} seedScope={request?.req.scope ?? null} seedKey={request?.key ?? 0} />
+      <AskDock variant="drawer" onClose={() => closeAsk()} seed={request?.req.question ?? null} seedScope={request?.req.scope ?? null} seedKey={request?.key ?? 0} />
     </aside>
   );
 }

@@ -648,3 +648,23 @@ substitution is dead code); the citation string's missing space. Left in the exp
 Result details Sources tab still prints the uncertainty and completeness blocks as raw JSON;
 the compare envelope's difference cell has no claim record (the left/right sub-cells are not
 followed); the mobile bottom sheets are covered by code paths only.
+
+
+## The PAQI house style: loading screen, logo and palette (2026-08-30)
+
+The user asked for the loading screen, the logo and the colours of https://emissions.web.app/
+(their Transport Emissions app). No source exists locally; the screen was read from the deployed
+app in the browser: the overlay (`fixed inset-0`, `#f8f9fa`, a pointer-reactive particle canvas,
+the logo at `h-20` floating with a drop-shadow, title and subtitle with `fadeSlideUp`, a 256×4
+bar filled `#94a3b8 → #64748b`, a rotating status line, a 700 ms fade), the logo (`/logo.png`,
+755×330 RGBA, gold `#ffbb12`), the CSS variables (`--foreground #030213`, `--muted-foreground
+#717182`, `--border rgba(0,0,0,.1)`, `--radius .625rem`), the blue-600 chat FAB, the 8 % icon
+tints, the YlOrRd choropleth and the white glass pills.
+
+Two agents on disjoint files: L (loading screen with real bootstrap stages, logo in the nav /
+header / footer, the Ask FAB, favicon; commits 6706a26, f347f65, f839713, fc96db6) and P (the
+tokens, `lib/theme.ts`, the light Map chrome, the YlOrRd ramp and the gradient legend bar).
+One deliberate deviation from the plan: `LoadingScreen` mounts *before* `ExplorerProvider`,
+because the provider's children do not render until `/release` resolves and the overlay must
+cover that stretch. The status lines are number-free by rule — their app hard-codes fleet
+figures; ours prints numbers only as release strings.

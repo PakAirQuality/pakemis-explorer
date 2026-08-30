@@ -81,6 +81,28 @@ and the utilities `card`, `widget-title`, `note`, `caption`, `toolbar-icon`; the
 Mapbox outline colours read the tokens through `lib/theme.ts`. Page containers sit at the
 analytical width `max-w-[1500px]`; the Map page stays full-bleed.
 
+**House style (2026-08-30, from emissions.web.app).** The Explorer carries the Pakistan Air
+Quality Initiative look of the user's Transport Emissions app, read from the deployed site
+(nothing of its source exists locally): the PAQI logo (`web/public/brand/paqi-logo.png`, the
+"Pakistan Air Quality Initiative" wordmark with the golden Urdu mark; origin and sha256 in
+`public/brand/README.md`) in the nav at `h-8`, above the Overview eyebrow at `h-10`, in the
+footer at `h-6` and on the loading screen at `h-20`; the favicon (`public/favicon.svg`,
+`app/icon.svg`) copied from the same site; the palette — ground `#f9fafb`, cards white, text
+`#030213`, muted `#717182`, hairlines `#e5e7eb`, the one accent blue `#2563eb`, a `brand-gold`
+`#ffbb12` for the active nav underline only, radius 0.625rem, white glass pills
+(`bg-white/90 backdrop-blur shadow-md border border-gray-200/50`) over the map, the system font
+stack; the YlOrRd choropleth ramp (`#ffffcc` → `#800026`) for the magnitude layer with a
+"Low ▬▬ High" gradient bar above the class list (the class breaks stay the server's strings);
+and the round blue Ask FAB bottom-right on every page (`components/shell/AskFab.tsx`, toggles
+the drawer). **The loading screen** (`components/shell/LoadingScreen.tsx`) is the app's:
+a `#f8f9fa` overlay with a drifting particle canvas, the floating logo, "PakEmis" over
+"Pakistan Air Quality Initiative", a 256×4 progress bar and a rotating status line — but the
+progress is real (`components/shell/bootstrap.ts`: `/release` resolved 35 %, labels 60 %, the
+page's first envelope 85 %, the map's `load` 100 % on `/` and `/map`; a 6 s ceiling, a 900 ms
+minimum, a 700 ms fade), it shows once per session (`sessionStorage`; `?loading=1` forces it,
+`&stage=<name>` holds it for captures), and its eight lines (`loadingLines.ts`) carry no digit,
+because a number on this site is a string the release returned.
+
 `/` is the public Overview as a country briefing (2026-08-30, in the manner of Global Nature
 Watch's country pages): two columns, the briefing left (58 %) and a sticky map right (42 %;
 under 1024 px the map is a widget after the opening block). Left, top to bottom: the header
