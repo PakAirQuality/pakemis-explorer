@@ -33,7 +33,7 @@ export function addSources(map: MBMap) {
   for (const name of ["adm1", "adm2", "grid"] as const) if (!map.getSource(name)) map.addSource(name, { type: "vector", url: tileJsonUrl(name), promoteId: KEYS[name] });
 }
 
-/** The id of the style's first symbol layer (labels), or undefined when the style has none. */
+/** The id of the style's first symbol layer (labels; light-v11's first is a road label), or undefined when the style has none (our layers then go on top). */
 export function firstSymbolLayerId(map: MBMap): string | undefined {
   return map.getStyle()?.layers?.find((l) => l.type === "symbol")?.id;
 }
@@ -58,6 +58,20 @@ export function hatchImage(): ImageData {
 
 const NO_FILL_COLOR = NO_CELL;
 
+/** The default choropleth opacity, in percent (the console's fixed value; the briefing's Opacity slider starts at 80). */
+export const FILL_OPACITY_PCT = 82;
+
+/** The choropleth's fill-opacity for an opacity in percent (0–100): the value, a touch stronger under the hover. A display setting, not a data number. */
+export function fillOpacity(pct: number) {
+  const base = Math.min(100, Math.max(0, pct)) / 100;
+  return ["case", ["boolean", ["feature-state", "hover"], false], Math.min(1, base + 0.13), base] as unknown as number;
+}
+
+/** Apply an opacity (percent) to the province and district fills, whichever are mounted. */
+export function setFillOpacity(map: MBMap, pct: number) {
+  for (const id of ["adm1-fill", "adm2-fill"]) if (map.getLayer(id)) map.setPaintProperty(id, "fill-opacity", fillOpacity(pct));
+}
+
 /** The outline, halo, hover and selection colours come from the theme's `map-*` tokens (drawn on the light basemap). */
 export function layerSpecs(): LayerSpecification[] {
   const hoverW = (base: number, hover: number) => ["case", ["boolean", ["feature-state", "hover"], false], hover, base] as unknown as number;
@@ -67,9 +81,9 @@ export function layerSpecs(): LayerSpecification[] {
     { id: "grid-line", type: "line", source: "grid", "source-layer": "grid", minzoom: 8, paint: { "line-color": t.outline, "line-opacity": 0.18, "line-width": 0.5 } },
     { id: "grid-hover", type: "line", source: "grid", "source-layer": "grid", minzoom: 6, paint: { "line-color": t.hover, "line-width": hoverW(0, 1.5) } },
     { id: "grid-selected", type: "line", source: "grid", "source-layer": "grid", minzoom: 5, filter: ["==", ["get", "cell_id"], ""], paint: { "line-color": t.selected, "line-width": 2.5 } },
-    { id: "adm2-fill", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.95, 0.82] } },
+    { id: "adm2-fill", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": fillOpacity(FILL_OPACITY_PCT) } },
     { id: "adm2-hatch", type: "fill", source: "adm2", "source-layer": "adm2", paint: { "fill-pattern": HATCH_IMAGE, "fill-opacity": ["case", ["boolean", ["feature-state", "hatch"], false], 1, 0] } },
-    { id: "adm1-fill", type: "fill", source: "adm1", "source-layer": "adm1", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.95, 0.82] } },
+    { id: "adm1-fill", type: "fill", source: "adm1", "source-layer": "adm1", paint: { "fill-color": NO_FILL_COLOR, "fill-opacity": fillOpacity(FILL_OPACITY_PCT) } },
     { id: "adm2-line", type: "line", source: "adm2", "source-layer": "adm2", paint: { "line-color": t.halo, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.3, 8, 0.9] } },
     { id: "adm1-line", type: "line", source: "adm1", "source-layer": "adm1", paint: { "line-color": t.outline, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 8, 1.6], "line-opacity": 0.7 } },
     // the dotted outline of the polygons sharing the residual unit's one cell (feature-state `shared`, paint.ts)
@@ -153,9 +167,13 @@ export function atmosphere() {
   return { range: [0.5, 10] as [number, number], color: "#ffffff", "high-color": "#b8d4e8", "space-color": mapTheme().space, "horizon-blend": 0.08, "star-intensity": 0 };
 }
 
-/** streets-v12 declares no fog, so v3's globe would show a bare edge; the atmosphere is set once unless the style has its own. */
+/** A style without fog (streets-v12 had none; light-v11 may carry its own) would show v3's globe with a bare edge: the atmosphere is set once unless the style has one, and a style that cannot take fog is left alone. */
 export function ensureAtmosphere(map: MBMap) {
-  if (!map.getFog()) map.setFog(atmosphere());
+  try {
+    if (!map.getFog()) map.setFog(atmosphere());
+  } catch {
+    /* the style has no fog slot: the globe keeps the style's own edge */
+  }
 }
 
 /** The ops dashboard's 3D recipe: Mapbox terrain, the atmosphere and a tilted camera; off keeps the atmosphere. */

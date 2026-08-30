@@ -2,7 +2,7 @@
 /**
  * Map allocated emissions (2026-08-30): the allocation map in the house style. The page is
  * light like every other (the dark chrome of the first build is gone): white glass panels
- * (globals.css `glass`) around the light streets-v12 map: [TopNav compact] · [FilterPanel 300 |
+ * (globals.css `glass`) around the light-v11 map: [TopNav compact] · [FilterPanel 300 |
  * rail 48] [the full-width map with the layer switch, its legend and the TimelineBar beneath]
  * [SelectionDrawer 420]. Under
  * 768 px the filters are a sheet and the drawer a bottom sheet. Everything reads one URL state

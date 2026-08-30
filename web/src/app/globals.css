@@ -10,7 +10,7 @@
  * their near-black with a blue cast, `muted` their muted foreground, `line` their rgba(0,0,0,.1)
  * on white, `accent` blue-600 (hover blue-700), `accent-soft` blue at 8 %, and `brand-gold` the
  * logo's gold, used sparingly (the active nav underline, a small tick). The map's light
- * streets-v12 basemap sits in a 1 px frame; the outline / halo / hover / selected colours drawn
+ * basemap (Mapbox light-v11: grey land, white water) sits in a 1 px frame; the outline / halo / hover / selected colours drawn
  * ON the basemap are the `map-*` tokens (dark slate, legible on the YlOrRd ramp), read at layer
  * construction (lib/theme.ts). lib/theme.ts's FALLBACK mirrors every value here; theme.test.ts
  * holds the two in step.
