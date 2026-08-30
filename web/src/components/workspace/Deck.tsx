@@ -33,7 +33,7 @@ import { releaseCitation, releaseFacts } from "@/lib/release";
 import { BrandLogo } from "@/components/shell/BrandLogo";
 import { HeaderBlock } from "@/components/overview/HeaderBlock";
 import { DeckControls } from "@/components/overview/DeckControls";
-import { FOOTER, HEADER, INDEPENDENT_LINE } from "@/components/overview/copy";
+import { HEADER, INDEPENDENT_SHORT, licenceLine } from "@/components/overview/copy";
 import { DECK_CARD } from "@/components/overview/deck";
 import { ScopeChips } from "./ScopeChips";
 import { cardsFor, scopeOf, type CardId } from "./cards";
@@ -142,33 +142,15 @@ export function DeckRail({ onExpand }: { onExpand: () => void }) {
   );
 }
 
-/** The deck's last card: the brand, the release's licences, the independence line and the four links. */
+/** The deck's last card, compact: the release's licences in one line, and what this is not. */
 function DeckFooter(): ReactNode {
   const { release } = useExplorer();
-  const facts = releaseFacts(release);
-  const citation = releaseCitation(release);
-  const licences = [facts.licences.data_and_text ? `Data and text ${facts.licences.data_and_text}` : "", facts.licences.code ? `code ${facts.licences.code}` : "", facts.licences.odbl_carveouts.length ? "OSM-derived tables ODbL" : ""].filter(Boolean).join(" · ");
+  const licences = licenceLine(releaseFacts(release).licences);
   return (
-    <footer className="pointer-events-auto shrink-0 rounded-2xl bg-white/90 p-4 text-xs text-muted shadow-md" data-testid="footer">
-      <div className="flex flex-col gap-2">
-        <span className="flex shrink-0 items-center gap-2 text-fg" data-testid="footer-brand">
-          <BrandLogo className="h-6 object-contain" />
-          {FOOTER.product}
-        </span>
-        <span>
-          {licences || "Licences as the release states them"}. {INDEPENDENT_LINE}
-        </span>
-        <span className="flex flex-wrap gap-4">
-          {citation?.repository && (
-            <a href={citation.repository} className="hover:text-fg" data-testid="footer-repository">
-              {FOOTER.repository}
-            </a>
-          )}
-          <Link href="/methods" className="hover:text-fg">{FOOTER.methods}</Link>
-          <Link href="/downloads" className="hover:text-fg">{FOOTER.downloads}</Link>
-          <a href={api.docsUrl()} className="hover:text-fg">{FOOTER.api}</a>
-        </span>
-      </div>
+    <footer className="pointer-events-auto shrink-0 rounded-2xl bg-white/90 px-4 py-3 text-xs text-muted shadow-md" data-testid="footer">
+      <div data-testid="footer-licences">{licences || "Licences as the release states them"}</div>
+      <div className="mt-1">{INDEPENDENT_SHORT}</div>
     </footer>
   );
 }
+

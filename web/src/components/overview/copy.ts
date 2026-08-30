@@ -65,6 +65,8 @@ export const DECK = {
 
 /** The muted line under the opening statement, and the footer's. */
 export const INDEPENDENT_LINE = "This is an independent public-data reconstruction, not an official inventory; every figure carries its method, evidence grade and source.";
+/** The same claim in one clause, for the compact footer. */
+export const INDEPENDENT_SHORT = "An independent public-data reconstruction, not an official inventory.";
 
 /**
  * The insight cards' titles. The default is the card's own; a scope that reads better with its
@@ -144,3 +146,12 @@ export const LINKS = {
 } as const;
 
 export const FOOTER = { product: "A Pakistan Air Quality Initiative product", repository: "Repository", methods: "Methods & evidence", downloads: "Downloads", api: "API" } as const;
+
+/**
+ * The deck's footer in one line, from the release's own licence fields: "Data/text CC-BY-4.0 ·
+ * code MIT · OSM data ODbL". The identifiers are the release's strings, never hard-coded here,
+ * so a release that changes a licence changes this line.
+ */
+export function licenceLine(l: { data_and_text: string; code: string; odbl_carveouts: readonly unknown[] }): string {
+  return [l.data_and_text ? `Data/text ${l.data_and_text}` : "", l.code ? `code ${l.code}` : "", l.odbl_carveouts.length ? "OSM data ODbL" : ""].filter(Boolean).join(" · ");
+}

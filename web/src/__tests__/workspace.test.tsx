@@ -185,11 +185,10 @@ describe("the workspace frame", () => {
     for (const id of ["map-zoom-in", "map-zoom-out", "map-locate", "map-fullscreen"]) expect(within(buttons).getByTestId(id).className, id).toContain("glass");
     expect(screen.getByTestId("map-settings-button")).toHaveTextContent("Map settings");
     expect(screen.queryByTestId("map-settings-panel")).toBeNull();
-    // one logo in the nav and one in the deck's footer card
+    // the brand mark appears once, in the nav: the footer is the compact licence line alone
     const logos = screen.getAllByTestId("brand-logo");
-    expect(logos).toHaveLength(2);
+    expect(logos).toHaveLength(1);
     expect(nav).toContainElement(logos[0]);
-    expect(screen.getByTestId("footer")).toContainElement(logos[1]);
   });
   it("the map's padding is the chrome's own widths, and collapsing a panel re-computes it", async () => {
     mount();
@@ -376,7 +375,9 @@ describe("the workspace's audits", () => {
       expect(el.getAttribute("title") ?? "").not.toContain("FY");
       expect(el.getAttribute("title") ?? "").not.toContain("1.0.0rc");
     }
-    expect(screen.getByTestId("footer")).toHaveTextContent("Data and text CC-BY-4.0 · code MIT · OSM-derived tables ODbL");
-    expect(screen.getByTestId("footer-repository")).toHaveAttribute("href", "https://github.com/example/pakemis");
+    // the footer is two short lines: the release's own licence identifiers, and what this is not
+    expect(screen.getByTestId("footer-licences")).toHaveTextContent("Data/text CC-BY-4.0 · code MIT · OSM data ODbL");
+    expect(screen.getByTestId("footer")).toHaveTextContent("An independent public-data reconstruction, not an official inventory.");
+    expect(screen.queryByTestId("footer-repository")).toBeNull();
   });
 });
