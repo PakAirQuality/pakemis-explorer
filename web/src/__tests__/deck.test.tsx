@@ -391,18 +391,12 @@ describe("the deck's audits", () => {
 });
 
 describe("every card keeps the deck's affordances", () => {
-  it("the switch, Result details, the CSV, the permalink and the claim record", async () => {
+  it("a card's header is its title and the switch alone: the toolbar icons were removed", async () => {
     set();
     await ready();
     for (const id of ["snapshot", "sectors", "trend", "places"]) {
       expect(screen.getByTestId(`card-${id}-switch`), id).toHaveAttribute("role", "switch");
-      expect(screen.getByTestId(`card-${id}-info`), id).toBeInTheDocument();
-      expect(screen.getByTestId(`card-${id}-download`), id).toBeInTheDocument();
-      expect(screen.getByTestId(`card-${id}-share`), id).toBeInTheDocument();
-      expect(screen.getByTestId(`card-${id}-claim`), id).toBeInTheDocument();
+      for (const tool of ["info", "download", "share", "claim"]) expect(screen.queryByTestId(`card-${id}-${tool}`), `${id}-${tool}`).toBeNull();
     }
-    // the claim record is the envelope drawer at its Evidence tab
-    fireEvent.click(screen.getByTestId("card-snapshot-claim"));
-    expect(await screen.findByTestId("drawer-evidence")).toBeInTheDocument();
   });
 });

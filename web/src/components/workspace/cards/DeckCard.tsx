@@ -1,12 +1,12 @@
 "use client";
 /**
  * The chrome every insight card wears: the deck's white rounded card (overview/deck.ts
- * `DECK_CARD`) around `ui/Widget`, so a card keeps the four affordances the rest of the
- * interface has — the info icon opens **Result details** on the card's own envelope, the
- * download icon fetches that result's canonical CSV, the share icon copies the permalink, and
- * the switch collapses the card to its header row. Before those, a card that shows a value
- * carries one more: **Claim record**, which opens the same drawer at its Evidence tab, where the
- * cell's claim — its method, its evidence grade and its sources — is answered by the server.
+ * `DECK_CARD`) around `ui/Widget`, with the toolbar off — a card's header is its title and the
+ * switch that collapses it, and nothing else. (The icon row that stood there, Claim record ·
+ * Result details · Download · Share, was removed on 2026-08-31: four small buttons on every
+ * card read as noise beside the numbers. The same result is reachable from Methods' claim-record
+ * browser and from the Data page's Evidence action; `useEnvelopeDrawer` stays mounted here so a
+ * card can open one again when something asks it to.)
  *
  * A card renders nothing of its own while its envelope is loading or refused: `Pending` shows the
  * release's typed refusal by name, never a blank or a guess. Every figure a card prints is a
@@ -15,15 +15,13 @@
  * derived itself.
  */
 import type { ReactNode } from "react";
-import { ScrollText } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
 import { magnitudeOf } from "@/lib/uncertainty";
-import { Widget, ICON_BUTTON } from "@/components/ui/Widget";
+import { Widget } from "@/components/ui/Widget";
 import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { DECK_CARD } from "@/components/overview/deck";
-import { LINKS } from "@/components/overview/copy";
 
 export type Query = { data?: Envelope; error?: unknown; isLoading?: boolean };
 
@@ -56,13 +54,7 @@ export function DeckCard({ id, title, env, sentence, note, caption, open, onTogg
         title={title}
         env={env}
         labels={labels}
-        tools={
-          env ? (
-            <button type="button" onClick={() => drawer.open(env, "evidence")} className={ICON_BUTTON} aria-label={LINKS.claim} title={LINKS.claim} data-testid={`${testId}-claim`}>
-              <ScrollText size={14} aria-hidden="true" />
-            </button>
-          ) : null
-        }
+        toolbar={false}
         sentence={sentence}
         note={note}
         caption={caption}

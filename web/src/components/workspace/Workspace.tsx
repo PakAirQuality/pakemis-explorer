@@ -44,21 +44,24 @@ import { FILTERS, MAP_BUTTONS } from "./copy";
 
 /** The gap the deck keeps from the map's own chrome, and the chrome above and below it. */
 export const DECK_GAP_PX = 16;
+/** Breathing room around the framed country, on top of the chrome's own insets. */
+export const FRAME_MARGIN_PX = 48;
 export const TOP_CHROME_PX = 84;
 export const BOTTOM_CHROME_PX = 56;
 
 /**
  * The visible canvas's insets for the current chrome: the deck's column on the left (nothing
  * when it is closed or the sheet is over the map), the filter panel or its rail on the right,
- * the nav capsule above and the legend capsule below.
+ * the nav capsule above and the legend capsule below — plus FRAME_MARGIN_PX all round, so the
+ * framed country stands off the panels rather than filling the gap between them.
  */
 export function chromePadding({ deck, filters, wide }: { deck: boolean; filters: boolean; wide: boolean }): MapPadding {
-  if (!wide) return { top: TOP_CHROME_PX, right: 16, bottom: 16, left: 16 };
+  if (!wide) return { top: TOP_CHROME_PX + 16, right: 32, bottom: 32, left: 32 };
   return {
-    top: TOP_CHROME_PX,
-    bottom: BOTTOM_CHROME_PX,
-    left: deck ? DECK_PX + DECK_INSET_PX + DECK_GAP_PX : DECK_INSET_PX,
-    right: (filters ? FILTER_WIDTH : RAIL_WIDTH) + FILTER_INSET_PX + FILTER_GAP_PX,
+    top: TOP_CHROME_PX + FRAME_MARGIN_PX,
+    bottom: BOTTOM_CHROME_PX + FRAME_MARGIN_PX,
+    left: (deck ? DECK_PX + DECK_INSET_PX + DECK_GAP_PX : DECK_INSET_PX) + FRAME_MARGIN_PX,
+    right: (filters ? FILTER_WIDTH : RAIL_WIDTH) + FILTER_INSET_PX + FILTER_GAP_PX + FRAME_MARGIN_PX,
   };
 }
 

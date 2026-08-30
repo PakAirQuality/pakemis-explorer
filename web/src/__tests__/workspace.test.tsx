@@ -194,20 +194,22 @@ describe("the workspace frame", () => {
     mount();
     await loaded();
     const stub = () => screen.getByTestId("map-stub");
-    expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16));
-    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16));
+    // the chrome's own widths plus FRAME_MARGIN_PX all round, so the country stands off the panels
+    const M = 48;
+    expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16 + M));
+    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16 + M));
     fireEvent.click(screen.getByTestId("filters-collapse"));
     expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "0");
-    expect(stub()).toHaveAttribute("data-pad-right", String(48 + 20 + 16));
+    expect(stub()).toHaveAttribute("data-pad-right", String(48 + 20 + 16 + M));
     fireEvent.click(screen.getByTestId("deck-collapse"));
     expect(screen.queryByTestId("deck")).toBeNull();
     expect(screen.getByTestId("deck-rail")).toBeInTheDocument();
-    expect(stub()).toHaveAttribute("data-pad-left", "20");
+    expect(stub()).toHaveAttribute("data-pad-left", String(20 + M));
     fireEvent.click(screen.getByTestId("deck-rail"));
     expect(await screen.findByTestId("deck")).toBeInTheDocument();
-    expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16));
+    expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16 + M));
     fireEvent.click(screen.getByTestId("filters-expand"));
-    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16));
+    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16 + M));
   });
   it("Map settings carries what left the filter panel plus the map's own display choices: the layer, the scale, the opacity, the raster, the basemap, the boundaries, the month, the estimate, the warming potentials and the spatial view", async () => {
     mount();
@@ -349,10 +351,10 @@ describe("the deck's cards", () => {
     expect(screen.getByTestId("sectors-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));
     expect(within(screen.getByTestId("column-chart")).getAllByTestId("column").map((c) => c.textContent)).toEqual(["2020–21 372.40", "2023–24 452.35"]);
+    // a card's header is its title and its switch: the toolbar icons were removed on 2026-08-31
     for (const id of ["card-snapshot", "card-sectors", "card-trend", "card-places"]) {
-      expect(screen.getByTestId(`${id}-info`)).toBeInTheDocument();
-      expect(screen.getByTestId(`${id}-download`)).toBeInTheDocument();
-      expect(screen.getByTestId(`${id}-claim`)).toBeInTheDocument();
+      expect(screen.getByTestId(`${id}-switch`)).toHaveAttribute("role", "switch");
+      for (const tool of ["info", "download", "share", "claim"]) expect(screen.queryByTestId(`${id}-${tool}`), `${id}-${tool}`).toBeNull();
     }
   });
 });

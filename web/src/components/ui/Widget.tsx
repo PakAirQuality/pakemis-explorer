@@ -36,6 +36,8 @@ export type WidgetProps = {
   share?: boolean;
   /** Extra toolbar buttons, before the three. */
   tools?: ReactNode;
+  /** Whether the three standard toolbar buttons (Result details, download, share) show at all. */
+  toolbar?: boolean;
   /** The sentence with the key figures in bold. */
   sentence?: ReactNode;
   /** The amber note box. */
@@ -54,7 +56,7 @@ export type WidgetProps = {
   onToggle?: (open: boolean) => void;
 };
 
-export function Widget({ title, env, labels, infoTab = "sources", downloadHref, share = true, tools, sentence, note, caption, children, className = "", chrome = "card p-4", testId = "widget", id, open = true, onToggle }: WidgetProps) {
+export function Widget({ title, env, labels, infoTab = "sources", downloadHref, share = true, tools, toolbar = true, sentence, note, caption, children, className = "", chrome = "card p-4", testId = "widget", id, open = true, onToggle }: WidgetProps) {
   const [details, setDetails] = useState(false);
   const [copied, setCopied] = useState(false);
   const download = downloadHref ?? (env ? api.downloadCsvUrl(env.receipt) : undefined);
@@ -72,22 +74,26 @@ export function Widget({ title, env, labels, infoTab = "sources", downloadHref, 
       <header className="flex items-center justify-between gap-3">
         <h2 className={`${WIDGET_TITLE} min-w-0`}>{title}</h2>
         <div className="flex shrink-0 items-center gap-1.5" data-testid={`${testId}-toolbar`}>
-          {tools}
-          {env && (
-            <button type="button" onClick={() => setDetails(true)} className={ICON_BUTTON} aria-label="Result details" title={RESULT_DETAILS_TITLE} data-testid={`${testId}-info`}>
-              <Info size={14} />
-            </button>
-          )}
-          {download && (
-            <a href={download} className={ICON_BUTTON} aria-label="Download these rows" title="Download the canonical CSV of this result" data-testid={`${testId}-download`}>
-              <Download size={14} />
-            </a>
-          )}
-          {share && (
-            <button type="button" onClick={copyLink} className={ICON_BUTTON} aria-label={copied ? "Link copied" : "Copy the link to this view"} title={copied ? "Link copied" : "Copy the link to this view"} data-testid={`${testId}-share`}>
-              <Link2 size={14} />
-            </button>
-          )}
+          {toolbar ? (
+            <>
+            {tools}
+            {env && (
+              <button type="button" onClick={() => setDetails(true)} className={ICON_BUTTON} aria-label="Result details" title={RESULT_DETAILS_TITLE} data-testid={`${testId}-info`}>
+                <Info size={14} />
+              </button>
+            )}
+            {download && (
+              <a href={download} className={ICON_BUTTON} aria-label="Download these rows" title="Download the canonical CSV of this result" data-testid={`${testId}-download`}>
+                <Download size={14} />
+              </a>
+            )}
+            {share && (
+              <button type="button" onClick={copyLink} className={ICON_BUTTON} aria-label={copied ? "Link copied" : "Copy the link to this view"} title={copied ? "Link copied" : "Copy the link to this view"} data-testid={`${testId}-share`}>
+                <Link2 size={14} />
+              </button>
+            )}
+            </>
+          ) : null}
           {onToggle && <Switch on={open} onChange={onToggle} label={open ? "Collapse this section" : "Expand this section"} testId={`${testId}-switch`} className="ml-1" />}
         </div>
       </header>
