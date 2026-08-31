@@ -10,7 +10,7 @@ import { adm1Body, adm2Body, detailBodies, gridCellBody, requestFromState, state
 
 const D: StateDefaults = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", c: null, cam: null, raster: false, view3d: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", pane: "map", c: null, cam: null, raster: false, view3d: false };
 
 const CASES: ExplorerState[] = [
   base,
@@ -67,7 +67,7 @@ describe("request bodies", () => {
 describe("resolve / raw / patch", () => {
   it("defaults are absent from the URL and restored on read", () => {
     expect(resolveState({}, D)).toEqual({ ...base });
-    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, tab: null, layer: null, scale: null, c: null, cam: null, raster: null, view3d: null });
+    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, tab: null, layer: null, scale: null, pane: null, c: null, cam: null, raster: null, view3d: null });
     const grid = resolveState({ level: "grid" }, D);
     expect(grid.gas).toBe("CO2");
     expect(grid.raster).toBe(true);
@@ -100,6 +100,19 @@ describe("resolve / raw / patch", () => {
     }
     // an unknown mode is not a mode: the parser drops it and the default stands
     expect(resolveState({ scale: null }, D).scale).toBe("relative");
+  });
+  it("the narrow window's `pane` round-trips: the map by default and absent from the URL, written when the switch chooses the dashboard, and kept across a level change", () => {
+    expect(resolveState({}, D).pane).toBe("map");
+    expect(rawFromState(base, D).pane).toBeNull();
+    expect(hrefForState(base, D)).toBe("/");
+    const s = { ...base, pane: "dashboard" as const };
+    expect(resolveState({ pane: "dashboard" }, D).pane).toBe("dashboard");
+    expect(rawFromState(s, D).pane).toBe("dashboard");
+    expect(resolveState(rawFromState(s, D), D)).toEqual(s);
+    expect(hrefForState(s, D)).toBe("/?pane=dashboard");
+    expect(applyPatch(s, { level: "adm2" }).pane).toBe("dashboard");
+    // an unknown pane is not a pane: the parser drops it and the map stands
+    expect(resolveState({ pane: null }, D).pane).toBe("map");
   });
   it("view3d is a flag: absent when off, `1` when on, and survives a level change", () => {
     expect(resolveState({ view3d: true }, D).view3d).toBe(true);

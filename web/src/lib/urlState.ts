@@ -4,7 +4,8 @@
  * parameters against the release's defaults (/release.defaults: period, configuration, GWP,
  * spatial view) so a bare `/` and `/?period=FY2023-24&config=REF_2023_24` are the same state and
  * produce the same request bodies (lib/requests.ts) and therefore the same receipts. The Map
- * page adds `layer` (its layer switch), `scale` (Map settings' scale mode) and `tab` (its
+ * page adds `layer` (its layer switch), `scale` (Map settings' scale mode), `pane` (which of
+ * the two panes a narrow window shows) and `tab` (its
  * drawer's tab); the old `panel` and `ask` keys are retired (the Ask drawer lives outside the
  * URL; the filter panel is not state).
  */
@@ -35,6 +36,14 @@ export type MapLayer = (typeof MAP_LAYERS)[number];
  */
 export const SCALE_MODES = ["relative", "fixed", "absolute"] as const;
 export type ScaleMode = (typeof SCALE_MODES)[number];
+/**
+ * Which pane a narrow window shows (URL `pane`; absent = map). Under 1280 px the workspace
+ * shows ONE pane at a time — the insight deck or the map — and the nav capsule carries the
+ * switch between them; at 1280 px and above both are on screen at once and the key is never
+ * written, so a wide window's link never carries a pane.
+ */
+export const PANES = ["dashboard", "map"] as const;
+export type Pane = (typeof PANES)[number];
 
 export type ExplorerState = {
   level: Level;
@@ -50,6 +59,7 @@ export type ExplorerState = {
   tab: MapTab;
   layer: MapLayer;
   scale: ScaleMode;
+  pane: Pane;
   c: string | null;
   cam: string | null;
   raster: boolean;
@@ -72,6 +82,7 @@ export const parsers = {
   tab: parseAsStringLiteral(MAP_TABS),
   layer: parseAsStringLiteral(MAP_LAYERS),
   scale: parseAsStringLiteral(SCALE_MODES),
+  pane: parseAsStringLiteral(PANES),
   c: parseAsString,
   cam: parseAsString.withOptions({ history: "replace", throttleMs: 400 }),
   raster: parseAsFlag,
@@ -96,6 +107,7 @@ export function resolveState(raw: Partial<RawState>, d: StateDefaults): Explorer
     tab: raw.tab ?? "summary",
     layer: raw.layer ?? "magnitude",
     scale: raw.scale ?? "relative",
+    pane: raw.pane ?? "map",
     c: raw.c ?? null,
     cam: raw.cam ?? null,
     raster: raw.raster ?? level === "grid",
@@ -119,6 +131,7 @@ export function rawFromState(s: ExplorerState, d: StateDefaults): RawState {
     tab: s.tab === "summary" ? null : s.tab,
     layer: s.layer === "magnitude" ? null : s.layer,
     scale: s.scale === "relative" ? null : s.scale,
+    pane: s.pane === "map" ? null : s.pane,
     c: s.c,
     cam: s.cam,
     raster: s.raster === (s.level === "grid") ? null : s.raster,

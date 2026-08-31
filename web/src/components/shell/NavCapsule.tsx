@@ -7,7 +7,9 @@
  * (components/shell/AskFab.tsx), so the same action is not offered twice.
  *
  * On the workspace (`floating`) the capsule is `absolute left-5 top-5 z-30`, sharing the deck's
- * left inset and radius family so the two left edges form one line; on every other page it is
+ * left inset and radius family so the two left edges form one line — 420 px wide when it holds
+ * nothing but the logo and the links, growing to fit when the workspace hands it the pane
+ * switch (a window under 1280 px); on every other page it is
  * the same pill inside a normal header row at the top of the page. Nothing here prints a number
  * or a version, and nothing here names the dataset: the chrome carries the initiative's name.
  */
@@ -36,6 +38,13 @@ export function isActive(pathname: string | null, href: string): boolean {
 export const CAPSULE_CLASS = "rounded-full bg-nav text-nav-fg border border-nav-line shadow-lg px-5 py-2.5 flex items-center gap-6";
 /** Floating, the capsule is exactly the deck's width, so its left AND right edges line up with the cards beneath it. */
 export const CAPSULE_WIDTH = "w-[420px] justify-between";
+/**
+ * Floating WITH something in the children slot — the workspace's pane switch, which only a
+ * window under 1280 px mounts — the capsule grows to hold it rather than clipping the links:
+ * the deck's width is not a promise it can keep once it carries a control as well. With no
+ * children it keeps 420 px exactly, and its edges keep the deck's.
+ */
+export const CAPSULE_WIDTH_WITH_CHILDREN = "w-auto max-w-[calc(100vw-40px)] justify-between";
 /** The floating placement on the workspace: the same left inset (20 px) and width as the deck beneath it. */
 export const CAPSULE_FLOATING = "absolute left-5 top-5 z-30";
 
@@ -57,7 +66,7 @@ export function NavCapsule({ floating = false, children }: { floating?: boolean;
     );
   };
   return (
-    <div className={`${floating ? `${CAPSULE_FLOATING} ${CAPSULE_WIDTH} ` : ""}${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
+    <div className={`${floating ? `${CAPSULE_FLOATING} ${children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ` : ""}${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
       <Link href="/" className="flex shrink-0 items-center" data-testid="brand" title="Pakistan Air Quality Initiative">
         <BrandLogo className="h-7 object-contain" />
       </Link>

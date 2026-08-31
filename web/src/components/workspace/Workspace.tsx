@@ -20,8 +20,12 @@
  * initial framing, `fitAll` and every selection flyTo respect — and calls `map.easeTo({padding})`
  * whenever a panel toggles.
  *
- * Under 1024 px the deck becomes a bottom sheet over the map (peek / half / full), the filter
- * panel a button that opens a full-height sheet, and the legend capsule hides.
+ * Under 1280 px the two panes cannot share the screen, so the workspace shows ONE at a time and
+ * the nav capsule carries the switch between them (PaneSwitch, `pane` in the URL, the map by
+ * default): the map pane is the map full-bleed with its legend, its buttons and the filters
+ * sheet; the dashboard pane is the deck as one full-width column with the map hidden behind it,
+ * the filters reachable from the deck's own header. At 1280 px and above both panes are on
+ * screen exactly as before and no switch is offered.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MBMap } from "mapbox-gl";
@@ -37,10 +41,12 @@ import { BASEMAP_DEFAULT, type BasemapChoice } from "@/components/map/basemap";
 import { DECK_INSET_PX, DECK_PX } from "@/components/overview/deck";
 import { HEADER } from "@/components/overview/copy";
 import { Deck, DeckRail } from "./Deck";
+import { PaneSwitch } from "./PaneSwitch";
 import { FILTER_GAP_PX, FILTER_INSET_PX, FILTER_WIDTH, FilterPanel, RAIL_WIDTH } from "./FilterPanel";
 import { LegendCapsule } from "./LegendCapsule";
 import { MapSettings } from "./MapSettings";
 import { FILTERS, MAP_BUTTONS } from "./copy";
+import type { Pane } from "@/lib/urlState";
 
 /** The gap the deck keeps from the map's own chrome, and the chrome above and below it. */
 export const DECK_GAP_PX = 16;
@@ -60,7 +66,8 @@ export const BOTTOM_CHROME_PX = 56;
  * framed country stands off the panels rather than filling the gap between them.
  */
 export function chromePadding({ deck, filters, wide }: { deck: boolean; filters: boolean; wide: boolean }): MapPadding {
-  if (!wide) return { top: TOP_CHROME_PX + 16, right: 32, bottom: 32, left: 32 };
+  // narrow: one pane at a time, so there is no side chrome — the nav above and a small inset all round
+  if (!wide) return { top: TOP_CHROME_PX + FRAME_MARGIN_PX, right: FRAME_MARGIN_PX + 20, bottom: FRAME_MARGIN_PX + 20, left: FRAME_MARGIN_PX + 20 };
   return {
     top: TOP_CHROME_PX + FRAME_MARGIN_PX,
     bottom: BOTTOM_CHROME_PX + FRAME_MARGIN_PX,
@@ -73,11 +80,19 @@ const MAP_BUTTON = "glass flex h-9 w-9 items-center justify-center rounded-xl te
 
 export function Workspace() {
   const { state, setState, labels, dims } = useExplorer();
-  const wide = useMediaQuery("(min-width: 1024px)");
+  const wide = useMediaQuery("(min-width: 1280px)");
   const [map, setMap] = useState<MBMap | null>(null);
   // "Reset map" appears only once there is something to reset: a user-driven move, or a picked place or level
   const [moved, setMoved] = useState(false);
   const [deckOpen, setDeckOpen] = useState(true);
+  /**
+   * Which pane a narrow window shows: the URL's own key, like every other choice on this screen,
+   * so it survives a reload and the back button. Only a narrow window mounts the switch that
+   * writes it, so a wide window's link never carries a pane — and a wide window reading one
+   * ignores it, since it shows both panes anyway.
+   */
+  const pane: Pane = state.pane;
+  const choosePane = useCallback((next: Pane) => setState({ pane: next }), [setState]);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -88,6 +103,9 @@ export function Workspace() {
   const [fullscreen, setFullscreen] = useState(false);
   // the map follows a hovered or picked sector without writing the URL (the URL wins; hover stays local)
   const [sector, setSector] = useState<string | null>(null);
+  // narrow: exactly one pane is on screen; wide: both, and the deck's own collapse decides its column
+  const showDeck = wide ? deckOpen : pane === "dashboard";
+  const showMap = wide || pane === "map";
 
   // the deck's scope is a province name (an ADM1 row); any other `geo` reads as Pakistan
   const geo = state.geo && dims.adm1.some((r) => r.name === state.geo) ? state.geo : null;
@@ -149,17 +167,27 @@ export function Workspace() {
 
   return (
     <div className="relative h-dvh overflow-hidden bg-surface text-fg" data-testid="workspace" data-scope={geo ?? "PK"}>
-      <div className="absolute inset-0" data-testid="map-pane">
+      <div className="absolute inset-0" data-testid="map-pane" aria-hidden={showMap ? undefined : true}>
         <ExplorerMap variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} override={override} />
       </div>
 
-      <NavCapsule floating />
+      <NavCapsule floating>{wide ? undefined : <PaneSwitch pane={pane} onPane={choosePane} />}</NavCapsule>
 
-      {!wide || deckOpen ? (
-        <Deck geo={geo} place={place} onGeo={onGeo} onReset={onReset} showReset={showReset} onSector={setSector} onCollapse={wide ? () => setDeckOpen(false) : undefined} mobile={!wide} />
-      ) : (
+      {showDeck ? (
+        <Deck
+          geo={geo}
+          place={place}
+          onGeo={onGeo}
+          onReset={onReset}
+          showReset={showReset}
+          onSector={setSector}
+          onCollapse={wide ? () => setDeckOpen(false) : undefined}
+          onFilters={wide ? undefined : () => setSheetOpen(true)}
+          full={!wide}
+        />
+      ) : wide ? (
         <DeckRail onExpand={() => setDeckOpen(true)} />
-      )}
+      ) : null}
 
       {wide ? (
         <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} />
@@ -167,30 +195,34 @@ export function Workspace() {
         <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={place} mobile />
       )}
 
-      <LegendCapsule />
+      {showMap && <LegendCapsule />}
 
       {/* clear of the Ask button, which the layout fixes at bottom-6 right-6 (56 px) */}
-      <div className="absolute bottom-[96px] right-5 z-20 flex flex-col gap-1.5" data-testid="map-buttons">
-        <button type="button" title={MAP_BUTTONS.zoomIn} aria-label={MAP_BUTTONS.zoomIn} onClick={() => map?.zoomIn()} className={MAP_BUTTON} data-testid="map-zoom-in">
-          <Plus size={16} aria-hidden="true" />
-        </button>
-        <button type="button" title={MAP_BUTTONS.zoomOut} aria-label={MAP_BUTTONS.zoomOut} onClick={() => map?.zoomOut()} className={MAP_BUTTON} data-testid="map-zoom-out">
-          <Minus size={16} aria-hidden="true" />
-        </button>
-        <button type="button" title={MAP_BUTTONS.locate} aria-label={MAP_BUTTONS.locate} onClick={fitAll} className={MAP_BUTTON} data-testid="map-locate">
-          <Locate size={16} aria-hidden="true" />
-        </button>
-        <button type="button" title={fullscreen ? MAP_BUTTONS.exitFullscreen : MAP_BUTTONS.fullscreen} aria-label={fullscreen ? MAP_BUTTONS.exitFullscreen : MAP_BUTTONS.fullscreen} onClick={toggleFullscreen} className={MAP_BUTTON} data-testid="map-fullscreen">
-          {fullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
-        </button>
-        {!wide && (
-          <button type="button" title={FILTERS.open} aria-label={FILTERS.open} onClick={() => setSheetOpen(true)} className={MAP_BUTTON} data-testid="filters-button">
-            <SlidersHorizontal size={16} aria-hidden="true" />
+      {showMap && (
+        <div className="absolute bottom-[96px] right-5 z-20 flex flex-col gap-1.5" data-testid="map-buttons">
+          <button type="button" title={MAP_BUTTONS.zoomIn} aria-label={MAP_BUTTONS.zoomIn} onClick={() => map?.zoomIn()} className={MAP_BUTTON} data-testid="map-zoom-in">
+            <Plus size={16} aria-hidden="true" />
           </button>
-        )}
-      </div>
+          <button type="button" title={MAP_BUTTONS.zoomOut} aria-label={MAP_BUTTONS.zoomOut} onClick={() => map?.zoomOut()} className={MAP_BUTTON} data-testid="map-zoom-out">
+            <Minus size={16} aria-hidden="true" />
+          </button>
+          <button type="button" title={MAP_BUTTONS.locate} aria-label={MAP_BUTTONS.locate} onClick={fitAll} className={MAP_BUTTON} data-testid="map-locate">
+            <Locate size={16} aria-hidden="true" />
+          </button>
+          <button type="button" title={fullscreen ? MAP_BUTTONS.exitFullscreen : MAP_BUTTONS.fullscreen} aria-label={fullscreen ? MAP_BUTTONS.exitFullscreen : MAP_BUTTONS.fullscreen} onClick={toggleFullscreen} className={MAP_BUTTON} data-testid="map-fullscreen">
+            {fullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+          </button>
+          {!wide && (
+            <button type="button" title={FILTERS.open} aria-label={FILTERS.open} onClick={() => setSheetOpen(true)} className={MAP_BUTTON} data-testid="filters-button">
+              <SlidersHorizontal size={16} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      )}
 
-      <MapSettings open={settingsOpen} onToggle={setSettingsOpen} opacity={opacity} onOpacity={setOpacity} basemap={basemapChoice} onBasemap={setBasemapChoice} boundaries={boundaries} onBoundaries={setBoundaries} />
+      {showMap && (
+        <MapSettings open={settingsOpen} onToggle={setSettingsOpen} opacity={opacity} onOpacity={setOpacity} basemap={basemapChoice} onBasemap={setBasemapChoice} boundaries={boundaries} onBoundaries={setBoundaries} />
+      )}
     </div>
   );
 }

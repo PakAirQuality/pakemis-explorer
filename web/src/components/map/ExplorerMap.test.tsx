@@ -22,7 +22,7 @@ import { OPACITY_DEFAULT } from "./layers";
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("mapbox-gl", () => ({ default: { Map: class {}, AttributionControl: class {}, accessToken: "" } }));
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", c: null, cam: null, raster: false, view3d: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", pane: "map", c: null, cam: null, raster: false, view3d: false };
 
 function ctx(state: ExplorerState): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;

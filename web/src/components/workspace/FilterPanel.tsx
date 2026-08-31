@@ -6,8 +6,9 @@
  * slider (YearSlider.tsx) — then the active view in one line and **Reset filters**. `«`
  * collapses it to a 48 px rail whose icons re-open it. Everything else that used to live here
  * — the estimate, the warming potentials, the spatial view, the layer switch, the opacity and
- * the grid raster — moved into Map settings (MapSettings.tsx). Under 1024 px the panel is a
- * full-height sheet opened from the map's Filters button.
+ * the grid raster — moved into Map settings (MapSettings.tsx). Under 1280 px, where the workspace shows one pane at a
+ * time, the panel is a full-height sheet opened from the Filters button of whichever pane is on
+ * screen.
  *
  * Every list comes from the release's dims and every word from its labels; every choice is
  * written to the URL, so any view is a shareable link. Nothing here prints a number.
@@ -17,6 +18,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import type { Level } from "@/lib/urlState";
 import { districtName, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabel } from "@/lib/labels";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
+import { SEGMENT_GROUP_CLASS, segmentClass } from "./PaneSwitch";
 import { YearSlider } from "./YearSlider";
 import { FILTERS } from "./copy";
 
@@ -48,7 +50,7 @@ export type FilterPanelProps = {
   onToggle: (open: boolean) => void;
   /** The place the deck is scoped to, as the release names it. */
   place: string;
-  /** Under 1024 px the panel is a sheet rather than a floating card. */
+  /** Under 1280 px the panel is a sheet rather than a floating card. */
   mobile?: boolean;
 };
 
@@ -61,7 +63,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false }: FilterPan
     <div className="flex flex-col gap-4">
       <div>
         <div className="micro mb-1.5">{FILTERS.level}</div>
-        <div className="pill flex overflow-hidden border border-line bg-surface p-0.5" role="tablist" aria-label={FILTERS.level}>
+        <div className={SEGMENT_GROUP_CLASS} role="tablist" aria-label={FILTERS.level}>
           {SEGMENTS.map((sgm) => (
             <button
               key={sgm.id}
@@ -69,7 +71,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false }: FilterPan
               role="tab"
               aria-selected={state.level === sgm.id}
               onClick={() => setState({ level: sgm.id })}
-              className={`pill flex-1 py-1 text-xs font-medium transition-colors ${state.level === sgm.id ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`}
+              className={`${segmentClass(state.level === sgm.id)} flex-1`}
               data-testid={`level-${sgm.id}`}
             >
               {sgm.label}

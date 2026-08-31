@@ -19,10 +19,15 @@
  *
  * Every number in the deck is a server string (`display_short`, `share_pct_short`, `rank`,
  * `interval_short`, `change.*`, `derived.*`, `axis.ticks_short`); the deck computes nothing.
- * Under 1024 px it is a bottom sheet over the map with three snap heights.
+ *
+ * Under 1280 px it is the whole pane rather than a column beside the map (`full`): the same
+ * cards, the same order, in one scrolling column inset 20 px and capped at 560 px, centred. The
+ * bottom sheet it used to be under 1024 px — peek / half / full over the map — retired on
+ * 2026-08-31, when the nav capsule's Dashboard | Map switch replaced it: a half-screen laptop
+ * window is not a phone, and one pane at a time serves it better than a drawer.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronsLeft, ChevronsRight, GripHorizontal } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, SlidersHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { useDeck } from "@/lib/queries";
 import { markStage } from "@/components/shell/bootstrap";
@@ -35,16 +40,18 @@ import { DECK_CARD } from "@/components/overview/deck";
 import { ScopeChips } from "./ScopeChips";
 import { cardsFor, scopeOf, type CardId } from "./cards";
 import { renderCard, wantsFor } from "./cards/render";
-import { DECK_COLLAPSE, DECK_EXPAND, DECK_TITLE } from "./copy";
+import { DECK_COLLAPSE, DECK_EXPAND, DECK_TITLE, FILTERS } from "./copy";
 
 /** The deck's column, over the map, clear of the nav capsule above it. */
 export const DECK_CLASS =
   "absolute left-5 top-[84px] bottom-5 w-[420px] z-20 overflow-y-auto overscroll-contain scrollbar-none pointer-events-none flex flex-col gap-3";
 
-/** The bottom sheet's three heights under 1024 px (the old map drawer's snap states). */
-export const SNAP_HEIGHT: Record<Snap, string> = { peek: "84px", half: "55dvh", full: "calc(100dvh - 84px)" };
-export type Snap = "peek" | "half" | "full";
-const NEXT_SNAP: Record<Snap, Snap> = { peek: "half", half: "full", full: "peek" };
+/**
+ * The deck as the whole pane, under 1280 px: the same column, full width and centred, inset
+ * 20 px, under the nav capsule and scrolling to the bottom of the window.
+ */
+export const DECK_FULL_CLASS =
+  "absolute inset-x-0 top-[84px] bottom-0 z-20 mx-auto w-full max-w-[560px] overflow-y-auto overscroll-contain scrollbar-none px-5 pb-5 flex flex-col gap-3";
 
 export type DeckProps = {
   /**
@@ -63,15 +70,16 @@ export type DeckProps = {
   onSector?: (id: string | null) => void;
   /** Collapse the deck to its rail (the workspace re-centres the map when it goes). */
   onCollapse?: () => void;
-  /** Under 1024 px the deck is a bottom sheet. */
-  mobile?: boolean;
+  /** Under 1280 px the deck is the whole pane: one full-width column, no map beside it. */
+  full?: boolean;
+  /** Open the filters sheet — the deck's own header carries the button when it is the pane. */
+  onFilters?: () => void;
 };
 
-export function Deck({ onGeo, onReset, onSector, onCollapse, showReset = false, mobile = false }: DeckProps) {
+export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showReset = false, full = false }: DeckProps) {
   const { state, labels, dims } = useExplorer();
   const [collapsed, setCollapsed] = useState<Partial<Record<CardId, boolean>>>({});
   const [picked, setPicked] = useState<string | null>(null);
-  const [snap, setSnap] = useState<Snap>("half");
 
   const scope = useMemo(() => scopeOf(state), [state]);
   const ids = useMemo(() => cardsFor(scope), [scope]);
@@ -102,6 +110,11 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, showReset = false, 
         <h2 className="widget-title min-w-0 truncate">{DECK_TITLE(place)}</h2>
         <div className="flex shrink-0 items-center gap-1.5">
           <DeckControls count={ids.length} allCollapsed={allCollapsed} onToggleAll={toggleAll} inline />
+          {onFilters && (
+            <button type="button" onClick={onFilters} aria-label={FILTERS.open} title={FILTERS.open} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg" data-testid="filters-button">
+              <SlidersHorizontal size={14} aria-hidden="true" />
+            </button>
+          )}
           {onCollapse && (
             <button type="button" onClick={onCollapse} aria-label={DECK_COLLAPSE} title={DECK_COLLAPSE} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg" data-testid="deck-collapse">
               <ChevronsLeft size={14} aria-hidden="true" />
@@ -115,18 +128,8 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, showReset = false, 
     </>
   );
 
-  if (mobile) {
-    return (
-      <section className="pointer-events-auto fixed inset-x-0 bottom-0 z-30 flex flex-col rounded-t-2xl bg-surface shadow-[0_-4px_16px_rgba(0,0,0,0.12)]" style={{ height: SNAP_HEIGHT[snap] }} data-testid="deck" data-snap={snap}>
-        <button type="button" onClick={() => setSnap(NEXT_SNAP[snap])} aria-label={`Resize the panel (now ${snap})`} className="flex h-8 shrink-0 items-center justify-center text-muted" data-testid="deck-snap">
-          <GripHorizontal size={20} aria-hidden="true" />
-        </button>
-        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-4">{cards}</div>
-      </section>
-    );
-  }
   return (
-    <div className={DECK_CLASS} data-testid="deck" data-scope={scope.kind}>
+    <div className={full ? DECK_FULL_CLASS : DECK_CLASS} data-testid="deck" data-scope={scope.kind} data-full={full ? "1" : "0"}>
       {cards}
     </div>
   );

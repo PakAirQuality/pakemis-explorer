@@ -10,6 +10,8 @@ import "@testing-library/jest-dom/vitest";
  *    the deck's and the map's scope, and nothing but the URL carries them;
  *  · the scope chips clearing each of the three back to its default;
  *  · collapse-all flipping every widget's switch, and each switch collapsing its own card;
+ *  · the narrow window (under 1280 px): one pane at a time, the Dashboard | Map switch in the
+ *    nav capsule, the pane in the URL and nowhere else;
  *  · the four audits — every decimal on the page is a server string (ticks included), no "FY",
  *    no raw id (bare AR5, "(NE)", "LULUCF", a version), no avoid-list phrase — and the naming
  *    rule: the chrome never names the dataset.
@@ -20,7 +22,7 @@ import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import Page from "@/app/page";
-import { RELEASE, envelope, mockFetch, refusal, stubWideViewport } from "./fixtures";
+import { RELEASE, envelope, mockFetch, refusal, stubNarrowViewport, stubWideViewport } from "./fixtures";
 import { avoidPhrasesIn, namesDataset } from "./vocabulary";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
@@ -185,6 +187,9 @@ describe("the workspace frame", () => {
     for (const id of ["map-zoom-in", "map-zoom-out", "map-locate", "map-fullscreen"]) expect(within(buttons).getByTestId(id).className, id).toContain("glass");
     expect(screen.getByTestId("map-settings-button")).toHaveTextContent("Map settings");
     expect(screen.queryByTestId("map-settings-panel")).toBeNull();
+    // at 1280 px and above both panes are on screen, so nothing offers a choice between them
+    expect(screen.queryByTestId("pane-switch")).toBeNull();
+    expect(screen.getByTestId("map-pane")).not.toHaveAttribute("aria-hidden");
     // the brand mark appears once, in the nav: the footer is the compact licence line alone
     const logos = screen.getAllByTestId("brand-logo");
     expect(logos).toHaveLength(1);
@@ -354,6 +359,83 @@ describe("the deck's cards", () => {
       expect(screen.getByTestId(`${id}-switch`)).toHaveAttribute("role", "switch");
       for (const tool of ["info", "download", "share", "claim"]) expect(screen.queryByTestId(`${id}-${tool}`), `${id}-${tool}`).toBeNull();
     }
+  });
+});
+
+describe("the narrow workspace: one pane at a time", () => {
+  it("the map pane is the map alone — its legend, its buttons and its filters sheet — with the Dashboard | Map switch in the nav capsule and no deck", async () => {
+    stubNarrowViewport();
+    mount();
+    const sw = await screen.findByTestId("pane-switch");
+    // the switch lives in the capsule, which grows to hold it rather than clipping the links
+    const nav = screen.getByTestId("nav-capsule");
+    expect(nav).toContainElement(sw);
+    expect(nav.className).not.toContain("w-[420px]");
+    expect(nav.className).toContain("w-auto");
+    expect(screen.getByTestId("pane-map")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("pane-dashboard")).toHaveAttribute("aria-pressed", "false");
+    expect([screen.getByTestId("pane-dashboard").textContent, screen.getByTestId("pane-map").textContent]).toEqual(["Dashboard", "Map"]);
+    // the map pane: the map, its legend, its buttons and the filters sheet's button; no deck
+    expect(screen.getByTestId("map-stub")).toBeInTheDocument();
+    expect(screen.getByTestId("map-pane")).not.toHaveAttribute("aria-hidden");
+    expect(screen.getByTestId("legend-capsule")).toBeInTheDocument();
+    expect(screen.getByTestId("map-buttons")).toBeInTheDocument();
+    expect(screen.queryByTestId("deck")).toBeNull();
+    expect(screen.queryByTestId("deck-rail")).toBeNull();
+    expect(screen.queryByTestId("filter-panel")).toBeNull(); // the sheet, closed
+    // one pane means no side chrome: the map's padding is the nav above and a small inset all round
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-pad-left", "32");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-pad-right", "32");
+    fireEvent.click(screen.getByTestId("filters-button"));
+    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "1");
+  });
+  it("Dashboard shows the deck as one full-width column, hides the map's own chrome, keeps the filters within reach, and writes the pane to the URL", async () => {
+    stubNarrowViewport();
+    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
+    mount("", (e) => updates.push(e));
+    fireEvent.click(await screen.findByTestId("pane-dashboard"));
+    await loaded();
+    expect(await urlWith(updates, "pane=dashboard")).toContain("pane=dashboard");
+    expect(screen.getByTestId("pane-dashboard")).toHaveAttribute("aria-pressed", "true");
+    // the deck is the pane: full width, inset 20, capped and centred, under the nav capsule
+    const deck = screen.getByTestId("deck");
+    expect(deck).toHaveAttribute("data-full", "1");
+    for (const c of ["absolute", "inset-x-0", "top-[84px]", "bottom-0", "mx-auto", "w-full", "max-w-[560px]", "overflow-y-auto", "px-5"]) expect(deck.className, c).toContain(c);
+    expect(deck.className).not.toContain("w-[420px]");
+    // every card is still there, in the same order
+    expect(Array.from(deck.children).map((el) => el.getAttribute("data-testid"))).toEqual(["header-block", "deck-header", "scope-chips", "card-snapshot", "card-sectors", "card-trend", "card-places", "footer"]);
+    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("452.35 Mt CO₂e");
+    // and the map's own chrome is not: no legend capsule, no map buttons, no Map settings
+    expect(screen.queryByTestId("legend-capsule")).toBeNull();
+    expect(screen.queryByTestId("map-buttons")).toBeNull();
+    expect(screen.queryByTestId("map-settings-button")).toBeNull();
+    expect(screen.getByTestId("map-pane")).toHaveAttribute("aria-hidden", "true");
+    // the filters stay reachable, from the deck's own header
+    const filters = within(screen.getByTestId("deck-header")).getByTestId("filters-button");
+    fireEvent.click(filters);
+    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "1");
+    fireEvent.click(screen.getByTestId("filters-close"));
+    // and the map comes back whole
+    fireEvent.click(screen.getByTestId("pane-map"));
+    expect(await urlWith(updates, "pane=")).not.toContain("pane=dashboard");
+    expect(screen.queryByTestId("deck")).toBeNull();
+    expect(screen.getByTestId("map-buttons")).toBeInTheDocument();
+  });
+  it("the pane survives a reload: `?pane=dashboard` opens on the deck, and a wide window ignores it and offers no switch", async () => {
+    stubNarrowViewport();
+    const { unmount } = mount("?pane=dashboard");
+    await loaded();
+    expect(screen.getByTestId("deck")).toHaveAttribute("data-full", "1");
+    expect(screen.getByTestId("pane-dashboard")).toHaveAttribute("aria-pressed", "true");
+    unmount();
+    // the same link on a wide window: both panes, no switch, and the deck in its 420 px column
+    stubWideViewport();
+    mount("?pane=dashboard");
+    await loaded();
+    expect(screen.queryByTestId("pane-switch")).toBeNull();
+    expect(screen.getByTestId("deck")).toHaveAttribute("data-full", "0");
+    expect(screen.getByTestId("map-buttons")).toBeInTheDocument();
+    expect(screen.getByTestId("legend-capsule")).toBeInTheDocument();
   });
 });
 

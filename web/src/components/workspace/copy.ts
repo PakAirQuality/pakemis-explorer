@@ -10,6 +10,16 @@ export const DECK_TITLE = (place: string) => `Insights · ${place}`.toUpperCase(
 export const DECK_COLLAPSE = "Collapse the insights";
 export const DECK_EXPAND = "Show the insights";
 
+/**
+ * The pane switch the nav capsule carries under 1280 px, where one pane shows at a time: the
+ * insight deck, or the map. Two words, each naming what it shows.
+ */
+export const PANES = {
+  label: "Pane",
+  dashboard: "Dashboard",
+  map: "Map",
+} as const;
+
 /** The scope chips: what each chip clears back to, said in words. */
 export const CHIPS = {
   label: "Current scope",

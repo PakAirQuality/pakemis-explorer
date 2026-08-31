@@ -153,20 +153,35 @@ export function mockFetch(route: (url: string, body: MockBody | undefined) => un
 }
 
 /**
- * jsdom answers every media query `false`, which would put the workspace into its mobile
- * layout; this stubs `matchMedia` so a `(min-width: …)` query matches — the desktop frame the
- * workspace tests assert. A `(max-width: …)` query still answers false, as it does on a wide
- * screen.
+ * jsdom answers every media query `false`, which would put the workspace into its narrow layout;
+ * this stubs `matchMedia` for a window `width` px across, so `(min-width: N)` matches when the
+ * window is at least N and `(max-width: N)` when it is at most N. `stubWideViewport()` is the
+ * desktop frame the workspace tests assert (both panes, no pane switch); `stubNarrowViewport()`
+ * is the split-screen window that shows one pane at a time.
  */
+export function stubViewport(width: number) {
+  vi.stubGlobal("matchMedia", (query: string) => {
+    const min = /min-width:\s*(\d+)/.exec(query);
+    const max = /max-width:\s*(\d+)/.exec(query);
+    return {
+      matches: min ? width >= Number(min[1]) : max ? width <= Number(max[1]) : false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    };
+  });
+}
+
+/** A wide window: both panes, no pane switch (the workspace's `(min-width: 1280px)` matches). */
 export function stubWideViewport() {
-  vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: /min-width/.test(query),
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  }));
+  stubViewport(1600);
+}
+
+/** A split-screen window under 1280 px: one pane at a time, the switch in the nav capsule. */
+export function stubNarrowViewport() {
+  stubViewport(1100);
 }
