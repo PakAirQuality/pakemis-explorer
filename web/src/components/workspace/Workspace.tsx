@@ -133,12 +133,16 @@ export function Workspace() {
 
   const bboxes = useBboxes();
   const onGeo = useCallback((name: string | null) => setState({ geo: name, level: "adm1" }), [setState]);
+  // the camera's own reset: back to the framing the app opened at (Reset map, and Reset filters too)
+  const resetCamera = useCallback(() => {
+    setMoved(false);
+    fitAllRef.current?.();
+  }, []);
   const onReset = useCallback(() => {
     setState({ geo: null, cell: null, level: "adm1" });
     setSector(null);
-    setMoved(false);
-    fitAllRef.current?.();          // and the camera returns to the view the app opened at
-  }, [setState]);
+    resetCamera();
+  }, [setState, resetCamera]);
   // A gesture on the canvas is the only unambiguous "the user moved the map": the automatic
   // framings (the initial fitBounds, the padding easeTo, a flyTo to a selection) fire moveend
   // too, and not all of them carry Mapbox's originalEvent.
@@ -190,9 +194,9 @@ export function Workspace() {
       ) : null}
 
       {wide ? (
-        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} />
+        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} onResetView={resetCamera} />
       ) : (
-        <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={place} mobile />
+        <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={place} mobile onResetView={resetCamera} />
       )}
 
       {showMap && <LegendCapsule />}

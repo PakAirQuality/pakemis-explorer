@@ -52,13 +52,17 @@ export type FilterPanelProps = {
   place: string;
   /** Under 1280 px the panel is a sheet rather than a floating card. */
   mobile?: boolean;
+  /** Reset filters also hands the camera back: the workspace passes its fit-the-country here. */
+  onResetView?: () => void;
 };
 
-export function FilterPanel({ open, onToggle, place, mobile = false }: FilterPanelProps) {
+export function FilterPanel({ open, onToggle, place, mobile = false, onResetView }: FilterPanelProps) {
   const { state, setState, labels, dims, defaults } = useExplorer();
   const districts = districtOptions(dims);
-  const reset = () =>
+  const reset = () => {
     setState({ level: "adm1", geo: null, cell: null, sector: null, gas: null, period: defaults.period_id, month: null });
+    onResetView?.();
+  };
   const controls = (
     <div className="flex flex-col gap-4">
       <div>

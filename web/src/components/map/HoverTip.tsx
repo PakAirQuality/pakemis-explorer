@@ -8,7 +8,7 @@
  */
 import { shown } from "@/lib/envelope";
 import type { Cell } from "@/lib/envelope";
-import type { Residual } from "@/lib/geography";
+import { joinNames, type Residual } from "@/lib/geography";
 import { adm2RowsForShape, cellUnit } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import type { Dims } from "@/components/ExplorerContext";
@@ -28,7 +28,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
     if (rows.length > 1) sub = `one shape for ${rows.map((r) => r.name).join(", ")} (shared_shape)`;
     else if (rows[0]) sub = `${rows[0].name} · ${rows[0].parent_id.replace(/^ADM1:/, "")}`;
   } else if (shared) {
-    sub = `part of the combined '${residual!.name}' unit`;
+    sub = `counted together with ${joinNames(residual!.members.filter((m) => m !== hover.id))}`;
   } else if (hover.level === "grid") {
     title = `Grid cell ${String(hover.props.cell_id ?? "")}`;
     sub = `row ${String(hover.props.row ?? "")} · col ${String(hover.props.col ?? "")} · ${String(hover.props.lat ?? "")}, ${String(hover.props.lon ?? "")}`;
