@@ -76,23 +76,23 @@ class Engine:
             raise E.UnknownDimensionValue("%r is not a geography level" % q.geography_level, dimension="geography_level")
         if q.geography_level == "adm2" and q.gwp_basis == "AR6":
             raise E.NotEstimated("AR6 CO2e is not carried at ADM2", "ar6_adm2_ne")
-        # THE SPATIAL LAYER IS NINE YEARS NOW, AND THIS REFUSAL USED TO SAY OTHERWISE. It read
-        # "spatial products exist for FY2023-24 only", which was true when the inventory
-        # placed one year and became a stale claim the moment the by-year products landed.
-        # What is still period-limited is the MONTH below ADM1 at module grain: the historical
-        # periods are published annually (fact_adm2_year), so a monthly district request
-        # outside the reference year is refused, and refused for the reason that is actually
-        # true rather than for the one that used to be.
+        # THE SPATIAL LAYER IS NINE YEARS NOW, AT BOTH LEVELS. This block has shed two
+        # stale refusals in two releases: first "spatial products exist for FY2023-24
+        # only" (true until the by-year district table landed), then "ADM1 is published
+        # monthly for FY2023-24" (true until fact_adm1_year landed - the nine-year ADM1
+        # product existed in the release all along, and the semantic layer had simply
+        # never consumed it; the Explorer's provinces slider is what finally asked).
+        # What remains period-limited is the MONTH: the historical periods are published
+        # ANNUALLY at both levels, and the year tables carry AR5 only.
         if q.geography_level != "national" and set(q.periods) != {REFERENCE_PERIOD}:
-            if q.geography_level == "adm1":
-                raise E.GrainUnavailable(
-                    "ADM1 is published monthly for FY2023-24; the historical periods are "
-                    "published at ADM2 annually (fact_adm2_year)", "grid_not_tabular")
             if q.months:
                 raise E.GrainUnavailable(
-                    "the historical periods are published at ADM2 ANNUALLY; a monthly "
-                    "district request outside FY2023-24 is refused rather than computed",
+                    "the historical periods are published ANNUALLY; a monthly request "
+                    "outside FY2023-24 is refused rather than computed",
                     "adm2_history_annual_only")
+            if q.geography_level == "adm1" and q.gwp_basis == "AR6":
+                raise E.NotEstimated(
+                    "AR6 CO2e is not carried in the historical ADM1 table", "ar6_adm2_ne")
         if q.spatial_view not in VIEWS:
             raise E.UnknownDimensionValue("%r is not a spatial view" % q.spatial_view, dimension="spatial_view")
         return q
@@ -186,7 +186,11 @@ class Engine:
                         limitations_hit=self._limitations_for(q), defaults_applied=q.defaults_applied)
 
     def _spatial(self, q):
-        if q.geography_level == "adm1":
+        if q.geography_level == "adm1" and set(q.periods) != {REFERENCE_PERIOD}:
+            # the nine-year provincial table: period-keyed, exact, AR5 (validated above)
+            table, col = "fact_adm1_year", "co2e_Mt_AR5"
+            geo_col = "province"
+        elif q.geography_level == "adm1":
             table, col = "fact_adm1_month", "co2e_Mt_%s" % q.gwp_basis
             geo_col = "province"
         elif set(q.periods) == {REFERENCE_PERIOD}:
@@ -198,7 +202,7 @@ class Engine:
             table, col = "fact_adm2_year", "co2e_Mt_AR5_low"
             geo_col = "shape_id"
         where = ["configuration_id = '%s'" % q.configuration_id]
-        if table == "fact_adm2_year":
+        if table in ("fact_adm2_year", "fact_adm1_year"):
             where.append(self._in("period_id", q.periods))
         elif q.months:
             where.append(self._in("month", q.months))

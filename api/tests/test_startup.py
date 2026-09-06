@@ -50,7 +50,7 @@ def test_tampered_boundary_refused(settings, tmp_path):
 def test_pinned_release_starts(client):
     body = client.get("/api/v1/emissions/release").json()
     assert body["version"] == client.app.state.service.settings.version
-    # 23 at rc47: fact_adm2_year entered the semantic contract - the nine-year
-    # district fact this pin exists to notice arriving.
-    assert len(body["digests"]["tables"]) == 23
+    # 24 at the adm1year follower: fact_adm1_year entered the contract - the
+    # provincial twin of the district fact the previous pin noticed arriving.
+    assert len(body["digests"]["tables"]) == 24
     assert body["context_bar"]["lulucf"]["status"] == "excluded"

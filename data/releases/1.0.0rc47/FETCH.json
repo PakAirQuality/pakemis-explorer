@@ -1,9 +1,9 @@
 {
  "digests": {
-  "release_manifest.json": "58ebe5c1bdfa06179b871c09ab759d43a18f55913fd334aa74dafca6d0f00c99",
-  "semantic_release.json": "1c8717bd16747c4f245beb00e5f76b5dd1e0a7b7a7859022bac30d56807895ca"
+  "release_manifest.json": "7f4b933d836575f79f217a211092adc846076e645254d4a51e81371da424ae88",
+  "semantic_release.json": "6a46b8f386778b61fe5b0fc4e317b018c669be4d30b65012025df901dd74adbc"
  },
- "fetched_at": "2026-09-06T09:03:18+00:00",
+ "fetched_at": "2026-09-06T11:34:37+00:00",
  "files": {
   "data/adm2_canonical.csv": {
    "bytes": 28154,
@@ -168,8 +168,8 @@
    "sha256": "42008b16141c8233ec3af0ef25d4c995fc3de894360bfb30de2724eb1460e79c"
   },
   "outputs/release_manifest.json": {
-   "bytes": 126121,
-   "sha256": "58ebe5c1bdfa06179b871c09ab759d43a18f55913fd334aa74dafca6d0f00c99"
+   "bytes": 126297,
+   "sha256": "7f4b933d836575f79f217a211092adc846076e645254d4a51e81371da424ae88"
   },
   "outputs/semantic/dim_category.csv": {
    "bytes": 8944,
@@ -258,6 +258,14 @@
   "outputs/semantic/fact_adm1_month.parquet": {
    "bytes": 698298,
    "sha256": "b92b957488ccb3950035064648d0f477b26c8429048b774a79adcbd7d20bc474"
+  },
+  "outputs/semantic/fact_adm1_year.csv": {
+   "bytes": 1345344,
+   "sha256": "bf42dbcd8bac384efa68bf211175157646ea7670400f967b9c3fc3bb368b9161"
+  },
+  "outputs/semantic/fact_adm1_year.parquet": {
+   "bytes": 428177,
+   "sha256": "b21cebc700f298e2544b2961276cc5f29ae07a61475b161b4a36ace112954cb3"
   },
   "outputs/semantic/fact_adm2_month.csv": {
    "bytes": 8210862,
@@ -356,8 +364,8 @@
    "sha256": "0a56b8ed1e7ee42d3204873ba52b57fac9f0a4fbc2ca876f02daacd60ce9b50d"
   },
   "outputs/semantic/semantic_release.json": {
-   "bytes": 140988,
-   "sha256": "1c8717bd16747c4f245beb00e5f76b5dd1e0a7b7a7859022bac30d56807895ca"
+   "bytes": 149777,
+   "sha256": "6a46b8f386778b61fe5b0fc4e317b018c669be4d30b65012025df901dd74adbc"
   }
  },
  "registries": [
@@ -386,10 +394,10 @@
  "release_id": "PakEmis 1.0.0rc47",
  "schema": "pakemis_explorer.fetch/v1",
  "source": {
-  "commit": "88ab2489a3b5fab9b43f1bb00b4b7bf6c80ccc96",
+  "commit": "46a1de58ad2cd1231e309f445eb03325c81b142f",
   "kind": "git",
-  "manifest_describes_commit": "4903262f98b0d71901ba8590fc3023b806ae4e7d",
-  "ref": "88ab2489",
+  "manifest_describes_commit": "45b342e976b82bf092c1c1f7c30c78984849f69b",
+  "ref": "46a1de58",
   "repository": "/Users/rehanahmad/Desktop/emissions"
  },
  "version": "1.0.0rc47"
