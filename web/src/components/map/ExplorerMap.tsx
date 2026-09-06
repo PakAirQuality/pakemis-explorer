@@ -208,8 +208,9 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   residualRef.current = residual;
   const exIdx = useMemo(() => (layered ? exceptionIndex(dims, residual?.name ?? null) : null), [layered, dims, residual]);
   const exItems = useMemo(() => (layered && exIdx ? exceptionItems(release, exIdx, residual) : []), [layered, exIdx, release, residual]);
-  // the release's spatial products exist for the reference year only: off it the map paints nothing
-  const mapped = mapsPeriod(labels, state.period);
+  // rc47: the polygon levels are year-aware (fact_adm2_year); only the grid level is
+  // reference-only, because its value rasters are built from the reference cubes alone
+  const mapped = mapsPeriod(labels, state.period, state.level);
   const adm1Ids = useMemo(() => Object.keys(bboxes.data?.adm1 ?? {}), [bboxes.data]);
   const ids = useMemo(() => (state.level === "adm1" ? adm1Ids : state.level === "adm2" ? Object.keys(bboxes.data?.adm2 ?? {}) : []), [state.level, adm1Ids, bboxes.data]);
 
@@ -326,8 +327,8 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
     if (map) setView3d(map, state.view3d);
   }, [map, state.view3d]);
 
-  // --- paint the layer (or clear: off the reference year the release maps nothing, and the
-  // map greys to outlines while the legend capsule carries the API's own refusal for the year)
+  // --- paint the layer (or clear: a level the release does not map for this year greys to
+  // outlines while the legend capsule carries the API's own refusal - grid off-reference)
   useEffect(() => {
     if (!map || state.level === "grid") return;
     if (!mapped) {

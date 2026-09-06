@@ -48,7 +48,9 @@ export function MapSettings({ open, onToggle, opacity, onOpacity, basemap, onBas
   const gwps = contract?.gwp?.length ? contract.gwp : Object.keys(labels.gwp).length ? Object.keys(labels.gwp) : [state.gwp];
   const views = Object.keys(labels.views).length ? Object.keys(labels.views) : [state.view];
   const configs = dims.configurations.length ? dims.configurations : [state.config];
-  const months = mapsPeriod(labels, state.period) ? (dims.monthsByPeriod[state.period] ?? []) : [];
+  // months are genuinely reference-only (the monthly grain refusal), whatever the level -
+  // this is the release's monthly-evidence fact, not the retired reference-only map rule
+  const months = (labels.periods[state.period]?.is_reference ?? true) ? (dims.monthsByPeriod[state.period] ?? []) : [];
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {

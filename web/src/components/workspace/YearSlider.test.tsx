@@ -1,12 +1,13 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * The year slider and the release's one mapped year. Nine ticks, one per fiscal period; the
- * reference year's tick is FILLED and every other one HOLLOW, and a hollow tick's tooltip says
- * which year the map shows. Standing on a hollow year the slider carries THE API'S OWN refusal
- * — its `message_worded`, never a reason of ours — while the deck goes on answering nationally;
- * and the map greys, which is the paint contract asserted here directly: off the reference year
- * `mapsPeriod` is false and the branch it selects, `clearPaint`, leaves the level with no
- * feature state and the no-data colour, outlines only.
+ * The year slider in the year-aware era (1.0.0rc47): the polygon levels map EVERY period
+ * from fact_adm2_year, so standing off the reference year no longer greys the map or draws
+ * a line - the line appears only when the release itself refuses the map's request (its
+ * `message_worded`, never a reason of ours) or on the grid level, whose value rasters are
+ * built from the reference cubes alone. The paint contract is asserted directly:
+ * `mapsPeriod` is level-aware - true for polygons in every year, reference-gated for grid -
+ * and the grid's `clearPaint` branch leaves the level with no feature state and the
+ * no-data colour, outlines only.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -82,7 +83,9 @@ describe("the year slider", () => {
     expect(screen.queryByTestId("year-national-only")).toBeNull();
   });
 
-  it("off the reference year the slider carries the API's own refusal, in the API's words", async () => {
+  it("when the release refuses a year's map request the slider carries its words - and only then", async () => {
+    // the fixture still refuses FY2020-21 the way any live refusal would arrive; the
+    // line exists for THAT, not for the year itself (the polygons are year-aware now)
     mount({ period: "FY2020-21" });
     const line = await screen.findByTestId("year-national-only");
     expect(line).toHaveTextContent(FILTERS.nationalOnly);
@@ -93,10 +96,15 @@ describe("the year slider", () => {
     expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21");
   });
 
-  it("the map greys off the reference year: mapsPeriod is false and clearPaint leaves outlines only", () => {
+  it("mapsPeriod is level-aware: polygons map every year, the grid stays reference-gated; clearPaint leaves outlines only", () => {
     const labels = releaseLabels(RELEASE as unknown as ReleaseInfo);
-    expect(mapsPeriod(labels, "FY2023-24")).toBe(true);
-    expect(mapsPeriod(labels, "FY2020-21")).toBe(false);
+    // rc47: fact_adm2_year serves all nine periods at the polygon levels
+    expect(mapsPeriod(labels, "FY2023-24", "adm1")).toBe(true);
+    expect(mapsPeriod(labels, "FY2020-21", "adm1")).toBe(true);
+    expect(mapsPeriod(labels, "FY2020-21", "adm2")).toBe(true);
+    // the grid's value rasters are built from the reference cubes alone
+    expect(mapsPeriod(labels, "FY2023-24", "grid")).toBe(true);
+    expect(mapsPeriod(labels, "FY2020-21", "grid")).toBe(false);
     const states = new Map<string, unknown>();
     const paints = new Map<string, unknown>();
     const map = {

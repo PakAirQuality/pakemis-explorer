@@ -29,13 +29,19 @@ export const LAYERS: Record<MapLayer, LayerDef> = {
 export const LAYER_ORDER: MapLayer[] = ["magnitude", "evidence", "method", "unallocated", "exceptions"];
 
 /**
- * Whether the release maps a period at all: its spatial products exist for the reference year
- * only, so every other year greys the map and the API answers the map's request with its own
- * typed refusal (the legend capsule prints that refusal, never a reason of ours). A period the
- * labels do not describe is assumed mapped: the refusal, if there is one, will say otherwise.
+ * Whether the release maps a period at the given level. Since 1.0.0rc47 the district and
+ * province choropleths are YEAR-AWARE - fact_adm2_year serves all nine periods, and the
+ * by-year cells carry the full lineage vocabulary (spatial_class, allocation_status,
+ * placement_class), so every polygon layer paints in every year. What remains
+ * reference-only is the GRID level, whose value-shaded rasters are built for the
+ * reference year's cubes alone - and any request the release itself refuses still greys
+ * the map with the API's own words (the legend capsule prints that refusal, never a
+ * reason of ours). This function existed to hard-code the old reference-only rule; it
+ * survives as the single place the grid exception lives.
  */
-export function mapsPeriod(labels: Labels, period: string): boolean {
-  return labels.periods[period]?.is_reference ?? true;
+export function mapsPeriod(labels: Labels, period: string, level?: Level): boolean {
+  if (level === "grid") return labels.periods[period]?.is_reference ?? true;
+  return true;
 }
 
 /** The level a layer paints when the current one cannot show it (the switch moves the level with the layer). */

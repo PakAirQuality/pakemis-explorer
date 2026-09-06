@@ -6,13 +6,11 @@
  * the same dates a second time; they went on 2026-08-31.) Moving it writes `period`
  * (`applyPatch` drops the month with it).
  *
- * The release's spatial products exist for the REFERENCE year only. Standing anywhere else the
- * deck keeps answering nationally, the map greys to its outlines
- * (components/map/ExplorerMap.tsx calls `clearPaint`) and the line under the slider carries
- * THE API'S OWN refusal for that year — the same refusal the legend capsule shows, read from
- * the map's own query key so it is never asked twice, and never a reason invented here. No
- * period id is ever printed and nothing is computed: every label is `periodShort` /
- * `periodLabel` / `periodBasisNote`.
+ * Since 1.0.0rc47 the polygon levels are YEAR-AWARE (fact_adm2_year serves all nine
+ * periods), so the slider no longer declares years unmapped: the line beneath it appears
+ * only when the release itself refuses the map's request (its message_worded, read from
+ * the map's own query key so it is never asked twice) or on the grid level off the
+ * reference year, whose value rasters are built from the reference cubes alone.
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -40,7 +38,7 @@ export function YearSlider() {
   if (!ids.length) return null;
   const last = ids.length - 1;
   const current = ids[index];
-  const mapped = mapsPeriod(labels, current);
+  const mapped = mapsPeriod(labels, current, state.level);
   const refusal = refusalOf(mapQ.error);
   return (
     <div data-testid="year-slider">
@@ -63,7 +61,7 @@ export function YearSlider() {
         title={periodBasisNote(labels, current)}
         data-testid="year-range"
       />
-      {!mapped && (
+      {(!mapped || refusal) && (
         <p className="mt-1.5 text-xs text-muted" data-testid="year-national-only">
           <span className="font-semibold text-warn">{FILTERS.nationalOnly}</span>
           {" · "}

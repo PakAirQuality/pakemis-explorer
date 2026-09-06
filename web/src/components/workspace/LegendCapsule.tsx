@@ -10,7 +10,7 @@
  *                                       reference year's all-sector, all-gas envelope
  *   Absolute · {n} bands · ⓘ            the ⓘ opens Legend.tsx's rows: the server's breaks
  *   {layer} · ⓘ                         a categorical layer, whose ⓘ opens LayerLegend's panel
- *   Not mapped · {the release's words}   off the reference year, or on any refused request
+ *   Not mapped · {the release's words}   the grid level off the reference year, or any refused request
  *
  * The refusal face prints the API's own `message_worded` and names its error class; it never
  * invents a reason of its own. Every panel ends with the layer's one sentence — the map is an
@@ -54,7 +54,7 @@ export function LegendCapsule({ className = "" }: { className?: string }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const mapped = mapsPeriod(labels, state.period);
+  const mapped = mapsPeriod(labels, state.period, state.level);
   const refusal = refusalOf(data.error);
   const face = legendFace({ layer: state.layer, scale: state.scale, mapped, refused: !!refusal });
   const breaks = data.env ? legendRanks(data.env.values).length : 0;
