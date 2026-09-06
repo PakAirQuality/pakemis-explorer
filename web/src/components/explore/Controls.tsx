@@ -138,7 +138,7 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
 
   if (!open) {
     return (
-      <aside className="flex w-12 flex-col items-center gap-1 rounded-2xl bg-card p-1.5 shadow-card" data-testid="filter-rail" data-open="0">
+      <aside className="flex w-12 flex-col items-center gap-1 self-start rounded-2xl bg-card p-1.5 shadow-card" data-testid="filter-rail" data-open="0">
         <button type="button" aria-label={D.expand} title={D.expand} onClick={() => setOpen(true)} className={RAIL_ICON} data-testid="filters-expand">
           <ChevronsRight size={16} />
         </button>
@@ -192,7 +192,7 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
         </Ctl>
         <p className="caption">The spatial view applies to province and district results; a national total is the same under every view.</p>
       </div>
-      <p className="border-t border-line pt-3 text-xs text-muted" data-testid="active-view">
+      <p className="mt-auto border-t border-line pt-3 text-xs text-muted" data-testid="active-view">
         <span className="micro mr-1.5">{D.showing}</span>
         {summaryLine(state, labels, dims, defaultGwp)}
       </p>

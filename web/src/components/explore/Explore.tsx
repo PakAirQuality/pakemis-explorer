@@ -102,9 +102,9 @@ export function Explore() {
   return (
     <div className="min-h-dvh bg-surface" data-testid="explore-page">
       <NavHeader />
-      <main className="px-5 pb-12 pt-3">
-        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)_300px]">
-        <div className="flex flex-col gap-4 xl:sticky xl:top-6">
+      <main className="px-5 pb-5 pt-3">
+        <div className="grid grid-cols-1 gap-5 xl:min-h-[calc(100dvh-112px)] xl:grid-cols-[340px_minmax(0,1fr)_300px]">
+        <div className="flex flex-col gap-4">
           <HeaderCard state={state} dispatch={dispatch} labels={labels} dims={dims} env={env} />
           <ResultChips state={state} ctx={ctx} dispatch={dispatch} labels={labels} place={place} />
           <OverviewCard state={state} />
@@ -163,9 +163,7 @@ export function Explore() {
           </details>
         </section>
 
-        <div className="xl:sticky xl:top-6">
-          <Controls state={state} ctx={ctx} dispatch={dispatch} labels={labels} dims={dims} categories={categories} gwps={gwps} configs={configs} views={views} partitions={partitions} defaultGwp={defaults.gwp_basis} />
-        </div>
+        <Controls state={state} ctx={ctx} dispatch={dispatch} labels={labels} dims={dims} categories={categories} gwps={gwps} configs={configs} views={views} partitions={partitions} defaultGwp={defaults.gwp_basis} />
         </div>
       </main>
       {drawer.node}
