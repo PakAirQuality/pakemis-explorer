@@ -89,7 +89,7 @@ function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
 
 describe("/methods", () => {
   it("renders the first sector's card from the registry, the streams, the ledger and the sector envelope", async () => {
-    mount();
+    mount("?mode=catalogue");
     expect(await screen.findByRole("heading", { level: 1, name: "Methods & evidence" })).toBeInTheDocument();
     expect(screen.getByTestId("identity-line")).toHaveTextContent("PakEmis · public-data reconstruction");
     expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "#methodology");
@@ -121,7 +121,7 @@ describe("/methods", () => {
     expect(String(methodCall?.[0])).toMatch(/\/method\/agriculture$/);
   });
   it("View equations lists the rules; Inspect sources opens Result details on the evidence envelope", async () => {
-    mount();
+    mount("?mode=catalogue");
     const card = await screen.findByTestId("sector-card");
     await within(card).findByTestId("step-method");
     fireEvent.click(within(card).getByTestId("view-equations"));
@@ -132,7 +132,7 @@ describe("/methods", () => {
     expect(await screen.findByTestId("drawer-sources")).toBeInTheDocument();
   });
   it("a tile switches the card through the URL; the search narrows the grid by category or source", async () => {
-    mount();
+    mount("?mode=catalogue");
     const tiles = await screen.findAllByTestId("sector-tile");
     fireEvent.click(tiles[1]);
     const card = screen.getByTestId("sector-card");
@@ -151,7 +151,7 @@ describe("/methods", () => {
     await waitFor(() => expect(screen.getAllByTestId("sector-tile")).toHaveLength(3));
   });
   it("the methodology prose renders its sections from the release; the version is printed once, under Release", async () => {
-    mount();
+    mount("?mode=catalogue");
     expect(await screen.findByTestId("methodology")).toBeInTheDocument();
     expect(screen.getByTestId("about-release")).toHaveTextContent("This Explorer reads PakEmis 1.0.0rc42 at commit bc1716d6");
     expect(screen.getByTestId("about-release")).toHaveAttribute("id", "release");
@@ -172,7 +172,7 @@ describe("/methods", () => {
   });
   it("the claim-record browser issues one query for the scope and opens the record of its cell; the URL carries ?claim=", async () => {
     const onUrlUpdate = vi.fn();
-    mount("", onUrlUpdate);
+    mount("?mode=catalogue", onUrlUpdate);
     const browser = await screen.findByTestId("claim-browser");
     expect(browser).toHaveTextContent("Claim-record browser");
     expect(within(browser).getByTestId("browser-category-select")).toBeDisabled();
@@ -197,7 +197,7 @@ describe("/methods", () => {
     expect(within(record).getAllByTestId("source-pages")[0]).toHaveTextContent("Not carried by this release");
   });
   it("a category with a province is sent as asked and the release's GrainUnavailable refusal is shown by name, with no record", async () => {
-    mount();
+    mount("?mode=catalogue");
     const browser = await screen.findByTestId("claim-browser");
     fireEvent.change(within(browser).getByTestId("browser-sector-select"), { target: { value: "agriculture" } });
     await waitFor(() => expect(within(within(browser).getByTestId("browser-category-select")).getAllByRole("option")).toHaveLength(3));
@@ -219,6 +219,33 @@ describe("/methods", () => {
     expect(fetchSpy.mock.calls.filter(([u]) => String(u).includes("/claim?"))).toHaveLength(1);
     expect(fetchSpy.mock.calls.some(([, b]) => b?.categories)).toBe(false);
   });
+  it("the story opens the page: hero, pipeline with the envelope's total, module chips, the gaps note; Browse the evidence crosses to the catalogue", async () => {
+    const updates: string[] = [];
+    mount("", ({ queryString }) => updates.push(queryString));
+    expect(await screen.findByRole("heading", { level: 1, name: "From public records to a national emissions inventory" })).toBeInTheDocument();
+    // the inventory circle prints the envelope's own string, never a client sum
+    expect(await screen.findByTestId("story-total-display")).toHaveTextContent("452.35");
+    // the modules card and chips count the release's dims (three in this fixture)
+    expect(screen.getByTestId("story-modules")).toHaveTextContent("3 tested modules");
+    expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link").map((a) => a.textContent)).toEqual(["Agriculture", "Power", "Residential"]);
+    expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link")[0]).toHaveAttribute("href", "/methods?mode=catalogue&sector=agriculture");
+    // the source chips come from the evidence envelope through sourceWords
+    expect(screen.getByTestId("story-sources")).toHaveTextContent("PBS");
+    // months from the release's month dim (two per period in the fixture)
+    expect(screen.getByTestId("story-months")).toHaveTextContent("2 months");
+    // the gaps note counts the NE rows and quotes the release's LULUCF sentence
+    await waitFor(() => expect(screen.getByTestId("story-gaps")).toHaveTextContent("4 categories are recorded NE"));
+    expect(screen.getByTestId("follow-reconstruction")).toHaveAttribute("href", "#reconstruction");
+    expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "/methods?mode=catalogue#methodology");
+    // the outline CTA crosses to the catalogue and the URL carries the mode
+    fireEvent.click(screen.getByTestId("browse-evidence"));
+    expect(await screen.findByTestId("sector-card")).toBeInTheDocument();
+    expect(updates.at(-1)).toContain("mode=catalogue");
+    // and Story returns, clearing the mode back to the default
+    fireEvent.click(screen.getByTestId("mode-story"));
+    expect(await screen.findByTestId("story")).toBeInTheDocument();
+    expect(updates.at(-1)).not.toContain("mode=");
+  });
   it("audits: every decimal is a server string; no FY; no raw id outside the Release section; no avoid-list phrase", async () => {
     const { container } = render(
       <Providers>
@@ -228,20 +255,29 @@ describe("/methods", () => {
       </Providers>,
       { wrapper: withNuqsTestingAdapter({ searchParams: "", hasMemory: true }) },
     );
-    const card = await screen.findByTestId("sector-card");
-    await within(card).findByTestId("step-result");
-    await within(card).findByTestId("step-method");
-    await screen.findByTestId("about-territories");
+    // the story opens; audit it, then cross to the catalogue and audit that too
+    await screen.findByTestId("story-total-display");
+    await screen.findByTestId("story-gaps");
     const allowed = new Set<string>();
     const add = (s: string) => (s.match(/\d+\.\d+/g) ?? []).forEach((t) => allowed.add(t));
     add(JSON.stringify(RELEASE));
     add(JSON.stringify([...STREAMS, ...RULES, ...NE]));
     add("223.454 223.45");
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-    const tokens: string[] = [];
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
-    expect(tokens.length).toBeGreaterThan(0);
-    for (const t of tokens) expect(allowed.has(t), t).toBe(true);
+    add("452.34662 452.35");
+    const sweep = () => {
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      const tokens: string[] = [];
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
+      for (const t of tokens) expect(allowed.has(t), t).toBe(true);
+      return tokens.length;
+    };
+    expect(sweep()).toBeGreaterThan(0);
+    fireEvent.click(screen.getByTestId("mode-catalogue"));
+    const card = await screen.findByTestId("sector-card");
+    await within(card).findByTestId("step-result");
+    await within(card).findByTestId("step-method");
+    await screen.findByTestId("about-territories");
+    expect(sweep()).toBeGreaterThan(0);
     // the prose names the period id once, on purpose, in a span marked data-allow-fy
     for (const el of Array.from(container.querySelectorAll("[data-allow-fy]"))) el.remove();
     const text = container.textContent ?? "";

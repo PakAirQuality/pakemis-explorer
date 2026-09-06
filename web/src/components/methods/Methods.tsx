@@ -14,6 +14,7 @@
  */
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { BookOpen, ScrollText, Search, Sigma, Table2 } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { ipccSectorNumber, neRowsFor, sectorCodes, type CodedCell } from "@/lib/completeness";
@@ -21,7 +22,8 @@ import { cellUnit, configWords, periodShort, sectorLabel } from "@/lib/labels";
 import { shown, type Cell } from "@/lib/envelope";
 import { useCompleteness, useEmissions, useEvidence, useMethod } from "@/lib/queries";
 import { scopeBody } from "@/lib/requests";
-import { NavHeader } from "@/components/shell/NavCapsule";
+import { NavCapsule } from "@/components/shell/NavCapsule";
+import { SEGMENT_GROUP_CLASS, segmentClass } from "@/components/workspace/PaneSwitch";
 import { CurrentView } from "@/components/shell/CurrentView";
 import { ACTION_CLASS, PageHeader } from "@/components/shell/PageHeader";
 import { Widget, ICON_BUTTON, WIDGET_TITLE } from "@/components/ui/Widget";
@@ -32,6 +34,7 @@ import { AXIS_LABEL, evidenceClassText, EVIDENCE_CLASS_TEXT } from "./evidenceCl
 import { sectorText, sourceWords, statusBadge } from "./sectorText";
 import { Methodology } from "./Methodology";
 import { ClaimBrowser } from "./ClaimBrowser";
+import { Story } from "./Story";
 
 export const METHODS = {
   title: "Methods & evidence",
@@ -46,7 +49,10 @@ export const METHODS = {
   equations: "View equations",
   sources: "Inspect sources",
   rows: "Open data rows",
+  modes: { label: "How to read this page", story: "Story", catalogue: "Evidence catalogue" },
 } as const;
+
+const MODES = ["story", "catalogue"] as const;
 
 type StreamCell = Cell & { source_stream_id?: string; module?: string; ipcc_code?: string; ipcc_category?: string; sub_category?: string; source_id?: string; evidence_class?: string; temporal_class?: string; spatial_class_measured?: string; placement_class?: string; allocation_surface?: string };
 type RuleCell = Cell & { category?: string; tier?: string; equation?: string; notes?: string; method_id?: string; uncertainty_model_id?: string };
@@ -76,6 +82,11 @@ export function sectorMatches(query: string, label: string, streams: StreamCell[
 
 export function Methods() {
   const { state, setState, labels, dims } = useExplorer();
+  // the page's two modes: the story opens; ?claim= (a claim permalink) forces the catalogue
+  const [modeParam, setModeParam] = useQueryState("mode", parseAsStringLiteral(MODES));
+  const [claimParam, setClaimParam] = useQueryState("claim", parseAsString);
+  const mode = claimParam ? "catalogue" : modeParam ?? "story";
+  const catalogue = mode === "catalogue";
   const [query, setQuery] = useState("");
   const [equations, setEquations] = useState(false);
   const sector = state.sector && dims.sectors.includes(state.sector) ? state.sector : dims.sectors[0] ?? "";
@@ -88,10 +99,10 @@ export function Methods() {
     }
     return m;
   }, [all.data]);
-  const evidence = useEvidence("_", { module: sector }, !!sector);
-  const rules = useMethod(sector, !!sector);
+  const evidence = useEvidence("_", { module: sector }, catalogue && !!sector);
+  const rules = useMethod(sector, catalogue && !!sector);
   const sectorBody = useMemo(() => scopeBody({ ...state, sector }), [state, sector]);
-  const result = useEmissions(sectorBody, !!sector);
+  const result = useEmissions(sectorBody, catalogue && !!sector);
   const completeness = useCompleteness({ notation_keys: ["NE"] });
   const drawer = useEnvelopeDrawer(labels);
 
@@ -109,10 +120,27 @@ export function Methods() {
   const visible = dims.sectors.filter((s) => sectorMatches(query, sectorLabel(labels, s), streamsByModule.get(s) ?? []));
   const number = ipccSectorNumber(codes);
 
+  const pickMode = (next: (typeof MODES)[number]) => {
+    if (next === "story") setClaimParam(null);
+    setModeParam(next === "story" ? null : next);
+  };
+
   return (
     <div className="min-h-dvh bg-surface" data-testid="methods-page">
-      <NavHeader />
-      <CurrentView compact />
+      <header className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-5" data-testid="top-nav">
+        <NavCapsule />
+        <div className={SEGMENT_GROUP_CLASS} role="group" aria-label={METHODS.modes.label} data-testid="mode-switch">
+          <button type="button" onClick={() => pickMode("story")} aria-pressed={!catalogue} className={`${segmentClass(!catalogue)} px-3`} data-testid="mode-story">
+            {METHODS.modes.story}
+          </button>
+          <button type="button" onClick={() => pickMode("catalogue")} aria-pressed={catalogue} className={`${segmentClass(catalogue)} px-3`} data-testid="mode-catalogue">
+            {METHODS.modes.catalogue}
+          </button>
+        </div>
+      </header>
+      {!catalogue && <Story onBrowse={() => pickMode("catalogue")} />}
+      {catalogue && <CurrentView compact />}
+      {catalogue && (
       <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
         <PageHeader
           title={METHODS.title}
@@ -280,6 +308,7 @@ export function Methods() {
           <Methodology />
         </div>
       </main>
+      )}
       {drawer.node}
     </div>
   );
