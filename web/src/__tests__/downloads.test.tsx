@@ -76,17 +76,17 @@ function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
 describe("/downloads", () => {
   it("the Files mode leads: hero with the archive and the chips, six purposes, the rail on the default purpose; no version anywhere", async () => {
     mount();
-    expect(await screen.findByRole("heading", { level: 1, name: "Download the inventory" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Download the data" })).toBeInTheDocument();
     expect(screen.getByTestId("api-docs")).toHaveAttribute("href", "http://localhost:8000/api/v1/emissions/docs");
     await waitFor(() => expect(screen.getByTestId("archive-download")).toHaveAttribute("href", `${BASE}/complete.zip`));
-    expect(screen.getByTestId("archive-download")).toHaveTextContent("Download complete release");
+    expect(screen.getByTestId("archive-download")).toHaveTextContent("Download all data");
     expect(screen.getByTestId("hero-chips")).toHaveTextContent("2020–21 to 2023–24");
-    expect(screen.getByTestId("purpose-question")).toHaveTextContent("What do you want to study?");
+    expect(screen.getByTestId("purpose-question")).toHaveTextContent("What data do you need?");
     const cards = screen.getAllByTestId("purpose-card");
     expect(cards.map((c) => c.getAttribute("data-purpose"))).toEqual(["totals", "monthly", "allocations", "gridded", "uncertainty", "evidence"]);
-    expect(within(cards[0]).getByTestId("purpose-caption")).toHaveTextContent("2020–21 to 2023–24 · National");
-    expect(within(cards[1]).getByTestId("purpose-caption")).toHaveTextContent("4 months · timing evidence graded");
-    expect(within(cards[3]).getByTestId("purpose-caption")).toHaveTextContent("2023–24 · Monthly grid");
+    expect(within(cards[0]).getByTestId("purpose-caption")).toHaveTextContent("2020–21 to 2023–24");
+    expect(within(cards[1]).getByTestId("purpose-caption")).toHaveTextContent("4 months");
+    expect(within(cards[3]).getByTestId("purpose-caption")).toHaveTextContent("2023–24 · Monthly");
     // the rail opens on the first purpose without a click
     expect(cards[0]).toHaveAttribute("aria-pressed", "true");
     const panel = screen.getByTestId("purpose-panel");
@@ -94,7 +94,7 @@ describe("/downloads", () => {
     expect(panel).toHaveAttribute("data-family", "annual");
     await waitFor(() => expect(within(panel).getByTestId("family-title")).toHaveTextContent("Annual inventory"));
     expect(within(panel).getAllByTestId("product-row").map((r) => r.getAttribute("data-product"))).toEqual(["fact_annual", "dim_gas"]);
-    expect(within(panel).getByTestId("always-included")).toHaveTextContent("Always included: schema · SHA-256 checksum · citation");
+    expect(within(panel).getByTestId("always-included")).toHaveTextContent("Every file comes with its column guide, checksum and citation.");
     expect(within(panel).getByTestId("download-all")).toHaveTextContent("Download 2 files");
     expect(within(panel).getByTestId("reference-configuration")).toHaveTextContent("Reference estimate");
     // the version has no home in the Files mode
@@ -129,13 +129,17 @@ describe("/downloads", () => {
     expect(schema).toHaveTextContent("Closure: fact_annual sums to the national total per period and configuration");
     expect(schema).toHaveTextContent("fact_annual.csv sha256 8e14aaaa · 648,750 bytes");
     fireEvent.click(within(rows[0]).getByTestId("schema-toggle"));
-    // Preview columns opens every file's schema at once
-    fireEvent.click(within(panel).getByTestId("preview-columns"));
+    // the researchers section owns the technical drawers: Data guide opens every file's columns
+    const researchers = screen.getByTestId("researchers");
+    fireEvent.click(within(researchers).getByTestId("preview-columns"));
     expect(within(panel).getAllByTestId("schema-panel")).toHaveLength(2);
-    fireEvent.click(within(panel).getByTestId("preview-columns"));
-    fireEvent.click(within(panel).getByTestId("checksums-toggle"));
-    expect(within(panel).getAllByTestId("digest").map((d) => d.textContent)).toEqual(["8e14aaaa", "3d61bbbb", "9f9f"]);
-    fireEvent.click(within(panel).getByTestId("copy-citation"));
+    fireEvent.click(within(researchers).getByTestId("preview-columns"));
+    fireEvent.click(within(researchers).getByTestId("checksums-toggle"));
+    expect(within(screen.getByTestId("checksums")).getAllByTestId("digest").map((d) => d.textContent)).toEqual(["8e14aaaa", "3d61bbbb", "9f9f"]);
+    // How to cite opens the citation table in place, and its Copy writes the clipboard
+    fireEvent.click(within(researchers).getByTestId("cite-toggle"));
+    const cite = await screen.findByTestId("citation-table");
+    fireEvent.click(within(cite).getByTestId("copy-apa"));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Ahmad, R. (2026)")));
   });
   it("the narrowings: allocations lists the spatial tables, gridded the cubes with NetCDF only, evidence a registry; the complete card is gone in favour of the hero's archive", async () => {
@@ -184,7 +188,7 @@ describe("/downloads", () => {
     const { container } = mount();
     const panel = await screen.findByTestId("purpose-panel");
     await waitFor(() => expect(within(panel).getAllByTestId("product-row")).toHaveLength(2));
-    fireEvent.click(within(panel).getByTestId("checksums-toggle"));
+    fireEvent.click(within(screen.getByTestId("researchers")).getByTestId("checksums-toggle"));
     const allowed = new Set<string>();
     const add = (s: string) => (s.match(/\d+\.\d+/g) ?? []).forEach((t) => allowed.add(t));
     add(JSON.stringify(RELEASE));

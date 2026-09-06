@@ -85,18 +85,24 @@ export function Downloads() {
   const range = periodRange(dims, labels);
   const refShort = reference ? periodShort(labels, reference) : range;
   const captions: Record<string, string> = {
-    totals: `${range} · National`,
-    monthly: `${months ? `${months} months` : "Every month"} · timing evidence graded`,
-    allocations: `${refShort} · Provinces and districts`,
-    gridded: `${refShort} · Monthly grid`,
-    uncertainty: "Common draw IDs · Reference and alternatives",
-    evidence: "Evidence classes · Registries",
+    totals: range,
+    monthly: months ? `${months} months` : "Every month",
+    allocations: refShort,
+    gridded: `${refShort} · Monthly`,
+    uncertainty: "",
+    evidence: "",
     complete: "Every file · One archive",
   };
   // the six purpose cards; the complete release is the hero's own action
   const offered = PURPOSES.filter((p) => p.id !== "complete");
   const purpose = purposeById(purposeParam) ?? offered[0];
   const complete = products.data?.families.find((f) => f.id === "complete");
+  const family = products.data?.families.find((f) => f.id === purpose.family);
+  const railProducts = products.data ? narrowProducts(familyProducts(products.data, family ?? { id: purpose.family, title: purpose.fallback.title, description: purpose.fallback.description, tables: [], formats: [] }), purpose.only) : [];
+  // the technical drawers, out of the main reading path (the researchers section owns them)
+  const [guide, setGuide] = useState(false);
+  const [checksums, setChecksums] = useState(false);
+  const [cite, setCite] = useState(false);
   const curl = curlLine(absoluteApiBase(), { method: "POST", path: "/query/emissions", body: JSON.stringify(scopeBody(state)) });
 
   const pickMode = (next: (typeof MODES)[number]) => {
@@ -166,16 +172,50 @@ export function Downloads() {
                   );
                 })}
               </div>
+
+              <div className="mt-8 border-t border-line pt-5" data-testid="researchers">
+                <div className="micro">{DOWNLOADS.researchers}</div>
+                <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+                  <button type="button" className={TEXT_BUTTON} onClick={() => setGuide((v) => !v)} aria-expanded={guide} data-testid="preview-columns">
+                    <Table2 size={12} aria-hidden="true" /> {guide ? DOWNLOADS.hidePreview : DOWNLOADS.preview}
+                  </button>
+                  <button type="button" className={TEXT_BUTTON} onClick={() => setChecksums((c) => !c)} aria-expanded={checksums} data-testid="checksums-toggle">
+                    <ShieldCheck size={12} aria-hidden="true" /> {checksums ? DOWNLOADS.hideChecksums : DOWNLOADS.checksums}
+                  </button>
+                  <button type="button" className={TEXT_BUTTON} onClick={() => setCite((c) => !c)} aria-expanded={cite} data-testid="cite-toggle">
+                    <Copy size={12} aria-hidden="true" /> {DOWNLOADS.copyCitation}
+                  </button>
+                  <button type="button" className={TEXT_BUTTON} onClick={() => pickMode("api")} data-testid="open-api-mode">
+                    <ExternalLink size={12} aria-hidden="true" /> {DOWNLOADS.modes.api}
+                  </button>
+                </div>
+                {checksums && railProducts.length > 0 && (
+                  <div className="mt-3 overflow-x-auto" data-testid="checksums">
+                    <p className="mb-2 text-xs text-muted">The sha256 of every file of this topic, as the contract, the manifest and the verification declare them; a download answers with the same digest as its ETag.{products.data?.note ? ` ${products.data.note}` : ""}</p>
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {railProducts.flatMap((pr) => pr.formats).map((f) => (
+                          <tr key={f.filename} className="border-t border-line">
+                            <td className="py-1 pr-3 text-muted">{f.filename}</td>
+                            <td className="mono break-all py-1" data-testid="digest">{f.sha256}</td>
+                            <td className="py-1 pl-3 text-muted">{f.identity ?? ""}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {cite && <CitationTable citation={citation} version={release.version} doi={doi.data} />}
+              </div>
             </section>
 
             <DownloadRail
               purpose={purpose}
-              family={products.data?.families.find((f) => f.id === purpose.family)}
-              products={products.data ? narrowProducts(familyProducts(products.data, products.data.families.find((f) => f.id === purpose.family) ?? { id: purpose.family, title: purpose.fallback.title, description: purpose.fallback.description, tables: [], formats: [] }), purpose.only) : []}
-              note={products.data?.note}
+              family={family}
+              products={railProducts}
+              guide={guide}
               loading={products.isLoading}
               error={products.error}
-              citation={citation}
               configuration={`${configLabel(labels, defaults.configuration_id)} · ${gwpLabel(labels, defaults.gwp_basis)}`}
             />
           </div>
@@ -220,18 +260,9 @@ export function Downloads() {
   );
 }
 
-/** The YOUR DOWNLOAD rail: the chosen purpose's family, its files, and the always-included note. */
-function DownloadRail({ purpose, family, products, note, loading, error, citation, configuration }: { purpose: Purpose; family?: ProductFamily; products: Product[]; note?: string; loading: boolean; error: unknown; citation: Citation | null; configuration: string }) {
-  const [preview, setPreview] = useState(false);
+/** The YOUR DOWNLOAD rail: the chosen topic's files and nothing technical - the column guide opens per row (or all at once from the researchers section's Data guide). */
+function DownloadRail({ purpose, family, products, guide, loading, error, configuration }: { purpose: Purpose; family?: ProductFamily; products: Product[]; guide: boolean; loading: boolean; error: unknown; configuration: string }) {
   const [schema, setSchema] = useState<string | null>(null);
-  const [checksums, setChecksums] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const copyCitation = async () => {
-    if (citation && (await copyText(citation.apa))) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    }
-  };
   const downloadAll = () => {
     for (const p of products) {
       const f = p.formats[0];
@@ -254,12 +285,11 @@ function DownloadRail({ purpose, family, products, note, loading, error, citatio
       {products.length > 0 ? (
         <ul className="mt-4 divide-y divide-line rounded-lg border border-line" data-testid="product-list">
           {products.map((p) => {
-            const open = preview || schema === p.name;
+            const open = guide || schema === p.name;
             return (
               <li key={p.name} className="p-3" data-testid="product-row" data-product={p.name} data-kind={p.kind}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="mono min-w-0 break-all text-sm text-fg">{p.name}</span>
-                  <span className="rounded bg-surface-3 px-1.5 py-0.5 text-micro normal-case tracking-normal text-muted">{p.table_kind ?? p.kind}</span>
                   {typeof p.rows === "number" && <span className="text-xs text-muted">{p.rows.toLocaleString("en-GB")} rows</span>}
                   <span className="flex-1" />
                   {p.formats.map((f) => (
@@ -301,38 +331,9 @@ function DownloadRail({ purpose, family, products, note, loading, error, citatio
       </p>
 
       {products.length > 0 && (
-        <>
-          <button type="button" onClick={downloadAll} className={`${PRIMARY} mt-3 w-full`} data-testid="download-all">
-            <Download size={15} aria-hidden="true" /> {DOWNLOADS.downloadAll(products.length)}
-          </button>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <button type="button" className={TEXT_BUTTON} onClick={() => setPreview((v) => !v)} aria-expanded={preview} data-testid="preview-columns">
-              <Table2 size={12} aria-hidden="true" /> {preview ? DOWNLOADS.hidePreview : DOWNLOADS.preview}
-            </button>
-            <button type="button" className={TEXT_BUTTON} onClick={copyCitation} data-testid="copy-citation">
-              <Copy size={12} aria-hidden="true" /> {copied ? DOWNLOADS.cite.copied : DOWNLOADS.copyCitation}
-            </button>
-            <button type="button" className={TEXT_BUTTON} onClick={() => setChecksums((c) => !c)} aria-expanded={checksums} data-testid="checksums-toggle">
-              <ShieldCheck size={12} aria-hidden="true" /> {checksums ? DOWNLOADS.hideChecksums : DOWNLOADS.checksums}
-            </button>
-          </div>
-          {checksums && (
-            <div className="mt-2 overflow-x-auto" data-testid="checksums">
-              <p className="mb-2 text-xs text-muted">The sha256 of every file of this purpose, as the contract, the manifest and the verification declare them; a download answers with the same digest as its ETag.{note ? ` ${note}` : ""}</p>
-              <table className="w-full text-xs">
-                <tbody>
-                  {products.flatMap((p) => p.formats).map((f) => (
-                    <tr key={f.filename} className="border-t border-line">
-                      <td className="py-1 pr-3 text-muted">{f.filename}</td>
-                      <td className="mono break-all py-1" data-testid="digest">{f.sha256}</td>
-                      <td className="py-1 pl-3 text-muted">{f.identity ?? ""}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+        <button type="button" onClick={downloadAll} className={`${PRIMARY} mt-3 w-full`} data-testid="download-all">
+          <Download size={15} aria-hidden="true" /> {DOWNLOADS.downloadAll(products.length)}
+        </button>
       )}
 
       <div className="mt-4 border-t border-line pt-3" data-testid="reference-configuration">
