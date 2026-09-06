@@ -78,11 +78,16 @@ export function NavCapsule({ floating = false, children }: { floating?: boolean;
   );
 }
 
-/** The capsule in a normal header row: the pages that are not the workspace. */
-export function NavHeader({ children }: { children?: ReactNode }) {
+/**
+ * The capsule in a normal header row: the pages that are not the workspace. A page whose
+ * content is a centred max-width container passes the same container classes as `container`,
+ * so the capsule's left edge lines up with the content's instead of hugging the viewport.
+ */
+export function NavHeader({ children, container }: { children?: ReactNode; container?: string }) {
+  const capsule = <NavCapsule>{children}</NavCapsule>;
   return (
-    <header className="flex shrink-0 items-center px-5 pb-3 pt-5" data-testid="top-nav">
-      <NavCapsule>{children}</NavCapsule>
+    <header className={`flex shrink-0 items-center pb-3 pt-5 ${container ? "" : "px-5"}`} data-testid="top-nav">
+      {container ? <div className={`${container} flex`}>{capsule}</div> : capsule}
     </header>
   );
 }

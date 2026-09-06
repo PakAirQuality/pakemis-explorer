@@ -101,8 +101,8 @@ export function Explore() {
 
   return (
     <div className="min-h-dvh bg-surface" data-testid="explore-page">
-      <NavHeader />
-      <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-6 md:px-6">
+      <NavHeader container="mx-auto w-full max-w-[1500px] px-4 md:px-6" />
+      <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-3 md:px-6">
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)_300px]">
         <div className="flex flex-col gap-4 xl:sticky xl:top-6">
           <HeaderCard state={state} dispatch={dispatch} labels={labels} dims={dims} env={env} />
