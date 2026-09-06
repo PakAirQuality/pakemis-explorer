@@ -181,7 +181,7 @@ describe("ClaimRecord", () => {
   });
 
   it("the permalink round-trips", () => {
-    expect(claimHref({ receipt: "060bde899b5bb984553b61722584952a", cell: 0 })).toBe("/methods?claim=060bde899b5bb984553b61722584952a%3A0");
+    expect(claimHref({ receipt: "060bde899b5bb984553b61722584952a", cell: 0 })).toBe("/methods/evidence?claim=060bde899b5bb984553b61722584952a%3A0");
     expect(parseClaimParam("060bde899b5bb984553b61722584952a:2")).toEqual({ receipt: "060bde899b5bb984553b61722584952a", cell: 2 });
     expect(parseClaimParam("nonsense")).toBeNull();
   });
@@ -213,7 +213,7 @@ describe("ClaimPanel, the Evidence tab and ClaimLink", () => {
     );
     expect(await screen.findByTestId("claim-record")).toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalledWith("http://localhost:8000/api/v1/emissions/claim?receipt=060bde899b5bb984553b61722584952a&cell=0");
-    expect(screen.getByTestId("claim-permalink")).toHaveAttribute("href", "/methods?claim=060bde899b5bb984553b61722584952a%3A0");
+    expect(screen.getByTestId("claim-permalink")).toHaveAttribute("href", "/methods/evidence?claim=060bde899b5bb984553b61722584952a%3A0");
   });
 
   it("a typed 422 in the route's own shape is the RefusalCard by name", async () => {

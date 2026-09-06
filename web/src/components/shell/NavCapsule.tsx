@@ -31,7 +31,8 @@ export const ASK_LABEL = "Ask about this view";
 /** Whether a link is the current page: the pathname without its trailing slash (the static export serves `/data/`). */
 export function isActive(pathname: string | null, href: string): boolean {
   const p = (pathname ?? "/").replace(/\/+$/, "") || "/";
-  return p === href;
+  // segment-aware: /methods/sectors/power keeps Methods current; /methodology does not
+  return p === href || (href !== "/" && p.startsWith(href + "/"));
 }
 
 /** The pill itself: the classes the deck's left inset and radius family are matched to. */

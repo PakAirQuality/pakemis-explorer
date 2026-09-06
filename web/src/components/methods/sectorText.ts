@@ -97,3 +97,99 @@ export function statusBadge(estimated: boolean, neCount: number): string {
   if (!estimated) return "Not estimated";
   return neCount > 0 ? "Estimated with explicit gaps" : "Estimated";
 }
+
+
+/**
+ * The public sector page's own words (the mockup's register): a one-line dek, and the first
+ * two stages of "How this estimate is built". Stages three and four are the same for every
+ * sector (standard IPCC methods; added to the national inventory) and live in SectorPage.
+ * No digits, no internal vocabulary - this is the reader's layer.
+ */
+export type SectorStory = { dek: string; step1: string; step2: string };
+
+export const SECTOR_STORY: Record<string, SectorStory> = {
+  agriculture: {
+    dek: "How Pakistan\u2019s agricultural emissions are estimated from livestock, crops and fertiliser data.",
+    step1: "Animal counts, crop areas and fertiliser use.",
+    step2: "Livestock, rice, nitrogen applied to soils and crop residues.",
+  },
+  aviation: {
+    dek: "How emissions from domestic flights are estimated from aircraft movements and jet-fuel sales.",
+    step1: "Aircraft movements and jet-fuel sales records.",
+    step2: "Fuel burnt on domestic flights.",
+  },
+  fugitives: {
+    dek: "How leaks, venting and flaring from oil and gas operations are estimated from industry statistics.",
+    step1: "The petroleum regulator\u2019s annual industry statistics.",
+    step2: "Wells, processing plants, pipelines and the gas they handle.",
+  },
+  industry: {
+    dek: "How emissions from fuel burnt in manufacturing are estimated from fuel sales records.",
+    step1: "Fuel sales to industry from petroleum and gas records.",
+    step2: "Each fuel delivered to factories and workshops.",
+  },
+  ippu: {
+    dek: "How process emissions from cement making are estimated from producers\u2019 own reports.",
+    step1: "Cement producers\u2019 annual reports.",
+    step2: "Clinker, the baked ingredient at the heart of cement.",
+  },
+  power: {
+    dek: "How emissions from electricity generation are estimated from each plant\u2019s reported fuel.",
+    step1: "The electricity regulator\u2019s plant-by-plant fuel reports.",
+    step2: "Fuel burnt at power stations and in captive generation.",
+  },
+  railways: {
+    dek: "How railway emissions are estimated from the national railway\u2019s own records.",
+    step1: "The national railway\u2019s year book.",
+    step2: "Diesel burnt by locomotives.",
+  },
+  residential: {
+    dek: "How emissions from cooking and heating at home are estimated from household survey data.",
+    step1: "Household surveys and gas-connection records.",
+    step2: "Firewood, dung, crop residues, gas and other household fuels.",
+  },
+  transport: {
+    dek: "How road transport emissions are estimated from fuel sales and the vehicle fleet.",
+    step1: "Fuel sales records and vehicle registrations.",
+    step2: "Petrol, diesel and gas burnt on the roads.",
+  },
+  waste: {
+    dek: "How emissions from waste and wastewater are estimated from population and utility data.",
+    step1: "Population statistics and utility records.",
+    step2: "Solid waste at disposal sites, open burning and wastewater.",
+  },
+};
+
+export const GENERIC_STORY: SectorStory = {
+  dek: "How this sector\u2019s emissions are estimated from public records.",
+  step1: "Published statistics and administrative records.",
+  step2: "The quantities the public records report.",
+};
+
+export function sectorStory(id: string): SectorStory {
+  return SECTOR_STORY[id] ?? GENERIC_STORY;
+}
+
+/** Category names in the reader's words; a category the map does not know passes through. */
+export const INCLUDED_LABELS: Record<string, string> = {
+  "Enteric fermentation": "Livestock digestion",
+  "Manure management": "Manure",
+  "Field burning of agricultural residues": "Crop-residue burning",
+  "Urea application": "Urea use",
+  "Product uses as substitutes for ODS (F-gases)": "F-gases",
+};
+
+export function includedLabel(category: string): string {
+  return INCLUDED_LABELS[category] ?? category;
+}
+
+/** Not-yet-estimated names in the reader's words; the fallback is the category as shipped. */
+export const PLAIN_GAPS: Record<string, string> = {
+  "Agricultural soils - N from SOC mineralisation": "Emissions from soil-carbon mineralisation",
+  "Agricultural soils - N from SOC mineralisation (FSOM)": "Emissions from soil-carbon mineralisation",
+  "Other carbon-containing fertilizers": "Other carbon-containing fertilisers",
+};
+
+export function plainGap(category: string): string {
+  return PLAIN_GAPS[category] ?? category;
+}

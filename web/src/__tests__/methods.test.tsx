@@ -18,11 +18,18 @@ import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import MethodsPage from "@/app/methods/page";
+import MethodologyPage from "@/app/methodology/page";
+import { SectorRoute } from "@/components/methods/SectorRoute";
+import { SectorsIndex } from "@/components/methods/SectorsIndex";
+import { EvidencePage } from "@/components/methods/EvidencePage";
 import { RELEASE, envelope, mockFetch, refusal } from "./fixtures";
 import { CLAIM } from "./claimFixture";
 import { avoidPhrasesIn } from "./vocabulary";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/methods", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+const pathname = { value: "/methods" };
+const push = vi.fn();
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push, replace }) }));
 
 const BBOXES = { adm1: { "Azad Kashmir": [73, 33, 75, 35], Balochistan: [61, 24, 70, 32], "Gilgit-Baltistan": [72, 34, 77, 37], "Islamabad Capital Territory": [72.8, 33.5, 73.4, 33.9], "Khyber Pakhtunkhwa": [69, 31, 74, 37], Punjab: [69, 27, 75, 34], Sindh: [66, 23, 71, 28] }, adm2: {} };
 
@@ -79,94 +86,107 @@ beforeEach(() => {
   );
 });
 
-function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
+function mountAt(node: React.ReactNode, path: string, search = "", onUrlUpdate?: OnUrlUpdateFunction) {
+  pathname.value = path;
+  push.mockReset();
+  replace.mockReset();
   const Wrapper = withNuqsTestingAdapter({ searchParams: search, onUrlUpdate, hasMemory: true });
   return render(
     <Wrapper>
       <Providers>
-        <ExplorerProvider>
-          <MethodsPage />
-        </ExplorerProvider>
+        <ExplorerProvider>{node}</ExplorerProvider>
       </Providers>
     </Wrapper>,
   );
 }
 
-describe("/methods", () => {
-  it("a sector's page: one result with its national share, four plain steps, the included categories, the glance, the NE strip - and the dense card behind Technical method", async () => {
-    mount("?mode=catalogue&sector=agriculture");
-    expect(await screen.findByRole("heading", { level: 1, name: "Methods & evidence" })).toBeInTheDocument();
-    expect(screen.getByTestId("identity-line")).toHaveTextContent("PakEmis · public-data reconstruction");
-    expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "#methodology");
-    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods")).toHaveAttribute("aria-current", "page");
-    // the page: title, dek, the envelope's own result and the partition's share
+/** The reader-page vocabulary ban: internal software and database words never render. */
+const PROHIBITED: [RegExp, string][] = [
+  [/\b(envelope|receipt|digest|canonical|registry|refusal|ledger|stream|configuration)s?\b/i, "internal vocabulary"],
+  [/\b[ES][1-4]\b/, "evidence code"],
+  [/\bT[1-4]\b/, "timing code"],
+  [/registered rules?/i, "registered rules"],
+  [/1\.0\.0rc/, "release candidate"],
+  [/\b[0-9a-f]{12,}\b/, "hash"],
+];
+function assertPublicLanguage(el: HTMLElement) {
+  const text = el.textContent ?? "";
+  for (const [re, what] of PROHIBITED) expect(re.test(text), `${what}: ${text.match(re)?.[0]}`).toBe(false);
+}
+
+
+describe("/methods/sectors/[sector]", () => {
+  it("the focused page: result with its national share, the four plain stages, included, glance, gaps, actions - and NOTHING of the catalogue", async () => {
+    mountAt(<SectorRoute sector="agriculture" />, "/methods/sectors/agriculture");
     const page = await screen.findByTestId("sector-page");
     expect(within(page).getByTestId("sector-title")).toHaveTextContent("Agriculture");
-    expect(within(page).getByTestId("sector-dek")).toHaveTextContent("Livestock digestion and manure");
+    expect(within(page).getByTestId("sector-dek")).toHaveTextContent("How Pakistan’s agricultural emissions are estimated from livestock, crops and fertiliser data.");
     await waitFor(() => expect(within(page).getByTestId("sector-result-display")).toHaveTextContent("223.45"));
     await waitFor(() => expect(within(page).getByTestId("sector-share")).toHaveTextContent("49.4 % of the national total"));
-    expect(within(page).getByTestId("sector-step-1")).toHaveTextContent("PBS agricultural census and economic survey");
-    expect(within(page).getByTestId("sector-step-2")).toHaveTextContent("buffalo · rice");
-    await waitFor(() => expect(within(page).getByTestId("sector-step-3")).toHaveTextContent("2 registered IPCC rules are applied."));
-    expect(within(page).getByTestId("sector-step-4")).toHaveTextContent("Added to the national inventory.");
-    expect(within(page).getAllByTestId("included-chip").map((c) => c.textContent)).toEqual(["Enteric fermentation", "Rice cultivation"]);
-    expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Annual estimates");
-    expect(within(page).getByTestId("sector-ne")).toHaveTextContent("Agricultural soils - N from SOC mineralisation · Liming");
+    expect(within(page).getByTestId("sector-step-1")).toHaveTextContent("Animal counts, crop areas and fertiliser use.");
+    expect(within(page).getByTestId("sector-step-2")).toHaveTextContent("Livestock, rice, nitrogen applied to soils and crop residues.");
+    expect(within(page).getByTestId("sector-step-3")).toHaveTextContent("Standard IPCC methods are used to calculate emissions.");
+    expect(within(page).getByTestId("sector-step-4")).toHaveTextContent("The estimates are added to the national inventory.");
+    await waitFor(() => expect(within(page).getAllByTestId("included-chip").map((c) => c.textContent?.trim())).toEqual(["Livestock digestion", "Rice cultivation"]));
+    expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Based mainly on published national statistics and figures derived from published statistics.");
+    expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Provincial statistics and census data are used to place the estimates.");
+    expect(within(page).getByTestId("sector-ne")).toHaveTextContent("Emissions from soil-carbon mineralisation · Liming");
     expect(within(page).getByTestId("view-sector-data")).toHaveAttribute("href", "/data?sector=agriculture");
+    expect(within(page).getByTestId("all-sectors")).toHaveAttribute("href", "/methods/sectors");
+    // exclusive rendering: nothing of the catalogue, the browser or the prose beneath
+    expect(screen.queryByTestId("claim-browser")).toBeNull();
+    expect(screen.queryByTestId("methodology")).toBeNull();
+    expect(screen.queryByTestId("search")).toBeNull();
+    expect(screen.queryByTestId("sector-tile")).toBeNull();
     expect(screen.queryByTestId("sector-card")).toBeNull();
-    // the technical fold carries the old card whole
-    fireEvent.click(within(page).getByTestId("technical-toggle"));
-    const card = screen.getByTestId("sector-card");
-    await waitFor(() => expect(within(card).getByText("IPCC sector 3")).toBeInTheDocument());
-    expect(within(card).getByTestId("sector-name")).toHaveTextContent("Agriculture");
-    await waitFor(() => expect(within(card).getByTestId("status-badge")).toHaveTextContent("Estimated with explicit gaps"));
-    expect(within(card).getByTestId("sector-summary")).toHaveTextContent("Livestock digestion and manure");
-    expect(within(card).getByTestId("step-1")).toHaveTextContent("1 · Source records");
-    expect(within(card).getByTestId("step-sources")).toHaveTextContent("PBS agricultural census and economic survey");
-    expect(within(card).getByTestId("step-activity")).toHaveTextContent("buffalo · rice");
-    await waitFor(() => expect(within(card).getByTestId("step-method")).toHaveTextContent("2 registered rules: Enteric fermentation, Rice cultivation"));
-    expect(within(card).getByTestId("step-3")).toHaveTextContent("Registered IPCC category equations");
-    await waitFor(() => expect(within(card).getByTestId("step-result")).toHaveTextContent("223.45 Mt CO₂e in 2023–24"));
-    expect(within(card).getByTestId("dim-annual")).toHaveTextContent("E2 — published statistic for this source and period, not independently verified");
-    expect(within(card).getByTestId("dim-annual")).toHaveTextContent("E3 — derived from a related published quantity (a share, a ratio, a balance)");
-    expect(within(card).getByTestId("dim-monthly")).toHaveTextContent("T3 — process-based seasonal profile (degree days, crop calendar, fire counts)");
-    expect(within(card).getByTestId("dim-spatial")).toHaveTextContent("S3 — administrative statistic (provincial sales, registrations, census counts)");
-    expect(within(card).getByTestId("dim-uncertainty")).toHaveTextContent("one uncertainty model (product lognormal activity x ef)");
-    const ne = within(card).getAllByTestId("ne-row");
-    expect(ne.map((r) => r.textContent)).toEqual(["NEAgricultural soils - N from SOC mineralisation · N2O", "NELiming · CO2"]);
-    expect(within(card).getByTestId("open-rows")).toHaveAttribute("href", "/data?sector=agriculture");
-    const methodCall = fetchSpy.mock.calls.find(([u]) => String(u).includes("/method/"));
-    expect(String(methodCall?.[0])).toMatch(/\/method\/agriculture$/);
+    // the actions row is the page's last section
+    const root = screen.getByTestId("sector-page");
+    expect(root.lastElementChild).toBe(within(root).getByTestId("sector-actions"));
+    // the reader's page speaks public language
+    assertPublicLanguage(root);
+    // the Methods nav item stays current on the nested route
+    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods")).toHaveAttribute("aria-current", "page");
   });
-  it("View equations lists the rules; Inspect sources opens Result details on the evidence envelope", async () => {
-    mount("?mode=catalogue&sector=agriculture");
-    fireEvent.click(await screen.findByTestId("technical-toggle"));
+  it("See the sources lists plain source names; Technical method opens the dense card in a drawer, where equations and the evidence drawer live", async () => {
+    mountAt(<SectorRoute sector="agriculture" />, "/methods/sectors/agriculture");
+    const page = await screen.findByTestId("sector-page");
+    fireEvent.click(within(page).getByTestId("see-sources"));
+    const dialog = await screen.findByTestId("sources-dialog");
+    expect(within(dialog).getAllByTestId("source-name").map((s) => s.textContent)).toEqual(["PBS agricultural census and economic survey", "Economic survey 2023 24 rice area"]);
+    fireEvent.click(screen.getByTestId("sources-dialog-close"));
+    await waitFor(() => expect(screen.queryByTestId("sources-dialog")).toBeNull());
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
     const card = await screen.findByTestId("sector-card");
     await within(card).findByTestId("step-method");
+    expect(within(card).getByText("IPCC sector 3")).toBeInTheDocument();
+    expect(within(card).getByTestId("step-sources")).toHaveTextContent("PBS agricultural census and economic survey");
+    await waitFor(() => expect(within(card).getByTestId("step-result")).toHaveTextContent("223.45 Mt CO₂e in 2023–24"));
     fireEvent.click(within(card).getByTestId("view-equations"));
     const eq = await within(card).findByTestId("equations");
     expect(eq).toHaveTextContent("2006 V4 Ch10 Eq 10.19/10.20");
-    expect(eq).toHaveTextContent("Country-specific head counts from the agricultural census");
     fireEvent.click(within(card).getByTestId("inspect-sources"));
     expect(await screen.findByTestId("drawer-sources")).toBeInTheDocument();
   });
-  it("the catalogue opens on the index; a tile opens the sector's page; All sectors returns; the search narrows the grid", async () => {
-    mount("?mode=catalogue");
-    // the index: no page yet, every tile unselected
-    const tiles = await screen.findAllByTestId("sector-tile");
-    expect(tiles.map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture", "power", "residential"]);
-    await waitFor(() => expect(tiles[0]).toHaveTextContent("2 source streams"));
-    expect(screen.queryByTestId("sector-page")).toBeNull();
-    fireEvent.click(tiles[1]);
+  it("the page is data-driven: power renders its own words and numbers", async () => {
+    mountAt(<SectorRoute sector="power" />, "/methods/sectors/power");
     const page = await screen.findByTestId("sector-page");
     expect(within(page).getByTestId("sector-title")).toHaveTextContent("Power");
+    expect(within(page).getByTestId("sector-dek")).toHaveTextContent("each plant’s reported fuel");
     await waitFor(() => expect(within(page).getByTestId("sector-result-display")).toHaveTextContent("63.37"));
-    await waitFor(() => expect(within(page).getByTestId("sector-step-3")).toHaveTextContent("Standard IPCC methods are applied."));
+    await waitFor(() => expect(within(page).getByTestId("sector-share")).toHaveTextContent("14.0 % of the national total"));
+    expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Based mainly on measured or metered records.");
     expect(within(page).queryByTestId("sector-ne")).toBeNull();
-    // and back to the index
-    fireEvent.click(within(page).getByTestId("all-sectors"));
-    await screen.findByTestId("browse");
-    expect(screen.queryByTestId("sector-page")).toBeNull();
+    assertPublicLanguage(page);
+  });
+});
+
+describe("/methods/sectors", () => {
+  it("the index: one linking tile per sector with its plain dek, no counts; the search narrows", async () => {
+    mountAt(<SectorsIndex />, "/methods/sectors");
+    const tiles = await screen.findAllByTestId("sector-tile");
+    expect(tiles.map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture", "power", "residential"]);
+    expect(tiles[0]).toHaveAttribute("href", "/methods/sectors/agriculture");
+    expect(tiles[0]).not.toHaveTextContent("source stream");
     fireEvent.change(screen.getByTestId("search-input"), { target: { value: "rice" } });
     await waitFor(() => expect(screen.getAllByTestId("sector-tile").map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture"]));
     fireEvent.change(screen.getByTestId("search-input"), { target: { value: "hies" } });
@@ -174,8 +194,11 @@ describe("/methods", () => {
     fireEvent.change(screen.getByTestId("search-input"), { target: { value: "" } });
     await waitFor(() => expect(screen.getAllByTestId("sector-tile")).toHaveLength(3));
   });
+});
+
+describe("/methodology", () => {
   it("the methodology prose renders its sections from the release; the version is printed once, under Release", async () => {
-    mount("?mode=catalogue");
+    mountAt(<MethodologyPage />, "/methodology");
     expect(await screen.findByTestId("methodology")).toBeInTheDocument();
     expect(screen.getByTestId("about-release")).toHaveTextContent("This Explorer reads PakEmis 1.0.0rc42 at commit bc1716d6");
     expect(screen.getByTestId("about-release")).toHaveAttribute("id", "release");
@@ -194,9 +217,12 @@ describe("/methods", () => {
     expect(screen.getByTestId("about-licences")).toHaveTextContent("data/gis/rail/pak_rail_network.geojson");
     expect(screen.getByTestId("about-links").querySelector('a[href="/downloads"]')).not.toBeNull();
   });
+});
+
+describe("/methods/evidence", () => {
   it("the claim-record browser issues one query for the scope and opens the record of its cell; the URL carries ?claim=", async () => {
     const onUrlUpdate = vi.fn();
-    mount("?mode=catalogue", onUrlUpdate);
+    mountAt(<EvidencePage />, "/methods/evidence", "", onUrlUpdate);
     const browser = await screen.findByTestId("claim-browser");
     expect(browser).toHaveTextContent("Claim-record browser");
     expect(within(browser).getByTestId("browser-category-select")).toBeDisabled();
@@ -215,13 +241,13 @@ describe("/methods", () => {
     const record = await screen.findByTestId("browser-record");
     await waitFor(() => expect(within(record).getByTestId("claim-breadcrumb")).toHaveAttribute("data-text", "Agriculture → Enteric fermentation → CH₄ → Pakistan → 2023–24"));
     expect(fetchSpy.mock.calls.some(([u]) => String(u).endsWith("/claim?receipt=060bde899b5bb984553b61722584952a&cell=0"))).toBe(true);
-    expect(within(record).getByTestId("browser-permalink")).toHaveAttribute("href", "/methods?claim=060bde899b5bb984553b61722584952a%3A0");
+    expect(within(record).getByTestId("browser-permalink")).toHaveAttribute("href", "/methods/evidence?claim=060bde899b5bb984553b61722584952a%3A0");
     await waitFor(() => expect(onUrlUpdate.mock.calls.some(([u]) => String((u as { queryString: string }).queryString).includes("claim=060bde899b5bb984553b61722584952a"))).toBe(true));
     expect(within(record).getByTestId("reported-short")).toHaveTextContent("151.66");
     expect(within(record).getAllByTestId("source-pages")[0]).toHaveTextContent("Not carried by this release");
   });
   it("a category with a province is sent as asked and the release's GrainUnavailable refusal is shown by name, with no record", async () => {
-    mount("?mode=catalogue");
+    mountAt(<EvidencePage />, "/methods/evidence");
     const browser = await screen.findByTestId("claim-browser");
     fireEvent.change(within(browser).getByTestId("browser-sector-select"), { target: { value: "agriculture" } });
     await waitFor(() => expect(within(within(browser).getByTestId("browser-category-select")).getAllByRole("option")).toHaveLength(3));
@@ -237,22 +263,25 @@ describe("/methods", () => {
     expect(screen.queryByTestId("browser-record")).toBeNull();
   });
   it("?claim=<receipt>:<cell> reopens the same record", async () => {
-    mount("?claim=060bde899b5bb984553b61722584952a%3A0");
+    mountAt(<EvidencePage />, "/methods/evidence", "?claim=060bde899b5bb984553b61722584952a%3A0");
     const record = await screen.findByTestId("browser-record");
     await waitFor(() => expect(within(record).getByTestId("claim-breadcrumb")).toHaveAttribute("data-text", "Agriculture → Enteric fermentation → CH₄ → Pakistan → 2023–24"));
     expect(fetchSpy.mock.calls.filter(([u]) => String(u).includes("/claim?"))).toHaveLength(1);
     expect(fetchSpy.mock.calls.some(([, b]) => b?.categories)).toBe(false);
   });
+});
+
+describe("/methods (the story)", () => {
   it("the story opens the page: hero, pipeline with the envelope's total, module chips, the gaps note; Browse the evidence crosses to the catalogue", async () => {
     const updates: string[] = [];
-    mount("", ({ queryString }) => updates.push(queryString));
+    mountAt(<MethodsPage />, "/methods", "", ({ queryString }) => updates.push(queryString));
     expect(await screen.findByRole("heading", { level: 1, name: "From public records to Pakistan\u2019s emissions inventory" })).toBeInTheDocument();
     // the inventory circle prints the envelope's own string, never a client sum
     expect(await screen.findByTestId("story-total-display")).toHaveTextContent("452.35");
     // the modules card and chips count the release's dims (three in this fixture)
     expect(screen.getByTestId("story-modules")).toHaveTextContent("3 sector modules");
     expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link").map((a) => a.textContent)).toEqual(["Agriculture", "Power", "Residential"]);
-    expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link")[0]).toHaveAttribute("href", "/methods?mode=catalogue&sector=agriculture");
+    expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link")[0]).toHaveAttribute("href", "/methods/sectors/agriculture");
     // the source chips come from the evidence envelope through sourceWords
     expect(screen.getByTestId("story-sources")).toHaveTextContent("PBS");
     // months from the release's month dim (two per period in the fixture)
@@ -260,63 +289,42 @@ describe("/methods", () => {
     // the gaps note counts the NE rows and quotes the release's LULUCF sentence
     await waitFor(() => expect(screen.getByTestId("story-gaps")).toHaveTextContent("4 categories are recorded NE"));
     expect(screen.getByTestId("follow-reconstruction")).toHaveAttribute("href", "#reconstruction");
-    expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "/methods?mode=catalogue#methodology");
-    // the outline CTA crosses to the catalogue and the URL carries the mode
+    expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "/methodology");
+    // the outline CTA navigates to the sector catalogue route
     fireEvent.click(screen.getByTestId("browse-evidence"));
-    expect((await screen.findAllByTestId("sector-tile")).length).toBe(3);
-    expect(updates.at(-1)).toContain("mode=catalogue");
-    // and Story returns, clearing the mode back to the default
-    fireEvent.click(screen.getByTestId("mode-story"));
-    expect(await screen.findByTestId("story")).toBeInTheDocument();
-    expect(updates.at(-1)).not.toContain("mode=");
+    expect(push).toHaveBeenCalledWith("/methods/sectors/");
   });
-  it("audits: every decimal is a server string; no FY; no raw id outside the Release section; no avoid-list phrase", async () => {
-    const { container } = render(
-      <Providers>
-        <ExplorerProvider>
-          <MethodsPage />
-        </ExplorerProvider>
-      </Providers>,
-      { wrapper: withNuqsTestingAdapter({ searchParams: "", hasMemory: true }) },
-    );
-    // the story opens; audit it, then cross to the catalogue and audit that too
-    await screen.findByTestId("story-total-display");
-    await screen.findByTestId("story-gaps");
+  it("the legacy single-page URLs replace to their routes", async () => {
+    const a = mountAt(<MethodsPage />, "/methods", "?mode=catalogue&sector=power");
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/methods/sectors/power/"));
+    a.unmount();
+    const b = mountAt(<MethodsPage />, "/methods", "?mode=catalogue");
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/methods/sectors/"));
+    b.unmount();
+    mountAt(<MethodsPage />, "/methods", "?claim=060bde899b5bb984553b61722584952a%3A0");
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/methods/evidence/?claim=060bde899b5bb984553b61722584952a%3A0"));
+  });
+  it("audits: every decimal on the story and the sector page is a server string; no FY; no avoid-list phrase", async () => {
     const allowed = new Set<string>();
-    const add = (s: string) => (s.match(/\d+\.\d+/g) ?? []).forEach((t) => allowed.add(t));
+    const add = (x: string) => (x.match(/\d+\.\d+/g) ?? []).forEach((t) => allowed.add(t));
     add(JSON.stringify(RELEASE));
     add(JSON.stringify([...STREAMS, ...RULES, ...NE]));
-    add("223.454 223.45");
-    add("452.34662 452.35");
-    add("49.4 63.370 63.37 14.0");  // the sector partition envelope the sector page reads
-    const sweep = () => {
+    add("223.454 223.45 452.34662 452.35 49.4 63.370 63.37 14.0");
+    const sweep = (container: HTMLElement) => {
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-      const tokens: string[] = [];
-      for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
-      for (const t of tokens) expect(allowed.has(t), t).toBe(true);
-      return tokens.length;
+      for (let n = walker.nextNode(); n; n = walker.nextNode())
+        for (const t of (n.textContent ?? "").match(/\d+\.\d+/g) ?? []) expect(allowed.has(t), t).toBe(true);
+      const text = container.textContent ?? "";
+      expect(text).not.toContain("FY");
+      expect(avoidPhrasesIn(text)).toEqual([]);
     };
-    expect(sweep()).toBeGreaterThan(0);
-    fireEvent.click(screen.getByTestId("mode-catalogue"));
-    fireEvent.click((await screen.findAllByTestId("sector-tile"))[0]);
-    const page = await screen.findByTestId("sector-page");
-    await within(page).findByTestId("sector-share");
-    fireEvent.click(within(page).getByTestId("technical-toggle"));
-    const card = await screen.findByTestId("sector-card");
-    await within(card).findByTestId("step-result");
-    await within(card).findByTestId("step-method");
-    await screen.findByTestId("about-territories");
-    expect(sweep()).toBeGreaterThan(0);
-    // the prose names the period id once, on purpose, in a span marked data-allow-fy
-    for (const el of Array.from(container.querySelectorAll("[data-allow-fy]"))) el.remove();
-    const text = container.textContent ?? "";
-    expect(text).not.toContain("FY");
-    expect(text).not.toContain("REF_2023_24");
-    expect(text).not.toContain("Mt CO2e");
-    expect(avoidPhrasesIn(text)).toEqual([]);
-    // the version appears in the Release section only
-    const outside = (container.textContent ?? "").replace(screen.getByTestId("about-release").textContent ?? "", "");
-    expect(outside).not.toContain("1.0.0rc");
-    for (const el of Array.from(container.querySelectorAll("[title]"))) expect(el.getAttribute("title") ?? "").not.toContain("FY");
+    const story = mountAt(<MethodsPage />, "/methods");
+    await screen.findByTestId("story-total-display");
+    await screen.findByTestId("story-gaps");
+    sweep(story.container);
+    story.unmount();
+    const sector = mountAt(<SectorRoute sector="agriculture" />, "/methods/sectors/agriculture");
+    await screen.findByTestId("sector-share");
+    sweep(sector.container);
   });
 });

@@ -35,7 +35,9 @@ export function AskFab() {
     mo.observe(el, { attributes: true, attributeFilter: ["data-open"] });
     return () => mo.disconnect();
   }, []);
-  if (open || isActive(pathname, "/ask")) return null;
+  // hidden on /ask (the dock is the page) and on the reader's sector pages, which end at
+  // their actions with nothing after them
+  if (open || isActive(pathname, "/ask") || (pathname ?? "").startsWith("/methods/sectors/")) return null;
   return (
     <button type="button" onClick={() => toggleAsk()} className={ASK_FAB_CLASS} aria-label="Ask about this view" title="Ask about this view: a question to the inventory, answered from receipts" data-testid="ask-fab">
       <MessageSquare size={24} aria-hidden="true" />

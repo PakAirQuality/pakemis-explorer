@@ -38,8 +38,6 @@ export const OPEN_TERMS = [
 export const QUERY_CLOSING = "Queries do not create a separate dataset; they provide another way to inspect the published estimates.";
 export const VERSIONED_LINE = "Releases are versioned so that published results can be reproduced.";
 
-/** Where "View methodology" goes: the methods section of /methods. */
-export const METHODS_HREF = "/methods#methods";
 
 /** The place card: the eyebrow, the dek, the country, the province select and the utility row. */
 export const HEADER = {

@@ -1,17 +1,20 @@
 "use client";
 /**
- * A sector's page in the evidence catalogue (regenerated 2026-09-07 to the user's mockup):
- * one prominent result, a four-step plain-language reconstruction, what is included, the
- * evidence at a glance, the not-yet-estimated strip, and the technical detail folded behind
- * a secondary action (the caller passes the old dense card as children). Every figure is a
- * server string — the total and its national share come from envelopes; the lists come from
- * the release's own streams, rules and completeness rows.
+ * The focused sector page (/methods/sectors/[sector]), the mockup's own order and NOTHING
+ * else: breadcrumb, All sectors, the IPCC eyebrow and title over a one-line plain intro, the
+ * pale-yellow result panel (the envelope's total and the partition's share - server strings),
+ * the four connected stages, What is included, Evidence at a glance, Not yet estimated, and
+ * three actions. After the actions the page ends. Public language throughout: no codes, no
+ * counts, no internal vocabulary - the authored layer (sectorText.ts, evidenceClassText.ts)
+ * carries the words. "See the sources" opens a small dialog of source names; "Technical
+ * method" opens an overlay drawer with the dense technical card (the caller's children),
+ * mounted only when opened.
  */
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BarChart3, CalendarDays, ChevronLeft, Cog, FileText, MapPin, ScrollText, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, CalendarDays, Cog, Droplets, FileText, Flame, Leaf, MapPin, Recycle, ScrollText, Sprout, Wheat, X } from "lucide-react";
 import { shown, type Cell } from "@/lib/envelope";
-import { cellUnit, periodShort, sectorLabel, type Dims as GeoDims } from "@/lib/labels";
+import { cellUnit, periodShort, sectorLabel } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import { ContourMotif } from "@/components/ui/ContourMotif";
 
@@ -19,74 +22,78 @@ const PRIMARY = "inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2
 const OUTLINE = "inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-card px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface-3";
 const TEXT_LINK = "inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline";
 
-const STEPS = [
-  { icon: <FileText size={18} aria-hidden="true" />, title: "Public records" },
-  { icon: <Sprout size={18} aria-hidden="true" />, title: "What is counted" },
-  { icon: <Cog size={18} aria-hidden="true" />, title: "How it is estimated" },
-  { icon: <BarChart3 size={18} aria-hidden="true" />, title: "Result" },
-] as const;
+const STEP_TITLES = ["Public records", "What is counted", "How it is estimated", "Result"] as const;
+const STEP_ICONS = [<FileText key="1" size={18} aria-hidden="true" />, <Sprout key="2" size={18} aria-hidden="true" />, <Cog key="3" size={18} aria-hidden="true" />, <BarChart3 key="4" size={18} aria-hidden="true" />];
+const STEP_3 = "Standard IPCC methods are used to calculate emissions.";
+const STEP_4 = "The estimates are added to the national inventory.";
+
+const CHIP_ICONS: [RegExp, typeof Leaf][] = [
+  [/livestock|enteric/i, Wheat],
+  [/manure/i, Recycle],
+  [/rice/i, Sprout],
+  [/soil/i, Leaf],
+  [/burn|flar/i, Flame],
+  [/water|waste/i, Droplets],
+];
+function chipIcon(label: string): ReactNode {
+  const Icon = CHIP_ICONS.find(([re]) => re.test(label))?.[1] ?? Leaf;
+  return <Icon size={16} aria-hidden="true" />;
+}
 
 export type SectorPageProps = {
   sector: string;
   number: string;
   labels: Labels;
-  dims: GeoDims;
-  /** The authored plain-language line under the title. */
+  /** The authored plain intro and the first two stages. */
   dek: string;
-  /** The sector's total cell (its own envelope), and its cell in the national partition. */
+  step1: string;
+  step2: string;
+  /** The sector's total cell and its cell in the national partition (server strings). */
   cell: Cell | null | undefined;
   shareCell: Cell | null | undefined;
   period: string;
-  /** Plain lists from the release: source names, activity descriptors, category names, NE categories. */
+  /** Plain lists: readable source names, included-category labels, not-yet-estimated names. */
   sources: string[];
-  activities: string[];
-  categories: string[];
-  ne: string[];
-  ruleCount: number;
-  /** The three evidence axes worded ("annual estimates from published statistics", ...). */
+  included: string[];
+  gaps: string[];
+  /** The three axes as plain sentences. */
   glance: { annual: string; monthly: string; location: string };
-  onBack: () => void;
-  onSources: () => void;
-  /** The old dense card, folded behind "Technical method". */
+  /** The dense technical card, mounted only inside the Technical method drawer. */
   children?: ReactNode;
 };
 
 export function SectorPage(p: SectorPageProps) {
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [technical, setTechnical] = useState(false);
   const name = sectorLabel(p.labels, p.sector);
-  const steps = [
-    p.sources.slice(0, 3).join(", ") + ".",
-    p.activities.slice(0, 3).join(" · ") + ".",
-    p.ruleCount ? `${p.ruleCount === 1 ? "One registered IPCC rule is" : `${p.ruleCount} registered IPCC rules are`} applied.` : "Standard IPCC methods are applied.",
-    "Added to the national inventory.",
-  ];
+  const steps = [p.step1, p.step2, STEP_3, STEP_4];
   return (
-    <div className="mt-6" data-testid="sector-page" data-sector={p.sector}>
-      <nav className="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb" data-testid="sector-breadcrumb">
-        <span>Methods</span> / <span>Sectors</span> / <span className="text-fg">{name}</span>
+    <div className="mx-auto max-w-[1200px] px-5 pb-16" data-testid="sector-page" data-sector={p.sector}>
+      <nav className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb" data-testid="sector-breadcrumb">
+        <Link href="/methods" className="hover:text-fg">Methods</Link> / <Link href="/methods/sectors" className="hover:text-fg">Sectors</Link> / <span className="text-fg">{name}</span>
       </nav>
-      <button type="button" onClick={p.onBack} className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" data-testid="all-sectors">
+      <Link href="/methods/sectors" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" data-testid="all-sectors">
         <ArrowLeft size={14} aria-hidden="true" /> All sectors
-      </button>
+      </Link>
 
-      <div className="mt-4 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-5 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div>
           {p.number && <div className="micro text-accent">IPCC sector {p.number}</div>}
-          <h2 className="mt-1 text-3xl font-semibold tracking-tight text-fg" data-testid="sector-title">{name}</h2>
-          <p className="mt-2 max-w-[36em] text-md text-muted" data-testid="sector-dek">{p.dek}</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-fg" data-testid="sector-title">{name}</h1>
+          <p className="mt-3 max-w-[30em] text-lg text-muted" data-testid="sector-dek">{p.dek}</p>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-nav-line bg-nav p-5" data-testid="sector-result">
+        <div className="relative overflow-hidden rounded-2xl bg-nav p-6" data-testid="sector-result">
           <ContourMotif corner="bottom-right" />
           <div className="relative">
             {p.cell ? (
               <>
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="num text-3xl font-semibold tracking-tight text-fg" data-testid="sector-result-display">{shown(p.cell)}</span>
-                  <span className="text-sm text-muted">{cellUnit(p.cell)}</span>
+                  <span className="num text-4xl font-semibold tracking-tight text-fg" data-testid="sector-result-display">{shown(p.cell)}</span>
+                  <span className="text-md text-muted">{cellUnit(p.cell)}</span>
                 </div>
-                <div className="mt-1 text-sm text-muted">{periodShort(p.labels, p.period)}</div>
+                <div className="mt-1.5 text-md text-muted">{periodShort(p.labels, p.period)}</div>
                 {p.shareCell?.share_pct_short && (
-                  <div className="mt-1 text-sm font-medium text-fg" data-testid="sector-share">
+                  <div className="mt-1 text-md font-medium text-fg" data-testid="sector-share">
                     <span className="num">{p.shareCell.share_pct_short} %</span> of the national total
                   </div>
                 )}
@@ -98,37 +105,42 @@ export function SectorPage(p: SectorPageProps) {
         </div>
       </div>
 
-      <section className="mt-8 border-t border-line pt-6" data-testid="sector-steps">
-        <h3 className="text-xl font-semibold tracking-tight text-fg">How this estimate is built</h3>
-        <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-start md:gap-0">
-          {STEPS.map((s, i) => (
-            <div key={s.title} className="flex flex-1 items-start gap-3 md:flex-col md:items-center md:gap-0 md:text-center">
-              {i > 0 && <div className="hidden md:block md:absolute" aria-hidden="true" />}
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">{s.icon}</div>
-              <div className="md:mt-2">
-                <div className="num text-lg font-semibold text-accent md:text-center">{i + 1}</div>
-                <div className="text-sm font-semibold text-fg">{s.title}</div>
-                <div className="mx-auto mt-1 max-w-[16em] text-xs text-muted" data-testid={`sector-step-${i + 1}`}>{steps[i]}</div>
+      <section className="mt-12 border-t border-line pt-8" data-testid="sector-steps">
+        <h2 className="text-2xl font-semibold tracking-tight text-fg">How this estimate is built</h2>
+        <div className="mt-8 flex flex-col gap-6 md:flex-row md:gap-0">
+          {STEP_TITLES.map((title, i) => (
+            <div key={title} className="flex flex-1 items-start gap-4 md:flex-col md:items-center md:text-center">
+              <div className="flex items-center md:w-full">
+                {i > 0 && <div className="hidden flex-1 border-t border-accent/30 md:block" aria-hidden="true" />}
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">{STEP_ICONS[i]}</div>
+                {i < STEP_TITLES.length - 1 && <div className="hidden flex-1 border-t border-accent/30 md:block" aria-hidden="true" />}
+                {i === STEP_TITLES.length - 1 && <div className="hidden flex-1 md:block" aria-hidden="true" />}
+                {i === 0 && <div className="hidden flex-1 md:block" aria-hidden="true" />}
+              </div>
+              <div className="md:mt-3">
+                <div className="num text-xl font-semibold text-accent">{i + 1}</div>
+                <div className="mt-0.5 text-md font-semibold text-fg">{title}</div>
+                <p className="mx-auto mt-1 max-w-[15em] text-sm text-muted" data-testid={`sector-step-${i + 1}`}>{steps[i]}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 border-t border-line pt-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="mt-12 grid grid-cols-1 gap-10 border-t border-line pt-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section data-testid="sector-included">
-          <h3 className="text-xl font-semibold tracking-tight text-fg">What is included</h3>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {p.categories.map((c) => (
-              <div key={c} className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-medium text-fg" data-testid="included-chip">
-                {c}
+          <h2 className="text-2xl font-semibold tracking-tight text-fg">What is included</h2>
+          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            {p.included.map((c) => (
+              <div key={c} className="flex items-center gap-2.5 rounded-lg border border-line bg-card px-3.5 py-3 text-sm font-medium text-fg" data-testid="included-chip">
+                <span className="text-accent">{chipIcon(c)}</span> {c}
               </div>
             ))}
           </div>
         </section>
         <section data-testid="sector-glance">
-          <h3 className="text-xl font-semibold tracking-tight text-fg">Evidence at a glance</h3>
-          <dl className="mt-3 space-y-3">
+          <h2 className="text-2xl font-semibold tracking-tight text-fg">Evidence at a glance</h2>
+          <dl className="mt-4 space-y-4">
             <GlanceRow icon={<FileText size={15} aria-hidden="true" />} title="Annual estimates" text={p.glance.annual} />
             <GlanceRow icon={<CalendarDays size={15} aria-hidden="true" />} title="Monthly pattern" text={p.glance.monthly} />
             <GlanceRow icon={<MapPin size={15} aria-hidden="true" />} title="Location" text={p.glance.location} />
@@ -136,37 +148,81 @@ export function SectorPage(p: SectorPageProps) {
         </section>
       </div>
 
-      {p.ne.length > 0 && (
-        <div className="mt-6 rounded-lg bg-surface-3 px-4 py-3" data-testid="sector-ne">
+      {p.gaps.length > 0 && (
+        <div className="mt-10 rounded-lg bg-surface-3 px-5 py-4" data-testid="sector-ne">
           <span className="micro text-accent">Not yet estimated</span>
-          <span className="ml-3 text-sm text-muted">{p.ne.join(" · ")}</span>
+          <span className="ml-3 text-sm text-muted">{p.gaps.join(" · ")}</span>
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3" data-testid="sector-actions">
+      <div className="mt-8 flex flex-wrap items-center gap-3" data-testid="sector-actions">
         <Link href={`/data?sector=${encodeURIComponent(p.sector)}`} className={PRIMARY} data-testid="view-sector-data">
           View {name.toLowerCase()} data
         </Link>
-        <button type="button" onClick={p.onSources} className={OUTLINE} data-testid="see-sources">
+        <button type="button" onClick={() => setSourcesOpen(true)} className={OUTLINE} data-testid="see-sources">
           <ScrollText size={15} aria-hidden="true" /> See the sources
         </button>
-        <button type="button" onClick={() => setTechnical((t) => !t)} aria-expanded={technical} className={TEXT_LINK} data-testid="technical-toggle">
-          Technical method {technical ? <ChevronLeft size={14} aria-hidden="true" /> : <ArrowRight size={14} aria-hidden="true" />}
+        <button type="button" onClick={() => setTechnical(true)} className={TEXT_LINK} data-testid="technical-toggle">
+          Technical method <ArrowRight size={14} aria-hidden="true" />
         </button>
       </div>
 
-      {technical && <div className="mt-4" data-testid="technical">{p.children}</div>}
+      {sourcesOpen && (
+        <Overlay title="The sources" onClose={() => setSourcesOpen(false)} testId="sources-dialog" narrow>
+          <p className="text-sm text-muted">The public records this estimate is built from.</p>
+          <ul className="mt-3 space-y-2">
+            {p.sources.map((s) => (
+              <li key={s} className="rounded-md border border-line bg-surface-3/60 px-3 py-2 text-sm text-fg" data-testid="source-name">{s}</li>
+            ))}
+          </ul>
+        </Overlay>
+      )}
+      {technical && (
+        <Overlay title="Technical method" onClose={() => setTechnical(false)} testId="technical">
+          {p.children}
+        </Overlay>
+      )}
     </div>
   );
 }
 
 function GlanceRow({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-accent">{icon}</div>
+    <div className="flex items-start gap-3.5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-accent">{icon}</div>
       <div>
-        <dt className="text-sm font-semibold text-fg">{title}</dt>
-        <dd className="text-xs text-muted">{text}</dd>
+        <dt className="text-md font-semibold text-fg">{title}</dt>
+      <dd className="mt-0.5 text-sm text-muted">{text}</dd>
+      </div>
+    </div>
+  );
+}
+
+/** A dismissable overlay (Escape, outside click, X): the sources list and the technical drawer. */
+function Overlay({ title, onClose, children, testId, narrow = false }: { title: string; onClose: () => void; children: ReactNode; testId: string; narrow?: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onDown = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-fg/30 p-4 md:p-10">
+      <div ref={box} role="dialog" aria-label={title} className={`card w-full ${narrow ? "max-w-md" : "max-w-4xl"} p-5`} data-testid={testId}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-fg">{title}</h3>
+          <button type="button" onClick={onClose} aria-label={`Close ${title.toLowerCase()}`} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg" data-testid={`${testId}-close`}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="mt-3">{children}</div>
       </div>
     </div>
   );

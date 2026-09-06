@@ -31,3 +31,54 @@ export function evidenceClassText(id: string): string {
   const d = EVIDENCE_CLASS_TEXT[id];
   return d ? `${id} — ${d.definition}` : id;
 }
+
+/**
+ * The public sector page's wording of each class: no codes, ordinary words, still keyed by
+ * the classes the release itself assigns. The composer sentences follow the mockup's
+ * register ("Based mainly on published national statistics.").
+ */
+const PLAIN: Record<string, string> = {
+  E1: "measured or metered records",
+  E2: "published national statistics",
+  E3: "figures derived from published statistics",
+  E4: "estimates using related data",
+  T1: "monthly records",
+  T2: "monthly administrative records",
+  T3: "seasonal patterns",
+  T4: "limited monthly evidence",
+  S1: "measured locations",
+  S2: "facility records",
+  S3: "provincial statistics and census data",
+  S4: "no location data yet",
+  NA: "",
+};
+
+function plainList(ids: string[]): string[] {
+  const out: string[] = [];
+  for (const id of ids) {
+    const w = PLAIN[id];
+    if (w && !out.includes(w)) out.push(w);
+  }
+  return out;
+}
+
+/** One plain sentence per axis, from the classes the release assigns to the sector's sources. */
+export function plainGlance(axis: EvidenceAxis, ids: string[]): string {
+  const words = plainList(ids);
+  if (!words.length) return "Not yet graded for this sector.";
+  if (axis === "E") return `Based mainly on ${joinWords(words)}.`;
+  if (axis === "TE") {
+    const monthly = words.some((w) => w.includes("monthly records") || w.includes("administrative"));
+    const seasonal = words.some((w) => w === "seasonal patterns" || w === "limited monthly evidence");
+    if (monthly && seasonal) return "Monthly records are used where available. Seasonal patterns are used where monthly data are missing.";
+    if (monthly) return "Based on monthly records.";
+    return "Based on seasonal patterns where monthly data are missing.";
+  }
+  return `${joinWords(words).charAt(0).toUpperCase()}${joinWords(words).slice(1)} are used to place the estimates.`;
+}
+
+function joinWords(words: string[]): string {
+  if (words.length <= 1) return words[0] ?? "";
+  return words.slice(0, -1).join(", ") + " and " + words[words.length - 1];
+}
+

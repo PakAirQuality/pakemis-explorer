@@ -118,7 +118,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
   const months = dims.monthsByPeriod[defaults.period_id]?.length ?? 0;
   const neCount = completeness.data?.values.length ?? null;
 
-  const catalogueHref = (hash = "") => `/methods?mode=catalogue${hash}`;
+  const sectorsHref = "/methods/sectors";
 
   return (
     <div data-testid="story">
@@ -141,7 +141,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
               <button type="button" onClick={onBrowse} className={OUTLINE} data-testid="browse-evidence">
                 <ScrollText size={15} aria-hidden="true" /> {STORY.browse}
               </button>
-              <Link href={catalogueHref("#methodology")} className={TEXT_LINK} data-testid="read-methodology">
+              <Link href="/methodology" className={TEXT_LINK} data-testid="read-methodology">
                 <BookOpen size={15} aria-hidden="true" /> {STORY.readMethodology}
               </Link>
             </div>
@@ -226,7 +226,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
               Every number begins with a public source, such as a statistical yearbook, regulator report, survey or satellite dataset. We record the source alongside the figure so readers can check where it came from.
             </p>
             <p className="mt-3">
-              <Link href={catalogueHref()} className={TEXT_LINK}>Browse the sources <ChevronRight size={14} aria-hidden="true" /></Link>
+              <Link href={sectorsHref} className={TEXT_LINK}>Browse the sources <ChevronRight size={14} aria-hidden="true" /></Link>
             </p>
           </article>
           <article className="mt-8" data-testid="story-section-2">
@@ -235,7 +235,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
               We break the data into individual emissions records. Each record covers one gas from one activity — for example, fuel sold or cattle counted — under one IPCC category. Internally, we call this a component row. All the totals on the site are built from these records.
             </p>
             <p className="mt-3">
-              <Link href={catalogueHref("#claims")} className={TEXT_LINK}>View an emissions record <ChevronRight size={14} aria-hidden="true" /></Link>
+              <Link href="/methods/evidence" className={TEXT_LINK}>View an emissions record <ChevronRight size={14} aria-hidden="true" /></Link>
             </p>
           </article>
           <article className="mt-8" data-testid="story-section-3">
@@ -245,7 +245,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5" data-testid="story-module-chips">
               {dims.sectors.map((m) => (
-                <Link key={m} href={`/methods?mode=catalogue&sector=${m}`} className="rounded-full border border-nav-line bg-nav px-3 py-1 text-xs font-medium text-fg shadow-sm hover:bg-surface-3">
+                <Link key={m} href={`/methods/sectors/${m}`} className="rounded-full border border-nav-line bg-nav px-3 py-1 text-xs font-medium text-fg shadow-sm hover:bg-surface-3">
                   {sectorLabel(labels, m)}
                 </Link>
               ))}
@@ -279,7 +279,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
               {facts.lulucf.note ? <> Land use and forestry remain outside the main total: {facts.lulucf.note}.</> : null}
             </div>
             <p className="mt-3">
-              <Link href={catalogueHref()} className={TEXT_LINK}>See what is missing <ChevronRight size={14} aria-hidden="true" /></Link>
+              <Link href={sectorsHref} className={TEXT_LINK}>See what is missing <ChevronRight size={14} aria-hidden="true" /></Link>
             </p>
           </article>
         </div>

@@ -122,7 +122,7 @@ export function parseClaimParam(value: string | null | undefined): { receipt: st
   return m ? { receipt: m[1].toLowerCase(), cell: Number(m[2]) } : null;
 }
 export function claimHref(selector: { receipt: string; cell: number }): string {
-  return `/methods?claim=${encodeURIComponent(claimParam(selector))}`;
+  return `/methods/evidence?claim=${encodeURIComponent(claimParam(selector))}`;
 }
 
 export async function loadClaim(selector: ClaimSelector): Promise<Claim> {

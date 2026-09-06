@@ -137,7 +137,7 @@ export function Explore() {
               <Row label={EXPLORE.reading.ne.label} testId="reading-ne">
                 {EXPLORE.reading.ne.text}
                 {neCount !== null ? <> {neCount === 1 ? "One category is" : `${neCount} categories are`} marked NE in this release.</> : null}{" "}
-                <Link href="/methods" className="text-accent hover:underline">See the gaps →</Link>
+                <Link href="/methods/sectors" className="text-accent hover:underline">See the gaps →</Link>
               </Row>
               <Row label={EXPLORE.reading.exact.label} testId="reading-exact">
                 {EXPLORE.reading.exact.text}
