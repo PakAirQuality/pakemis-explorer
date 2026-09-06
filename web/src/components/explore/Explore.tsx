@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Download, Link2, ScrollText, Sparkles } from "lucide-react";
+import { Download, Link2 } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { markStage } from "@/components/shell/bootstrap";
 import { api } from "@/lib/api";
@@ -19,14 +19,12 @@ import { shown, type Cell, type Envelope } from "@/lib/envelope";
 import { cellUnit, configLabel, configWords, envelopeUnitLine, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
 import { useCompare, useCompleteness, useEmissions, useTimeseries } from "@/lib/queries";
 import { hrefForState } from "@/lib/urlState";
-import { openAsk } from "@/lib/askBus";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { canvasTitle, placeWords, possessive, showingWords, type ExploreState, type QueryPlan } from "@/lib/explore/query";
 import { useExploreState } from "@/lib/explore/useExploreState";
 import { NavHeader } from "@/components/shell/NavCapsule";
 import { ShowingLine } from "@/components/ui/ShowingLine";
 import { ResultTabs } from "@/components/ui/ResultTabs";
-import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
 import { Controls } from "./Controls";
 import { HeaderCard } from "./HeaderCard";
 import { ResultChips } from "./ResultChips";
@@ -35,12 +33,6 @@ import { Canvas, sidesOf } from "./Canvas";
 import { EXPLORE } from "./copy";
 
 const ACTION = "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent-soft";
-
-/** The Ask permalink of a scope with the question first: `/ask?q=Explain%20this%20result&sector=agriculture`. */
-export function explainHref(shared: Parameters<typeof hrefForState>[0], defaults: Parameters<typeof hrefForState>[1], question = EXPLORE.question): string {
-  const scope = hrefForState(shared, defaults, "/ask").split("?")[1] ?? "";
-  return `/ask?q=${encodeURIComponent(question)}${scope ? `&${scope}` : ""}`;
-}
 
 /** The envelope the canvas shows: the plan's filter applied (several provinces out of the ADM1 envelope), never a changed value. */
 export function visibleEnvelope(env: Envelope | null | undefined, plan: QueryPlan): Envelope | null {
@@ -58,7 +50,6 @@ export function topCell(env: Envelope | null | undefined): Cell | null {
 export function Explore() {
   const { state: shared, labels, dims, defaults, contract } = useExplorer();
   const { state, plan, ctx, dispatch } = useExploreState();
-  const drawer = useEnvelopeDrawer(labels);
   const [copied, setCopied] = useState(false);
   const [readingOpen, setReadingOpen] = useState(false);
 
@@ -88,7 +79,6 @@ export function Explore() {
   const others = configs.filter((c) => c !== state.config).map((c) => configLabel(labels, c));
   const neCount = completeness.data?.values.length ?? null;
 
-  const explain = () => openAsk({ question: EXPLORE.question, scope: shared });
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -127,12 +117,6 @@ export function Explore() {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-1 border-t border-line pt-3" data-testid="actions">
-            <button type="button" onClick={explain} className={ACTION} data-testid="action-explain" data-href={explainHref(shared, defaults)}>
-              <Sparkles size={14} aria-hidden="true" /> {EXPLORE.actions.explain}
-            </button>
-            <button type="button" onClick={() => env && drawer.open(env, "sources")} disabled={!env} className={`${ACTION} disabled:opacity-50`} data-testid="action-evidence">
-              <ScrollText size={14} aria-hidden="true" /> {EXPLORE.actions.evidence}
-            </button>
             <a href={env ? api.downloadCsvUrl(env.receipt) : undefined} aria-disabled={!env} className={`${ACTION} ${env ? "" : "pointer-events-none opacity-50"}`} data-testid="action-download" title="Download the canonical CSV of this result">
               <Download size={14} aria-hidden="true" /> {EXPLORE.actions.download}
             </a>
@@ -166,7 +150,6 @@ export function Explore() {
         <Controls state={state} ctx={ctx} dispatch={dispatch} labels={labels} dims={dims} categories={categories} gwps={gwps} configs={configs} views={views} partitions={partitions} defaultGwp={defaults.gwp_basis} />
         </div>
       </main>
-      {drawer.node}
     </div>
   );
 }

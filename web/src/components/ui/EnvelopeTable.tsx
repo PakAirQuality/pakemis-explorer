@@ -37,13 +37,15 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
   const groupKeys = Array.from(new Set(env.values.flatMap((v) => Object.keys(groupOf(v)))));
   const hasDisplay = env.values.some((v) => v.display !== "");
   const hasShare = env.values.some((v) => shareOf(v) !== "");
+  const units = Array.from(new Set(env.values.filter((v) => v.display !== "").map((v) => cellUnit(v))));
+  const oneUnit = units.length === 1 ? units[0] : null;
   const rows = maxRows && !all ? env.values.slice(0, maxRows) : env.values;
-  const cellPad = dense ? "px-2 py-1" : "px-2 py-1.5";
+  const cellPad = dense ? "px-2 py-1" : "px-3 py-2";
   return (
     <div className="envelope-table text-xs" data-testid="envelope-table">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <label className="flex items-center gap-1 text-micro normal-case tracking-normal" title="The contract's display and the exact decimal beside every value">
-          <input type="checkbox" checked={exact} onChange={(e) => setExact(e.target.checked)} data-testid="full-precision" /> full precision
+        <label className="pill flex cursor-pointer items-center gap-1.5 border border-line px-2.5 py-1 text-micro normal-case tracking-normal text-muted hover:text-fg" title="The contract's display and the exact decimal beside every value">
+          <input type="checkbox" checked={exact} onChange={(e) => setExact(e.target.checked)} data-testid="full-precision" /> Full precision
         </label>
         {maxRows && env.values.length > maxRows && (
           <button className="text-micro normal-case tracking-normal text-accent" onClick={() => setAll((a) => !a)}>
@@ -51,15 +53,15 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
           </button>
         )}
       </div>
-      <div className="max-h-[60vh] overflow-auto rounded border border-line">
+      <div className="max-h-[60vh] overflow-auto rounded-lg border border-line">
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-surface">
+          <thead className="sticky top-0 bg-surface-3 text-micro uppercase tracking-[0.06em]">
             <tr>
               {groupKeys.length ? groupKeys.map((k) => <th key={k} className={`${cellPad} text-left font-semibold text-muted`}>{columnLabel(k)}</th>) : <th className={`${cellPad} text-left font-semibold text-muted`}>Scope</th>}
               {extra.map((k) => <th key={k} className={`${cellPad} text-left font-semibold text-muted`}>{columnLabel(k)}</th>)}
               {hasShare && <th className={`${cellPad} text-right font-semibold text-muted`} title={String((env as Record<string, unknown>).partition ? ((env as Record<string, unknown>).partition as { rule?: string }).rule ?? "" : "")}>Share</th>}
-              {hasDisplay && <th className={`${cellPad} text-right font-semibold text-muted`}>Value</th>}
-              {hasDisplay && <th className={`${cellPad} text-left font-semibold text-muted`}>Unit</th>}
+              {hasDisplay && <th className={`${cellPad} text-right font-semibold text-muted`}>{oneUnit ? `Value · ${oneUnit}` : "Value"}</th>}
+              {hasDisplay && !oneUnit && <th className={`${cellPad} text-left font-semibold text-muted`}>Unit</th>}
               {exact && <th className={`${cellPad} text-left font-semibold text-muted`}>Exact</th>}
               {exact && <th className={`${cellPad} text-right font-semibold text-muted`}>Rows</th>}
             </tr>
@@ -81,9 +83,8 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
                       const id = g[k] ?? "";
                       const human = groupValueLabel(labels, dims, k, id);
                       return (
-                        <td key={k} className={cellPad}>
+                        <td key={k} className={`${cellPad} font-medium text-fg`} title={human !== id && id ? id : undefined}>
                           {human}
-                          {human !== id && id ? <span className="mono ml-1 text-muted/80">{id}</span> : null}
                         </td>
                       );
                     })
@@ -98,7 +99,7 @@ export function EnvelopeTable({ env, extra = [], showExact = false, labels = EMP
                       {isBounded(v) && <IntervalBadge cell={v} title={String((v as Record<string, unknown>).interpretation ?? "")} />}
                     </td>
                   )}
-                  {hasDisplay && <td className={`${cellPad} whitespace-nowrap text-muted`} title={v.unit}>{cellUnit(v)}</td>}
+                  {hasDisplay && !oneUnit && <td className={`${cellPad} whitespace-nowrap text-muted`} title={v.unit}>{cellUnit(v)}</td>}
                   {exact && <td className={`${cellPad} mono`}>{v.exact}{v.exact_high && v.exact_high !== v.exact ? ` .. ${v.exact_high}` : ""}</td>}
                   {exact && <td className={`${cellPad} num text-right`}>{v.n_rows ?? v.result_row_ids.length}</td>}
                 </tr>

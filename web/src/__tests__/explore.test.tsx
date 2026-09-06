@@ -23,7 +23,6 @@ import { RELEASE, envelope, mockFetch } from "./fixtures";
 import { avoidPhrasesIn } from "./vocabulary";
 
 const push = vi.fn();
-import { subscribeAsk } from "@/lib/askBus";
 vi.mock("next/navigation", () => ({ usePathname: () => "/data", useRouter: () => ({ push, replace: vi.fn() }) }));
 vi.mock("@/components/map/ExplorerMap", () => ({
   ExplorerMap: ({ override }: { override?: { level?: string; sector?: string | null } }) => <div data-testid="map-stub" data-level={override?.level ?? ""} data-sector={override?.sector ?? ""} />,
@@ -235,7 +234,7 @@ describe("lib/explore/query: one state, one contract call", () => {
 // --- the page -------------------------------------------------------------------------------
 
 describe("/data (the Grapher)", () => {
-  it("the sector canvas: title, Showing sentence, the largest cell's share, bars on the server's ticks, exactly four actions", async () => {
+  it("the sector canvas: title, Showing sentence, the largest cell's share, bars on the server's ticks, exactly two actions", async () => {
     mount();
     expect(await screen.findByRole("heading", { level: 1, name: "Pakistan" })).toBeInTheDocument();
     // the analytical counterpart's three zones: the branded header card, the chips, the overview, the rail
@@ -253,21 +252,11 @@ describe("/data (the Grapher)", () => {
     expect(bars).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(within(bars).getAllByTestId("bar-item").map((b) => b.textContent)).toEqual(["Agriculture 223.45 · 49.4 %", "Power 63.37 · 14.0 %", "Residential 29.47 · 6.5 %"]);
     expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", group_by: ["sector_id"], order_by: "value desc" });
-    // the four actions, and only four
+    // the two actions, and only two (Explain and Evidence left the canvas on 2026-09-07)
     const actions = screen.getByTestId("actions");
-    expect(Array.from(actions.children).map((c) => c.getAttribute("data-testid"))).toEqual(["action-explain", "action-evidence", "action-download", "action-share"]);
-    expect(screen.getByTestId("action-explain")).toHaveAttribute("data-href", "/ask?q=Explain%20this%20result");
-    const asked: unknown[] = [];
-    const unsub = subscribeAsk((e) => asked.push(e));
-    fireEvent.click(screen.getByTestId("action-explain"));
-    unsub();
-    expect(asked).toEqual([{ type: "open", request: { question: "Explain this result", scope: expect.objectContaining({ sector: null }) } }]);
-    expect(push).not.toHaveBeenCalled();
+    expect(Array.from(actions.children).map((c) => c.getAttribute("data-testid"))).toEqual(["action-download", "action-share"]);
     expect(screen.getByTestId("action-download")).toHaveAttribute("href", expect.stringMatching(/\/download\/[0-9a-f]{32}\.csv$/));
-    fireEvent.click(screen.getByTestId("action-evidence"));
-    expect(await screen.findByTestId("drawer-sources")).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(push).not.toHaveBeenCalled();
     // the reading line opens to its four rows and counts every NE row
     fireEvent.click(screen.getByText("Reading this result"));
     await waitFor(() => expect(screen.getByTestId("reading-ne")).toHaveTextContent("2 categories are marked NE in this release."));
@@ -276,7 +265,7 @@ describe("/data (the Grapher)", () => {
     expect(screen.getByTestId("reading-exact")).toHaveTextContent("Every value can expose its data rows, calculation, release and query receipt.");
     expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Data")).toHaveAttribute("aria-current", "page");
   });
-  it("Chart · Table · Map show the same envelope: the table carries the Share column, the map is refused by name off a place breakdown and drawn for every province", async () => {
+  it("Chart · Table · Map show the same envelope: the table carries the Share column, choosing Map carries the scope to every province and draws it", async () => {
     const updates: string[] = [];
     mount("", ({ queryString }) => updates.push(queryString));
     await screen.findByTestId("canvas-sentence");
@@ -288,13 +277,8 @@ describe("/data (the Grapher)", () => {
     expect(within(rows[0]).getByTestId("table-value")).toHaveTextContent("223.45");
     expect(screen.getByTestId("canvas").getAttribute("data-receipt")).toBe(receipt);
     expect(updates.at(-1)).toContain("rep=table");
+    // choosing Map from a national breakdown carries the scope to every province, not a refusal
     fireEvent.click(screen.getByTestId("rep-tabs-map"));
-    expect(await screen.findByTestId("refusal-card")).toHaveTextContent("Map is available for place breakdowns");
-    // two, not one, since the page grew its overview card: the canvas's sector breakdown (which
-    // the overview's own breakdown shares through the query cache) and the overview's total.
-    // The point of the pin is unchanged: switching representations issued NO new query.
-    expect(calls("/query/emissions")).toHaveLength(2);
-    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
     expect(await screen.findByTestId("map-stub")).toHaveAttribute("data-level", "adm1");
     expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", geography_level: "adm1", spatial_view: "all", group_by: ["province"], order_by: "value desc" });
     expect(screen.getByTestId("canvas-title")).toHaveTextContent("Allocated emissions by province");
@@ -313,7 +297,7 @@ describe("/data (the Grapher)", () => {
     expect(updates.at(-1)).toContain("range=true");
     expect(screen.getByTestId("period-select")).toHaveValue("range");
   });
-  it("what makes up agriculture: Sector = Agriculture groups the categories, offers them in a Category control, and Explain carries the scope", async () => {
+  it("what makes up agriculture: Sector = Agriculture groups the categories, offers them in a Category control", async () => {
     mount();
     await screen.findByTestId("canvas-sentence");
     fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "agriculture" } });
@@ -323,7 +307,6 @@ describe("/data (the Grapher)", () => {
     expect(screen.getByTestId("canvas-title")).toHaveTextContent("Emissions by IPCC category");
     const cat = screen.getByTestId("category-select");
     expect(Array.from(cat.querySelectorAll("option")).map((o) => o.textContent)).toEqual(["All of agriculture", "Enteric fermentation", "Managed soils"]);
-    expect(screen.getByTestId("action-explain")).toHaveAttribute("data-href", "/ask?q=Explain%20this%20result&sector=agriculture");
     // the category filter then groups the gases
     fireEvent.change(cat, { target: { value: "Enteric fermentation" } });
     await waitFor(() => expect(lastCall("/query/emissions")).toMatchObject({ sectors: ["agriculture"], categories: ["Enteric fermentation"], group_by: ["gas"] }));
