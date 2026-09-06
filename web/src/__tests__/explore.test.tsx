@@ -237,7 +237,14 @@ describe("lib/explore/query: one state, one contract call", () => {
 describe("/data (the Grapher)", () => {
   it("the sector canvas: title, Showing sentence, the largest cell's share, bars on the server's ticks, exactly four actions", async () => {
     mount();
-    expect(await screen.findByRole("heading", { level: 1, name: "Explore the inventory" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Pakistan" })).toBeInTheDocument();
+    // the analytical counterpart's three zones: the branded header card, the chips, the overview, the rail
+    expect(screen.getByTestId("data-header")).toBeInTheDocument();
+    expect(screen.getByTestId("data-eyebrow")).toHaveTextContent("Pakistan Emissions Data");
+    expect(screen.getByTestId("result-chips")).toHaveTextContent("All sectors");
+    expect(screen.getByTestId("filter-rail")).toHaveAttribute("data-open", "1");
+    expect(await screen.findByTestId("overview-display")).toHaveTextContent("452.35");
+    expect(await screen.findByTestId("overview-chip")).toHaveTextContent("49.4 % from agriculture");
     expect(screen.getByTestId("canvas-title")).toHaveTextContent("Emissions by sector");
     expect(screen.getByTestId("showing-line-text")).toHaveTextContent("Pakistan's 2023–24 reference emissions, all sectors, grouped by sector, using IPCC 2013 warming factors.");
     expect(await screen.findByTestId("canvas-sentence")).toHaveTextContent("Agriculture accounts for 49.4 % (nearly half) of Pakistan's 2023–24 reference estimate.");
@@ -264,7 +271,7 @@ describe("/data (the Grapher)", () => {
     // the reading line opens to its four rows and counts every NE row
     fireEvent.click(screen.getByText("Reading this result"));
     await waitFor(() => expect(screen.getByTestId("reading-ne")).toHaveTextContent("2 categories are marked NE in this release."));
-    expect(screen.getByTestId("reading-estimate")).toHaveTextContent("Every number on this page is the reference estimate. Structural alternatives (Survey-based estimate) are selectable under More.");
+    expect(screen.getByTestId("reading-estimate")).toHaveTextContent("Every number on this page is the reference estimate. Structural alternatives (Survey-based estimate) are selectable under Estimate.");
     expect(screen.getByTestId("reading-not-official")).toHaveTextContent("Not an official inventory");
     expect(screen.getByTestId("reading-exact")).toHaveTextContent("Every value can expose its data rows, calculation, release and query receipt.");
     expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Data")).toHaveAttribute("aria-current", "page");
@@ -283,7 +290,10 @@ describe("/data (the Grapher)", () => {
     expect(updates.at(-1)).toContain("rep=table");
     fireEvent.click(screen.getByTestId("rep-tabs-map"));
     expect(await screen.findByTestId("refusal-card")).toHaveTextContent("Map is available for place breakdowns");
-    expect(calls("/query/emissions")).toHaveLength(1);
+    // two, not one, since the page grew its overview card: the canvas's sector breakdown (which
+    // the overview's own breakdown shares through the query cache) and the overview's total.
+    // The point of the pin is unchanged: switching representations issued NO new query.
+    expect(calls("/query/emissions")).toHaveLength(2);
     fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
     expect(await screen.findByTestId("map-stub")).toHaveAttribute("data-level", "adm1");
     expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", geography_level: "adm1", spatial_view: "all", group_by: ["province"], order_by: "value desc" });
@@ -356,7 +366,6 @@ describe("/data (the Grapher)", () => {
   it("L against S: Compare estimates draws grouped bars with the difference cells' display_short", async () => {
     mount();
     await screen.findByTestId("canvas-sentence");
-    fireEvent.click(screen.getByTestId("more-settings"));
     fireEvent.change(screen.getByTestId("config-select"), { target: { value: "compare" } });
     const grouped = await screen.findByTestId("grouped-bars");
     expect(lastCall("/query/compare")).toEqual({
@@ -377,12 +386,34 @@ describe("/data (the Grapher)", () => {
     const share = screen.getByTestId("measure-select").querySelector('option[value="share"]') as HTMLOptionElement;
     expect(share.disabled).toBe(true);
   });
+  it("the left column and the rail act on the same state: a chip clears its filter, Reset pushes the bare path, the rail collapses to icons", async () => {
+    const updates: string[] = [];
+    mount("", ({ queryString }) => updates.push(queryString));
+    await screen.findByTestId("canvas-sentence");
+    // the sector chip appears once a sector is chosen, and its × clears it back
+    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "agriculture" } });
+    await waitFor(() => expect(screen.getByTestId("result-chip-sector")).toHaveTextContent("Agriculture"));
+    fireEvent.click(screen.getByTestId("result-chip-sector-clear"));
+    await waitFor(() => expect(screen.getByTestId("result-chip-sector")).toHaveTextContent("All sectors"));
+    expect(screen.getByTestId("result-chip-sector")).toHaveAttribute("data-default", "1");
+    // the hero select in the header card drives the same geography control as the rail's
+    fireEvent.change(screen.getByTestId("place-select"), { target: { value: "province:Punjab" } });
+    await waitFor(() => expect(screen.getByTestId("geography-select")).toHaveValue("province:Punjab"));
+    expect(screen.getByTestId("data-place-title")).toHaveTextContent("Punjab");
+    // Reset is a push to the bare path: the URL is the whole state
+    fireEvent.click(screen.getByTestId("reset-filters"));
+    expect(push).toHaveBeenCalledWith("/data");
+    // the rail collapses to a 48 px icon strip and reopens
+    fireEvent.click(screen.getByTestId("filters-collapse"));
+    expect(screen.getByTestId("filter-rail")).toHaveAttribute("data-open", "0");
+    fireEvent.click(screen.getByTestId("filters-expand"));
+    expect(screen.getByTestId("filter-rail")).toHaveAttribute("data-open", "1");
+  });
   it("audits: every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase", async () => {
     mount();
     await screen.findByTestId("canvas-sentence");
     fireEvent.click(screen.getByText("Reading this result"));
     await waitFor(() => expect(screen.getByTestId("reading-ne")).toHaveTextContent("marked NE in this release"));
-    fireEvent.click(screen.getByTestId("more-settings"));
     const allowed = serverDecimals();
     const audit = () => {
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);

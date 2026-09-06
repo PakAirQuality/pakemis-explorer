@@ -24,11 +24,13 @@ import { magnitudeOf } from "@/lib/uncertainty";
 import { canvasTitle, placeWords, possessive, showingWords, type ExploreState, type QueryPlan } from "@/lib/explore/query";
 import { useExploreState } from "@/lib/explore/useExploreState";
 import { NavHeader } from "@/components/shell/NavCapsule";
-import { PageHeader } from "@/components/shell/PageHeader";
 import { ShowingLine } from "@/components/ui/ShowingLine";
 import { ResultTabs } from "@/components/ui/ResultTabs";
 import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
 import { Controls } from "./Controls";
+import { HeaderCard } from "./HeaderCard";
+import { ResultChips } from "./ResultChips";
+import { OverviewCard } from "./OverviewCard";
 import { Canvas, sidesOf } from "./Canvas";
 import { EXPLORE } from "./copy";
 
@@ -100,13 +102,15 @@ export function Explore() {
   return (
     <div className="min-h-dvh bg-surface" data-testid="explore-page">
       <NavHeader />
-      <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-8 md:px-6">
-        <PageHeader title={EXPLORE.title} dek={EXPLORE.dek} />
-        <div className="mt-6">
-          <Controls state={state} ctx={ctx} dispatch={dispatch} labels={labels} dims={dims} categories={categories} gwps={gwps} configs={configs} views={views} partitions={partitions} />
+      <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-6 md:px-6">
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)_300px]">
+        <div className="flex flex-col gap-4 xl:sticky xl:top-6">
+          <HeaderCard state={state} dispatch={dispatch} labels={labels} dims={dims} env={env} />
+          <ResultChips state={state} ctx={ctx} dispatch={dispatch} labels={labels} place={place} />
+          <OverviewCard state={state} />
         </div>
 
-        <section className="card mt-5 p-5 md:p-6" data-testid="canvas" data-receipt={env?.receipt ?? ""} data-chart={plan.kind === "refused" ? "" : plan.chart}>
+        <section className="card p-5 md:p-6" data-testid="canvas" data-receipt={env?.receipt ?? ""} data-chart={plan.kind === "refused" ? "" : plan.chart}>
           <header className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-xl font-semibold tracking-tight text-fg" data-testid="canvas-title">{canvasTitle(state)}</h2>
@@ -143,7 +147,7 @@ export function Explore() {
               <Row label={state.by === "estimate" ? "Two estimates" : configLabel(labels, state.config)} testId="reading-estimate">
                 {state.by === "estimate"
                   ? `The reference estimate and the survey-based estimate are two structural readings of the same year; the difference is right minus left, never an uncertainty.`
-                  : `Every number on this page is the ${configWords(labels, state.config)}.${others.length ? ` Structural alternatives (${others.join(", ")}) are selectable under ${EXPLORE.controls.more}.` : ""}`}
+                  : `Every number on this page is the ${configWords(labels, state.config)}.${others.length ? ` Structural alternatives (${others.join(", ")}) are selectable under ${EXPLORE.controls.estimate}.` : ""}`}
               </Row>
               <Row label={EXPLORE.reading.notOfficial.label} testId="reading-not-official">{EXPLORE.reading.notOfficial.text}</Row>
               <Row label={EXPLORE.reading.ne.label} testId="reading-ne">
@@ -158,6 +162,11 @@ export function Explore() {
             </dl>
           </details>
         </section>
+
+        <div className="xl:sticky xl:top-6">
+          <Controls state={state} ctx={ctx} dispatch={dispatch} labels={labels} dims={dims} categories={categories} gwps={gwps} configs={configs} views={views} partitions={partitions} defaultGwp={defaults.gwp_basis} />
+        </div>
+        </div>
       </main>
       {drawer.node}
     </div>
