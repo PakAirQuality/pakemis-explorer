@@ -81,10 +81,30 @@ const OUTLINE = "inline-flex items-center gap-1.5 rounded-full border border-lin
 const TEXT_LINK = "inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline";
 const NODE_CARD = "relative rounded-xl border border-line bg-card px-4 py-3 shadow-card";
 
-function Connector() {
+/** The dashed left-to-right connector of the pipeline; below lg the flow stacks and it points down. */
+function Flow() {
   return (
-    <div className="flex justify-center py-1" aria-hidden="true">
-      <ArrowDown size={15} className="text-muted" />
+    <>
+      <div className="hidden min-w-6 flex-1 items-center px-1 lg:flex" aria-hidden="true">
+        <div className="h-px flex-1 border-t border-dashed border-line-strong" />
+        <ChevronRight size={13} className="-ml-1.5 shrink-0 text-muted" />
+      </div>
+      <div className="flex justify-center py-1 lg:hidden" aria-hidden="true">
+        <ArrowDown size={15} className="text-muted" />
+      </div>
+    </>
+  );
+}
+
+/** One product tile under the inventory's bracket, its drop line above it. */
+function Branch({ icon, label, testId }: { icon: React.ReactNode; label: string; testId?: string }) {
+  return (
+    <div className="flex flex-col items-center">
+      <div className="h-3 w-px bg-accent/40" aria-hidden="true" />
+      <div className={`${NODE_CARD} w-full text-center`}>
+        {icon}
+        <div className="micro mt-1.5" data-testid={testId}>{label}</div>
+      </div>
     </div>
   );
 }
@@ -125,7 +145,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
     <div data-testid="story">
       {/* --- the hero -------------------------------------------------------------------- */}
       <section className="relative overflow-hidden" data-testid="story-hero">
-        <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-10 px-5 pb-10 pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:gap-14 lg:pt-14">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-10 px-5 pb-10 pt-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10 lg:pt-12">
           <div>
             <div className="micro">{STORY.eyebrow}</div>
             <h1 className="mt-3 max-w-[16em] text-3xl font-semibold leading-tight tracking-tight text-fg md:text-4xl">{STORY.headline}</h1>
@@ -154,34 +174,43 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
           {/* --- the pipeline ------------------------------------------------------------ */}
           <div className="relative" data-testid="story-diagram">
             <ContourMotif corner="top-right" />
-            <div className="relative">
-              <div className="relative">
+            <div className="relative flex flex-col gap-1 lg:min-h-[26rem] lg:flex-row lg:items-center lg:gap-0">
+              <div className="relative shrink-0 lg:w-44">
                 <div className="absolute inset-0 -translate-y-1.5 translate-x-1.5 rounded-xl border border-line bg-card" aria-hidden="true" />
                 <div className="absolute inset-0 -translate-y-3 translate-x-3 rounded-xl border border-line bg-card" aria-hidden="true" />
                 <div className={NODE_CARD}>
                   <div className="micro flex items-center gap-1.5"><FileText size={13} aria-hidden="true" /> {STORY.records}</div>
-                  <div className="mt-2 flex flex-wrap gap-1.5" data-testid="story-sources">
-                    {sources.slice(0, 5).map((s) => (
+                  <div className="mt-2 flex flex-col gap-1.5" data-testid="story-sources">
+                    {sources.slice(0, 4).map((s) => (
                       <span key={s} className="rounded-md border border-line bg-surface-3 px-2 py-1 text-xs text-fg">{s}</span>
                     ))}
                   </div>
                 </div>
               </div>
-              <Connector />
-              <div className={NODE_CARD}>
-                <div className="micro">{STORY.componentRow}</div>
-                <div className="mt-1 text-xs text-muted">{STORY.componentGrain}</div>
+              <Flow />
+              <div className="shrink-0 lg:w-40">
+                <div className={NODE_CARD}>
+                  <div className="micro">{STORY.componentRow}</div>
+                </div>
+                <div className="mt-1.5 px-1 text-center text-[10px] text-muted">{STORY.componentGrain}</div>
               </div>
-              <Connector />
-              <div className={`${NODE_CARD} border-t-[3px] border-t-brand-gold`} data-testid="story-modules">
+              <Flow />
+              <div className={`${NODE_CARD} shrink-0 border-t-[3px] border-t-brand-gold lg:w-44`} data-testid="story-modules">
                 <div className="micro">{STORY.modules(dims.sectors.length)}</div>
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
                   <CircleCheck size={13} className="text-amber-soft" aria-hidden="true" /> {STORY.invariants}
                 </div>
               </div>
-              <Connector />
-              <div className="flex items-center justify-center gap-4">
-                <div className="flex h-44 w-44 shrink-0 flex-col items-center justify-center rounded-full bg-accent text-center text-on-accent shadow-card" data-testid="story-total">
+              <Flow />
+              <div className="flex shrink-0 flex-col items-center">
+                <div className="flex items-start gap-2" data-testid="story-unestimated">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-dashed border-accent/50 text-center">
+                    <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-accent">{STORY.unestimated}</span>
+                  </div>
+                  <p className="mt-3 w-24 text-[11px] leading-snug text-muted">{STORY.unestimatedNote}</p>
+                </div>
+                <div className="h-5 w-px border-l border-dashed border-accent/50" aria-hidden="true" />
+                <div className="flex h-44 w-44 flex-col items-center justify-center rounded-full bg-accent text-center text-on-accent shadow-card" data-testid="story-total">
                   <BarChart3 size={16} aria-hidden="true" />
                   <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.08em] opacity-80">{STORY.inventory}</div>
                   {cell ? (
@@ -193,26 +222,14 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
                     <div className="num text-3xl font-semibold opacity-60">—</div>
                   )}
                 </div>
-                <div className="max-w-[10rem]" data-testid="story-unestimated">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-accent/50 text-center">
-                    <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-accent">{STORY.unestimated}</span>
+                <div className="h-4 w-px bg-accent/40" aria-hidden="true" />
+                <div className="w-[22rem] max-w-full">
+                  <div className="mx-[3.7rem] border-t border-accent/40" aria-hidden="true" />
+                  <div className="grid grid-cols-3 gap-2">
+                    <Branch icon={<CalendarDays size={15} className="mx-auto text-accent" aria-hidden="true" />} label={STORY.months(months)} testId="story-months" />
+                    <Branch icon={<MapIcon size={15} className="mx-auto text-accent" aria-hidden="true" />} label={STORY.maps} />
+                    <Branch icon={<BarChart3 size={15} className="mx-auto text-accent" aria-hidden="true" />} label={STORY.uncertainty} />
                   </div>
-                  <p className="mt-2 text-xs text-muted">{STORY.unestimatedNote}</p>
-                </div>
-              </div>
-              <Connector />
-              <div className="grid grid-cols-3 gap-2">
-                <div className={`${NODE_CARD} text-center`}>
-                  <CalendarDays size={15} className="mx-auto text-accent" aria-hidden="true" />
-                  <div className="micro mt-1.5" data-testid="story-months">{STORY.months(months)}</div>
-                </div>
-                <div className={`${NODE_CARD} text-center`}>
-                  <MapIcon size={15} className="mx-auto text-accent" aria-hidden="true" />
-                  <div className="micro mt-1.5">{STORY.maps}</div>
-                </div>
-                <div className={`${NODE_CARD} text-center`}>
-                  <BarChart3 size={15} className="mx-auto text-accent" aria-hidden="true" />
-                  <div className="micro mt-1.5">{STORY.uncertainty}</div>
                 </div>
               </div>
             </div>
