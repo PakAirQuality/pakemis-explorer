@@ -9,6 +9,7 @@
 import { X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { gasLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { POLLUTANT_LABELS } from "@/lib/explore/query";
 import { CHIPS } from "./copy";
 
 const CHIP = "inline-flex max-w-full items-center gap-1.5 rounded-full border border-nav-line bg-nav py-1 pl-3 text-xs font-medium text-fg shadow-sm";
@@ -19,7 +20,9 @@ export function ScopeChips({ className = "" }: { className?: string }) {
   const { state, setState, labels, defaults } = useExplorer();
   const chips: Chip[] = [
     { id: "sector", label: sectorLabel(labels, state.sector), what: CHIPS.sector, onClear: state.sector ? () => setState({ sector: null }) : null },
-    { id: "gas", label: gasLabel(labels, state.gas), what: CHIPS.gas, onClear: state.gas ? () => setState({ gas: null }) : null },
+    state.pol
+      ? { id: "gas", label: `${POLLUTANT_LABELS[state.pol] ?? state.pol} (air beta)`, what: CHIPS.gas, onClear: () => setState({ pol: null }) }
+      : { id: "gas", label: gasLabel(labels, state.gas), what: CHIPS.gas, onClear: state.gas ? () => setState({ gas: null }) : null },
     { id: "period", label: periodShort(labels, state.period), what: CHIPS.year, onClear: state.period !== defaults.period_id ? () => setState({ period: defaults.period_id }) : null },
   ];
   return (

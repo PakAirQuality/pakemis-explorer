@@ -47,7 +47,7 @@ import { Layers, Locate } from "lucide-react";
 import type { Map as MBMap } from "mapbox-gl";
 import type { ExplorerState, Level } from "@/lib/urlState";
 import { api } from "@/lib/api";
-import { adm1Body, mapBody, parseCell } from "@/lib/requests";
+import { adm1Body, airMapBody, mapBody, parseCell } from "@/lib/requests";
 import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap, styleFor, type BasemapChoice } from "./basemap";
@@ -155,7 +155,8 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   // the workspace paints the URL's layer as the console does (Map settings holds its switch);
   // the briefing map on /data is the magnitude choropleth and nothing else
   const layered = !briefing;
-  const layer = layered ? state.layer : "magnitude";
+  // a pollutant paints magnitude alone: the evidence and unallocated layers belong to the CO2e product
+  const layer = state.pol ? "magnitude" : layered ? state.layer : "magnitude";
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const onMapRef = useRef(onMap);
@@ -183,21 +184,40 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   const bboxes = useBboxes();
   const bm = useMemo(buildBasemap, []);
 
-  const body = useMemo(() => mapBody(state), [state]);
-  const mapQ = useQuery({ queryKey: ["map", body], queryFn: () => api.queryEmissions(body!), enabled: !!body, retry: false });
+  const airBody = useMemo(() => airMapBody(state), [state]);
+  const body = useMemo(() => (state.pol ? null : mapBody(state)), [state]);
+  const mapQ = useQuery({
+    queryKey: ["map", state.pol ? airBody : body],
+    queryFn: () => (state.pol ? api.queryAir(airBody!) : api.queryEmissions(body!)),
+    enabled: state.pol ? !!airBody : !!body,
+    retry: false,
+  });
   // Map settings' FIXED scale: the level's all-sector, all-gas envelope for the reference year
   // under the same configuration, fetched once and reused, so choosing a sector or a gas moves
   // the colours within a domain that does not move. Its key is the map's own when the scope is
   // already that envelope, so the request is not sent twice.
   const referencePeriod = useMemo(() => dims.periods.find((r) => String(r.is_reference).toLowerCase() === "true")?.period_id ?? state.period, [dims.periods, state.period]);
-  const fixedBody = useMemo(() => (state.scale === "fixed" ? mapBody({ ...state, sector: null, gas: null, month: null, period: referencePeriod }) : null), [state, referencePeriod]);
+  const fixedBody = useMemo(() => (state.scale === "fixed" && !state.pol ? mapBody({ ...state, sector: null, gas: null, month: null, period: referencePeriod }) : null), [state, referencePeriod]);
   const fixedQ = useQuery({ queryKey: ["map", fixedBody], queryFn: () => api.queryEmissions(fixedBody!), enabled: !!fixedBody, retry: false });
   const scale: ScalePaint = useMemo(() => {
     if (state.scale !== "fixed" || !fixedQ.data || state.level === "grid") return { mode: state.scale, domain: null };
     const i = indexCells(fixedQ.data, state.level);
     return { mode: "fixed", domain: { min: i.min, max: i.max } };
   }, [state.scale, state.level, fixedQ.data]);
-  const index = useMemo(() => (mapQ.data && state.level !== "grid" ? indexCells(mapQ.data, state.level) : null), [mapQ.data, state.level]);
+  // the air district table names its districts; the map's features carry shape ids, so the
+  // envelope is re-keyed through the release's own dims before indexing (a join, not arithmetic)
+  const airKeyed = useMemo(() => {
+    if (!state.pol || !mapQ.data) return mapQ.data;
+    if (state.level !== "adm2") return mapQ.data;
+    const byName = new Map(dims.adm2.filter((r) => r.shape_id).map((r) => [r.name, r.shape_id] as const));
+    return {
+      ...mapQ.data,
+      values: mapQ.data.values
+        .map((c) => ({ ...c, group: { ...c.group, shape_id: byName.get(String(c.group?.district ?? "")) ?? "" } }))
+        .filter((c) => c.group.shape_id),
+    };
+  }, [state.pol, state.level, mapQ.data, dims.adm2]);
+  const index = useMemo(() => (airKeyed && state.level !== "grid" ? indexCells(airKeyed, state.level) : null), [airKeyed, state.level]);
   // the unallocated layer reads the province envelope at either level (the map's own ADM1 request, so the key is shared)
   const provinceBody = useMemo(() => adm1Body(state), [state]);
   const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: layered && layer === "unallocated", retry: false });

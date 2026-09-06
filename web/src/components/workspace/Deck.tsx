@@ -39,6 +39,7 @@ import { HEADER, licenceLine } from "@/components/overview/copy";
 import { DECK_CARD } from "@/components/overview/deck";
 import { ScopeChips } from "./ScopeChips";
 import { cardsFor, scopeOf, type CardId } from "./cards";
+import { AirCards } from "./cards/AirCards";
 import { renderCard, wantsFor } from "./cards/render";
 import { DECK_COLLAPSE, DECK_EXPAND, DECK_TITLE, FILTERS } from "./copy";
 
@@ -123,7 +124,9 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
         </div>
       </header>
       <ScopeChips />
-      {ids.map((id) => renderCard({ id, scope, deck, place, open: isOpen(id), onToggle: toggle(id), onSector: pickSector, picked }))}
+      {state.pol
+        ? <AirCards pol={state.pol} />
+        : ids.map((id) => renderCard({ id, scope, deck, place, open: isOpen(id), onToggle: toggle(id), onSector: pickSector, picked }))}
       <DeckFooter />
     </>
   );

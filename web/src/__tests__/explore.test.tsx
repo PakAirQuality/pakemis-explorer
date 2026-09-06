@@ -163,7 +163,7 @@ function serverDecimals(): Set<string> {
 
 const DEFAULTS = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 const CTX: ExploreContext = { periods: ["FY2020-21", "FY2023-24"], referencePeriod: "FY2023-24", monthsOf: (p) => (p === "FY2023-24" ? ["202307", "202308"] : []), reference: "REF_2023_24", survey: "S_2023_24", surveyCovers: (p) => p === "FY2023-24" };
-const LOCAL: LocalKeys = { by: null, rep: null, range: null, geos: null, cat: null, share: null, pol: null };
+const LOCAL: LocalKeys = { by: null, rep: null, range: null, geos: null, cat: null, share: null };
 const start = (): ExploreState => resolveExplore(resolveState({}, DEFAULTS), LOCAL, CTX);
 const SCOPE = { periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5" };
 

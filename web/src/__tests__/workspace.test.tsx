@@ -96,6 +96,13 @@ beforeEach(() => {
         if (q?.geography_ids?.length) return SERIES_REFUSAL;
         return envelope(SERIES, { request_type: "get_timeseries", axis: SERIES_AXIS, change: CHANGE });
       }
+      if (url.includes("/query/air")) {
+        const k = (body as { group_by?: string[] } | undefined)?.group_by?.[0];
+        if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air" });
+        if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
+        if (k === "sector_id") return envelope([{ display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { sector_id: "agriculture" }, extra: { share_pct_short: "96.0" } }], { request_type: "query_air", axis: AXIS_250 });
+        return envelope([{ display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃" }], { request_type: "query_air" });
+      }
       if (body?.group_by?.includes("sector_id")) return envelope(SECTORS, { axis: AXIS_250, partition: { n: 3 } });
       if (body?.group_by?.includes("module")) return envelope(PUNJAB_SECTORS, { axis: { ticks_short: ["0", "25", "50", "75", "100", "125"], unit_short: "Mt CO₂e" }, partition: { n: 2 } });
       if (body?.group_by?.includes("gas")) return envelope(GASES, { axis: AXIS_250, partition: { n: 2 } });
@@ -440,6 +447,20 @@ describe("the narrow workspace: one pane at a time", () => {
 });
 
 describe("the workspace's audits", () => {
+  it("a pollutant as the metric: the filter select carries the beta group, the deck answers in kilotonnes, the chip names it", async () => {
+    stubWideViewport();
+    mount("?pol=NH3");
+    await screen.findByTestId("deck");
+    expect(screen.getByTestId("gas-select")).toHaveValue("pol:NH3");
+    expect(await screen.findByTestId("air-display")).toHaveTextContent("2784.71");
+    expect(screen.getByTestId("chip-gas")).toHaveTextContent("NH₃ (air beta)");
+    expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");
+    expect(screen.getByTestId("card-air-sources")).toHaveTextContent("Agriculture is the largest estimated source");
+    expect(screen.getByTestId("card-air-trend")).toHaveTextContent("the agriculture layer alone");
+    // clearing through the chip returns to CO₂e
+    fireEvent.click(screen.getByTestId("chip-gas-clear"));
+    await waitFor(() => expect(screen.getByTestId("gas-select")).toHaveValue(""));
+  });
   it("every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase; and the chrome never names the dataset", async () => {
     mount();
     await loaded();

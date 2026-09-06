@@ -5,7 +5,7 @@
  * Field values here are the contract's own words (openapi descriptions): "annual" is the
  * GridCellRequest's word for the twelve-month sum; group keys name the release's columns.
  */
-import type { CompareRequest, GridCellRequest, QueryEmissions, TimeseriesRequest } from "./api";
+import type { CompareRequest, GridCellRequest, QueryAir, QueryEmissions, TimeseriesRequest } from "./api";
 import type { ExplorerState, Level } from "./urlState";
 
 const GRID_ANNUAL = "annual";
@@ -45,6 +45,18 @@ export function adm2Body(s: ExplorerState): QueryEmissions {
 export function mapBody(s: ExplorerState): QueryEmissions | null {
   if (s.level === "adm1") return adm1Body(s);
   if (s.level === "adm2") return adm2Body(s);
+  return null;
+}
+
+/**
+ * The air beta's choropleth request: the agriculture allocation (the only spatial air layer)
+ * for one pollutant. No sector filter rides here - the layer IS agriculture's - and no
+ * configuration, month or GWP: the air tables are single-estimate CY2024 kilotonnes.
+ */
+export function airMapBody(s: Pick<ExplorerState, "level" | "pol">): QueryAir | null {
+  if (!s.pol) return null;
+  if (s.level === "adm1") return { pollutants: [s.pol], geography_level: "adm1", group_by: ["province"] };
+  if (s.level === "adm2") return { pollutants: [s.pol], geography_level: "adm2", group_by: ["district"] };
   return null;
 }
 

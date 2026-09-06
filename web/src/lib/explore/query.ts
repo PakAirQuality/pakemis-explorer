@@ -70,7 +70,7 @@ export type ExploreContext = {
 };
 
 /** The URL form: the shared keys of lib/urlState.ts and the page-local ones (`by`, `rep`, `range`, `geos`, `cat`, `share`). */
-export type LocalKeys = { by: string | null; rep: string | null; range: boolean | null; geos: string | null; cat: string | null; share: boolean | null; pol: string | null };
+export type LocalKeys = { by: string | null; rep: string | null; range: boolean | null; geos: string | null; cat: string | null; share: boolean | null };
 
 export type QueryPlan =
   | { kind: "emissions"; body: QueryEmissions; groupBy: string; chart: ChartKind; /** The values the canvas keeps (several provinces out of the ADM1 envelope): a filter, never arithmetic. */ filterTo?: { key: string; ids: string[] } }
@@ -170,7 +170,7 @@ export function resolveExplore(shared: ExplorerState, local: LocalKeys, ctx: Exp
     by: "sector",
     rep: isRep(local.rep) ? local.rep : "chart",
     share: !!local.share,
-    pollutant: (POLLUTANTS as readonly string[]).includes(local.pol ?? "") ? local.pol : null,
+    pollutant: (POLLUTANTS as readonly string[]).includes(shared.pol ?? "") ? shared.pol : null,
   };
   if (s.pollutant) {
     // the pollutant replaces the CO2e metric: the gas, category and share controls stand down
@@ -206,6 +206,7 @@ export function toUrl(s: ExploreState): { shared: Partial<ExplorerState>; local:
       config: s.config,
       gwp: s.gwp,
       view: s.view,
+      pol: s.pollutant,
     },
     local: {
       by: s.range ? null : s.by === "sector" ? null : s.by,
@@ -214,7 +215,6 @@ export function toUrl(s: ExploreState): { shared: Partial<ExplorerState>; local:
       geos: s.allPlaces ? ALL_PLACES : several ? s.geos.join(",") : null,
       cat: s.category,
       share: s.share ? true : null,
-      pol: s.pollutant,
     },
   };
 }

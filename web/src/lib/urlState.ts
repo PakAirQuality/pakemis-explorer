@@ -51,6 +51,8 @@ export type ExplorerState = {
   month: string | null;
   sector: string | null;
   gas: string | null;
+  /** One air pollutant (the beta): the metric becomes native kilotonnes via query_air. */
+  pol: string | null;
   config: string;
   gwp: string;
   view: string;
@@ -74,6 +76,7 @@ export const parsers = {
   month: parseAsString,
   sector: parseAsString,
   gas: parseAsString,
+  pol: parseAsString,
   config: parseAsString,
   gwp: parseAsString,
   view: parseAsString,
@@ -99,6 +102,7 @@ export function resolveState(raw: Partial<RawState>, d: StateDefaults): Explorer
     month: raw.month ?? null,
     sector: raw.sector ?? null,
     gas: raw.gas ?? (level === "grid" ? d.grid_gas : null),
+    pol: raw.pol ?? null,
     config: raw.config ?? d.configuration_id,
     gwp: raw.gwp ?? d.gwp_basis,
     view: raw.view ?? d.spatial_view,
@@ -123,6 +127,7 @@ export function rawFromState(s: ExplorerState, d: StateDefaults): RawState {
     month: s.month,
     sector: s.sector,
     gas: s.gas === (s.level === "grid" ? d.grid_gas : null) ? null : s.gas,
+    pol: s.pol,
     config: s.config === d.configuration_id ? null : s.config,
     gwp: s.gwp === d.gwp_basis ? null : s.gwp,
     view: s.view === d.spatial_view ? null : s.view,

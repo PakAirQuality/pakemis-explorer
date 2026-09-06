@@ -17,6 +17,7 @@ import { ChevronsLeft, ChevronsRight, Factory, MapPin, RotateCcw, Wind, X } from
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Level } from "@/lib/urlState";
 import { districtName, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { POLLUTANTS, POLLUTANT_LABELS } from "@/lib/explore/query";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { SEGMENT_GROUP_CLASS, segmentClass } from "./PaneSwitch";
 import { YearSlider } from "./YearSlider";
@@ -36,12 +37,13 @@ const SEGMENTS: { id: Extract<Level, "adm1" | "adm2">; label: string }[] = [
 /** "Pakistan · All sectors · CO₂e · 2023–24": the active view in one line, every part a release label. */
 export function summaryLine(
   labels: Parameters<typeof sectorLabel>[0],
-  state: { sector: string | null; gas: string | null; period: string; gwp: string },
+  state: { sector: string | null; gas: string | null; pol?: string | null; period: string; gwp: string },
   place: string,
   defaultGwp: string,
 ): string {
-  const parts = [place, sectorLabel(labels, state.sector), state.gas ? gasLabel(labels, state.gas) : "CO₂e", periodShort(labels, state.period)];
-  if (!gwpIsDefault(labels, state.gwp, defaultGwp)) parts.push(gwpLabel(labels, state.gwp));
+  const metric = state.pol ? `${POLLUTANT_LABELS[state.pol] ?? state.pol} (air beta, kt)` : state.gas ? gasLabel(labels, state.gas) : "CO₂e";
+  const parts = [place, sectorLabel(labels, state.sector), metric, periodShort(labels, state.period)];
+  if (!state.pol && !gwpIsDefault(labels, state.gwp, defaultGwp)) parts.push(gwpLabel(labels, state.gwp));
   return parts.join(" · ");
 }
 
@@ -60,7 +62,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
   const { state, setState, labels, dims, defaults } = useExplorer();
   const districts = districtOptions(dims);
   const reset = () => {
-    setState({ level: "adm1", geo: null, cell: null, sector: null, gas: null, period: defaults.period_id, month: null });
+    setState({ level: "adm1", geo: null, cell: null, sector: null, gas: null, pol: null, period: defaults.period_id, month: null });
     onResetView?.();
   };
   const controls = (
@@ -94,10 +96,24 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
       </div>
       <div>
         <div className="micro mb-1.5">{FILTERS.gas}</div>
-        <select className={SELECT_CLASS} value={state.gas ?? ""} onChange={(e) => setState({ gas: e.target.value || null })} aria-label={FILTERS.gas} data-testid="gas-select">
+        <select
+          className={SELECT_CLASS}
+          value={state.pol ? `pol:${state.pol}` : state.gas ?? ""}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v.startsWith("pol:")) setState({ pol: v.slice(4), gas: null, month: null });
+            else setState({ gas: v || null, pol: null });
+          }}
+          aria-label={FILTERS.gas}
+          data-testid="gas-select"
+        >
           <option value="">All gases (CO₂e)</option>
           {dims.gases.map((g) => (
             <option key={g} value={g}>{gasLabel(labels, g)}</option>
+          ))}
+          <option value="sep" disabled>— Air pollutants (beta) —</option>
+          {POLLUTANTS.map((pl) => (
+            <option key={pl} value={`pol:${pl}`}>{POLLUTANT_LABELS[pl] ?? pl}</option>
           ))}
         </select>
       </div>

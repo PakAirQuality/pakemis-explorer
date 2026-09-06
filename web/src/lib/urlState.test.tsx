@@ -10,13 +10,13 @@ import { adm1Body, adm2Body, detailBodies, gridCellBody, requestFromState, state
 
 const D: StateDefaults = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 
-const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", pane: "map", c: null, cam: null, raster: false, view3d: false };
+const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, sector: null, gas: null, pol: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", pane: "map", c: null, cam: null, raster: false, view3d: false };
 
 const CASES: ExplorerState[] = [
   base,
   { ...base, level: "adm2", sector: "power", geo: "60131773B12131197496886" },
   { ...base, level: "adm2", gwp: "AR6" },
-  { ...base, period: "FY2020-21", month: "202007", gas: "CH4", config: "S_2023_24", view: "physical", geo: "Punjab" },
+  { ...base, period: "FY2020-21", month: "202007", gas: "CH4", pol: null, config: "S_2023_24", view: "physical", geo: "Punjab" },
   { ...base, level: "grid", gas: "CH4", month: "202401", cell: "24.925,67.075", raster: true },
   { ...base, level: "grid", gas: "N2O", raster: true },
 ];
@@ -67,7 +67,7 @@ describe("request bodies", () => {
 describe("resolve / raw / patch", () => {
   it("defaults are absent from the URL and restored on read", () => {
     expect(resolveState({}, D)).toEqual({ ...base });
-    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, config: null, gwp: null, view: null, geo: null, cell: null, tab: null, layer: null, scale: null, pane: null, c: null, cam: null, raster: null, view3d: null });
+    expect(rawFromState(base, D)).toEqual({ level: null, period: null, month: null, sector: null, gas: null, pol: null, config: null, gwp: null, view: null, geo: null, cell: null, tab: null, layer: null, scale: null, pane: null, c: null, cam: null, raster: null, view3d: null });
     const grid = resolveState({ level: "grid" }, D);
     expect(grid.gas).toBe("CO2");
     expect(grid.raster).toBe(true);
