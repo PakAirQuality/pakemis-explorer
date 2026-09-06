@@ -76,8 +76,23 @@ class Engine:
             raise E.UnknownDimensionValue("%r is not a geography level" % q.geography_level, dimension="geography_level")
         if q.geography_level == "adm2" and q.gwp_basis == "AR6":
             raise E.NotEstimated("AR6 CO2e is not carried at ADM2", "ar6_adm2_ne")
+        # THE SPATIAL LAYER IS NINE YEARS NOW, AND THIS REFUSAL USED TO SAY OTHERWISE. It read
+        # "spatial products exist for FY2023-24 only", which was true when the inventory
+        # placed one year and became a stale claim the moment the by-year products landed.
+        # What is still period-limited is the MONTH below ADM1 at module grain: the historical
+        # periods are published annually (fact_adm2_year), so a monthly district request
+        # outside the reference year is refused, and refused for the reason that is actually
+        # true rather than for the one that used to be.
         if q.geography_level != "national" and set(q.periods) != {REFERENCE_PERIOD}:
-            raise E.GrainUnavailable("spatial products exist for FY2023-24 only", "grid_not_tabular")
+            if q.geography_level == "adm1":
+                raise E.GrainUnavailable(
+                    "ADM1 is published monthly for FY2023-24; the historical periods are "
+                    "published at ADM2 annually (fact_adm2_year)", "grid_not_tabular")
+            if q.months:
+                raise E.GrainUnavailable(
+                    "the historical periods are published at ADM2 ANNUALLY; a monthly "
+                    "district request outside FY2023-24 is refused rather than computed",
+                    "adm2_history_annual_only")
         if q.spatial_view not in VIEWS:
             raise E.UnknownDimensionValue("%r is not a spatial view" % q.spatial_view, dimension="spatial_view")
         return q
@@ -174,11 +189,18 @@ class Engine:
         if q.geography_level == "adm1":
             table, col = "fact_adm1_month", "co2e_Mt_%s" % q.gwp_basis
             geo_col = "province"
-        else:
+        elif set(q.periods) == {REFERENCE_PERIOD}:
             table, col = "fact_adm2_month", "co2e_Mt_AR5_low"
             geo_col = "shape_id"
+        else:
+            # The historical periods live in the annual table, keyed on period_id rather than
+            # month. Same columns, same closure, same module grain - a different time key.
+            table, col = "fact_adm2_year", "co2e_Mt_AR5_low"
+            geo_col = "shape_id"
         where = ["configuration_id = '%s'" % q.configuration_id]
-        if q.months:
+        if table == "fact_adm2_year":
+            where.append(self._in("period_id", q.periods))
+        elif q.months:
             where.append(self._in("month", q.months))
         if q.geography_ids:
             where.append(self._in(geo_col, q.geography_ids))
@@ -187,7 +209,7 @@ class Engine:
         where += self._filters(q)
         groups = list(q.group_by) or [geo_col]
         group_cols = ", ".join(groups)
-        if table == "fact_adm2_month":
+        if table in ("fact_adm2_month", "fact_adm2_year"):
             sql = ("SELECT %s, SUM(CAST(co2e_Mt_AR5_low AS %s)) AS exact_low, SUM(CAST(co2e_Mt_AR5_high AS %s)) AS exact_high, "
                    "SUM(CAST(emissions_Gg AS %s)) AS gg, string_agg(DISTINCT co2e_exactness, ';') AS exactness, COUNT(*) AS n, "
                    "string_agg(result_row_id, ';' ORDER BY result_row_id) AS ids FROM %s WHERE %s AND emissions_Gg <> '' GROUP BY %s"

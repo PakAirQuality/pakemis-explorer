@@ -189,34 +189,118 @@ def get_cross_sector_transfer(engine, req):
                     values, {"kind": "ledger", "closure": "control == transfers + unresolved, per ledger and configuration"}, engine._provenance(["fact_transfer"]))
 
 
+def _time_origin(variable):
+    """The epoch a cube's time axis is counted from, READ from the file.
+
+    This used to be the literal date(2023, 7, 1). That was correct for the monthly cube and
+    only for it - the annual cube counts days since 1970-01-01 - so the constant would have
+    returned a confidently wrong month the first time the lookup was pointed at history. A CF
+    time variable states its own origin; there is no reason to guess it.
+    """
+    from datetime import date
+    units = getattr(variable, "units", "")
+    if "since" not in units:
+        raise E.GrainUnavailable(
+            "the cube's time axis declares no origin (units=%r), so a month cannot be "
+            "resolved against it" % units, "grid_not_tabular")
+    stamp = units.split("since", 1)[1].strip().split()[0]
+    return date.fromisoformat(stamp)
+
+
 def get_grid_cell(engine, req, cube_paths):
-    """cube_paths: {"REF_2023_24": path, "S_2023_24": path} to the NetCDF products."""
+    """cube_paths: {"REF_2023_24": path, "S_2023_24": path, "ANNUAL": path} to the products.
+
+    Three refusals live here rather than in a caller, because a lookup that answers anyway is
+    worse than one that declines: a point outside the grid, a survey configuration outside the
+    year it was surveyed, and a historical MONTH. The last is the honest shape of the products -
+    eight of the nine years have annual cells and no monthly ones, because a historical month's
+    seasonal geography is not evidenced and will not be invented to satisfy a query.
+    """
     try:
         from netCDF4 import Dataset
     except ImportError as exc:
         raise E.GrainUnavailable("the grid needs netCDF4: %s" % exc, "grid_not_tabular")
     conf = req.configuration_id or engine.release.defaults["configuration_id"]
-    path = cube_paths[conf]
+    period = req.period_id or REFERENCE_PERIOD
+    historical = period != REFERENCE_PERIOD
+
+    if historical and conf != "REF_2023_24":
+        raise E.NotEstimated(
+            "configuration %s exists for %s alone: it is a survey that was run in the "
+            "reference year, and there is no historical survey to configure %s from"
+            % (conf, REFERENCE_PERIOD, period), "configuration_s_reference_year_only")
+    if historical and req.month and req.month != "annual":
+        raise E.GrainUnavailable(
+            "the monthly grain is the reference year's alone; %s is published annually on the "
+            "grid (a historical month's seasonal geography is not evidenced)" % period,
+            "grid_monthly_reference_year_only")
+
+    path = cube_paths["ANNUAL"] if historical else cube_paths[conf]
     ds = Dataset(path)
     try:
         lats, lons = ds["lat"][:], ds["lon"][:]
+        # A DOMAIN CHECK, BECAUSE argmin ALWAYS SUCCEEDS. Without this, a query for Delhi or
+        # for the middle of the Arabian Sea snaps to the nearest edge cell and is returned with
+        # a receipt, a digest and four decimal places. Half a cell is the tolerance: outside it
+        # the point is not in this grid and the honest answer is that there is no cell.
+        half = float(abs(lats[1] - lats[0])) / 2.0
+        if (req.lat > float(lats.max()) + half or req.lat < float(lats.min()) - half
+                or req.lon > float(lons.max()) + half or req.lon < float(lons.min()) - half):
+            raise E.UnknownDimensionValue(
+                "(%.4f, %.4f) is outside the Pakistan grid domain (lat %.2f..%.2f, lon "
+                "%.2f..%.2f)" % (req.lat, req.lon, float(lats.min()), float(lats.max()),
+                                 float(lons.min()), float(lons.max())), "grid_domain")
         i = int(abs(lats - req.lat).argmin()); j = int(abs(lons - req.lon).argmin())
-        var = ds["%s_Gg" % req.gas.lower()]
-        months = [str(int(m)) for m in ds["time"][:]] if "time" in ds.variables else []
-        if req.month and req.month != "annual":
-            from datetime import date
-            t = int((date(int(req.month[:4]), int(req.month[4:]), 1) - date(2023, 7, 1)).days)
-            k = [int(x) for x in ds["time"][:]].index(t)
-            val = float(var[k, i, j])
+
+        if historical:
+            var = ds["%s_emissions" % req.gas.lower()]
+            periods = [str(p) for p in ds["period_id"][:]]
+            if period not in periods:
+                raise E.UnknownDimensionValue(
+                    "%s is not one of the nine gridded periods %s" % (period, periods),
+                    "grid_period")
+            k = periods.index(period)
+            views = [str(v) for v in ds["spatial_view"][:]]
+            if req.spatial_view:
+                if req.spatial_view not in views:
+                    raise E.UnknownDimensionValue(
+                        "%s is not a spatial view %s" % (req.spatial_view, views), "grid_view")
+                cell = var[k, views.index(req.spatial_view), i, j]
+            else:
+                cell = var[k, :, i, j].sum()
+            # A masked cell is OUTSIDE PAKISTAN, which is a different claim from zero.
+            import numpy as _np
+            if _np.ma.is_masked(cell):
+                raise E.NotEstimated(
+                    "(%.4f, %.4f) is inside the grid but outside Pakistan: the cube masks "
+                    "non-national cells rather than calling them zero" % (req.lat, req.lon),
+                    "grid_outside_country")
+            val = float(cell)
         else:
-            val = float(var[:, i, j].sum())
+            var = ds["%s_Gg" % req.gas.lower()]
+            if req.spatial_view:
+                raise E.GrainUnavailable(
+                    "the monthly cube carries no spatial_view dimension; views are published "
+                    "on the annual grid", "grid_not_tabular")
+            if req.month and req.month != "annual":
+                from datetime import date
+                origin = _time_origin(ds["time"])
+                t = int((date(int(req.month[:4]), int(req.month[4:]), 1) - origin).days)
+                axis = [int(x) for x in ds["time"][:]]
+                if t not in axis:
+                    raise E.UnknownDimensionValue(
+                        "%s is not a month of %s" % (req.month, REFERENCE_PERIOD), "grid_month")
+                val = float(var[axis.index(t), i, j])
+            else:
+                val = float(var[:, i, j].sum())
         conservation = getattr(ds, "conservation", "")
     finally:
         ds.close()
     v = value(repr(val), "Gg", engine.decimals["emissions_Gg"], formula="cell value read from %s" % os.path.basename(path),
-              lat=float(lats[i]), lon=float(lons[j]), row=i, col=j, month=req.month or "annual")
+              lat=float(lats[i]), lon=float(lons[j]), row=i, col=j, month=req.month or "annual",
+              period_id=period, spatial_view=req.spatial_view or "all (the three views sum)")
     return envelope(engine.release, "get_grid_cell", canonical_json(req),
-                    {"basis": "fiscal", "periods": (REFERENCE_PERIOD,), "configuration_id": conf, "gwp_basis": "native", "geography_level": "grid"},
+                    {"basis": "fiscal", "periods": (period,), "configuration_id": conf, "gwp_basis": "native", "geography_level": "grid"},
                     [v], {"kind": "lookup", "table": os.path.basename(path), "conservation": conservation},
                     {"tables": [{"path": "outputs/" + os.path.basename(path), "sha256": engine.release.product_digest("outputs/" + os.path.basename(path))}]},
                     limitations_hit=["grid_not_tabular"])

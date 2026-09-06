@@ -466,7 +466,7 @@ export interface components {
         };
         /**
          * GridCellRequest
-         * @description GridCellRequest(lat: float = 0.0, lon: float = 0.0, month: str = '', gas: str = 'CO2', configuration_id: str = '')
+         * @description GridCellRequest(lat: float = 0.0, lon: float = 0.0, month: str = '', gas: str = 'CO2', configuration_id: str = '', period_id: str = '', spatial_view: str = '')
          */
         GridCellRequest: {
             /**
@@ -495,6 +495,17 @@ export interface components {
              * @default
              */
             month: string;
+            /**
+             * Period Id
+             * @description "" means the reference year
+             * @default
+             */
+            period_id: string;
+            /**
+             * Spatial View
+             * @default
+             */
+            spatial_view: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {

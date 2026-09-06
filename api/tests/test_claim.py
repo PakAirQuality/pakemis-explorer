@@ -45,7 +45,7 @@ def test_shape_and_breadcrumb(enteric):
     assert [(c["level"], c["id"], c["label"]) for c in rec["breadcrumb"]] == [
         ("sector", "agriculture", "Agriculture"), ("category", "Enteric fermentation", "Enteric fermentation"),
         ("gas", "CH4", "CH₄"), ("geography", "PK", "Pakistan"), ("period", "FY2023-24", "2023–24")]
-    assert rec["release"] == {"release": "PakEmis 1.0.0rc42", "version": "1.0.0rc42", "commit": env["context"]["commit"]}
+    assert rec["release"] == {"release": "PakEmis 1.0.0rc47", "version": "1.0.0rc47", "commit": env["context"]["commit"]}
     # only the page-number absence is missing for this cell
     assert [m["section"] for m in rec["missing"]] == ["sources.pages"]
     assert rec["missing"][0]["message"].startswith("not carried by this release")
@@ -68,7 +68,7 @@ def test_reported_and_calculation(enteric):
     assert rep["gwp"]["basis"] == "AR5" and rep["gwp"]["label"] == "IPCC 2013 (AR5)"
     assert rep["configuration"] == {"id": "REF_2023_24", "label": "Reference estimate", "letter": "L"}
     assert rep["period"] == {"ids": ["FY2023-24"], "labels": ["2023–24"], "months": [], "basis": "fiscal"}
-    assert rep["release"]["release"] == "PakEmis 1.0.0rc42"
+    assert rep["release"]["release"] == "PakEmis 1.0.0rc47"
     calc = rec["calculation"]
     assert calc["sql"] == env["calculation"]["sql"] and calc["table"] == "fact_annual" and calc["column"] == "co2e_Mt_AR5"
     assert calc["rows"] == 6 and calc["result_sha256"] == env["result_sha256"] and calc["receipt"] == env["receipt"]
@@ -231,7 +231,8 @@ def test_typed_errors(enteric, client):
 def test_release_lists_the_registries(client, settings):
     reg = client.get(PREFIX + "/release").json()["registries"]
     assert len(reg) == 22 and "method_registry" in reg
-    assert reg["emission_factors"]["identity"] == "manifest_sources" and reg["emission_factors"]["rows"] == 420
+    # 424 at rc47 (four factor rows arrived with the release's new streams)
+    assert reg["emission_factors"]["identity"] == "manifest_sources" and reg["emission_factors"]["rows"] == 424
     assert reg["uncertainty_parameters"]["identity"] == "fetch"
     assert all(os.path.exists(os.path.join(settings.release_dir, r["path"])) for r in reg.values())
 

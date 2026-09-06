@@ -1,0 +1,396 @@
+{
+ "digests": {
+  "release_manifest.json": "58ebe5c1bdfa06179b871c09ab759d43a18f55913fd334aa74dafca6d0f00c99",
+  "semantic_release.json": "1c8717bd16747c4f245beb00e5f76b5dd1e0a7b7a7859022bac30d56807895ca"
+ },
+ "fetched_at": "2026-09-06T09:03:18+00:00",
+ "files": {
+  "data/adm2_canonical.csv": {
+   "bytes": 28154,
+   "sha256": "c7436e78b285a24d4372e3990b1877eaf29345e47fed476cdfdf970474ead2c1"
+  },
+  "data/gis/BOUNDARY_SOURCES.json": {
+   "bytes": 821,
+   "sha256": "ee5567b95bee85dd6d700a6bbbcec2b1f34cce2710ee6c27d28b0970c6dfdd49"
+  },
+  "data/gis/PAK_ADM1.geojson": {
+   "bytes": 159152,
+   "sha256": "c7ff4e70bcf740cfba47b871a7c2b2b2b243b59e4c0656e6e1bc2a64e295d93a"
+  },
+  "data/gis/PAK_ADM2.geojson": {
+   "bytes": 921802,
+   "sha256": "f274cfc377b3b570b6fd620c2911b5e4acd14460f9cb48551747f1d698566f2e"
+  },
+  "data/method_registry.csv": {
+   "bytes": 14190,
+   "sha256": "a035c13ae61b8cf40040cfc6626bf88c2ad1fd6274fbc6a6ba457c4185dc6864"
+  },
+  "data/registries/allowed_grid_fallbacks.csv": {
+   "bytes": 3144,
+   "identity": "manifest_sources",
+   "sha256": "0243b69ca6d1be8383f955ebbd4b713494f36bd69803d695da11074ec469cd9d",
+   "source_path": "data/allowed_grid_fallbacks.csv"
+  },
+  "data/registries/benchmarks.csv": {
+   "bytes": 20215,
+   "identity": "manifest_sources",
+   "sha256": "95c21df55c0998566286c16eeaa7b24a7388606dec3c03b508e6e6f64bd849a0",
+   "source_path": "data/benchmarks.csv"
+  },
+  "data/registries/data_gaps.csv": {
+   "bytes": 95213,
+   "identity": "manifest_sources",
+   "sha256": "d5083a624245e231af07c4f8a2eda2eb70cca19665475c135be4b136999b5c0e",
+   "source_path": "data/data_gaps.csv"
+  },
+  "data/registries/emission_factors.csv": {
+   "bytes": 93802,
+   "identity": "manifest_sources",
+   "sha256": "a2a15d92f74e3d225aa77982ae2e367ff3c9c72ab4fadc6f032111f025e0c44e",
+   "source_path": "data/emission_factors.csv"
+  },
+  "data/registries/geometry_sets.csv": {
+   "bytes": 6749,
+   "identity": "manifest_sources",
+   "sha256": "105b8615ae2ac5f24d9f087fabb88e672a1b0c4b8fc573da6d545f34e9312c4a",
+   "source_path": "data/geometry_sets.csv"
+  },
+  "data/registries/national_uncertainty_parameters.csv": {
+   "bytes": 144103,
+   "identity": "fetch",
+   "sha256": "ab653e516174bce6197226037f68d865206c61834af52ba0ed4ecfa2faff3761",
+   "source_path": "outputs/national_uncertainty_parameters.csv"
+  },
+  "data/registries/pakemis_grid_fallbacks.csv": {
+   "bytes": 71717,
+   "identity": "manifest_products",
+   "sha256": "08e57ab78d76544eae50c42f99def4a01a6ff8221da4683cb31a32b618e77d10",
+   "source_path": "outputs/pakemis_grid_fallbacks.csv"
+  },
+  "data/registries/pakemis_source_register.csv": {
+   "bytes": 113726,
+   "identity": "manifest_products",
+   "sha256": "87a2a6e58d3985cd89f84fda5dd6b10fa3eca9484b7025efe6c08e5896004376",
+   "source_path": "outputs/pakemis_source_register.csv"
+  },
+  "data/registries/pakemis_source_streams.csv": {
+   "bytes": 131867,
+   "identity": "manifest_products",
+   "sha256": "e86496c95b9b28e6c2f76b700fa0ebfcf413f907281123e9c38138af14c09764",
+   "source_path": "outputs/pakemis_source_streams.csv"
+  },
+  "data/registries/pakemis_temporal_profiles.csv": {
+   "bytes": 11074892,
+   "identity": "manifest_products",
+   "sha256": "daeb394336e3eee977342c4e5cc76e4176ce73bfaec5bb738f076c12c3b0cd27",
+   "source_path": "outputs/pakemis_temporal_profiles.csv"
+  },
+  "data/registries/pakemis_validation_catalog.csv": {
+   "bytes": 50275,
+   "identity": "manifest_products",
+   "sha256": "5d6c8dbc5bdd284605eb37153c7648ad85c655be361006d46da858b27d3af957",
+   "source_path": "outputs/pakemis_validation_catalog.csv"
+  },
+  "data/registries/pakemis_validation_scorecard.csv": {
+   "bytes": 4495,
+   "identity": "manifest_products",
+   "sha256": "736e6e20e4f45bb53f852545b7bd12ca42ff181dbf826b1c21a7d82c4572496c",
+   "source_path": "outputs/pakemis_validation_scorecard.csv"
+  },
+  "data/registries/pakemis_validation_sector_scorecard.csv": {
+   "bytes": 7017,
+   "identity": "manifest_products",
+   "sha256": "bb62f79ed70644f1791d5f0ac3071b8a4011f345d1776a08f72fe46358166492",
+   "source_path": "outputs/pakemis_validation_sector_scorecard.csv"
+  },
+  "data/registries/parameters.csv": {
+   "bytes": 6962,
+   "identity": "manifest_sources",
+   "sha256": "31e5f495842d6cf3dab6e550fcc718c2ac64fa0aec6eda5ebfb9cee097ae900a",
+   "source_path": "data/parameters.csv"
+  },
+  "data/registries/public_documents.csv": {
+   "bytes": 1110,
+   "identity": "manifest_sources",
+   "sha256": "22b16d4280c096ebb0017eef1affc1a6a3e692a8e247b040aa215d28619719dc",
+   "source_path": "data/public_documents.csv"
+  },
+  "data/registries/release_heights.csv": {
+   "bytes": 3387,
+   "identity": "manifest_sources",
+   "sha256": "29616123e05fa984ff1fdd3413cb8bebfe189c6b9822290191bfe65a58c3dd6d",
+   "source_path": "data/release_heights.csv"
+  },
+  "data/registries/source_documents.csv": {
+   "bytes": 45676,
+   "identity": "manifest_sources",
+   "sha256": "f245647f899fa881095dc32b663b3ed6b396890fe38d7e81c42bb74bc07432bb",
+   "source_path": "data/source_documents.csv"
+  },
+  "data/registries/stream_geometry.csv": {
+   "bytes": 8448,
+   "identity": "manifest_sources",
+   "sha256": "550434f659e665624f5a58e14ace982fba384cd6f2ddd57ceb1eb7c6bea64f02",
+   "source_path": "data/stream_geometry.csv"
+  },
+  "data/registries/stream_grid_proxy.csv": {
+   "bytes": 5115,
+   "identity": "manifest_sources",
+   "sha256": "03f31799f1e82ffbd352e7ddcd24450b369ac7e27ce700bbf93ec9aedcbe70bc",
+   "source_path": "data/stream_grid_proxy.csv"
+  },
+  "data/registries/temporal_profiles.csv": {
+   "bytes": 10140,
+   "identity": "manifest_sources",
+   "sha256": "9c5e136970f21d4dc411825599907dc8cf0aaf69f8e78505481c682a15d615c0",
+   "source_path": "data/temporal_profiles.csv"
+  },
+  "data/registries/validation_catalog.csv": {
+   "bytes": 48288,
+   "identity": "manifest_sources",
+   "sha256": "9df962bcf36fa07b910d1ab653120337bdebd38267f88b5d79b5bb20fb9057de",
+   "source_path": "data/validation_catalog.csv"
+  },
+  "outputs/pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24.nc": {
+   "bytes": 9507356,
+   "sha256": "eb603eaa0fcfd7ea3b58439016643c5d5367e0de48d2fa86579615bd9794478f"
+  },
+  "outputs/pakemis_grid_0p05_monthly.nc": {
+   "bytes": 6177442,
+   "sha256": "f94a74e72fc49563a88854a96faa70d2b1cd510b93e162b891d34be16610af56"
+  },
+  "outputs/pakemis_grid_0p05_monthly_survey.nc": {
+   "bytes": 3952711,
+   "sha256": "3cd474ea0f3fca5076e324ba14eab9fbcd42e8ba81a21a966bbcbe8e2a72bfb9"
+  },
+  "outputs/pakemis_grid_0p1_edgar_aligned.nc": {
+   "bytes": 3035441,
+   "sha256": "42008b16141c8233ec3af0ef25d4c995fc3de894360bfb30de2724eb1460e79c"
+  },
+  "outputs/release_manifest.json": {
+   "bytes": 126121,
+   "sha256": "58ebe5c1bdfa06179b871c09ab759d43a18f55913fd334aa74dafca6d0f00c99"
+  },
+  "outputs/semantic/dim_category.csv": {
+   "bytes": 8944,
+   "sha256": "47cf4dbbf7ad007fceb006353cce15082555cba4582cf26088e430f753c11799"
+  },
+  "outputs/semantic/dim_category.parquet": {
+   "bytes": 8868,
+   "sha256": "202c3dc94cdb037cda04e72ae52939bc35cca7acd085415a6ea2a8690cee10c2"
+  },
+  "outputs/semantic/dim_configuration.csv": {
+   "bytes": 21310,
+   "sha256": "5d2143f635334c9faa8e1c44a4c8187c8e1d7046be4f164442d7d7b19ff6c06e"
+  },
+  "outputs/semantic/dim_configuration.parquet": {
+   "bytes": 18331,
+   "sha256": "b1c015adffbc4047c5d47e68487441deb44dc2a98bac4b1b564dc60a95bef300"
+  },
+  "outputs/semantic/dim_evidence_class.csv": {
+   "bytes": 1326,
+   "sha256": "237654c6d7564a48b092990ee8e3b385cfc7006f6ede62b1e513bcec880e67d1"
+  },
+  "outputs/semantic/dim_evidence_class.parquet": {
+   "bytes": 2631,
+   "sha256": "1676a915ecac2ea1b5ac0f37f12be1031bde7846ed0e40d61c25aacbaf83f619"
+  },
+  "outputs/semantic/dim_gas.csv": {
+   "bytes": 232,
+   "sha256": "8fffa255c206d709a254f359c402848c92b565683503b86ed52165403b057ce5"
+  },
+  "outputs/semantic/dim_gas.parquet": {
+   "bytes": 1556,
+   "sha256": "f55dc475f0bf48acbed9ee0f45330c5d6d3033fcf96aa56a510752664285c079"
+  },
+  "outputs/semantic/dim_geography.csv": {
+   "bytes": 26567,
+   "sha256": "cd1d57cdb66fa45355b8245b1d3c8310325dce5c1f0183215ec3ce1eb3530039"
+  },
+  "outputs/semantic/dim_geography.parquet": {
+   "bytes": 16570,
+   "sha256": "fed80f14eda8c828c7a740d836fac3c376eec74a5373e81225f49e55927cebaf"
+  },
+  "outputs/semantic/dim_gwp.csv": {
+   "bytes": 5164,
+   "sha256": "984757620a6aa4739fb76014b87e461549a7ae23d3eff1c52de02bc6e03040c4"
+  },
+  "outputs/semantic/dim_gwp.parquet": {
+   "bytes": 3775,
+   "sha256": "439699d7a0091d6245fdfab80ec6053145d024d91f0f5a287460da6e841c3ba6"
+  },
+  "outputs/semantic/dim_month.csv": {
+   "bytes": 8760,
+   "sha256": "57bc33e29ef865397a2fe0c19392dee028712d19279d122d6218e268780123e8"
+  },
+  "outputs/semantic/dim_month.parquet": {
+   "bytes": 7957,
+   "sha256": "2e1f16e67f4ccb326c9f5f513b76ec05e269386dee6ba4574234e06b375da153"
+  },
+  "outputs/semantic/dim_notation_key.csv": {
+   "bytes": 275,
+   "sha256": "8f49230301a4b00c9bcbd25185ed20d3833f465fbb9560d9a758145fcc4f45c0"
+  },
+  "outputs/semantic/dim_notation_key.parquet": {
+   "bytes": 1514,
+   "sha256": "e7aa79ece5cdf475b57404ec065d3c9a2595961d40efe8aaf00c0c7fc7c0d1a6"
+  },
+  "outputs/semantic/dim_period.csv": {
+   "bytes": 8908,
+   "sha256": "5869ff420e74e5333a97b900d32076a8c1ac0421386d6e7a437f86a423509e1a"
+  },
+  "outputs/semantic/dim_period.parquet": {
+   "bytes": 5939,
+   "sha256": "7b43a55be0fb293e9f8dd1dba00abb05195d82a7d9d3cfb1f021edbf81da8e0e"
+  },
+  "outputs/semantic/dim_stream.csv": {
+   "bytes": 96128,
+   "sha256": "768b581e3b7afb13b1be58dcbd8e51e84c851a44c1de059c92e0fd5ad3aa4826"
+  },
+  "outputs/semantic/dim_stream.parquet": {
+   "bytes": 25833,
+   "sha256": "9866f356460e783f8f678efe441cd5ba02fa46d18c78b7ef454c7161bd649d50"
+  },
+  "outputs/semantic/fact_adm1_month.csv": {
+   "bytes": 3297831,
+   "sha256": "2559fe069b98864d70269600b4607535582100d9558ce1e8166f38b7b85deb2d"
+  },
+  "outputs/semantic/fact_adm1_month.parquet": {
+   "bytes": 698298,
+   "sha256": "b92b957488ccb3950035064648d0f477b26c8429048b774a79adcbd7d20bc474"
+  },
+  "outputs/semantic/fact_adm2_month.csv": {
+   "bytes": 8210862,
+   "sha256": "62654f998077d609a9deb86c4dac04f635c026bf116cebb306dc1baeddac1a01"
+  },
+  "outputs/semantic/fact_adm2_month.parquet": {
+   "bytes": 2289776,
+   "sha256": "c236cb8da2d6da3cd85c249243fdac252abd99e8b22402e65cffceb066c4d28e"
+  },
+  "outputs/semantic/fact_adm2_year.csv": {
+   "bytes": 5640526,
+   "sha256": "a836e0b87c23047fd621981c579c4505cd0706827f15c780c217b5cbd2ab0081"
+  },
+  "outputs/semantic/fact_adm2_year.parquet": {
+   "bytes": 1729845,
+   "sha256": "d487b37a0c79a07a955956dd0870d310e7f0c6750554c79dfc0f96777a522206"
+  },
+  "outputs/semantic/fact_annual.csv": {
+   "bytes": 681227,
+   "sha256": "37971f64186fbb3b86c63bf91ca96f223a404197a50cd4927ff0502cf52486e5"
+  },
+  "outputs/semantic/fact_annual.parquet": {
+   "bytes": 113314,
+   "sha256": "ca4096b1341bb93c968888391f9380a52056186a32994d56ad65ef1c5735879c"
+  },
+  "outputs/semantic/fact_annual_calendar.csv": {
+   "bytes": 23211,
+   "sha256": "b339d32c85b47c8467fd6e85109fab1bd2268b7eb600fdd890732e59fdb68d63"
+  },
+  "outputs/semantic/fact_annual_calendar.parquet": {
+   "bytes": 12738,
+   "sha256": "ad5c65f106e7c9bf6d40aefaa083feea8a1789a50e1715778afc7b61a323d3c7"
+  },
+  "outputs/semantic/fact_completeness.csv": {
+   "bytes": 45045,
+   "sha256": "a443e142a8635c8af11d270f3390111474e171d9e43713723afed81a0aa73531"
+  },
+  "outputs/semantic/fact_completeness.parquet": {
+   "bytes": 32193,
+   "sha256": "27ff1ff138ba14e55eb321b61daa85416cf1d34f496748ab7083d58edd13721c"
+  },
+  "outputs/semantic/fact_completeness_mass.csv": {
+   "bytes": 12206,
+   "sha256": "b8d65d22fae11306346bda6cff8e2e95b13de49a6354becc1896f13b8e87e141"
+  },
+  "outputs/semantic/fact_completeness_mass.parquet": {
+   "bytes": 13244,
+   "sha256": "3297b32dca73d1f174f52812da0285859ee769e9d8a26e130f53e286d6d29ed6"
+  },
+  "outputs/semantic/fact_evidence.csv": {
+   "bytes": 51598,
+   "sha256": "b7cb56441c1511c56d3732c275d3f1c3c502c353656b7e82518989cab41310f7"
+  },
+  "outputs/semantic/fact_evidence.parquet": {
+   "bytes": 18184,
+   "sha256": "0b8ab997bd0cddbcfe45bfe3e79a5aeeef87c9ffb5c8c0d3e4ba4d89288f8194"
+  },
+  "outputs/semantic/fact_monthly.csv": {
+   "bytes": 7786076,
+   "sha256": "28df5a042d5431e64e2861d2822a70bc9aa07b2f908c53499839e1a2342c8599"
+  },
+  "outputs/semantic/fact_monthly.parquet": {
+   "bytes": 1146300,
+   "sha256": "002c5cc367e12b16080c29ab632140d453ced496622ad7f0efc022b598a2c77f"
+  },
+  "outputs/semantic/fact_transfer.csv": {
+   "bytes": 19652,
+   "sha256": "5d739581e746c386d6ff380d34466ca3f7ab9cf17379e740c237af8ec36ac0af"
+  },
+  "outputs/semantic/fact_transfer.parquet": {
+   "bytes": 13997,
+   "sha256": "7736fc530c6517fc15acba905d02f9b514cd527444548fc5eb7dfa96f49403db"
+  },
+  "outputs/semantic/fact_unallocated.csv": {
+   "bytes": 52018,
+   "sha256": "64aec4dea4c76d27748b88ce4b8ffed2f2aeae20422aa3a9d22cd36db7a74a5b"
+  },
+  "outputs/semantic/fact_unallocated.parquet": {
+   "bytes": 14974,
+   "sha256": "f8a63a2365ae900374450472cb5e49c8dbd8cc7c6b2c9f1583e538bf14ad1586"
+  },
+  "outputs/semantic/fact_uncertainty.csv": {
+   "bytes": 61499,
+   "sha256": "1c2892a75a08c01e1174694b9e178616877d2844bd69ea58ca78e2b43c99bb83"
+  },
+  "outputs/semantic/fact_uncertainty.parquet": {
+   "bytes": 17753,
+   "sha256": "83bfc5b3b8345c3ef59f969766ddc7aa5ac108fe312db776000cc3eba65f8830"
+  },
+  "outputs/semantic/fact_uncertainty_series.csv": {
+   "bytes": 21082,
+   "sha256": "d9a0e50af6f93dd6bb07ad430e717ecd93eac00c1a7b624977b439461e9e7d94"
+  },
+  "outputs/semantic/fact_uncertainty_series.parquet": {
+   "bytes": 12339,
+   "sha256": "0a56b8ed1e7ee42d3204873ba52b57fac9f0a4fbc2ca876f02daacd60ce9b50d"
+  },
+  "outputs/semantic/semantic_release.json": {
+   "bytes": 140988,
+   "sha256": "1c8717bd16747c4f245beb00e5f76b5dd1e0a7b7a7859022bac30d56807895ca"
+  }
+ },
+ "registries": [
+  "data/registries/allowed_grid_fallbacks.csv",
+  "data/registries/benchmarks.csv",
+  "data/registries/data_gaps.csv",
+  "data/registries/emission_factors.csv",
+  "data/registries/geometry_sets.csv",
+  "data/registries/national_uncertainty_parameters.csv",
+  "data/registries/pakemis_grid_fallbacks.csv",
+  "data/registries/pakemis_source_register.csv",
+  "data/registries/pakemis_source_streams.csv",
+  "data/registries/pakemis_temporal_profiles.csv",
+  "data/registries/pakemis_validation_catalog.csv",
+  "data/registries/pakemis_validation_scorecard.csv",
+  "data/registries/pakemis_validation_sector_scorecard.csv",
+  "data/registries/parameters.csv",
+  "data/registries/public_documents.csv",
+  "data/registries/release_heights.csv",
+  "data/registries/source_documents.csv",
+  "data/registries/stream_geometry.csv",
+  "data/registries/stream_grid_proxy.csv",
+  "data/registries/temporal_profiles.csv",
+  "data/registries/validation_catalog.csv"
+ ],
+ "release_id": "PakEmis 1.0.0rc47",
+ "schema": "pakemis_explorer.fetch/v1",
+ "source": {
+  "commit": "88ab2489a3b5fab9b43f1bb00b4b7bf6c80ccc96",
+  "kind": "git",
+  "manifest_describes_commit": "4903262f98b0d71901ba8590fc3023b806ae4e7d",
+  "ref": "88ab2489",
+  "repository": "/Users/rehanahmad/Desktop/emissions"
+ },
+ "version": "1.0.0rc47"
+}

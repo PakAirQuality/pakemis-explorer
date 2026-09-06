@@ -85,7 +85,7 @@
     "type": "object"
    },
    "GridCellRequest": {
-    "description": "GridCellRequest(lat: float = 0.0, lon: float = 0.0, month: str = '', gas: str = 'CO2', configuration_id: str = '')",
+    "description": "GridCellRequest(lat: float = 0.0, lon: float = 0.0, month: str = '', gas: str = 'CO2', configuration_id: str = '', period_id: str = '', spatial_view: str = '')",
     "properties": {
      "configuration_id": {
       "default": "",
@@ -111,6 +111,17 @@
       "default": "",
       "description": "YYYYMM or \"annual\"",
       "title": "Month",
+      "type": "string"
+     },
+     "period_id": {
+      "default": "",
+      "description": "\"\" means the reference year",
+      "title": "Period Id",
+      "type": "string"
+     },
+     "spatial_view": {
+      "default": "",
+      "title": "Spatial View",
       "type": "string"
      }
     },

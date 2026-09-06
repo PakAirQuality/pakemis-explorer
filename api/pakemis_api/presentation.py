@@ -109,7 +109,7 @@ DERIVED = {
         "sentence": (
             "unallocated_total_short is the sum of exact over unallocated.by_province (the mass retained at ADM1 and "
             "placed no finer, within the request's configuration, months and sectors), rounded half to even to two "
-            "decimal places (9.01); it is added only when every province row carries a numeric exact, and never to a download."
+            "decimal places (0.25); it is added only when every province row carries a numeric exact, and never to a download."
         ),
     },
     PLACED_FIELD: {
@@ -123,7 +123,7 @@ DERIVED = {
                       "unallocated.placed_short and derived.placed_short",
         "sentence": (
             "placed_short is the sum of exact over the cells minus the sum of exact over unallocated.by_province, rounded "
-            "half to even to two decimal places (443.34): the mass the release places at the request's grain. It is "
+            "half to even to two decimal places (465.67): the mass the release places at the request's grain. It is "
             "added only beside unallocated_total_short, when every cell is exact and the request has no limit, and never to a download."
         ),
     },
@@ -281,7 +281,7 @@ PRESENTATION_ROUNDING = {
     "decimals": DECIMALS,
     "sentence": (
         "display_short is the exact decimal rounded half to even to two decimal places, in plain notation with "
-        "trailing zeros kept (452.35, 9.01, 0.30), for every numeric cell whatever its unit; a zero prints as 0.00; "
+        "trailing zeros kept (465.92, 0.25, 0.30), for every numeric cell whatever its unit; a zero prints as 0.00; "
         "a non-zero value that would print as 0.00 prints as <0.01 (>-0.01 when negative, so -0.00 never appears); "
         "a negative keeps its sign; a bounded cell prints both ends at two decimals as [low, high], or the single "
         "value when the two ends round equal; a count and a non-numeric cell print their display unchanged. "
@@ -295,7 +295,7 @@ PRESENTATION_ROUNDING = {
         "bounded": {"rendering": "[low, high] at two decimals; ends that round equal print the single value"},
         "quantiles": {"field": "quantiles_short", "decimals": DECIMALS},
     },
-    "trailing_zeros": "kept (452.35, 63.37, 9.01, 0.39, 0.30, 248.75)",
+    "trailing_zeros": "kept (465.92, 63.37, 0.25, 0.39, 0.30, 248.75)",
     "derived": DERIVED,
 }
 

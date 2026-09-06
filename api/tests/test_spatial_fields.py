@@ -68,7 +68,8 @@ def test_adm1_province_rows_and_cells_carry_unallocated_short(client):
     for province, r in rows.items():
         assert r[PROVINCE_UNALLOCATED_FIELD] == str(Decimal(r["exact"]).quantize(Decimal("0.01")))
     assert env["derived"]["unallocated_by_province_short"] == {p: r[PROVINCE_UNALLOCATED_FIELD] for p, r in rows.items()}
-    assert env["derived"]["unallocated_by_province_short"]["Punjab"] == "4.84"
+    # 0.04 at rc47: Punjab's retained mass is its cruise-fuel share alone
+    assert env["derived"]["unallocated_by_province_short"]["Punjab"] == "0.04"
     for c in env["values"]:
         assert c[PROVINCE_UNALLOCATED_FIELD] == rows[c["group"]["province"]][PROVINCE_UNALLOCATED_FIELD]
     assert not any(f in c for c in env["values"] for f in FIELDS)          # adm1 carries no spatial class

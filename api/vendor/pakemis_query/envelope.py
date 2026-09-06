@@ -4,7 +4,7 @@ and a receipt. A value is a dict {exact, value, display, unit, result_row_ids, f
 exact string is the decimal the engine summed, the display is the contract's rounding of it."""
 from decimal import Decimal, ROUND_HALF_EVEN
 
-from pakemis_query.receipt import receipt_id, result_digest
+from pakemis_query.receipt import digest_context, receipt_id, result_digest
 
 
 def display(exact, decimals):
@@ -27,7 +27,7 @@ def envelope(release, request_type, canonical_request, request_fields, values, c
              limitations_hit=(), defaults_applied=()):
     context = release.context(request_fields)
     context["defaults_applied"] = list(defaults_applied)
-    digest = result_digest(values, context)
+    digest = result_digest(values, digest_context(context))
     body = {
         "request_type": request_type,
         "request": canonical_request,

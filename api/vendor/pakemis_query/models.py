@@ -106,6 +106,11 @@ class GridCellRequest:
     month: str = ""                     # YYYYMM or "annual"
     gas: str = "CO2"
     configuration_id: str = ""
+    period_id: str = ""                 # "" means the reference year
+    # "" sums the three views, which is the only reading that closes: the views PARTITION the
+    # placed mass (physical where emitted, origin for waste, accounting for transport), so a
+    # default of one view would return 68% of the cell and look like the whole of it.
+    spatial_view: str = ""
 
 
 @dataclass(frozen=True)

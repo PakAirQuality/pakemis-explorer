@@ -1,27 +1,27 @@
 {
- "digest": "b92ce2ad155c00fccba0bacc20d8ff5a446334f27036f6c9ca9a431523105fdb",
+ "digest": "f64cecee249c7baac142fa9feb4d88900ece16724ca9fcf6df19d8ee8d36695d",
  "files": {
   "__init__.py": "b62a1f4439f2724e28903286167094f97058ad8df22e90295e45321ee7590d53",
   "download.py": "82d0980ffeec7dc9505f2d478a9de5d2d2e1cdd5cb05f511703bfa2c364cfe59",
-  "engine.py": "8528ca0599d8e42521ea0389dfa954297a1cee7cc2ae5ae34608f06c81a54836",
-  "envelope.py": "654cff856c871a897d339809b73de8e2a1a5372aef47d15e0ca11115bbf180fa",
+  "engine.py": "d0da340aab2eca83b544ba3f076b4100b0c7103241d2158a4d5c5bb8a73497fe",
+  "envelope.py": "0e0c4e8ffdac28d366ddaaff8f2984317f79593d0e442a204ac50cceaab0d831",
   "errors.py": "18fd543445d0858d9d1755d41fa2449ca7ecf8e0ba7f1d29014a13b4e39dfee8",
-  "functions.py": "8f91a812798bea6acca80293111a488564f255e41d7c895e542dd8777101c5bf",
-  "models.py": "24be231e6bc0f192293fdf83e27a406a0abbfc22459b64949e44340f02f11292",
+  "functions.py": "3244fd5342029131643466a9a111a2c01e6bb218642d4644b7680e6fa245eaf4",
+  "models.py": "96715c920c228583818b828036391616ef38510393bbaf966bc75671a0d73f92",
   "placeholders.py": "1111b8d735f5fe394cb9d4e3cffffe09763894b5b8ee9d7b30ed20b6eb1fe57f",
-  "receipt.py": "8260a58650b6ccc6691f6055f7c03c333102127caac34ee295e98b3e2d4d4de6",
+  "receipt.py": "20f8b18ee58ff7794c353d5a0fea3629c12ebada59448dbef61c9bd391f46dd1",
   "release.py": "1d5dfb37e60622b5cce54666ed9779b1337d3ffa7ce6ff64a7e3172768124913"
  },
  "package": "pakemis_query",
  "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here",
  "schema": "pakemis_explorer.vendor/v1",
  "source": {
-  "commit": "631b95f0c04111e2f95e947e5fd6edb38e78f91b",
+  "commit": "88ab2489a3b5fab9b43f1bb00b4b7bf6c80ccc96",
   "kind": "git",
   "ref": "HEAD",
   "repository": "/Users/rehanahmad/Desktop/emissions",
   "subdir": "src/pakemis_query",
   "working_tree_dirty_at_vendoring": false
  },
- "vendored_at": "2026-08-29T22:00:21+00:00"
+ "vendored_at": "2026-09-06T09:03:49+00:00"
 }

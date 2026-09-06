@@ -1,6 +1,10 @@
 """unallocated_total_short and placed_short: declared derived presentation fields on a spatial
 query_emissions envelope whose unallocated block lists provinces with exacts; absent from the
-national envelope, from every other function and from the downloads."""
+national envelope, from every other function and from the downloads.
+
+rc47 pins: industry left S4 (Wave 4), so the unallocated mass is the three cruise
+streams (0.25 Mt) and the placed mass is nearly the whole total (465.67 of 465.92).
+"""
 from decimal import Decimal
 
 import pytest
@@ -18,13 +22,13 @@ def adm1(client):
 
 
 def test_adm1_by_province(adm1):
-    assert {k: v for k, v in adm1["derived"].items() if k != "unallocated_by_province_short"} == {"unallocated_total_short": "9.01", "placed_short": "443.34"}
-    assert adm1["unallocated"]["total_short"] == "9.01" and adm1["unallocated"]["placed_short"] == "443.34"
+    assert {k: v for k, v in adm1["derived"].items() if k != "unallocated_by_province_short"} == {"unallocated_total_short": "0.25", "placed_short": "465.67"}
+    assert adm1["unallocated"]["total_short"] == "0.25" and adm1["unallocated"]["placed_short"] == "465.67"
     cells = sum(Decimal(c["exact"]) for c in adm1["values"])
     unallocated = sum(Decimal(r["exact"]) for r in adm1["unallocated"]["by_province"])
-    assert str(unallocated.quantize(Decimal("0.01"))) == "9.01"
-    assert str((cells - unallocated).quantize(Decimal("0.01"))) == "443.34"
-    assert str(cells.quantize(Decimal("0.01"))) == "452.35"      # the cells sum to the national total
+    assert str(unallocated.quantize(Decimal("0.01"))) == "0.25"
+    assert str((cells - unallocated).quantize(Decimal("0.01"))) == "465.67"
+    assert str(cells.quantize(Decimal("0.01"))) == "465.92"      # the cells sum to the national total
 
 
 def test_national_has_no_derived(client):
@@ -34,13 +38,16 @@ def test_national_has_no_derived(client):
 
 def test_adm1_by_view_and_sector(client):
     env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "group_by": ["spatial_view"]}).json()
-    assert env["derived"]["unallocated_total_short"] == "9.01" and env["derived"]["placed_short"] == "443.34"
-    # fact_unallocated holds industry rows only: a sector with rows gets both fields, one without gets neither
-    env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "sectors": ["industry"]}).json()
+    assert env["derived"]["unallocated_total_short"] == "0.25" and env["derived"]["placed_short"] == "465.67"
+    # rc47: fact_unallocated holds AVIATION rows only (industry got its geography at
+    # Wave 4; what stays at ADM1 is the cruise share, whose corridors no held evidence
+    # can draw). A sector with rows gets both fields, one without gets neither - and
+    # industry now sits on the empty side, which is this test's proof the move landed.
+    env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "sectors": ["aviation"]}).json()
     assert set(env["derived"]) == {UNALLOCATED_FIELD, PLACED_FIELD, "unallocated_by_province_short"}
     unallocated = sum(Decimal(r["exact"]) for r in env["unallocated"]["by_province"])
-    assert env["derived"][UNALLOCATED_FIELD] == str(unallocated.quantize(Decimal("0.01"))) == "9.01"
-    env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "sectors": ["power"]}).json()
+    assert env["derived"][UNALLOCATED_FIELD] == str(unallocated.quantize(Decimal("0.01"))) == "0.25"
+    env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "sectors": ["industry"]}).json()
     assert env["unallocated"]["by_province"] == [] and "derived" not in env
 
 
@@ -91,4 +98,4 @@ def test_declared_on_release(client):
         d = DERIVED[field]
         assert d["field"] == field and d["decimals"] == 2 and d["mode"] == "ROUND_HALF_EVEN"
         assert "never to a download" in d["sentence"]
-    assert "9.01" in DERIVED[UNALLOCATED_FIELD]["sentence"] and "443.34" in DERIVED[PLACED_FIELD]["sentence"]
+    assert "0.25" in DERIVED[UNALLOCATED_FIELD]["sentence"] and "465.67" in DERIVED[PLACED_FIELD]["sentence"]
