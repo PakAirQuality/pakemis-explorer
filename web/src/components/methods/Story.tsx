@@ -15,71 +15,50 @@ import Link from "next/link";
 import { ArrowDown, BarChart3, BookOpen, CalendarDays, ChevronRight, CircleCheck, FileText, Map as MapIcon, ScrollText } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { shown, type Cell } from "@/lib/envelope";
-import { cellUnit, sectorLabel } from "@/lib/labels";
+import { cellUnit, periodShort, sectorLabel } from "@/lib/labels";
 import { releaseFacts, useRelease } from "@/lib/release";
 import { useCompleteness, useEmissions, useEvidence } from "@/lib/queries";
 import { ContourMotif } from "@/components/ui/ContourMotif";
 import { sourceWords } from "./sectorText";
 
 const STORY = {
-  eyebrow: "How the inventory is built",
-  headline: "From public records to a national emissions inventory",
+  eyebrow: "How we built the inventory",
+  headline: "From public records to Pakistan\u2019s emissions inventory",
   questions: [
     "Where does each number come from?",
-    "How do the modules become one consistent inventory?",
-    "What is observed, allocated, assumed — or still missing?",
+    "How are estimates from different sectors added together?",
+    "Which parts use direct data, which rely on assumptions, and what is still missing?",
   ],
   intro:
-    "This is an independent public-data reconstruction of Pakistan's greenhouse-gas emissions, excluding land use and forestry. Every estimate passes through the same traceable, tested system — from source document to national total, month and map.",
-  follow: "Follow the reconstruction",
+    "This is an independent estimate of Pakistan\u2019s greenhouse-gas emissions, built from publicly available records. It does not include land use or forestry. For every figure, readers can see where it came from and how it was calculated. The annual estimates are also broken down by month and mapped across Pakistan.",
+  follow: "See how it works",
   browse: "Browse the evidence",
-  readMethodology: "Read the methodology",
-  scrollHint: "Scroll to follow the reconstruction",
+  readMethodology: "Read the full methodology",
+  scrollHint: "Scroll to see how it works",
   records: "Public records",
-  componentRow: "Component row",
-  componentGrain: "one gas · one source item · one IPCC category",
-  modules: (n: number) => `${n} tested modules`,
-  invariants: "shared invariants across every module",
-  inventory: "Annual inventory",
-  unestimated: "Unestimated",
-  unestimatedNote: "Known gaps recorded, not ignored.",
-  months: (n: number) => `${n} months`,
-  maps: "District & grid maps",
-  uncertainty: "Uncertainty",
-  reconstruction: "The reconstruction",
-  sections: [
-    {
-      title: "Every estimate begins with a source",
-      body: "Nothing enters the inventory without a public document behind it: statistical yearbooks, regulator reports, survey microdata, satellite products. Each is registered with its digest, so a number can always name the page it came from.",
-      link: "Inspect the sources",
-    },
-    {
-      title: "One gas, one source item, one IPCC category",
-      body: "The atom of the system is the component row: a single gas from a single source item, priced under a single IPCC category. Totals are sums over these rows and nothing else — which is why any figure on any page can open its own claim record.",
-      link: "Open a claim record",
-    },
-    {
-      title: "The modules, one tested system",
-      body: "Each sector is reconstructed by its own module, but all of them answer to the same registries, the same period vocabulary and the same closure tests. A module cannot ship a number the shared checks have not seen.",
-      link: "",
-    },
-    {
-      title: "The annual inventory",
-      body: "The component rows close to one national total per year, with the sector shares the server itself attaches. The same envelope that renders this figure carries its receipt, its rows and its calculation.",
-      link: "Query it on the Data page",
-    },
-    {
-      title: "Time, space, uncertainty — and what is not estimated",
-      body: "The annual total is carried down to months, to provinces and districts, and onto a fine national grid — each step graded by the evidence that supports it, never silently interpolated. Uncertainty is published per category and resolution.",
-      link: "See the gaps",
-    },
-  ],
+  componentRow: "One emissions record",
+  componentGrain: "one gas · one activity · one IPCC category",
+  modules: (n: number) => `${n} sector modules`,
+  invariants: "The same rules and checks for every sector",
+  inventory: "Annual total",
+  unestimated: "Known gaps",
+  unestimatedNote: "Listed openly, not treated as zero.",
+  months: "Monthly estimates",
+  maps: "Province, district and grid maps",
+  uncertainty: "Uncertainty ranges",
+  reconstruction: "How it works",
 } as const;
 
 const PRIMARY = "inline-flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-bright";
 const OUTLINE = "inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-card px-5 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface-3";
 const TEXT_LINK = "inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline";
 const NODE_CARD = "relative rounded-xl border border-line bg-card px-4 py-3 shadow-card";
+
+/** The cell's `unit_words` as the server wrote them ("million tonnes CO₂e"), else its short unit. */
+function unitWordsOf(cell: Cell): string {
+  const w = (cell as Record<string, unknown>).unit_words;
+  return typeof w === "string" && w ? w : cellUnit(cell);
+}
 
 /** The dashed left-to-right connector of the pipeline; below lg the flow stacks and it points down. */
 function Flow() {
@@ -226,7 +205,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
                 <div className="w-[22rem] max-w-full">
                   <div className="mx-[3.7rem] border-t border-accent/40" aria-hidden="true" />
                   <div className="grid grid-cols-3 gap-2">
-                    <Branch icon={<CalendarDays size={15} className="mx-auto text-accent" aria-hidden="true" />} label={STORY.months(months)} testId="story-months" />
+                    <Branch icon={<CalendarDays size={15} className="mx-auto text-accent" aria-hidden="true" />} label={STORY.months} testId="story-months" />
                     <Branch icon={<MapIcon size={15} className="mx-auto text-accent" aria-hidden="true" />} label={STORY.maps} />
                     <Branch icon={<BarChart3 size={15} className="mx-auto text-accent" aria-hidden="true" />} label={STORY.uncertainty} />
                   </div>
@@ -241,54 +220,68 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
       <section id="reconstruction" className="scroll-mt-20 border-t border-line bg-surface-2" data-testid="story-reconstruction">
         <div className="mx-auto max-w-[900px] px-5 pb-16 pt-10">
           <div className="text-micro font-semibold uppercase tracking-[0.08em] text-accent">{STORY.reconstruction}</div>
-          {STORY.sections.map((s, i) => (
-            <article key={s.title} className="mt-8" data-testid={`story-section-${i + 1}`}>
-              <h2 className="text-xl font-semibold tracking-tight text-fg">
-                {i + 1} · {s.title}
-              </h2>
-              <p className="mt-2 max-w-[46em] text-md leading-relaxed text-muted">{s.body}</p>
-              {i === 0 && (
-                <p className="mt-3">
-                  <Link href={catalogueHref()} className={TEXT_LINK}>{s.link} <ChevronRight size={14} aria-hidden="true" /></Link>
-                </p>
-              )}
-              {i === 1 && (
-                <p className="mt-3">
-                  <Link href={catalogueHref("#claims")} className={TEXT_LINK}>{s.link} <ChevronRight size={14} aria-hidden="true" /></Link>
-                </p>
-              )}
-              {i === 2 && (
-                <div className="mt-3 flex flex-wrap gap-1.5" data-testid="story-module-chips">
-                  {dims.sectors.map((m) => (
-                    <Link key={m} href={`/methods?mode=catalogue&sector=${m}`} className="rounded-full border border-nav-line bg-nav px-3 py-1 text-xs font-medium text-fg shadow-sm hover:bg-surface-3">
-                      {sectorLabel(labels, m)}
-                    </Link>
-                  ))}
-                </div>
-              )}
-              {i === 3 && (
-                <p className="mt-3 flex flex-wrap items-center gap-3">
-                  {cell && (
-                    <span className="num text-lg font-semibold text-accent" data-testid="story-section-total">
-                      {shown(cell)} {cellUnit(cell)}
-                    </span>
-                  )}
-                  <Link href="/data" className={TEXT_LINK}>{s.link} <ChevronRight size={14} aria-hidden="true" /></Link>
-                </p>
-              )}
-              {i === 4 && (
+          <article className="mt-8" data-testid="story-section-1">
+            <h2 className="text-xl font-semibold tracking-tight text-fg">1 · Every number starts with a source</h2>
+            <p className="mt-2 max-w-[46em] text-md leading-relaxed text-muted">
+              Every number begins with a public source, such as a statistical yearbook, regulator report, survey or satellite dataset. We record the source alongside the figure so readers can check where it came from.
+            </p>
+            <p className="mt-3">
+              <Link href={catalogueHref()} className={TEXT_LINK}>Browse the sources <ChevronRight size={14} aria-hidden="true" /></Link>
+            </p>
+          </article>
+          <article className="mt-8" data-testid="story-section-2">
+            <h2 className="text-xl font-semibold tracking-tight text-fg">2 · Turn the data into simple records</h2>
+            <p className="mt-2 max-w-[46em] text-md leading-relaxed text-muted">
+              We break the data into individual emissions records. Each record covers one gas from one activity — for example, fuel sold or cattle counted — under one IPCC category. Internally, we call this a component row. All the totals on the site are built from these records.
+            </p>
+            <p className="mt-3">
+              <Link href={catalogueHref("#claims")} className={TEXT_LINK}>View an emissions record <ChevronRight size={14} aria-hidden="true" /></Link>
+            </p>
+          </article>
+          <article className="mt-8" data-testid="story-section-3">
+            <h2 className="text-xl font-semibold tracking-tight text-fg">3 · Calculate every sector using the same rules</h2>
+            <p className="mt-2 max-w-[46em] text-md leading-relaxed text-muted">
+              Agriculture, power, transport and the other sectors are calculated separately. All of them use the same reporting period, follow the same structure and pass the same checks. This keeps the figures consistent and helps catch emissions that are missing or counted twice.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-1.5" data-testid="story-module-chips">
+              {dims.sectors.map((m) => (
+                <Link key={m} href={`/methods?mode=catalogue&sector=${m}`} className="rounded-full border border-nav-line bg-nav px-3 py-1 text-xs font-medium text-fg shadow-sm hover:bg-surface-3">
+                  {sectorLabel(labels, m)}
+                </Link>
+              ))}
+            </div>
+          </article>
+          <article className="mt-8" data-testid="story-section-4">
+            <h2 className="text-xl font-semibold tracking-tight text-fg">4 · Add the records together</h2>
+            <p className="mt-2 max-w-[46em] text-md leading-relaxed text-muted">
+              Once the records pass the checks, they are added together.
+              {cell ? (
                 <>
-                  <div className="note mt-3 max-w-[46em] text-sm" data-testid="story-gaps">
-                    {neCount !== null ? <>{neCount === 1 ? "One category is" : `${neCount} categories are`} recorded NE — not estimated, never counted as zero. </> : null}
-                    {facts.lulucf.note ? <>Land use and forestry: {facts.lulucf.note}.</> : null}
-                  </div>
-                  <p className="mt-3">
-                    <Link href={catalogueHref()} className={TEXT_LINK}>{s.link} <ChevronRight size={14} aria-hidden="true" /></Link>
-                  </p>
+                  {" "}
+                  For {periodShort(labels, state.period)}, the sources covered by the inventory add up to{" "}
+                  <b className="num whitespace-nowrap text-fg" data-testid="story-section-total">{shown(cell)} {unitWordsOf(cell)}</b>.
                 </>
-              )}
-            </article>
-          ))}
+              ) : null}{" "}
+              The Data page shows how this total is divided by sector, gas and IPCC category.
+            </p>
+            <p className="mt-3">
+              <Link href="/data" className={TEXT_LINK}>Explore the data <ChevronRight size={14} aria-hidden="true" /></Link>
+            </p>
+          </article>
+          <article className="mt-8" data-testid="story-section-5">
+            <h2 className="text-xl font-semibold tracking-tight text-fg">5 · Show when and where emissions occur</h2>
+            <p className="mt-2 max-w-[46em] text-md leading-relaxed text-muted">
+              The annual estimates are divided across the {months} months of each year and mapped to provinces, districts and grid cells. Some of these breakdowns come from detailed records. Others use clearly labelled estimates or proxies.
+            </p>
+            <div className="note mt-3 max-w-[46em] text-sm" data-testid="story-gaps">
+              We also show the uncertainty around the figures and list what could not yet be estimated
+              {neCount !== null ? <> — {neCount === 1 ? "one category is" : `${neCount} categories are`} recorded NE</> : null}. Missing sources are never treated as zero.
+              {facts.lulucf.note ? <> Land use and forestry remain outside the main total: {facts.lulucf.note}.</> : null}
+            </div>
+            <p className="mt-3">
+              <Link href={catalogueHref()} className={TEXT_LINK}>See what is missing <ChevronRight size={14} aria-hidden="true" /></Link>
+            </p>
+          </article>
         </div>
       </section>
     </div>

@@ -222,17 +222,17 @@ describe("/methods", () => {
   it("the story opens the page: hero, pipeline with the envelope's total, module chips, the gaps note; Browse the evidence crosses to the catalogue", async () => {
     const updates: string[] = [];
     mount("", ({ queryString }) => updates.push(queryString));
-    expect(await screen.findByRole("heading", { level: 1, name: "From public records to a national emissions inventory" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "From public records to Pakistan\u2019s emissions inventory" })).toBeInTheDocument();
     // the inventory circle prints the envelope's own string, never a client sum
     expect(await screen.findByTestId("story-total-display")).toHaveTextContent("452.35");
     // the modules card and chips count the release's dims (three in this fixture)
-    expect(screen.getByTestId("story-modules")).toHaveTextContent("3 tested modules");
+    expect(screen.getByTestId("story-modules")).toHaveTextContent("3 sector modules");
     expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link").map((a) => a.textContent)).toEqual(["Agriculture", "Power", "Residential"]);
     expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link")[0]).toHaveAttribute("href", "/methods?mode=catalogue&sector=agriculture");
     // the source chips come from the evidence envelope through sourceWords
     expect(screen.getByTestId("story-sources")).toHaveTextContent("PBS");
     // months from the release's month dim (two per period in the fixture)
-    expect(screen.getByTestId("story-months")).toHaveTextContent("2 months");
+    expect(screen.getByTestId("story-months")).toHaveTextContent("Monthly estimates");
     // the gaps note counts the NE rows and quotes the release's LULUCF sentence
     await waitFor(() => expect(screen.getByTestId("story-gaps")).toHaveTextContent("4 categories are recorded NE"));
     expect(screen.getByTestId("follow-reconstruction")).toHaveAttribute("href", "#reconstruction");
