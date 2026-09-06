@@ -299,7 +299,7 @@ describe("the workspace's state", () => {
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "province");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PUNJAB");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Punjab");
-    expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest at 123.30 Mt");
+    expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest source of emissions, contributing 123.30 Mt");
     // now a place is picked, "Reset map" appears, and it returns the deck and the map to Pakistan
     expect(screen.getByTestId("header-reset")).toHaveTextContent("Reset map");
     fireEvent.click(screen.getByTestId("header-reset"));
@@ -345,11 +345,11 @@ describe("the deck's cards", () => {
   it("each card's sentence is built from the envelope's server strings, and the charts' ticks are the envelopes' own", async () => {
     mount();
     await loaded();
-    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %, nearly half — of the reconstructed inventory.");
+    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture contributed 223.45 Mt, accounting for 49.4 % of the total.");
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("49.4 % from agriculture");
     expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
-    expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest at 223.45 Mt (49.4 %), followed by power (63.37 Mt, 14.0 %) and transport (41.93 Mt, 9.3 %).");
-    expect(screen.getByTestId("card-trend-sentence")).toHaveTextContent("From 2020–21 to 2023–24, Pakistan's emissions rose from 372.40 Mt to 452.35 Mt CO₂e, a change of +79.95 Mt (+21.5 %).");
+    expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source of emissions, contributing 223.45 Mt CO₂e (49.4 %). Power followed at 63.37 Mt (14.0 %), with transport at 41.93 Mt (9.3 %).");
+    expect(screen.getByTestId("card-trend-sentence")).toHaveTextContent("Between 2020–21 and 2023–24, Pakistan's emissions increased by +21.5 %, from 372.40 Mt to 452.35 Mt CO₂e.");
     expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
     expect(screen.getByTestId("sectors-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));

@@ -45,15 +45,13 @@ export function OverviewCard({ state }: { state: ExploreState }) {
       {top ? (
         <>
           {" "}
-          {topName} accounted for <Figure cell={top} unit={magnitudeOf(top)} />
+          {topName} contributed <Figure cell={top} unit={magnitudeOf(top)} />
           {top.share_pct_short ? (
             <>
-              {" "}
-              — <b className="num">{top.share_pct_short} %</b>
-              {top.share_phrase ? `, ${top.share_phrase}` : ""} —
+              , accounting for <b className="num">{top.share_pct_short} %</b> of the total
             </>
-          ) : null}{" "}
-          of the reconstructed inventory.
+          ) : null}
+          .
         </>
       ) : null}
     </>

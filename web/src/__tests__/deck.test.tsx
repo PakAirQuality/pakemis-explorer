@@ -219,7 +219,7 @@ describe("the deck's card set follows the scope", () => {
     // the share and the rank are the SERVER's, off the sector partition's own cell
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("14.0 % of the national total · rank 2 of 2");
     expect(screen.getByTestId("card-categories")).toHaveTextContent("Category breakdown");
-    expect(await screen.findByTestId("card-categories-sentence")).toHaveTextContent("enteric fermentation was the largest at 151.66 Mt (67.9 %)");
+    expect(await screen.findByTestId("card-categories-sentence")).toHaveTextContent("enteric fermentation was the largest source of emissions, contributing 151.66 Mt");
   });
   it("a gas chosen: its total, which sectors emit it, how it changed — and no placement card", async () => {
     set("?gas=CH4");
@@ -237,7 +237,7 @@ describe("the deck's card set follows the scope", () => {
     expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Province overview");
     expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e.");
     expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("50.6 % of the national allocated total · rank 1 of 2");
-    expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest at 123.30 Mt (53.9 %)");
+    expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest source of emissions, contributing 123.30 Mt");
     expect(await screen.findByTestId("card-peers-sentence")).toHaveTextContent("Punjab is 1 of 2 provinces, at 228.72 Mt (50.6 %).");
     expect(await screen.findByTestId("card-placement-sentence")).toHaveTextContent("Of Punjab's allocated total, 223.88 Mt CO₂e is placed at a finer grain and 4.84 Mt CO₂e is retained at province level");
     expect(within(screen.getByTestId("placement-rows")).getByText("4.84 Mt CO₂e")).toBeInTheDocument();
@@ -252,7 +252,7 @@ describe("the deck's card set follows the scope", () => {
     // the release bounds an ADM2 total: the card prints its interval string and its badge, and no share
     expect(screen.getByTestId("snapshot-display")).toHaveTextContent("[14.30, 14.32]");
     expect(screen.queryByTestId("snapshot-chip")).toBeNull();
-    expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest at 2.85 Mt");
+    expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest source of emissions, contributing 2.85 Mt");
     expect(await screen.findByTestId("card-peers-sentence")).toHaveTextContent("Lahore is one of 1 districts in the same province");
   });
 });

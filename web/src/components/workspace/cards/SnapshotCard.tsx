@@ -87,8 +87,8 @@ function whatWords(scope: Scope, place: string): string {
 
 /**
  * The opening sentence, in the release's own words and the server's own strings: "In 2023–24,
- * Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture accounted for 223.45 Mt — 49.4 %,
- * nearly half — of the reconstructed inventory."
+ * Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture contributed 223.45 Mt, accounting
+ * for 49.4 % of the total."
  */
 function sentenceOf({ scope, place, period, cell, top, topName, labels }: { scope: Scope; place: string; period: string; cell: NonNullable<ReturnType<typeof rankedCells>>[number]; top: ReturnType<typeof rankedCells>[number] | null; topName: string; labels: Parameters<typeof sectorLabel>[0] }): ReactNode {
   const figure = (
@@ -120,15 +120,13 @@ function sentenceOf({ scope, place, period, cell, top, topName, labels }: { scop
       {top ? (
         <>
           {" "}
-          {topName} accounted for <Figure cell={top} unit={magnitudeOf(top)} />
+          {topName} contributed <Figure cell={top} unit={magnitudeOf(top)} />
           {top.share_pct_short ? (
             <>
-              {" "}
-              — <b className="num">{top.share_pct_short} %</b>
-              {top.share_phrase ? `, ${top.share_phrase}` : ""} —
+              , accounting for <b className="num">{top.share_pct_short} %</b> of the total
             </>
-          ) : null}{" "}
-          of the reconstructed inventory.
+          ) : null}
+          .
         </>
       ) : null}
     </>

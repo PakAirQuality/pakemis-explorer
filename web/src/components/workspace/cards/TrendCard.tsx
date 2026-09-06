@@ -24,9 +24,11 @@ export function TrendCard({ id, scope, deck, place, title, open, onToggle }: { i
   const reference = dims.periods.find((p) => String(p.is_reference).toLowerCase() === "true")?.period_id ?? dims.fiscalPeriods[dims.fiscalPeriods.length - 1] ?? "";
   const last = cells[cells.length - 1];
   const subject = scope.kind === "national" ? `${place}'s emissions` : "it";
+  // the server's typed direction, in the sentence's own verbs; the signed pct stays verbatim
+  const verb = change?.direction === "rose" ? "increased" : change?.direction === "fell" ? "decreased" : "changed";
   const sentence: ReactNode = change ? (
     <>
-      From <b>{periodShort(labels, change.from_period)}</b> to <b>{periodShort(labels, change.to_period)}</b>, {subject} {change.direction || "changed"} from <b className="num whitespace-nowrap">{change.from_short} {magnitudeOf(last)}</b> to <b className="num whitespace-nowrap">{change.to_short} {cellUnit(last)}</b>, a change of <b className="num whitespace-nowrap">{change.change_short} {magnitudeOf(last)}</b> (<b className="num whitespace-nowrap">{change.change_pct_short} %</b>).
+      Between <b>{periodShort(labels, change.from_period)}</b> and <b>{periodShort(labels, change.to_period)}</b>, {subject} {verb} by <b className="num whitespace-nowrap">{change.change_pct_short} %</b>, from <b className="num whitespace-nowrap">{change.from_short} {magnitudeOf(last)}</b> to <b className="num whitespace-nowrap">{change.to_short} {cellUnit(last)}</b>.
     </>
   ) : null;
   const points: ColumnPoint[] = cells.map((x) => ({ id: x.group?.period_id ?? "", name: periodShort(labels, x.group?.period_id ?? ""), value: x.value as number, label: shown(x), reference: x.group?.period_id === reference }));

@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
 import { shown, type Cell } from "@/lib/envelope";
-import { configLabel, gasLabel, gwpLabel, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, configLabel, gasLabel, gwpLabel, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
 import { rampByRank } from "@/lib/palette";
 import { hrefForState } from "@/lib/urlState";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
@@ -38,22 +38,22 @@ export function BreakdownCard({ id, scope, deck, title, open, onToggle, onSector
   const [a, b, c] = cells;
   const sentence: ReactNode = a ? (
     <>
-      In <b>{periodShort(labels, state.period)}</b>, {lowerName(name(a))} was the largest at <Figure cell={a} />
-      {a.share_pct_short ? <> (<Share cell={a} />)</> : null}
+      In <b>{periodShort(labels, state.period)}</b>, {lowerName(name(a))} was the largest source of emissions, contributing <Figure cell={a} unit={cellUnit(a)} />
+      {a.share_pct_short ? <> (<Share cell={a} />)</> : null}.
       {b ? (
         <>
-          , followed by {lowerName(name(b))} (<Figure cell={b} />
-          {b.share_pct_short ? <>, <Share cell={b} /></> : null})
-        </>
-      ) : null}
-      {c ? (
-        <>
           {" "}
-          and {lowerName(name(c))} (<Figure cell={c} />
-          {c.share_pct_short ? <>, <Share cell={c} /></> : null})
+          {name(b)} followed at <Figure cell={b} />
+          {b.share_pct_short ? <> (<Share cell={b} />)</> : null}
+          {c ? (
+            <>
+              , with {lowerName(name(c))} at <Figure cell={c} />
+              {c.share_pct_short ? <> (<Share cell={c} />)</> : null}
+            </>
+          ) : null}
+          .
         </>
       ) : null}
-      .
     </>
   ) : null;
   const items: BarItem[] = cells.map((x, i) => {
