@@ -10,6 +10,7 @@
 import { X } from "lucide-react";
 import type { Labels } from "@/lib/release";
 import { gasLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { POLLUTANT_LABELS } from "@/lib/explore/query";
 import type { Action, ExploreContext, ExploreState } from "@/lib/explore/query";
 import { EXPLORE } from "./copy";
 
@@ -21,7 +22,9 @@ type Chip = { id: string; label: string; what: string; onClear: (() => void) | n
 export function ResultChips({ state, ctx, dispatch, labels, place }: { state: ExploreState; ctx: ExploreContext; dispatch: (a: Action) => void; labels: Labels; place: string }) {
   const chips: Chip[] = [
     { id: "sector", label: sectorLabel(labels, state.sector), what: D.chipSector, onClear: state.sector ? () => dispatch({ control: "sector", value: null }) : null },
-    { id: "gas", label: gasLabel(labels, state.gas), what: D.chipGas, onClear: state.gas ? () => dispatch({ control: "gas", value: null }) : null },
+    state.pollutant
+      ? { id: "gas", label: `${POLLUTANT_LABELS[state.pollutant] ?? state.pollutant} (air beta)`, what: D.chipGas, onClear: () => dispatch({ control: "pollutant", value: null }) }
+      : { id: "gas", label: gasLabel(labels, state.gas), what: D.chipGas, onClear: state.gas ? () => dispatch({ control: "gas", value: null }) : null },
     { id: "period", label: periodShort(labels, state.period), what: D.chipPeriod, onClear: state.period !== ctx.referencePeriod ? () => dispatch({ control: "period", value: { period: ctx.referencePeriod } }) : null },
   ];
   return (

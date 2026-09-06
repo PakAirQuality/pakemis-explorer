@@ -1,9 +1,9 @@
 {
  "digests": {
-  "release_manifest.json": "7f4b933d836575f79f217a211092adc846076e645254d4a51e81371da424ae88",
-  "semantic_release.json": "6a46b8f386778b61fe5b0fc4e317b018c669be4d30b65012025df901dd74adbc"
+  "release_manifest.json": "bd803e25037d3276d044295bc23df0e17f5cdcf567d077c57d4e3a27b32b2a6e",
+  "semantic_release.json": "4f8a68e8d9dcedefd692fc21ff761052a48540249fbbe4a7f3552625114e18c7"
  },
- "fetched_at": "2026-09-06T11:34:37+00:00",
+ "fetched_at": "2026-09-06T21:21:10+00:00",
  "files": {
   "data/adm2_canonical.csv": {
    "bytes": 28154,
@@ -168,8 +168,8 @@
    "sha256": "42008b16141c8233ec3af0ef25d4c995fc3de894360bfb30de2724eb1460e79c"
   },
   "outputs/release_manifest.json": {
-   "bytes": 126297,
-   "sha256": "7f4b933d836575f79f217a211092adc846076e645254d4a51e81371da424ae88"
+   "bytes": 128998,
+   "sha256": "bd803e25037d3276d044295bc23df0e17f5cdcf567d077c57d4e3a27b32b2a6e"
   },
   "outputs/semantic/dim_category.csv": {
    "bytes": 8944,
@@ -204,12 +204,12 @@
    "sha256": "f55dc475f0bf48acbed9ee0f45330c5d6d3033fcf96aa56a510752664285c079"
   },
   "outputs/semantic/dim_geography.csv": {
-   "bytes": 26567,
-   "sha256": "cd1d57cdb66fa45355b8245b1d3c8310325dce5c1f0183215ec3ce1eb3530039"
+   "bytes": 26471,
+   "sha256": "d1504f58816565358bcee9d01e1cfecababba40e80aab1d281b3221d113172f1"
   },
   "outputs/semantic/dim_geography.parquet": {
-   "bytes": 16570,
-   "sha256": "fed80f14eda8c828c7a740d836fac3c376eec74a5373e81225f49e55927cebaf"
+   "bytes": 16512,
+   "sha256": "f8ff6fc9074e09df9b1993dfd76587358e0da6935845d4a1ab456249f8a753b0"
   },
   "outputs/semantic/dim_gwp.csv": {
    "bytes": 5164,
@@ -242,6 +242,14 @@
   "outputs/semantic/dim_period.parquet": {
    "bytes": 5939,
    "sha256": "7b43a55be0fb293e9f8dd1dba00abb05195d82a7d9d3cfb1f021edbf81da8e0e"
+  },
+  "outputs/semantic/dim_pollutant.csv": {
+   "bytes": 1054,
+   "sha256": "4012bc92ab0732d830598591e8436ea68fc3ba48d0649d40920414752b12809b"
+  },
+  "outputs/semantic/dim_pollutant.parquet": {
+   "bytes": 2585,
+   "sha256": "1c4b0720e990ed1c9bf40458bc33455e41dcbb9d9f84fed1ed948ca21d523cb7"
   },
   "outputs/semantic/dim_stream.csv": {
    "bytes": 96128,
@@ -282,6 +290,38 @@
   "outputs/semantic/fact_adm2_year.parquet": {
    "bytes": 1729845,
    "sha256": "d487b37a0c79a07a955956dd0870d310e7f0c6750554c79dfc0f96777a522206"
+  },
+  "outputs/semantic/fact_air_adm1.csv": {
+   "bytes": 7312,
+   "sha256": "69a3550907da6849501bcbba94a8dd08f6048c5de613d29bbbd990fa28ce86b7"
+  },
+  "outputs/semantic/fact_air_adm1.parquet": {
+   "bytes": 5096,
+   "sha256": "a3ade87d5115f2d408f79a4fbda47e3c74013193707b8b303a2d76faaf9392a2"
+  },
+  "outputs/semantic/fact_air_adm2.csv": {
+   "bytes": 120484,
+   "sha256": "66900989271f4d343cc5d2cf84b3bc27a6058aaa8069dedfbb41db2e6aad11a1"
+  },
+  "outputs/semantic/fact_air_adm2.parquet": {
+   "bytes": 49666,
+   "sha256": "8822ab0f735a05f558b563424db811e126d1098d34d112ac8fc4fef32181a032"
+  },
+  "outputs/semantic/fact_air_annual.csv": {
+   "bytes": 17180,
+   "sha256": "e35fe77224979bbf48d8eef40ef9a55846b6c07d5864e2a677985a1f63afdfba"
+  },
+  "outputs/semantic/fact_air_annual.parquet": {
+   "bytes": 10143,
+   "sha256": "9810634f39db8e71cd8933e462f137e4edf83f124f15ae34372e4d0ca77fbfc4"
+  },
+  "outputs/semantic/fact_air_timeseries.csv": {
+   "bytes": 34639,
+   "sha256": "31e3bf007f26250eac5dbb35677fa66f370a5d17e99b4f7ba2ba2a9af21444aa"
+  },
+  "outputs/semantic/fact_air_timeseries.parquet": {
+   "bytes": 21863,
+   "sha256": "a7116541bb7a6d553393f14a05cb732c08bc4f22d5d0d72d23219f1f68e799c1"
   },
   "outputs/semantic/fact_annual.csv": {
    "bytes": 681227,
@@ -364,8 +404,8 @@
    "sha256": "0a56b8ed1e7ee42d3204873ba52b57fac9f0a4fbc2ca876f02daacd60ce9b50d"
   },
   "outputs/semantic/semantic_release.json": {
-   "bytes": 149777,
-   "sha256": "6a46b8f386778b61fe5b0fc4e317b018c669be4d30b65012025df901dd74adbc"
+   "bytes": 221341,
+   "sha256": "4f8a68e8d9dcedefd692fc21ff761052a48540249fbbe4a7f3552625114e18c7"
   }
  },
  "registries": [
@@ -394,10 +434,10 @@
  "release_id": "PakEmis 1.0.0rc47",
  "schema": "pakemis_explorer.fetch/v1",
  "source": {
-  "commit": "46a1de58ad2cd1231e309f445eb03325c81b142f",
+  "commit": "6fdff972b00da8c5fcedc14e28565624be530bf8",
   "kind": "git",
-  "manifest_describes_commit": "45b342e976b82bf092c1c1f7c30c78984849f69b",
-  "ref": "46a1de58",
+  "manifest_describes_commit": "18cdafc133ac1ff2f210467098c30ca0cd249be9",
+  "ref": "6fdff972",
   "repository": "/Users/rehanahmad/Desktop/emissions"
  },
  "version": "1.0.0rc47"

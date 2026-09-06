@@ -2,7 +2,7 @@
 /** react-query wrappers over the typed client; a typed refusal is an error the caller shows by name (no retry). */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, type CompareRequest, type GridCellRequest, type QueryEmissions, type TimeseriesRequest, type UncertaintyRequest, type CompletenessRequest } from "./api";
+import { api, type CompareRequest, type GridCellRequest, type QueryAir, type QueryEmissions, type TimeseriesRequest, type UncertaintyRequest, type CompletenessRequest } from "./api";
 import { deckBodies, sectorSeriesBody, seriesBody, type LineageRequest } from "./requests";
 import { provinceOfShape } from "./labels";
 import type { ExplorerState } from "./urlState";
@@ -12,6 +12,11 @@ const opts = { retry: false as const, staleTime: 5 * 60 * 1000 };
 
 export function useEmissions(body: QueryEmissions | null | undefined, enabled = true) {
   return useQuery({ queryKey: ["emissions", body], queryFn: () => api.queryEmissions(body!), enabled: enabled && !!body, ...opts });
+}
+
+/** The air beta: native kilotonnes of a named pollutant (query_air). */
+export function useAir(body: QueryAir | null | undefined, enabled = true) {
+  return useQuery({ queryKey: ["air", body], queryFn: () => api.queryAir(body!), enabled: enabled && !!body, ...opts });
 }
 export function useCompare(body: CompareRequest | null | undefined, enabled = true) {
   return useQuery({ queryKey: ["compare", body], queryFn: () => api.compare(body!), enabled: enabled && !!body, ...opts });

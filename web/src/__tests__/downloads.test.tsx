@@ -83,7 +83,7 @@ describe("/downloads", () => {
     expect(screen.getByTestId("hero-chips")).toHaveTextContent("2020–21 to 2023–24");
     expect(screen.getByTestId("purpose-question")).toHaveTextContent("What data do you need?");
     const cards = screen.getAllByTestId("purpose-card");
-    expect(cards.map((c) => c.getAttribute("data-purpose"))).toEqual(["totals", "monthly", "allocations", "gridded", "uncertainty", "evidence"]);
+    expect(cards.map((c) => c.getAttribute("data-purpose"))).toEqual(["totals", "monthly", "allocations", "gridded", "uncertainty", "evidence", "air"]);
     expect(within(cards[0]).getByTestId("purpose-caption")).toHaveTextContent("2020–21 to 2023–24");
     expect(within(cards[1]).getByTestId("purpose-caption")).toHaveTextContent("4 months");
     expect(within(cards[3]).getByTestId("purpose-caption")).toHaveTextContent("2023–24 · Monthly");
@@ -157,7 +157,7 @@ describe("/downloads", () => {
     expect(reg.map((r) => r.getAttribute("data-kind"))).toEqual(["registry"]);
     fireEvent.click(within(reg[0]).getByTestId("schema-toggle"));
     expect(within(reg[0]).getByTestId("schema-panel")).toHaveTextContent("Registry source: data/emission_factors.csv");
-    expect(screen.getAllByTestId("purpose-card")).toHaveLength(6);
+    expect(screen.getAllByTestId("purpose-card")).toHaveLength(7);
     expect(screen.getByTestId("archive-download")).toHaveAttribute("title", expect.stringContaining("not itself hashed"));
   });
   it("the API mode: the curl line for the current view, the citation table as the version's one home, Copy on the clipboard; ?receipt= forces the mode and replays", async () => {

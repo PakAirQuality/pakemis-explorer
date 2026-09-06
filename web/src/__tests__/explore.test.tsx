@@ -113,6 +113,14 @@ beforeEach(() => {
       if (url.includes("/query/completeness")) return envelope(NE, { request_type: "get_completeness" });
       if (url.includes("/query/timeseries")) return envelope(SERIES, { request_type: "get_timeseries", axis: AXIS_500, change: CHANGE });
       if (url.includes("/query/compare")) return envelope(COMPARE, { request_type: "compare_emissions", axis: AXIS_DIFF, context: { release: "PakEmis 1.0.0rc42", version: "1.0.0rc42", commit: "bc1716d6", configuration_id: "REF_2023_24 vs S_2023_24", gwp_basis: "AR5", lulucf: { status: "excluded", notation_key: "NE", note: "" }, defaults_applied: [] } });
+      if (url.includes("/query/air")) {
+        const k = body?.group_by?.[0];
+        if (body?.sectors?.length && body?.geography_level)
+          return { __status: 422, body: { error: "grain_unavailable", error_class: "GrainUnavailable", message: "the provincial and district air layers exist for agriculture only; the other six sector layers are national", limitation_id: "air_spatial_agriculture_only", message_worded: "the provincial and district air layers exist for agriculture only; the other six sector layers are national", detail: {} } };
+        if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air", axis: AXIS_250 });
+        if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
+        return envelope([{ display: "631.915", display_short: "631.92", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "residential" }, extra: { share_pct_short: "75.7" } }, { display: "63.851", display_short: "63.85", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "waste" }, extra: { share_pct_short: "7.6" } }], { request_type: "query_air", axis: AXIS_250 });
+      }
       const key = body?.group_by?.[0];
       if (key === "sector_id") return envelope(SECTORS, { partition: PARTITION, axis: AXIS_250 });
       if (key === "module") return envelope(MODULES, { partition: PARTITION, axis: AXIS_250 });
@@ -155,7 +163,7 @@ function serverDecimals(): Set<string> {
 
 const DEFAULTS = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 const CTX: ExploreContext = { periods: ["FY2020-21", "FY2023-24"], referencePeriod: "FY2023-24", monthsOf: (p) => (p === "FY2023-24" ? ["202307", "202308"] : []), reference: "REF_2023_24", survey: "S_2023_24", surveyCovers: (p) => p === "FY2023-24" };
-const LOCAL: LocalKeys = { by: null, rep: null, range: null, geos: null, cat: null, share: null };
+const LOCAL: LocalKeys = { by: null, rep: null, range: null, geos: null, cat: null, share: null, pol: null };
 const start = (): ExploreState => resolveExplore(resolveState({}, DEFAULTS), LOCAL, CTX);
 const SCOPE = { periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5" };
 
@@ -391,6 +399,37 @@ describe("/data (the Grapher)", () => {
     expect(screen.getByTestId("filter-rail")).toHaveAttribute("data-open", "0");
     fireEvent.click(screen.getByTestId("filters-expand"));
     expect(screen.getByTestId("filter-rail")).toHaveAttribute("data-open", "1");
+  });
+  it("the air beta: a pollutant in the metric select routes to query_air - sectors, provinces, the 1990-2024 series, the map's typed note, and the server's own refusal", async () => {
+    const updates: string[] = [];
+    mount("", ({ queryString }) => updates.push(queryString));
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "pol:PM2.5" } });
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], group_by: ["sector_id"], order_by: "value desc" }));
+    expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by sector");
+    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("Residential contributed 631.92 kt PM₂.₅ (75.7 % of the total)"));
+    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("air-quality beta");
+    expect(updates.at(-1)).toContain("pol=PM2.5");
+    // the map is a typed note, not a silent CO2e map
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    expect(await screen.findByTestId("refusal-card")).toHaveTextContent("the air-quality beta has no map layer yet");
+    fireEvent.click(screen.getByTestId("rep-tabs-chart"));
+    // provinces: the agriculture allocation
+    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
+    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["PM2.5"], geography_level: "adm1", group_by: ["province"] }));
+    // the series
+    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "national" } });
+    fireEvent.change(screen.getByTestId("period-select"), { target: { value: "range" } });
+    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["PM2.5"], group_by: ["year"] }));
+    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("782.45 kt NH₃ in 1990"));
+    // a sector the layer does not carry at a place grain: the SERVER refusal, verbatim
+    fireEvent.change(screen.getByTestId("period-select"), { target: { value: "FY2023-24" } });
+    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
+    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "power" } });
+    await waitFor(() => expect(screen.getByTestId("refusal-card")).toHaveTextContent("agriculture only"));
+    // choosing a gas returns to CO2e
+    fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
+    await waitFor(() => expect(screen.getByTestId("canvas-title")).not.toHaveTextContent("PM₂.₅"));
   });
   it("audits: every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase", async () => {
     mount();

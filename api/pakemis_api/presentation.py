@@ -400,16 +400,21 @@ def scenario_label(scenario):
 
 def _group_keys(env):
     """The request's group_by, read from the envelope's canonical request; None when the
-    envelope is not a query_emissions answer."""
-    if env.get("request_type") != "query_emissions":
+    envelope is not a query_emissions or query_air answer. query_air joined on 2026-09-08:
+    one pollutant's cells partition its own total the same way (the one-unit rule guarantees
+    one species) - except a year grouping, which is a series, not a partition; a share of a
+    35-year sum is a number nobody asked for."""
+    if env.get("request_type") not in ("query_emissions", "query_air"):
         return None
     try:
         req = json.loads(env.get("request") or "")
     except (TypeError, ValueError):
         return None
-    if not isinstance(req, dict) or req.get("_type", "QueryEmissions") != "QueryEmissions":
+    if not isinstance(req, dict) or req.get("_type", "QueryEmissions") not in ("QueryEmissions", "QueryAir"):
         return None
     keys = req.get("group_by") or ()
+    if env.get("request_type") == "query_air" and list(keys) == ["year"]:
+        return None
     return list(keys) if isinstance(keys, (list, tuple)) else None
 
 

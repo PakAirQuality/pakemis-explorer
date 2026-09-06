@@ -20,6 +20,7 @@ export const localParsers = {
   geos: parseAsString,
   cat: parseAsString,
   share: parseAsBoolean,
+  pol: parseAsString,
 };
 
 export function useExploreContext(): ExploreContext {

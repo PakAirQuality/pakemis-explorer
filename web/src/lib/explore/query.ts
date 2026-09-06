@@ -10,7 +10,7 @@
  * same body and therefore the same receipt. Words for the subtitle come from the release's
  * labels through lib/breakdown.ts and lib/labels.ts; no number is written here.
  */
-import type { CompareRequest, QueryEmissions, TimeseriesRequest } from "../api";
+import type { CompareRequest, QueryAir, QueryEmissions, TimeseriesRequest } from "../api";
 import type { Refusal } from "../envelope";
 import { estimateNoun, gwpWords } from "../breakdown";
 import { configLabel, districtName, periodShort, sectorLabel, type Dims as GeoDims } from "../labels";
@@ -26,6 +26,13 @@ export type ChartKind = "bars" | "stacked" | "line" | "column" | "grouped";
 
 /** The sentinel of the `geos` URL key: every unit of the level (all provinces, all districts). */
 export const ALL_PLACES = "all";
+
+/** The air beta's seven agriculture-wide species, in the release's own ids. */
+export const POLLUTANTS = ["NOx", "SO2", "CO", "NMVOC", "PM2.5", "BC", "NH3"] as const;
+export const POLLUTANT_LABELS: Record<string, string> = {
+  NOx: "NOx", SO2: "SO\u2082", CO: "CO", NMVOC: "NMVOC", "PM2.5": "PM\u2082.\u2085", BC: "Black carbon", NH3: "NH\u2083",
+};
+const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
 
 export type ExploreState = {
   /** The grain the query asks at: national, or the level of the places. */
@@ -46,6 +53,8 @@ export type ExploreState = {
   rep: Rep;
   /** Measure = Share of total: the chart labels the server's share_pct_short instead of the value. */
   share: boolean;
+  /** Metric = one air pollutant (the beta): native kilotonnes via query_air; null = CO2e. */
+  pollutant: string | null;
 };
 
 /** What the release offers the builder: the fiscal years, the reference year, its months, the queryable configurations. */
@@ -61,12 +70,13 @@ export type ExploreContext = {
 };
 
 /** The URL form: the shared keys of lib/urlState.ts and the page-local ones (`by`, `rep`, `range`, `geos`, `cat`, `share`). */
-export type LocalKeys = { by: string | null; rep: string | null; range: boolean | null; geos: string | null; cat: string | null; share: boolean | null };
+export type LocalKeys = { by: string | null; rep: string | null; range: boolean | null; geos: string | null; cat: string | null; share: boolean | null; pol: string | null };
 
 export type QueryPlan =
   | { kind: "emissions"; body: QueryEmissions; groupBy: string; chart: ChartKind; /** The values the canvas keeps (several provinces out of the ADM1 envelope): a filter, never arithmetic. */ filterTo?: { key: string; ids: string[] } }
   | { kind: "timeseries"; body: TimeseriesRequest; groupBy: "period_id"; chart: "line" }
   | { kind: "compare"; body: CompareRequest; groupBy: string; chart: "grouped" }
+  | { kind: "air"; body: QueryAir; groupBy: string; chart: ChartKind; filterTo?: { key: string; ids: string[] } }
   | { kind: "refused"; refusal: Refusal };
 
 function compact<T extends Record<string, unknown>>(body: T): T {
@@ -93,6 +103,11 @@ function isRep(v: string | null | undefined): v is Rep {
  * when it can. The reasons name what the release answers, never a column id.
  */
 export function unavailableReason(s: ExploreState, ctx: ExploreContext, by: Breakdown, labels?: Labels): string | null {
+  if (s.pollutant && (by === "month" || by === "gas" || by === "category" || by === "estimate")) {
+    if (by === "month") return "The air-quality beta has no monthly product; the annual layers and the 1990-2024 series are what the release carries.";
+    if (by === "estimate") return "The air-quality beta carries a single estimate; there is no survey-based alternative to compare.";
+    return "A pollutant replaces the CO2e metric; the gas and category breakdowns belong to the greenhouse-gas inventory.";
+  }
   const ref = labels ? periodShort(labels, ctx.referencePeriod) : ctx.referencePeriod;
   if (s.geos.length > 1 && by !== "place") return "Two provinces are compared side by side; choose one place to see its composition.";
   switch (by) {
@@ -155,7 +170,14 @@ export function resolveExplore(shared: ExplorerState, local: LocalKeys, ctx: Exp
     by: "sector",
     rep: isRep(local.rep) ? local.rep : "chart",
     share: !!local.share,
+    pollutant: (POLLUTANTS as readonly string[]).includes(local.pol ?? "") ? local.pol : null,
   };
+  if (s.pollutant) {
+    // the pollutant replaces the CO2e metric: the gas, category and share controls stand down
+    s.gas = null;
+    s.category = null;
+    s.share = false;
+  }
   if (range) {
     s.by = "period";
     if (unavailableReason(s, ctx, "period")) {
@@ -166,6 +188,7 @@ export function resolveExplore(shared: ExplorerState, local: LocalKeys, ctx: Exp
   }
   const asked = isBreakdown(local.by) ? local.by : null;
   s.by = asked && asked !== "period" && !unavailableReason(s, ctx, asked) ? asked : fallbackBreakdown(s, ctx);
+  if (s.pollutant && !["sector", "place", "period"].includes(s.by)) s.by = s.level === "national" ? "sector" : "place";
   return s;
 }
 
@@ -191,6 +214,7 @@ export function toUrl(s: ExploreState): { shared: Partial<ExplorerState>; local:
       geos: s.allPlaces ? ALL_PLACES : several ? s.geos.join(",") : null,
       cat: s.category,
       share: s.share ? true : null,
+      pol: s.pollutant,
     },
   };
 }
@@ -205,6 +229,7 @@ export type Action =
   | { control: "sector"; value: string | null }
   | { control: "category"; value: string | null }
   | { control: "gas"; value: "by" | string | null }
+  | { control: "pollutant"; value: string | null }
   | { control: "measure"; value: "share" | { gwp: string } }
   | { control: "estimate"; value: "compare" | { config: string } }
   | { control: "view"; value: string }
@@ -271,6 +296,7 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
       n.category = a.value;
       return settle(a.value ? "gas" : "category");
     case "gas":
+      n.pollutant = null;
       if (a.value === "by") {
         n.gas = null;
         return settle("gas");
@@ -280,6 +306,8 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
       if (!a.value && n.by === "gas") n.by = fallbackBreakdown(n, ctx);
       return settle();
     case "measure":
+      n.pollutant = null;
+      n.pollutant = null;
       if (a.value === "share") n.share = true;
       else {
         n.gwp = a.value.gwp;
@@ -294,6 +322,16 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
     case "view":
       n.view = a.value;
       return n;
+    case "pollutant": {
+      n.pollutant = a.value;
+      if (a.value) {
+        n.gas = null;
+        n.category = null;
+        n.share = false;
+        if (!["sector", "place", "period"].includes(n.by)) n.by = n.level === "national" ? "sector" : "place";
+      }
+      return n;
+    }
     case "rep": {
       n.rep = a.value;
       if (a.value !== "map") return n;
@@ -302,6 +340,7 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
       // filters survive the move. A crafted URL can still resolve to an unmappable state, and
       // the canvas keeps its typed refusal for that.
       const q = buildQuery(n, ctx);
+      if (n.pollutant) return n; // the air beta has no map layer; the canvas says so in place
       if (q.kind === "emissions" && (q.groupBy === "province" || q.groupBy === "shape_id")) return n;
       const moved = transition(n, { control: "geography", value: n.level === "adm2" ? "districts" : "provinces" }, ctx);
       moved.rep = "map";
@@ -350,6 +389,7 @@ export const CATEGORY_GRAIN_REFUSAL: Refusal = {
 /** The one contract call of a state; see the module note. */
 export function buildQuery(s: ExploreState, ctx: ExploreContext): QueryPlan {
   if (s.category && s.level !== "national") return { kind: "refused", refusal: { ...CATEGORY_GRAIN_REFUSAL, detail: { ...CATEGORY_GRAIN_REFUSAL.detail, grain: s.level } } };
+  if (s.pollutant) return buildAir(s);
   const scope = scopeOf(s);
   switch (s.by) {
     case "period": {
@@ -418,9 +458,37 @@ export function possessive(place: string): string {
   return /s$/.test(place) ? `${place}'` : `${place}'s`;
 }
 
+/**
+ * The one query_air call of a pollutant state: kilotonnes of the named species. All years is
+ * the agriculture 1990-2024 series (national); a place grain groups the agriculture
+ * allocation's provinces or districts; national groups the seven sector layers. A sector
+ * filter rides along - off agriculture at a place grain the SERVER refuses, and the canvas
+ * shows that refusal verbatim.
+ */
+function buildAir(s: ExploreState): QueryPlan {
+  const base: QueryAir = { pollutants: [s.pollutant!] };
+  if (s.sector) base.sectors = [s.sector];
+  if (s.range) return { kind: "air", body: { ...base, years: AIR_YEARS, group_by: ["year"] }, groupBy: "year", chart: "line" };
+  if (s.level === "national") return { kind: "air", body: { ...base, group_by: ["sector_id"], order_by: "value desc" }, groupBy: "sector_id", chart: "bars" };
+  const key = s.level === "adm2" ? "district" : "province";
+  return {
+    kind: "air",
+    body: { ...base, geography_level: s.level, group_by: [key], order_by: "value desc" },
+    groupBy: key,
+    chart: "bars",
+    // province names match the envelope's group values; district state carries shape ids, which do not
+    ...(s.level === "adm1" && s.geos.length ? { filterTo: { key, ids: s.geos } } : {}),
+  };
+}
+
 export function showingWords(s: ExploreState, ctx: ExploreContext, labels: Labels, dims: GeoDims): string {
   const place = placeWords(s, dims);
   const owner = possessive(place);
+  if (s.pollutant) {
+    const when = s.by === "period" ? "1990 to 2024" : periodShort(labels, s.period);
+    const what = s.sector ? `${sectorLabel(labels, s.sector).toLowerCase()} ` : "";
+    return `${owner} ${when} ${what}${POLLUTANT_LABELS[s.pollutant] ?? s.pollutant} emissions in kilotonnes, ${groupedWords(s, ctx, labels)} — the air-quality beta, a companion product of uneven assurance, outside the CO\u2082e totals.`;
+  }
   const when = s.by === "period" ? "" : `${periodShort(labels, s.period)} `;
   const allocated = s.level === "national" ? "" : "allocated ";
   const estimate = s.by === "estimate" ? "emissions" : estimateNoun(labels, s.config);
@@ -432,6 +500,13 @@ export function showingWords(s: ExploreState, ctx: ExploreContext, labels: Label
 
 /** The canvas title: "Emissions by sector", "Allocated emissions by province", "Emissions over time", "Two estimates by sector". */
 export function canvasTitle(s: ExploreState): string {
+  if (s.pollutant) {
+    const p = POLLUTANT_LABELS[s.pollutant] ?? s.pollutant;
+    if (s.by === "period") return `${p} emissions over time`;
+    if (s.level === "adm2") return `${p} emissions by district`;
+    if (s.level === "adm1") return `${p} emissions by province`;
+    return `${p} emissions by sector`;
+  }
   const noun = s.level === "national" ? "Emissions" : "Allocated emissions";
   switch (s.by) {
     case "sector":

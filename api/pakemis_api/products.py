@@ -65,6 +65,10 @@ FAMILIES = (
      "description": "The evidence classes behind every stream, the stream register, the completeness ledgers, and the registries the "
                     "claim record joins: emission factors, parameters, source documents, temporal profiles, spatial registries, validation rows, benchmarks, data gaps.",
      "tables": ("fact_evidence", "dim_evidence_class", "dim_stream", "fact_completeness", "fact_completeness_mass", "registries"), "formats": ("csv", "parquet")},
+    {"id": "air", "title": "Air quality (beta)",
+     "description": "The companion air-pollutant layer: seven sectors' NOx, SO2, CO, NMVOC, PM2.5, BC and NH3 in native kilotonnes, "
+                    "with agriculture's provincial and district allocations and its 1990-2024 national series. A beta of uneven assurance, outside every greenhouse-gas total.",
+     "tables": ("fact_air_annual", "fact_air_timeseries", "fact_air_adm1", "fact_air_adm2", "dim_pollutant"), "formats": ("csv", "parquet")},
     {"id": "complete", "title": "Complete release",
      "description": "Every file of the release payload: the 22 tables as CSV and Parquet, the two grid cubes, the contract and manifest, and every registry; "
                     "also as one zip archive with SHA256SUMS.",

@@ -330,6 +330,8 @@ class Service:
         name = type(request).__name__
         if name == "QueryEmissions":
             env = self.engine.query_emissions(request)
+        elif name == "QueryAir":
+            env = self.engine.query_air(request)
         elif name == "CompareRequest":
             env = F.compare_emissions(self.engine, request)
         elif name == "TimeseriesRequest":
@@ -653,6 +655,12 @@ def create_app(settings=None, model_client=None):
 
     @api.post("/query/emissions", tags=["query"])
     def query_emissions(body: G.QueryEmissionsModel):
+        return svc().run(G.to_request(body))
+
+    @api.post("/query/air", tags=["query"])
+    def air(body: G.QueryAirModel):
+        """The air beta: native kilotonnes of a named pollutant, never CO2e; seven sectors,
+        agriculture's provincial, district and 1990-2024 grains, typed refusals elsewhere."""
         return svc().run(G.to_request(body))
 
     @api.post("/query/compare", tags=["query"])

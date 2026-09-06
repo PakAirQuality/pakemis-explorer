@@ -16,7 +16,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Archive, BarChart3, CalendarDays, Check, Copy, Download, ExternalLink, FileJson, FileText, Info, Layers, LineChart, MapPin, ShieldCheck, Table2 } from "lucide-react";
+import { Archive, BarChart3, CalendarDays, Check, Copy, Download, ExternalLink, FileJson, FileText, Info, Layers, LineChart, MapPin, ShieldCheck, Table2, Wind } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { absoluteApiBase, api } from "@/lib/api";
 import { configLabel, gwpLabel, periodRange, periodShort } from "@/lib/labels";
@@ -46,6 +46,7 @@ const PURPOSE_ICON: Record<string, React.ReactNode> = {
   gridded: <Layers size={18} className="text-accent" aria-hidden="true" />,
   uncertainty: <LineChart size={18} className="text-accent" aria-hidden="true" />,
   evidence: <FileText size={18} className="text-accent" aria-hidden="true" />,
+  air: <Wind size={18} className="text-accent" aria-hidden="true" />,
 };
 
 /** "CSV · Parquet · NetCDF": the formats a family offers, as the API lists them. */
@@ -91,6 +92,7 @@ export function Downloads() {
     gridded: `${refShort} · Monthly`,
     uncertainty: "",
     evidence: "",
+    air: "Seven sectors · Agriculture mapped and 1990 to 2024",
     complete: "Every file · One archive",
   };
   // the six purpose cards; the complete release is the hero's own action

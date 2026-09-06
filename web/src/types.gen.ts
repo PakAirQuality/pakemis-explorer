@@ -166,6 +166,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/emissions/query/air": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Air
+         * @description The air beta: native kilotonnes of a named pollutant, never CO2e; seven sectors,
+         *     agriculture's provincial, district and 1990-2024 grains, typed refusals elsewhere.
+         */
+        post: operations["air_api_v1_emissions_query_air_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/emissions/query/compare": {
         parameters: {
             query?: never;
@@ -511,6 +532,43 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * QueryAir
+         * @description The air beta: native kt of a named species, never CO2e. Seven sectors carry a layer
+         *     (industry, IPPU and fugitives are NE); the spatial and timeseries grains are
+         *     agriculture's alone. A sum across pollutants is refused - the particulate strata
+         *     contain one another - so a request either filters to one pollutant or groups by it.
+         */
+        QueryAir: {
+            /** Categories */
+            categories?: string[];
+            /** Geography Ids */
+            geography_ids?: string[];
+            /**
+             * Geography Level
+             * @description national | adm1 | adm2; empty -> national
+             * @default
+             */
+            geography_level: string;
+            /** Group By */
+            group_by?: string[];
+            /**
+             * Limit
+             * @default 0
+             */
+            limit: number;
+            /**
+             * Order By
+             * @default
+             */
+            order_by: string;
+            /** Pollutants */
+            pollutants?: string[];
+            /** Sectors */
+            sectors?: string[];
+            /** Years */
+            years?: string[];
         };
         /**
          * QueryEmissions
@@ -893,6 +951,39 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    air_api_v1_emissions_query_air_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryAir"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

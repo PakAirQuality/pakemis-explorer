@@ -17,10 +17,10 @@ import { markStage } from "@/components/shell/bootstrap";
 import { api } from "@/lib/api";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
 import { cellUnit, configLabel, configWords, envelopeUnitLine, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
-import { useCompare, useCompleteness, useEmissions, useTimeseries } from "@/lib/queries";
+import { useAir, useCompare, useCompleteness, useEmissions, useTimeseries } from "@/lib/queries";
 import { hrefForState } from "@/lib/urlState";
 import { magnitudeOf } from "@/lib/uncertainty";
-import { canvasTitle, placeWords, possessive, showingWords, type ExploreState, type QueryPlan } from "@/lib/explore/query";
+import { canvasTitle, placeWords, possessive, showingWords, POLLUTANT_LABELS, type ExploreState, type QueryPlan } from "@/lib/explore/query";
 import { useExploreState } from "@/lib/explore/useExploreState";
 import { NavHeader } from "@/components/shell/NavCapsule";
 import { ShowingLine } from "@/components/ui/ShowingLine";
@@ -56,7 +56,8 @@ export function Explore() {
   const emissions = useEmissions(plan.kind === "emissions" ? plan.body : null, plan.kind === "emissions");
   const series = useTimeseries(plan.kind === "timeseries" ? plan.body : null, plan.kind === "timeseries");
   const compare = useCompare(plan.kind === "compare" ? plan.body : null, plan.kind === "compare");
-  const active = plan.kind === "timeseries" ? series : plan.kind === "compare" ? compare : emissions;
+  const air = useAir(plan.kind === "air" ? plan.body : null, plan.kind === "air");
+  const active = plan.kind === "timeseries" ? series : plan.kind === "compare" ? compare : plan.kind === "air" ? air : emissions;
   const raw = plan.kind === "refused" ? null : active.data;
   // the loading screen's last stage on this page: the canvas's first envelope answered (or refused)
   useEffect(() => {
@@ -172,6 +173,28 @@ function Row({ label, children, testId }: { label: string; children: ReactNode; 
  */
 function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | null, labels: Parameters<typeof configWords>[0], place: string, owner: string): ReactNode {
   if (!env || plan.kind === "refused") return null;
+  if (plan.kind === "air") {
+    if (plan.groupBy === "year") {
+      const first = env.values.find((c) => typeof c.value === "number");
+      const last = topCell({ ...env, values: [...env.values].reverse() });
+      if (!first || !last) return null;
+      return (
+        <>
+          {POLLUTANT_LABELS[state.pollutant ?? ""] ?? state.pollutant} emissions: <B>{shown(first)} {cellUnit(first)}</B> in {String(first.group?.year ?? "")}, <B>{shown(last)} {cellUnit(last)}</B> in {String(last.group?.year ?? "")} — the agriculture layer alone, on the air-quality beta.
+        </>
+      );
+    }
+    const top = topCell(env);
+    if (!top) return null;
+    const id = top.group?.[plan.groupBy] ?? "";
+    const name = plan.groupBy === "sector_id" ? sectorLabel(labels, id) : id;
+    return (
+      <>
+        <b>{name}</b> contributed <B>{shown(top)} {cellUnit(top)}</B>
+        {top.share_pct_short ? <> (<B>{top.share_pct_short} %</B> of the total)</> : null} — the air-quality beta, outside the CO\u2082e inventory.
+      </>
+    );
+  }
   if (plan.kind === "timeseries") {
     const change = env.change;
     const last = topCell({ ...env, values: [...env.values].reverse() });

@@ -22,7 +22,7 @@ from pakemis_api.settings import import_query_core
 import_query_core()
 from pakemis_query import models as M  # noqa: E402
 
-REQUEST_TYPES = [M.QueryEmissions, M.CompareRequest, M.TimeseriesRequest, M.UncertaintyRequest,
+REQUEST_TYPES = [M.QueryEmissions, M.QueryAir, M.CompareRequest, M.TimeseriesRequest, M.UncertaintyRequest,
                  M.CompletenessRequest, M.EvidenceRequest, M.MethodRequest, M.SpatialLineageRequest,
                  M.TransferRequest, M.GridCellRequest, M.DownloadRequest]
 BY_NAME = {t.__name__: t for t in REQUEST_TYPES}
@@ -78,6 +78,7 @@ def build_models():
 
 MODELS = build_models()
 QueryEmissionsModel = MODELS["QueryEmissions"]
+QueryAirModel = MODELS["QueryAir"]
 CompareRequestModel = MODELS["CompareRequest"]
 TimeseriesRequestModel = MODELS["TimeseriesRequest"]
 UncertaintyRequestModel = MODELS["UncertaintyRequest"]

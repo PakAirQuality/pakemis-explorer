@@ -313,7 +313,7 @@ def test_tools_are_the_contract_functions_plus_set_map_view(ask_client):
     runtime = ask_client.app.state.ask
     contract = ask_client.get("/api/v1/emissions/release").json()["query_contract"]["functions"]
     assert [t["name"] for t in runtime.tools] == contract + ["set_map_view"]
-    assert len(runtime.tools) == 12
+    assert len(runtime.tools) == 13  # 12 + query_air (the air beta)
     for tool in runtime.tools:
         assert tool["description"] and tool["input_schema"]["type"] == "object"
         assert "$defs" not in json.dumps(tool) and '"title"' not in json.dumps(tool)

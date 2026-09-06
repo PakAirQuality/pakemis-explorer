@@ -16,6 +16,7 @@ from pakemis_query.models import GROUPS, VIEWS
 # function name (query_contract.functions) -> request model name (models_gen.MODELS)
 FUNCTION_MODEL = {
     "query_emissions": "QueryEmissions",
+    "query_air": "QueryAir",
     "compare_emissions": "CompareRequest",
     "get_timeseries": "TimeseriesRequest",
     "get_uncertainty": "UncertaintyRequest",
@@ -32,6 +33,9 @@ DOWNLOAD_TOOL = "download_query_result"
 ENGINE_TOOLS = tuple(n for n in FUNCTION_MODEL if n != DOWNLOAD_TOOL)
 
 WHEN_TO_CALL = {
+    "query_air": "the AIR POLLUTANT beta (NOx, SO2, CO, NMVOC, PM2.5, BC, NH3) in native kilotonnes - never CO2e "
+                 "and never summed across pollutants; seven sectors nationally, agriculture's provinces, "
+                 "districts and 1990-2024 series; anything else is a typed refusal",
     "query_emissions": "Call this for any emissions figure: a national, provincial (adm1) or district (adm2) total, "
                        "a breakdown by sector, category, gas, month, IPCC code or stream, a filtered sum, or the top-N "
                        "of a grouping. It is the default tool; one call returns one envelope of cells.",

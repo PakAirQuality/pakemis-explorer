@@ -50,7 +50,7 @@ def test_tampered_boundary_refused(settings, tmp_path):
 def test_pinned_release_starts(client):
     body = client.get("/api/v1/emissions/release").json()
     assert body["version"] == client.app.state.service.settings.version
-    # 24 at the adm1year follower: fact_adm1_year entered the contract - the
-    # provincial twin of the district fact the previous pin noticed arriving.
-    assert len(body["digests"]["tables"]) == 24
+    # 29 at the air beta: dim_pollutant and the four air facts entered the contract
+    # (24 was the adm1year follower; this pin exists to notice tables arriving).
+    assert len(body["digests"]["tables"]) == 29
     assert body["context_bar"]["lulucf"]["status"] == "excluded"

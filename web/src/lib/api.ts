@@ -9,6 +9,7 @@ import type { components } from "@/types.gen";
 /** Every request field has a contract default server-side, so a body may omit any of them. */
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 export type QueryEmissions = DeepPartial<components["schemas"]["QueryEmissions"]>;
+export type QueryAir = DeepPartial<components["schemas"]["QueryAir"]>;
 export type CompareRequest = DeepPartial<components["schemas"]["CompareRequest"]>;
 export type TimeseriesRequest = DeepPartial<components["schemas"]["TimeseriesRequest"]>;
 export type UncertaintyRequest = DeepPartial<components["schemas"]["UncertaintyRequest"]>;
@@ -139,6 +140,7 @@ export const api = {
   release: async (): Promise<ReleaseInfo> => ReleaseSchema.parse(await call("/release")),
   claim: fetchClaim,
   queryEmissions: (body: QueryEmissions) => envelope("/query/emissions", post(body)),
+  queryAir: (body: QueryAir) => envelope("/query/air", post(body)),
   compare: (body: CompareRequest) => envelope("/query/compare", post(body)),
   timeseries: (body: TimeseriesRequest) => envelope("/query/timeseries", post(body)),
   uncertainty: (body: UncertaintyRequest) => envelope("/query/uncertainty", post(body)),

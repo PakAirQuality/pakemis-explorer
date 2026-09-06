@@ -10,7 +10,7 @@ import os
 
 from pakemis_query import errors as E
 from pakemis_query.envelope import envelope, value
-from pakemis_query.models import (GEOGRAPHY_LEVELS, VIEWS, QueryEmissions, canonical_json)
+from pakemis_query.models import (GEOGRAPHY_LEVELS, VIEWS, QueryAir, QueryEmissions, canonical_json)
 
 DECIMAL = "DECIMAL(38,18)"
 REFERENCE_PERIOD = "FY2023-24"
@@ -248,6 +248,103 @@ class Engine:
     def _disp(exact, decimals):
         from pakemis_query.envelope import display
         return display(exact, decimals)
+
+    # --- query_air (the air beta) ---------------------------------------------------------
+
+    AIR_GROUPS = ("pollutant", "sector_id", "category", "subitem", "province", "district", "year")
+    AIR_SECTORS = ("agriculture", "aviation", "power", "railways", "residential", "transport", "waste")
+
+    def query_air(self, request):
+        """Native kt of a named species from the PakEmis-Air beta tables; never CO2e, and
+        never a sum across pollutants (the particulate strata contain one another). The
+        spatial and timeseries grains are agriculture's alone; every other combination is a
+        typed refusal, not a computation."""
+        q = request
+        applied = []
+        if not q.geography_level:
+            q = dataclasses.replace(q, geography_level="national"); applied.append("geography_level")
+        q = dataclasses.replace(q, defaults_applied=tuple(applied))
+        pollutants = {r["pollutant"] for r in self.release.dim("dim_pollutant")}
+        for pl in q.pollutants:
+            if pl not in pollutants:
+                raise E.UnknownDimensionValue("%r is not a pollutant of the air beta (%s)"
+                                              % (pl, ", ".join(sorted(pollutants))), dimension="pollutant", value=pl)
+        for sec in q.sectors:
+            if sec not in self.AIR_SECTORS:
+                raise E.NotEstimated("the air beta carries no %s layer; industry, IPPU and "
+                                     "fugitives are recorded NE in the completeness ledger" % sec,
+                                     "air_sector_ne")
+        if q.geography_level not in GEOGRAPHY_LEVELS:
+            raise E.UnknownDimensionValue("%r is not a geography level" % q.geography_level, dimension="geography_level")
+        bad = [g for g in q.group_by if g not in self.AIR_GROUPS]
+        if bad:
+            raise E.GrainUnavailable("%r is not a grouping of the air tables (%s)"
+                                     % (bad[0], ", ".join(self.AIR_GROUPS)), "grain_unavailable")
+        if "pollutant" not in q.group_by and len(q.pollutants) != 1:
+            raise E.GrainUnavailable(
+                "a sum across pollutants is meaningless (BC is inside PM2.5, PM2.5 inside "
+                "PM10); name exactly one pollutant or group by pollutant", "pollutants_not_additive")
+        if q.geography_level != "national":
+            if q.sectors and set(q.sectors) != {"agriculture"}:
+                raise E.GrainUnavailable(
+                    "the provincial and district air layers exist for agriculture only; the "
+                    "other six sector layers are national", "air_spatial_agriculture_only")
+            if q.years:
+                raise E.GrainUnavailable("the air timeseries is national only; provinces and "
+                                         "districts carry CY2024 alone", "air_history_national_only")
+        # table choice
+        if q.years:
+            table, geo_col = "fact_air_timeseries", ""
+            base = [self._in("year", q.years)]
+            allowed = ("year", "pollutant", "category")
+            bad = [g for g in q.group_by if g not in allowed]
+            if bad:
+                raise E.GrainUnavailable("%r is not a grouping of the air timeseries (%s); the "
+                                         "series is agriculture, national" % (bad[0], ", ".join(allowed)),
+                                         "air_history_national_only")
+            # the source's own TOTAL rows are its sums; a category grouping must not add them in
+            base.append("category <> 'TOTAL'" if ("category" in q.group_by or q.categories) else "category = 'TOTAL'")
+        elif q.geography_level == "adm1":
+            table, geo_col = "fact_air_adm1", "province"
+            base = []
+        elif q.geography_level == "adm2":
+            table, geo_col = "fact_air_adm2", "district"
+            base = []
+        else:
+            table, geo_col = "fact_air_annual", ""
+            base = []
+            if q.sectors:
+                base.append(self._in("sector_id", q.sectors))
+        if q.pollutants:
+            base.append(self._in("pollutant", q.pollutants))
+        if q.categories:
+            base.append(self._in("category", q.categories))
+        if q.geography_ids and geo_col:
+            base.append(self._in(geo_col, q.geography_ids))
+        groups = list(q.group_by) or ([geo_col] if geo_col else ["pollutant"])
+        if geo_col and geo_col not in groups and "pollutant" not in groups and len(q.pollutants) != 1:
+            groups.append("pollutant")
+        group_cols = ", ".join(groups) + ", " if groups else ""
+        where = " AND ".join(base) if base else "1=1"
+        sql = ("SELECT %sSUM(CAST(emissions_kt AS %s)) AS exact, string_agg(result_row_id, ';' ORDER BY result_row_id) AS ids, "
+               "COUNT(*) AS n FROM %s WHERE %s GROUP BY %s"
+               % (group_cols, DECIMAL, table, where, ", ".join(groups) if groups else "'all'"))
+        rows = self._fetch(sql + self._order(q))
+        values = []
+        for r in rows:
+            label = {g: r[g] for g in groups}
+            species = label.get("pollutant") or (q.pollutants[0] if len(q.pollutants) == 1 else "")
+            values.append(value(str(r["exact"]), ("kt %s" % species).strip(), 3,
+                               row_ids=(r["ids"] or "").split(";") if r["ids"] else [],
+                               formula="SUM(emissions_kt) over %d %s rows" % (r["n"], table),
+                               group=label, n_rows=r["n"]))
+        prov = self._provenance([table])
+        limitations = ["air_beta", "lulucf_excluded"]
+        if q.geography_level != "national" or not q.sectors:
+            limitations.append("air_sector_ne")
+        return envelope(self.release, "query_air", canonical_json(q), dataclasses.asdict(q),
+                        values, {"kind": "sum", "sql": sql, "table": table, "column": "emissions_kt"},
+                        prov, limitations_hit=limitations, defaults_applied=q.defaults_applied)
 
     def _order(self, q, column="exact"):
         sql = ""

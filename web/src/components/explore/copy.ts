@@ -11,7 +11,7 @@ export const EXPLORE = {
     period: "Period",
     sector: "Sector",
     category: "Category",
-    gas: "Gas",
+    gas: "Gas / metric",
     measure: "Measure",
     estimate: "Estimate",
     view: "Spatial view",

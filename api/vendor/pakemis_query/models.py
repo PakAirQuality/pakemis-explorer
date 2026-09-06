@@ -43,6 +43,24 @@ class QueryEmissions:
 
 
 @dataclass(frozen=True)
+class QueryAir:
+    """The air beta: native kt of a named species, never CO2e. Seven sectors carry a layer
+    (industry, IPPU and fugitives are NE); the spatial and timeseries grains are
+    agriculture's alone. A sum across pollutants is refused - the particulate strata
+    contain one another - so a request either filters to one pollutant or groups by it."""
+    pollutants: tuple = ()              # subset of dim_pollutant; empty -> all, grouped
+    sectors: tuple = ()                 # sector_id filter over the seven covered sectors
+    categories: tuple = ()
+    geography_level: str = ""           # national | adm1 | adm2; empty -> national
+    geography_ids: tuple = ()           # province names or district labels
+    years: tuple = ()                   # 1990..2024 -> the agriculture timeseries grain
+    group_by: tuple = ()                # subset of pollutant sector_id category subitem province district year
+    order_by: str = ""
+    limit: int = 0
+    defaults_applied: tuple = field(default=(), compare=False)
+
+
+@dataclass(frozen=True)
 class CompareRequest:
     left: QueryEmissions
     right: QueryEmissions

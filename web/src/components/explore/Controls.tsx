@@ -17,7 +17,7 @@ import { ChevronsLeft, ChevronsRight, Factory, MapPin, RotateCcw, Wind } from "l
 import { Select, type SelectOption } from "@/components/ui/ControlsCard";
 import { configLabel, gasLabel, gwpIsDefault, gwpLabel, gwpTooltip, periodShort, sectorLabel, viewLabel, type Dims as GeoDims } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
-import { placeWords, unavailableReason, type Action, type ExploreContext, type ExploreState } from "@/lib/explore/query";
+import { placeWords, unavailableReason, POLLUTANTS, POLLUTANT_LABELS, type Action, type ExploreContext, type ExploreState } from "@/lib/explore/query";
 import { EXPLORE } from "./copy";
 
 export type ControlsProps = {
@@ -123,9 +123,15 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
   const sectorOptions: SelectOption[] = [{ value: "", label: W.allSectors }, ...Object.keys(labels.sectors).map((s) => ({ value: s, label: sectorLabel(labels, s) }))];
   const categoryOptions: SelectOption[] = [{ value: "", label: `${W.wholeSector} ${sectorLabel(labels, state.sector).toLowerCase()}` }, ...categories.map((c) => ({ value: c, label: c }))];
 
-  // --- Gas
-  const gasValue = state.by === "gas" && !state.gas ? "by" : state.gas ?? "";
-  const gasOptions: SelectOption[] = [{ value: "", label: W.allGases }, { value: "by", label: W.byGas }, ...Object.keys(labels.gases).map((g) => ({ value: g, label: gasLabel(labels, g) }))];
+  // --- Gas / metric (the air beta rides in the same select, prefixed pol:)
+  const gasValue = state.pollutant ? `pol:${state.pollutant}` : state.by === "gas" && !state.gas ? "by" : state.gas ?? "";
+  const gasOptions: SelectOption[] = [
+    { value: "", label: W.allGases },
+    { value: "by", label: W.byGas },
+    ...Object.keys(labels.gases).map((g) => ({ value: g, label: gasLabel(labels, g) })),
+    { value: "sep", label: "— Air pollutants (beta) —", disabled: true },
+    ...POLLUTANTS.map((pl) => ({ value: `pol:${pl}`, label: POLLUTANT_LABELS[pl] ?? pl, title: "The air-quality beta: native kilotonnes, outside the CO\u2082e totals" })),
+  ];
 
   // --- Measure
   const measureValue = state.share ? "share" : state.gwp;
@@ -178,7 +184,7 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
         </Ctl>
       )}
       <Ctl label={W.gas}>
-        <Select value={gasValue} onChange={(v) => dispatch({ control: "gas", value: v === "by" ? "by" : v || null })} options={gasOptions} ariaLabel={W.gas} testId="gas-select" />
+        <Select value={gasValue} onChange={(v) => (v.startsWith("pol:") ? dispatch({ control: "pollutant", value: v.slice(4) }) : dispatch({ control: "gas", value: v === "by" ? "by" : v || null }))} options={gasOptions} ariaLabel={W.gas} testId="gas-select" />
       </Ctl>
       <Ctl label={W.measure}>
         <Select value={measureValue} onChange={(v) => dispatch({ control: "measure", value: v === "share" ? "share" : { gwp: v } })} options={measureOptions} ariaLabel={W.measure} testId="measure-select" />

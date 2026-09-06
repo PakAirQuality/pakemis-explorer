@@ -10,7 +10,7 @@ pinned: 1.0.0rc47
 
 | version | semantic_release.json sha256 | release_manifest.json sha256 | source |
 |---|---|---|---|
-| 1.0.0rc47 | 6a46b8f386778b61fe5b0fc4e317b018c669be4d30b65012025df901dd74adbc | 7f4b933d836575f79f217a211092adc846076e645254d4a51e81371da424ae88 | git 46a1de58 (fact_adm1_year added post-release at the app's request; manifest re-anchored to describe the adm1year tree); Zenodo: no deposit yet |
+| 1.0.0rc47 | 4f8a68e8d9dcedefd692fc21ff761052a48540249fbbe4a7f3552625114e18c7 | bd803e25037d3276d044295bc23df0e17f5cdcf567d077c57d4e3a27b32b2a6e | git 6fdff972 (the air beta: dim_pollutant + four air facts + query_air, and the dim_geography repair; manifest describes the air-beta tree); Zenodo: no deposit yet |
 | 1.0.0rc42 | 0d612d2e19ec055cf7768f86cb5dffd2b803a0856a22a9e36c0a9af03ef28d4d | 630d11228d768eef5e3889a916bdf5c7610f330f4327689ba38ef845e203c9ce | git 5e42b7cb125e9ba13a986c1df47129cdff6a9f8e (manifest describes bc1716d6df797d3232daf95122197eaee25fa8bd); Zenodo: no deposit yet |
 
 The payload also carries, under `data/registries/`, the twenty-one registries `GET /claim` joins

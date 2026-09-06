@@ -271,7 +271,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
           <article className="mt-8" data-testid="story-section-5">
             <h2 className="text-xl font-semibold tracking-tight text-fg">5 · Show when and where emissions occur</h2>
             <p className="mt-2 max-w-[46em] text-md leading-relaxed text-muted">
-              The annual estimates are divided across the {months} months of each year and mapped to provinces, districts and grid cells. Some of these breakdowns come from detailed records. Others use clearly labelled estimates or proxies.
+              The annual estimates are divided across the {months} months of each year and mapped to provinces, districts and grid cells. Some of these breakdowns come from detailed records. Others use clearly labelled estimates or proxies. A companion air-quality layer, published as a labelled beta, carries seven pollutants beside the greenhouse gases.
             </p>
             <div className="note mt-3 max-w-[46em] text-sm" data-testid="story-gaps">
               We also show the uncertainty around the figures and list what could not yet be estimated

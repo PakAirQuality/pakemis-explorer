@@ -50,12 +50,16 @@ export function sidesOf(cell: Cell): { left: Side; right: Side } | null {
   return left && right ? { left, right } : null;
 }
 
+const AIR_MAP_REFUSAL = { error: "representation_unavailable", error_class: "RepresentationUnavailable", message: "The map paints the CO\u2082e layers; the air-quality beta has no map layer yet. Chart and Table carry the pollutant.", limitation_id: null, detail: { available_at: ["chart", "table"] } };
 const MAP_REFUSAL = { error: EXPLORE.mapUnavailable.error, error_class: EXPLORE.mapUnavailable.error_class, message: EXPLORE.mapUnavailable.message, limitation_id: null, detail: { available_at: [...EXPLORE.mapUnavailable.available_at] } };
 
 export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, dispatch }: CanvasProps) {
   if (plan.kind === "refused") return <RefusalCard refusal={plan.refusal} />;
   const active: ActivePlan = plan;
   if (state.rep === "map") {
+    // the map tiles carry the CO2e layers; painting a pollutant needs its own layer, which the
+    // beta does not ship yet - a typed note, never a silent CO2e map under an air title
+    if (active.kind === "air") return <RefusalCard refusal={AIR_MAP_REFUSAL} compact />;
     const placeKey = active.kind === "emissions" && (active.groupBy === "province" || active.groupBy === "shape_id");
     if (!placeKey) return <RefusalCard refusal={MAP_REFUSAL} compact />;
     const level: Level = state.level === "adm2" ? "adm2" : "adm1";
