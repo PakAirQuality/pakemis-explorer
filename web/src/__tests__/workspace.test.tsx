@@ -350,7 +350,7 @@ describe("the deck's cards", () => {
     expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
     expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source of emissions, contributing 223.45 Mt CO₂e (49.4 %). Power followed at 63.37 Mt (14.0 %), with transport at 41.93 Mt (9.3 %).");
     expect(screen.getByTestId("card-trend-sentence")).toHaveTextContent("Between 2020–21 and 2023–24, Pakistan's emissions increased by +21.5 %, from 372.40 Mt to 452.35 Mt CO₂e.");
-    expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
+    expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share.");
     expect(screen.getByTestId("sectors-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));
     expect(within(screen.getByTestId("column-chart")).getAllByTestId("column").map((c) => c.textContent)).toEqual(["2020–21 372.40", "2023–24 452.35"]);

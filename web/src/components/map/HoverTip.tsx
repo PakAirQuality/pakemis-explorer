@@ -8,7 +8,7 @@
  */
 import { shown } from "@/lib/envelope";
 import type { Cell } from "@/lib/envelope";
-import { joinNames, type Residual } from "@/lib/geography";
+import type { Residual } from "@/lib/geography";
 import { adm2RowsForShape, cellUnit } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import type { Dims } from "@/components/ExplorerContext";
@@ -28,7 +28,7 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
     if (rows.length > 1) sub = `one shape for ${rows.map((r) => r.name).join(", ")} (shared_shape)`;
     else if (rows[0]) sub = `${rows[0].name} · ${rows[0].parent_id.replace(/^ADM1:/, "")}`;
   } else if (shared) {
-    sub = `part of the release's '${residual!.name}' unit — ${joinNames(residual!.members)} together`;
+    sub = `part of the combined '${residual!.name}' unit`;
   } else if (hover.level === "grid") {
     title = `Grid cell ${String(hover.props.cell_id ?? "")}`;
     sub = `row ${String(hover.props.row ?? "")} · col ${String(hover.props.col ?? "")} · ${String(hover.props.lat ?? "")}, ${String(hover.props.lon ?? "")}`;
@@ -48,7 +48,6 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
           <span className="text-muted">{cellUnit(cell)}</span>
           {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           {isBounded(cell) && <div className="w-full text-muted">{String((cell as Record<string, unknown>).interpretation ?? "")}</div>}
-          {shared && <div className="w-full text-muted" data-testid="hover-shared">one cell for the whole unit; coverage differs by sector for these territories — see About</div>}
           {extra && <div className="w-full text-fg/80" data-testid="hover-layer">{extra}</div>}
         </div>
       ) : (

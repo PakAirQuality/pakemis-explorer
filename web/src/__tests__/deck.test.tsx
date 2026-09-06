@@ -208,7 +208,7 @@ describe("the deck's card set follows the scope", () => {
     expect(screen.getByTestId("card-sectors")).toHaveTextContent("Emission sources");
     expect(screen.getByTestId("card-trend")).toHaveTextContent("Change over time");
     expect(screen.getByTestId("card-places")).toHaveTextContent("Spatial distribution");
-    expect(await screen.findByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer.");
+    expect(await screen.findByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share.");
   });
   it("a sector chosen: its total against the national partition, its categories, its series, its provincial split", async () => {
     set("?sector=power");

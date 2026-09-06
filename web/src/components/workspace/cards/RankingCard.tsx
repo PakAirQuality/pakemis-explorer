@@ -41,7 +41,7 @@ export function RankingCard({ id, scope, deck, title, open, onToggle }: { id: st
     return districts ? districtName(dims, gid) : geographyName(labels, gid);
   };
   const chosen = selected ? cells.find((x) => x.group?.[key] === selected) ?? null : cells[0] ?? null;
-  const sentence: ReactNode = chosen ? (id === "places" ? <PlacedSentence env={env} chosen={chosen} /> : <StandingSentence cell={chosen} name={label(chosen)} n={cells.length} what={districts ? "districts in the same province" : "provinces"} />) : null;
+  const sentence: ReactNode = chosen ? (id === "places" ? <PlacedSentence chosen={chosen} n={cells.length} /> : <StandingSentence cell={chosen} name={label(chosen)} n={cells.length} what={districts ? "districts in the same province" : "provinces"} />) : null;
   const items: BarItem[] = cells.map((x, i) => ({ id: x.group?.[key] ?? "", name: label(x), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: rampByRank(i, cells.length), dim: !!selected && x.group?.[key] !== selected }));
   const view = viewLabel(labels, state.view);
   const pick = (gid: string) => (districts ? setState({ level: "adm2", geo: gid }) : setState({ level: "adm1", geo: gid === selected ? null : gid }));
@@ -56,17 +56,22 @@ export function RankingCard({ id, scope, deck, title, open, onToggle }: { id: st
   );
 }
 
-/** "Punjab carried 228.72 Mt of the allocated total; 9.01 Mt was retained at provincial level and placed no finer." */
-function PlacedSentence({ env, chosen }: { env: Envelope | undefined; chosen: Cell }) {
+/**
+ * "Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share."
+ * The share and the rank are the server's own; the retained mass stays on the placement card
+ * and in the envelope's unallocated block, not in this sentence.
+ */
+function PlacedSentence({ chosen, n }: { chosen: Cell; n: number }) {
   const { labels } = useExplorer();
-  const derived = env?.derived as Derived | undefined;
-  const retained = typeof derived?.unallocated_total_short === "string" ? derived.unallocated_total_short : "";
+  const rank = typeof chosen.rank === "number" ? chosen.rank : null;
   return (
     <>
       <b>{geographyName(labels, chosen.group?.province ?? "")}</b> carried <Figure cell={chosen} /> of the allocated total
-      {retained ? (
+      {chosen.share_pct_short ? (
         <>
-          ; <b className="num whitespace-nowrap">{retained} {magnitudeOf(chosen)}</b> was retained at provincial level and placed no finer
+          {" "}
+          — <b className="num">{chosen.share_pct_short} %</b>
+          {rank === 1 ? ", the largest provincial share" : rank ? <>, ranked <b className="num">{String(rank)}</b> of <b className="num">{String(n)}</b> provinces</> : null}
         </>
       ) : null}
       .
