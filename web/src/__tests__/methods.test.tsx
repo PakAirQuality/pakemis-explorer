@@ -67,6 +67,11 @@ beforeEach(() => {
       if (body?.group_by?.[0] === "category") return envelope([{ display: "151.658", display_short: "151.66", group: { category: "Enteric fermentation" } }, { display: "16.550", display_short: "16.55", group: { category: "Rice cultivation" } }]);
       if (body?.categories && body?.geography_level) return refusal("grain_unavailable", "GrainUnavailable", "category filters are national-grain only in this release: the core applies them at national grain only");
       if (body?.categories) return envelope([{ display: "151.658", display_short: "151.66", unit_short: "Mt CO₂e" }], { receipt: "060bde899b5bb984553b61722584952a" });
+      if (body?.group_by?.[0] === "sector_id")
+        return envelope([
+          { display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e", group: { sector_id: "agriculture" }, extra: { share_pct_short: "49.4" } },
+          { display: "63.370", display_short: "63.37", unit_short: "Mt CO₂e", group: { sector_id: "power" }, extra: { share_pct_short: "14.0" } },
+        ]);
       if (body?.sectors?.[0] === "agriculture") return envelope([{ display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e" }]);
       if (body?.sectors?.[0] === "power") return envelope([{ display: "63.370", display_short: "63.37", unit_short: "Mt CO₂e" }]);
       return envelope([{ display: "452.34662", display_short: "452.35", unit_short: "Mt CO₂e" }]);
@@ -88,16 +93,29 @@ function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
 }
 
 describe("/methods", () => {
-  it("renders the first sector's card from the registry, the streams, the ledger and the sector envelope", async () => {
-    mount("?mode=catalogue");
+  it("a sector's page: one result with its national share, four plain steps, the included categories, the glance, the NE strip - and the dense card behind Technical method", async () => {
+    mount("?mode=catalogue&sector=agriculture");
     expect(await screen.findByRole("heading", { level: 1, name: "Methods & evidence" })).toBeInTheDocument();
     expect(screen.getByTestId("identity-line")).toHaveTextContent("PakEmis · public-data reconstruction");
     expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "#methodology");
     expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Methods")).toHaveAttribute("aria-current", "page");
-    const tiles = await screen.findAllByTestId("sector-tile");
-    expect(tiles.map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture", "power", "residential"]);
-    expect(tiles[0]).toHaveAttribute("aria-pressed", "true");
-    await waitFor(() => expect(tiles[0]).toHaveTextContent("2 source streams"));
+    // the page: title, dek, the envelope's own result and the partition's share
+    const page = await screen.findByTestId("sector-page");
+    expect(within(page).getByTestId("sector-title")).toHaveTextContent("Agriculture");
+    expect(within(page).getByTestId("sector-dek")).toHaveTextContent("Livestock digestion and manure");
+    await waitFor(() => expect(within(page).getByTestId("sector-result-display")).toHaveTextContent("223.45"));
+    await waitFor(() => expect(within(page).getByTestId("sector-share")).toHaveTextContent("49.4 % of the national total"));
+    expect(within(page).getByTestId("sector-step-1")).toHaveTextContent("PBS agricultural census and economic survey");
+    expect(within(page).getByTestId("sector-step-2")).toHaveTextContent("buffalo · rice");
+    await waitFor(() => expect(within(page).getByTestId("sector-step-3")).toHaveTextContent("2 registered IPCC rules are applied."));
+    expect(within(page).getByTestId("sector-step-4")).toHaveTextContent("Added to the national inventory.");
+    expect(within(page).getAllByTestId("included-chip").map((c) => c.textContent)).toEqual(["Enteric fermentation", "Rice cultivation"]);
+    expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Annual estimates");
+    expect(within(page).getByTestId("sector-ne")).toHaveTextContent("Agricultural soils - N from SOC mineralisation · Liming");
+    expect(within(page).getByTestId("view-sector-data")).toHaveAttribute("href", "/data?sector=agriculture");
+    expect(screen.queryByTestId("sector-card")).toBeNull();
+    // the technical fold carries the old card whole
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
     const card = screen.getByTestId("sector-card");
     await waitFor(() => expect(within(card).getByText("IPCC sector 3")).toBeInTheDocument());
     expect(within(card).getByTestId("sector-name")).toHaveTextContent("Agriculture");
@@ -121,7 +139,8 @@ describe("/methods", () => {
     expect(String(methodCall?.[0])).toMatch(/\/method\/agriculture$/);
   });
   it("View equations lists the rules; Inspect sources opens Result details on the evidence envelope", async () => {
-    mount("?mode=catalogue");
+    mount("?mode=catalogue&sector=agriculture");
+    fireEvent.click(await screen.findByTestId("technical-toggle"));
     const card = await screen.findByTestId("sector-card");
     await within(card).findByTestId("step-method");
     fireEvent.click(within(card).getByTestId("view-equations"));
@@ -131,18 +150,23 @@ describe("/methods", () => {
     fireEvent.click(within(card).getByTestId("inspect-sources"));
     expect(await screen.findByTestId("drawer-sources")).toBeInTheDocument();
   });
-  it("a tile switches the card through the URL; the search narrows the grid by category or source", async () => {
+  it("the catalogue opens on the index; a tile opens the sector's page; All sectors returns; the search narrows the grid", async () => {
     mount("?mode=catalogue");
+    // the index: no page yet, every tile unselected
     const tiles = await screen.findAllByTestId("sector-tile");
+    expect(tiles.map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture", "power", "residential"]);
+    await waitFor(() => expect(tiles[0]).toHaveTextContent("2 source streams"));
+    expect(screen.queryByTestId("sector-page")).toBeNull();
     fireEvent.click(tiles[1]);
-    const card = screen.getByTestId("sector-card");
-    await waitFor(() => expect(within(card).getByTestId("sector-name")).toHaveTextContent("Power"));
-    await waitFor(() => expect(within(card).getByText("IPCC sector 1")).toBeInTheDocument());
-    await waitFor(() => expect(within(card).getByTestId("step-result")).toHaveTextContent("63.37 Mt CO₂e in 2023–24"));
-    await waitFor(() => expect(within(card).getByTestId("status-badge")).toHaveTextContent("Estimated"));
-    expect(within(card).getByTestId("ne-none")).toBeInTheDocument();
-    expect(within(card).getByTestId("dim-annual")).toHaveTextContent("E1 — measured or metered quantity for this source and period");
-    await waitFor(() => expect(within(card).getByTestId("step-method")).toHaveTextContent("0 registered rules"));
+    const page = await screen.findByTestId("sector-page");
+    expect(within(page).getByTestId("sector-title")).toHaveTextContent("Power");
+    await waitFor(() => expect(within(page).getByTestId("sector-result-display")).toHaveTextContent("63.37"));
+    await waitFor(() => expect(within(page).getByTestId("sector-step-3")).toHaveTextContent("Standard IPCC methods are applied."));
+    expect(within(page).queryByTestId("sector-ne")).toBeNull();
+    // and back to the index
+    fireEvent.click(within(page).getByTestId("all-sectors"));
+    await screen.findByTestId("browse");
+    expect(screen.queryByTestId("sector-page")).toBeNull();
     fireEvent.change(screen.getByTestId("search-input"), { target: { value: "rice" } });
     await waitFor(() => expect(screen.getAllByTestId("sector-tile").map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture"]));
     fireEvent.change(screen.getByTestId("search-input"), { target: { value: "hies" } });
@@ -239,7 +263,7 @@ describe("/methods", () => {
     expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "/methods?mode=catalogue#methodology");
     // the outline CTA crosses to the catalogue and the URL carries the mode
     fireEvent.click(screen.getByTestId("browse-evidence"));
-    expect(await screen.findByTestId("sector-card")).toBeInTheDocument();
+    expect((await screen.findAllByTestId("sector-tile")).length).toBe(3);
     expect(updates.at(-1)).toContain("mode=catalogue");
     // and Story returns, clearing the mode back to the default
     fireEvent.click(screen.getByTestId("mode-story"));
@@ -264,6 +288,7 @@ describe("/methods", () => {
     add(JSON.stringify([...STREAMS, ...RULES, ...NE]));
     add("223.454 223.45");
     add("452.34662 452.35");
+    add("49.4 63.370 63.37 14.0");  // the sector partition envelope the sector page reads
     const sweep = () => {
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
       const tokens: string[] = [];
@@ -273,6 +298,10 @@ describe("/methods", () => {
     };
     expect(sweep()).toBeGreaterThan(0);
     fireEvent.click(screen.getByTestId("mode-catalogue"));
+    fireEvent.click((await screen.findAllByTestId("sector-tile"))[0]);
+    const page = await screen.findByTestId("sector-page");
+    await within(page).findByTestId("sector-share");
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
     const card = await screen.findByTestId("sector-card");
     await within(card).findByTestId("step-result");
     await within(card).findByTestId("step-method");

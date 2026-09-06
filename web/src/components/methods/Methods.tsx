@@ -35,6 +35,7 @@ import { sectorText, sourceWords, statusBadge } from "./sectorText";
 import { Methodology } from "./Methodology";
 import { ClaimBrowser } from "./ClaimBrowser";
 import { Story } from "./Story";
+import { SectorPage } from "./SectorPage";
 
 export const METHODS = {
   title: "Methods & evidence",
@@ -89,7 +90,8 @@ export function Methods() {
   const catalogue = mode === "catalogue";
   const [query, setQuery] = useState("");
   const [equations, setEquations] = useState(false);
-  const sector = state.sector && dims.sectors.includes(state.sector) ? state.sector : dims.sectors[0] ?? "";
+  // the catalogue opens on the sector index; a chosen sector (the URL's own key) opens its page
+  const sector = state.sector && dims.sectors.includes(state.sector) ? state.sector : "";
   const all = useEvidence("_", {});
   const streamsByModule = useMemo(() => {
     const m = new Map<string, StreamCell[]>();
@@ -104,6 +106,8 @@ export function Methods() {
   const sectorBody = useMemo(() => scopeBody({ ...state, sector }), [state, sector]);
   const result = useEmissions(sectorBody, catalogue && !!sector);
   const completeness = useCompleteness({ notation_keys: ["NE"] });
+  const shareQ = useEmissions(useMemo(() => ({ periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp, group_by: ["sector_id"], order_by: "value desc" }), [state.period, state.config, state.gwp]), catalogue && !!sector);
+  const shareCell = (shareQ.data?.values ?? []).find((c) => c.group?.sector_id === sector) ?? null;
   const drawer = useEnvelopeDrawer(labels);
 
   const streams = (evidence.data?.values ?? []) as StreamCell[];
@@ -119,6 +123,11 @@ export function Methods() {
   const models = distinct(ruleCells, "uncertainty_model_id");
   const visible = dims.sectors.filter((s) => sectorMatches(query, sectorLabel(labels, s), streamsByModule.get(s) ?? []));
   const number = ipccSectorNumber(codes);
+  const categories = distinct(streams, "ipcc_category");
+  const worded = (key: Parameters<typeof classes>[0]) => {
+    const ids = classes(key);
+    return ids.length ? ids.map((id) => evidenceClassText(id)).join("; ") : evidence.isLoading ? "…" : "not graded";
+  };
 
   const pickMode = (next: (typeof MODES)[number]) => {
     if (next === "story") setClaimParam(null);
@@ -152,6 +161,8 @@ export function Methods() {
           }
         />
 
+        {!sector && (
+          <>
         <label className="card mt-6 flex items-center gap-2 px-3 py-2" data-testid="search">
           <Search size={15} className="shrink-0 text-muted" aria-hidden="true" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={METHODS.search} aria-label={METHODS.search} className="w-full bg-transparent text-sm text-fg outline-none" data-testid="search-input" />
@@ -174,7 +185,28 @@ export function Methods() {
             {!visible.length && <p className="col-span-full text-sm text-muted">No sector, category or source matches.</p>}
           </div>
         </section>
+          </>
+        )}
 
+        {sector && (
+          <SectorPage
+            sector={sector}
+            number={number}
+            labels={labels}
+            dims={dims}
+            dek={text.summary}
+            cell={cell}
+            shareCell={shareCell}
+            period={state.period}
+            sources={sources.map(sourceWords)}
+            activities={activities.map((a) => a.replace(/_/g, " "))}
+            categories={categories}
+            ne={ne.map((r) => r.category ?? "").filter(Boolean)}
+            ruleCount={ruleCells.length}
+            glance={{ annual: worded("evidence_class"), monthly: worded("temporal_class"), location: worded("spatial_class_measured") }}
+            onBack={() => setState({ sector: null })}
+            onSources={() => evidence.data && drawer.open(evidence.data, "sources")}
+          >
         <Widget
           className="mt-6"
           title={number ? `IPCC sector ${number}` : "Sector"}
@@ -301,6 +333,8 @@ export function Methods() {
             </div>
           </div>
         </Widget>
+          </SectorPage>
+        )}
 
         <ClaimBrowser />
 
