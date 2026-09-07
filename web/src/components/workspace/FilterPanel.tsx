@@ -42,7 +42,7 @@ export function summaryLine(
   defaultGwp: string,
 ): string {
   const metric = state.pol ? `${POLLUTANT_LABELS[state.pol] ?? state.pol} (air beta, kt)` : state.gas ? gasLabel(labels, state.gas) : "CO₂e";
-  const parts = [place, sectorLabel(labels, state.sector), metric, periodShort(labels, state.period)];
+  const parts = [place, sectorLabel(labels, state.sector), metric, state.pol ? "the 2024 layer" : periodShort(labels, state.period)];
   if (!state.pol && !gwpIsDefault(labels, state.gwp, defaultGwp)) parts.push(gwpLabel(labels, state.gwp));
   return parts.join(" · ");
 }
@@ -101,7 +101,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
           value={state.pol ? `pol:${state.pol}` : state.gas ?? ""}
           onChange={(e) => {
             const v = e.target.value;
-            if (v.startsWith("pol:")) setState({ pol: v.slice(4), gas: null, month: null });
+            if (v.startsWith("pol:")) setState({ pol: v.slice(4), gas: null, month: null, period: defaults.period_id });
             else setState({ gas: v || null, pol: null });
           }}
           aria-label={FILTERS.gas}
@@ -117,7 +117,14 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
           ))}
         </select>
       </div>
-      <YearSlider />
+      {state.pol ? (
+        <div data-testid="air-year-note">
+          <div className="micro mb-1.5">Year</div>
+          <p className="text-xs text-muted">Single-year layer (calendar 2024; power and aviation on the 2023–24 fiscal year). The slider returns with the CO₂e metric.</p>
+        </div>
+      ) : (
+        <YearSlider />
+      )}
       {state.level === "adm2" && districts.length > 0 && (
         <div>
           <div className="micro mb-1.5">{FILTERS.districts}</div>

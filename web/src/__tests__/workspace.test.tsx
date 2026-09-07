@@ -457,9 +457,15 @@ describe("the workspace's audits", () => {
     expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");
     expect(screen.getByTestId("card-air-sources")).toHaveTextContent("Agriculture is the largest estimated source");
     expect(screen.getByTestId("card-air-trend")).toHaveTextContent("the agriculture layer alone");
+    // the layers are single-year: the slider stands down with the reason, and the year chip
+    // names the layer's own year instead of relabeling it with a slider year
+    expect(screen.getByTestId("air-year-note")).toHaveTextContent("Single-year layer (calendar 2024; power and aviation on the 2023–24 fiscal year)");
+    expect(screen.queryByTestId("year-slider")).toBeNull();
+    expect(screen.getByTestId("chip-period")).toHaveTextContent("2024 layer");
     // clearing through the chip returns to CO₂e
     fireEvent.click(screen.getByTestId("chip-gas-clear"));
     await waitFor(() => expect(screen.getByTestId("gas-select")).toHaveValue(""));
+    expect(screen.getByTestId("year-slider")).toBeInTheDocument();
   });
   it("every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase; and the chrome never names the dataset", async () => {
     mount();

@@ -173,10 +173,13 @@ export function resolveExplore(shared: ExplorerState, local: LocalKeys, ctx: Exp
     pollutant: (POLLUTANTS as readonly string[]).includes(shared.pol ?? "") ? shared.pol : null,
   };
   if (s.pollutant) {
-    // the pollutant replaces the CO2e metric: the gas, category and share controls stand down
+    // the pollutant replaces the CO2e metric: the gas, category and share controls stand
+    // down, and the PERIOD PINS to the reference - the air layers are single-year, and a
+    // slider year relabeling the same numbers would be the lie the doctrine forbids
     s.gas = null;
     s.category = null;
     s.share = false;
+    s.period = ctx.referencePeriod;
   }
   if (range) {
     s.by = "period";
@@ -328,6 +331,7 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
         n.gas = null;
         n.category = null;
         n.share = false;
+        n.period = ctx.referencePeriod;
         if (!["sector", "place", "period"].includes(n.by)) n.by = n.level === "national" ? "sector" : "place";
       }
       return n;
@@ -485,9 +489,11 @@ export function showingWords(s: ExploreState, ctx: ExploreContext, labels: Label
   const place = placeWords(s, dims);
   const owner = possessive(place);
   if (s.pollutant) {
-    const when = s.by === "period" ? "1990 to 2024" : periodShort(labels, s.period);
+    const when = s.by === "period"
+      ? "1990 to 2024 (the agriculture series)"
+      : "the layers\u2019 single year (calendar 2024; power and aviation on the 2023\u201324 fiscal year)";
     const what = s.sector ? `${sectorLabel(labels, s.sector).toLowerCase()} ` : "";
-    return `${owner} ${when} ${what}${POLLUTANT_LABELS[s.pollutant] ?? s.pollutant} emissions in kilotonnes, ${groupedWords(s, ctx, labels)} — the air-quality beta, a companion product of uneven assurance, outside the CO\u2082e totals.`;
+    return `${owner} ${what}${POLLUTANT_LABELS[s.pollutant] ?? s.pollutant} emissions in kilotonnes, ${groupedWords(s, ctx, labels)}, ${when} — the air-quality beta, a companion product of uneven assurance, outside the CO\u2082e totals.`;
   }
   const when = s.by === "period" ? "" : `${periodShort(labels, s.period)} `;
   const allocated = s.level === "national" ? "" : "allocated ";

@@ -430,6 +430,24 @@ describe("/data (the Grapher)", () => {
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByTestId("canvas-title")).not.toHaveTextContent("PM₂.₅"));
   });
+  it("the air layers are single-year: a URL year cannot relabel them - the period pins, the select stands down with the reason, and the showing line names the layers' own year", async () => {
+    // a stale 2015-16 URL under a pollutant: the layer holds one year, so the state pins to
+    // the reference and no request carries a period - the year label must never be a lie
+    mount("?period=FY2015-16&pol=SO2");
+    await screen.findByTestId("canvas-sentence");
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["SO2"], group_by: ["sector_id"], order_by: "value desc" }));
+    expect(screen.getByTestId("period-select")).toHaveValue("air-year");
+    expect(screen.getByTestId("result-chip-period")).toHaveTextContent("2024 layer");
+    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("single year (calendar 2024; power and aviation on the 2023–24 fiscal year)");
+    expect(screen.getByTestId("showing-line-text")).not.toHaveTextContent("2015");
+    // districts: still no period on the wire
+    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "districts" } });
+    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["SO2"], geography_level: "adm2", group_by: ["shape_id"] }));
+    expect(lastCall("/query/air")).not.toHaveProperty("periods");
+    // back to CO2e: the year control returns
+    fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
+    await waitFor(() => expect(screen.getByTestId("period-select")).not.toHaveValue("air-year"));
+  });
   it("audits: every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase", async () => {
     mount();
     await screen.findByTestId("canvas-sentence");

@@ -16,7 +16,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { markStage } from "@/components/shell/bootstrap";
 import { api } from "@/lib/api";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
-import { cellUnit, configLabel, configWords, envelopeUnitLine, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, configLabel, configWords, envelopeUnitLine, groupValueLabel, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
 import { useAir, useCompare, useCompleteness, useEmissions, useTimeseries } from "@/lib/queries";
 import { hrefForState } from "@/lib/urlState";
 import { magnitudeOf } from "@/lib/uncertainty";
@@ -76,7 +76,7 @@ export function Explore() {
   const partitions = plan.kind === "emissions";
   const sentence = showingWords(state, ctx, labels, dims);
   const place = placeWords(state, dims);
-  const result = resultSentence(state, plan, env, labels, place, possessive(place));
+  const result = resultSentence(state, plan, env, labels, dims, place, possessive(place));
   const others = configs.filter((c) => c !== state.config).map((c) => configLabel(labels, c));
   const neCount = completeness.data?.values.length ?? null;
 
@@ -171,7 +171,7 @@ function Row({ label, children, testId }: { label: string; children: ReactNode; 
  * to 452.35 Mt CO₂e, +79.95 Mt (+21.5 %)"), the largest cell's share of a partition, the two
  * places' values, or the largest difference between the two estimates.
  */
-function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | null, labels: Parameters<typeof configWords>[0], place: string, owner: string): ReactNode {
+function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | null, labels: Parameters<typeof configWords>[0], dims: Parameters<typeof groupValueLabel>[1], place: string, owner: string): ReactNode {
   if (!env || plan.kind === "refused") return null;
   if (plan.kind === "air") {
     if (plan.groupBy === "year") {
@@ -187,11 +187,11 @@ function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | nu
     const top = topCell(env);
     if (!top) return null;
     const id = top.group?.[plan.groupBy] ?? "";
-    const name = plan.groupBy === "sector_id" ? sectorLabel(labels, id) : id;
+    const name = groupValueLabel(labels, dims, plan.groupBy, id) || id;
     return (
       <>
         <b>{name}</b> contributed <B>{shown(top)} {cellUnit(top)}</B>
-        {top.share_pct_short ? <> (<B>{top.share_pct_short} %</B> of the total)</> : null} — the air-quality beta, outside the CO\u2082e inventory.
+        {top.share_pct_short ? <> (<B>{top.share_pct_short} %</B> of the total)</> : null} — the air-quality beta, outside the CO₂e inventory.
       </>
     );
   }

@@ -23,7 +23,9 @@ export function ScopeChips({ className = "" }: { className?: string }) {
     state.pol
       ? { id: "gas", label: `${POLLUTANT_LABELS[state.pol] ?? state.pol} (air beta)`, what: CHIPS.gas, onClear: () => setState({ pol: null }) }
       : { id: "gas", label: gasLabel(labels, state.gas), what: CHIPS.gas, onClear: state.gas ? () => setState({ gas: null }) : null },
-    { id: "period", label: periodShort(labels, state.period), what: CHIPS.year, onClear: state.period !== defaults.period_id ? () => setState({ period: defaults.period_id }) : null },
+    state.pol
+      ? { id: "period", label: "2024 layer", what: CHIPS.year, onClear: null }
+      : { id: "period", label: periodShort(labels, state.period), what: CHIPS.year, onClear: state.period !== defaults.period_id ? () => setState({ period: defaults.period_id }) : null },
   ];
   return (
     <div className={`pointer-events-auto flex shrink-0 flex-wrap gap-1.5 ${className}`} role="group" aria-label={CHIPS.label} data-testid="scope-chips">

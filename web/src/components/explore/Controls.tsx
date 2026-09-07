@@ -111,13 +111,20 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
   const geo = geographyControl(state, labels, dims, dispatch, pickingDistrict, setPickingDistrict);
 
   // --- Period
-  const periodValue = state.range ? "range" : state.by === "month" ? "months" : state.period;
-  const periodOptions: SelectOption[] = [
+  const AIR_YEAR = "The air-quality layers are single-year (calendar 2024; power and aviation on the 2023\u201324 fiscal year). The year control returns with the CO\u2082e metric.";
+  const periodValue = state.range ? "range" : state.by === "month" ? "months" : state.pollutant ? "air-year" : state.period;
+  const periodOptions: SelectOption[] = state.pollutant ? [
+    { value: "air-year", label: "2024 \u00b7 single-year layer", title: AIR_YEAR, disabled: false },
+    { value: "range", label: `${W.range} (1990 to 2024, the agriculture series)` },
+  ] : [
     ...ctx.periods.map((p) => ({ value: p, label: periodShort(labels, p), title: labels.periods[p]?.label })),
     { value: "range", label: `${W.range} (${periodShort(labels, ctx.periods[0])} to ${periodShort(labels, ctx.periods[ctx.periods.length - 1])})`, disabled: !!reason("period"), title: reason("period") },
     { value: "months", label: `${W.months} ${periodShort(labels, ctx.referencePeriod)}`, disabled: !!unavailableReason({ ...state, period: ctx.referencePeriod }, ctx, "month", labels), title: unavailableReason({ ...state, period: ctx.referencePeriod }, ctx, "month", labels) ?? undefined },
   ];
-  const onPeriod = (v: string) => dispatch({ control: "period", value: v === "range" ? "range" : v === "months" ? "months" : { period: v } });
+  const onPeriod = (v: string) => {
+    if (v === "air-year") return;
+    dispatch({ control: "period", value: v === "range" ? "range" : v === "months" ? "months" : { period: v } });
+  };
 
   // --- Sector and category
   const sectorOptions: SelectOption[] = [{ value: "", label: W.allSectors }, ...Object.keys(labels.sectors).map((s) => ({ value: s, label: sectorLabel(labels, s) }))];
