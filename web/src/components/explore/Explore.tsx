@@ -180,7 +180,7 @@ function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | nu
       if (!first || !last) return null;
       return (
         <>
-          {POLLUTANT_LABELS[state.pollutant ?? ""] ?? state.pollutant} emissions: <B>{shown(first)} {cellUnit(first)}</B> in {String(first.group?.year ?? "")}, <B>{shown(last)} {cellUnit(last)}</B> in {String(last.group?.year ?? "")} — the agriculture layer alone, on the air-quality beta.
+          {POLLUTANT_LABELS[state.pollutant ?? ""] ?? state.pollutant} emissions: <B>{shown(first)} {cellUnit(first)}</B> in {String(first.group?.year ?? "")}, <B>{shown(last)} {cellUnit(last)}</B> in {String(last.group?.year ?? "")} — the 1990–2024 series is the agriculture layer, on the air-quality beta.
         </>
       );
     }

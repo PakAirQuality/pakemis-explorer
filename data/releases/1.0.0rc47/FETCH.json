@@ -1,9 +1,9 @@
 {
  "digests": {
-  "release_manifest.json": "bd803e25037d3276d044295bc23df0e17f5cdcf567d077c57d4e3a27b32b2a6e",
-  "semantic_release.json": "4f8a68e8d9dcedefd692fc21ff761052a48540249fbbe4a7f3552625114e18c7"
+  "release_manifest.json": "848a1460559da96a74766b93c9cc1eb7955ccf906767803e7cd557afb4ddb56d",
+  "semantic_release.json": "3fbe78f1263e5047993809f65e38706f021948277b2d31e2c9ffde0e56818957"
  },
- "fetched_at": "2026-09-06T21:21:10+00:00",
+ "fetched_at": "2026-09-07T01:40:18+00:00",
  "files": {
   "data/adm2_canonical.csv": {
    "bytes": 28154,
@@ -168,8 +168,8 @@
    "sha256": "42008b16141c8233ec3af0ef25d4c995fc3de894360bfb30de2724eb1460e79c"
   },
   "outputs/release_manifest.json": {
-   "bytes": 128998,
-   "sha256": "bd803e25037d3276d044295bc23df0e17f5cdcf567d077c57d4e3a27b32b2a6e"
+   "bytes": 129524,
+   "sha256": "848a1460559da96a74766b93c9cc1eb7955ccf906767803e7cd557afb4ddb56d"
   },
   "outputs/semantic/dim_category.csv": {
    "bytes": 8944,
@@ -292,28 +292,28 @@
    "sha256": "d487b37a0c79a07a955956dd0870d310e7f0c6750554c79dfc0f96777a522206"
   },
   "outputs/semantic/fact_air_adm1.csv": {
-   "bytes": 7312,
-   "sha256": "69a3550907da6849501bcbba94a8dd08f6048c5de613d29bbbd990fa28ce86b7"
+   "bytes": 129592,
+   "sha256": "3a28ca0d618d6dd14c18ed486a086a435349e1f5fbb6da486452b764e34b049d"
   },
   "outputs/semantic/fact_air_adm1.parquet": {
-   "bytes": 5096,
-   "sha256": "a3ade87d5115f2d408f79a4fbda47e3c74013193707b8b303a2d76faaf9392a2"
+   "bytes": 35606,
+   "sha256": "42f76e64ddb96660963ecd114a91b8af58012c19c4871080bda982e6123efd66"
   },
   "outputs/semantic/fact_air_adm2.csv": {
-   "bytes": 120484,
-   "sha256": "66900989271f4d343cc5d2cf84b3bc27a6058aaa8069dedfbb41db2e6aad11a1"
+   "bytes": 3843206,
+   "sha256": "1002af20e0524037f377e3a637122902561760b830985ad3b5abdc45d2bc682e"
   },
   "outputs/semantic/fact_air_adm2.parquet": {
-   "bytes": 49666,
-   "sha256": "8822ab0f735a05f558b563424db811e126d1098d34d112ac8fc4fef32181a032"
+   "bytes": 713758,
+   "sha256": "5f377c7f70ef0a47a9f43fd68228f38b322917b806bb2f72e7bc44f80badefed"
   },
   "outputs/semantic/fact_air_annual.csv": {
-   "bytes": 17180,
-   "sha256": "e35fe77224979bbf48d8eef40ef9a55846b6c07d5864e2a677985a1f63afdfba"
+   "bytes": 18765,
+   "sha256": "6c62091e441b6bf4faee1ff06916b48f18cf42f476708fd9d12ff0c00bfbd4ac"
   },
   "outputs/semantic/fact_air_annual.parquet": {
-   "bytes": 10143,
-   "sha256": "9810634f39db8e71cd8933e462f137e4edf83f124f15ae34372e4d0ca77fbfc4"
+   "bytes": 10718,
+   "sha256": "2c0310f5fbfd646d5fb1626f81d58dcafb7951017eedd96ef7971426f532bb8e"
   },
   "outputs/semantic/fact_air_timeseries.csv": {
    "bytes": 34639,
@@ -404,8 +404,8 @@
    "sha256": "0a56b8ed1e7ee42d3204873ba52b57fac9f0a4fbc2ca876f02daacd60ce9b50d"
   },
   "outputs/semantic/semantic_release.json": {
-   "bytes": 221341,
-   "sha256": "4f8a68e8d9dcedefd692fc21ff761052a48540249fbbe4a7f3552625114e18c7"
+   "bytes": 229998,
+   "sha256": "3fbe78f1263e5047993809f65e38706f021948277b2d31e2c9ffde0e56818957"
   }
  },
  "registries": [
@@ -434,10 +434,10 @@
  "release_id": "PakEmis 1.0.0rc47",
  "schema": "pakemis_explorer.fetch/v1",
  "source": {
-  "commit": "6fdff972b00da8c5fcedc14e28565624be530bf8",
+  "commit": "51b5acf9fafcf3fb64af9bc72a1ab5af4880d121",
   "kind": "git",
-  "manifest_describes_commit": "18cdafc133ac1ff2f210467098c30ca0cd249be9",
-  "ref": "6fdff972",
+  "manifest_describes_commit": "0cc16ad6ef3980a95f4dc49ff1ba7502c827e6da",
+  "ref": "51b5acf9",
   "repository": "/Users/rehanahmad/Desktop/emissions"
  },
  "version": "1.0.0rc47"

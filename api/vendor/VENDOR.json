@@ -1,9 +1,9 @@
 {
- "digest": "ab368e9b9d0f25fc48986e5d4d3c0cdfa3c890269d4e59b6a2f556438f581ce0",
+ "digest": "b3a84f3ac0512a8671658d31466d8512c352cbd7a032499fca61b86c918dec41",
  "files": {
   "__init__.py": "b62a1f4439f2724e28903286167094f97058ad8df22e90295e45321ee7590d53",
   "download.py": "82d0980ffeec7dc9505f2d478a9de5d2d2e1cdd5cb05f511703bfa2c364cfe59",
-  "engine.py": "588f4ec1cb5bd64615d757ecb3e87e9a0a7caf92172b267e6ee6f316092e1550",
+  "engine.py": "eeb84ca85ad4cb7839b1eff24ba2ae074a8449b706c2e75a294095a32b099942",
   "envelope.py": "0e0c4e8ffdac28d366ddaaff8f2984317f79593d0e442a204ac50cceaab0d831",
   "errors.py": "18fd543445d0858d9d1755d41fa2449ca7ecf8e0ba7f1d29014a13b4e39dfee8",
   "functions.py": "3244fd5342029131643466a9a111a2c01e6bb218642d4644b7680e6fa245eaf4",
@@ -16,12 +16,12 @@
  "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here",
  "schema": "pakemis_explorer.vendor/v1",
  "source": {
-  "commit": "fdfc6e8f2d403b022575fe15344cec26ae361f4d",
+  "commit": "51b5acf9fafcf3fb64af9bc72a1ab5af4880d121",
   "kind": "git",
   "ref": "HEAD",
   "repository": "/Users/rehanahmad/Desktop/emissions",
   "subdir": "src/pakemis_query",
   "working_tree_dirty_at_vendoring": false
  },
- "vendored_at": "2026-09-06T21:21:12+00:00"
+ "vendored_at": "2026-09-07T01:40:20+00:00"
 }

@@ -470,7 +470,7 @@ function buildAir(s: ExploreState): QueryPlan {
   if (s.sector) base.sectors = [s.sector];
   if (s.range) return { kind: "air", body: { ...base, years: AIR_YEARS, group_by: ["year"] }, groupBy: "year", chart: "line" };
   if (s.level === "national") return { kind: "air", body: { ...base, group_by: ["sector_id"], order_by: "value desc" }, groupBy: "sector_id", chart: "bars" };
-  const key = s.level === "adm2" ? "district" : "province";
+  const key = s.level === "adm2" ? "shape_id" : "province";
   return {
     kind: "air",
     body: { ...base, geography_level: s.level, group_by: [key], order_by: "value desc" },

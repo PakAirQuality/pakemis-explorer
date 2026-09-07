@@ -204,20 +204,9 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
     const i = indexCells(fixedQ.data, state.level);
     return { mode: "fixed", domain: { min: i.min, max: i.max } };
   }, [state.scale, state.level, fixedQ.data]);
-  // the air district table names its districts; the map's features carry shape ids, so the
-  // envelope is re-keyed through the release's own dims before indexing (a join, not arithmetic)
-  const airKeyed = useMemo(() => {
-    if (!state.pol || !mapQ.data) return mapQ.data;
-    if (state.level !== "adm2") return mapQ.data;
-    const byName = new Map(dims.adm2.filter((r) => r.shape_id).map((r) => [r.name, r.shape_id] as const));
-    return {
-      ...mapQ.data,
-      values: mapQ.data.values
-        .map((c) => ({ ...c, group: { ...c.group, shape_id: byName.get(String(c.group?.district ?? "")) ?? "" } }))
-        .filter((c) => c.group.shape_id),
-    };
-  }, [state.pol, state.level, mapQ.data, dims.adm2]);
-  const index = useMemo(() => (airKeyed && state.level !== "grid" ? indexCells(airKeyed, state.level) : null), [airKeyed, state.level]);
+  // since the air spatial lane the district air envelopes carry shape_id natively - the
+  // same canonical frame every other district product speaks; no re-keying
+  const index = useMemo(() => (mapQ.data && state.level !== "grid" ? indexCells(mapQ.data, state.level) : null), [mapQ.data, state.level]);
   // the unallocated layer reads the province envelope at either level (the map's own ADM1 request, so the key is shared)
   const provinceBody = useMemo(() => adm1Body(state), [state]);
   const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: layered && layer === "unallocated", retry: false });

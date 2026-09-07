@@ -56,7 +56,7 @@ export function mapBody(s: ExplorerState): QueryEmissions | null {
 export function airMapBody(s: Pick<ExplorerState, "level" | "pol">): QueryAir | null {
   if (!s.pol) return null;
   if (s.level === "adm1") return { pollutants: [s.pol], geography_level: "adm1", group_by: ["province"] };
-  if (s.level === "adm2") return { pollutants: [s.pol], geography_level: "adm2", group_by: ["district"] };
+  if (s.level === "adm2") return { pollutants: [s.pol], geography_level: "adm2", group_by: ["shape_id"] };
   return null;
 }
 

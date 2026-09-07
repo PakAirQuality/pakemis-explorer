@@ -251,7 +251,7 @@ class Engine:
 
     # --- query_air (the air beta) ---------------------------------------------------------
 
-    AIR_GROUPS = ("pollutant", "sector_id", "category", "subitem", "province", "district", "year")
+    AIR_GROUPS = ("pollutant", "sector_id", "category", "subitem", "province", "shape_id", "year")
     AIR_SECTORS = ("agriculture", "aviation", "power", "railways", "residential", "transport", "waste")
 
     def query_air(self, request):
@@ -285,10 +285,17 @@ class Engine:
                 "a sum across pollutants is meaningless (BC is inside PM2.5, PM2.5 inside "
                 "PM10); name exactly one pollutant or group by pollutant", "pollutants_not_additive")
         if q.geography_level != "national":
-            if q.sectors and set(q.sectors) != {"agriculture"}:
+            # derived, never declared: the sectors the spatial tables actually hold
+            table_probe = "fact_air_adm1" if q.geography_level == "adm1" else "fact_air_adm2"
+            have = {r["sector_id"] for r in self._fetch("SELECT DISTINCT sector_id FROM %s" % table_probe)}
+            missing = [sec for sec in q.sectors if sec not in have]
+            if missing:
                 raise E.GrainUnavailable(
-                    "the provincial and district air layers exist for agriculture only; the "
-                    "other six sector layers are national", "air_spatial_agriculture_only")
+                    "%r has no %s air layer in this release (what is absent stays typed: "
+                    "aviation cruise below the provinces, railway yards, landfills and "
+                    "wastewater, industry, IPPU and fugitives)"
+                    % (missing[0], "provincial" if q.geography_level == "adm1" else "district"),
+                    "air_spatial_not_in_layer")
             if q.years:
                 raise E.GrainUnavailable("the air timeseries is national only; provinces and "
                                          "districts carry CY2024 alone", "air_history_national_only")
@@ -306,10 +313,12 @@ class Engine:
             base.append("category <> 'TOTAL'" if ("category" in q.group_by or q.categories) else "category = 'TOTAL'")
         elif q.geography_level == "adm1":
             table, geo_col = "fact_air_adm1", "province"
-            base = []
+            base = [self._in("sector_id", q.sectors)] if q.sectors else []
         elif q.geography_level == "adm2":
-            table, geo_col = "fact_air_adm2", "district"
-            base = []
+            table, geo_col = "fact_air_adm2", "shape_id"
+            base = ["shape_id <> ''"]
+            if q.sectors:
+                base.append(self._in("sector_id", q.sectors))
         else:
             table, geo_col = "fact_air_annual", ""
             base = []

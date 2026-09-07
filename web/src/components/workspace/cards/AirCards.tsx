@@ -2,10 +2,9 @@
 /**
  * The deck when a pollutant is the metric (the air beta): four cards over query_air envelopes,
  * every figure a server string in native kilotonnes. The snapshot names the beta plainly; the
- * sources card is the seven sector layers; the provinces and trend cards are the agriculture
- * layer alone (the only spatial and historical air grains) and say so. A sector filter rides
- * the snapshot and sources; the two agriculture cards ignore it by construction and their
- * captions carry that.
+ * sources card is the seven sector layers; the provinces card is now ALL sectors (each placed
+ * with its own streams' geography since the air spatial lane); the 1990-2024 trend remains
+ * the agriculture layer alone and says so. A sector filter rides the snapshot and sources.
  */
 import { useState } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
@@ -100,7 +99,7 @@ export function AirCards({ pol }: { pol: string }) {
         env={provinces.data}
         open={isOpen("prov")}
         onToggle={toggle("prov")}
-        caption="The agriculture layer alone: the only air layer with a provincial allocation."
+        caption="Every sector placed with its own streams’ geography; aviation’s cruise share is held at the provinces."
       >
         {provBars.length ? <BarsWithAxis items={provBars} ticks={provinces.data?.axis?.ticks_short} testId="air-prov-bars" /> : <Pending q={provinces} what="the provincial layer" />}
       </DeckCard>

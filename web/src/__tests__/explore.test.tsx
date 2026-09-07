@@ -115,8 +115,6 @@ beforeEach(() => {
       if (url.includes("/query/compare")) return envelope(COMPARE, { request_type: "compare_emissions", axis: AXIS_DIFF, context: { release: "PakEmis 1.0.0rc42", version: "1.0.0rc42", commit: "bc1716d6", configuration_id: "REF_2023_24 vs S_2023_24", gwp_basis: "AR5", lulucf: { status: "excluded", notation_key: "NE", note: "" }, defaults_applied: [] } });
       if (url.includes("/query/air")) {
         const k = body?.group_by?.[0];
-        if (body?.sectors?.length && body?.geography_level)
-          return { __status: 422, body: { error: "grain_unavailable", error_class: "GrainUnavailable", message: "the provincial and district air layers exist for agriculture only; the other six sector layers are national", limitation_id: "air_spatial_agriculture_only", message_worded: "the provincial and district air layers exist for agriculture only; the other six sector layers are national", detail: {} } };
         if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
         return envelope([{ display: "631.915", display_short: "631.92", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "residential" }, extra: { share_pct_short: "75.7" } }, { display: "63.851", display_short: "63.85", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "waste" }, extra: { share_pct_short: "7.6" } }], { request_type: "query_air", axis: AXIS_250 });
@@ -400,7 +398,7 @@ describe("/data (the Grapher)", () => {
     fireEvent.click(screen.getByTestId("filters-expand"));
     expect(screen.getByTestId("filter-rail")).toHaveAttribute("data-open", "1");
   });
-  it("the air beta: a pollutant in the metric select routes to query_air - sectors, provinces, the 1990-2024 series, the map's typed note, and the server's own refusal", async () => {
+  it("the air beta: a pollutant in the metric select routes to query_air - sectors, provinces, the 1990-2024 series, the map's typed note, and a sector filter at provinces", async () => {
     const updates: string[] = [];
     mount("", ({ queryString }) => updates.push(queryString));
     await screen.findByTestId("canvas-sentence");
@@ -422,11 +420,12 @@ describe("/data (the Grapher)", () => {
     fireEvent.change(screen.getByTestId("period-select"), { target: { value: "range" } });
     await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["PM2.5"], group_by: ["year"] }));
     await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("782.45 kt NH₃ in 1990"));
-    // a sector the layer does not carry at a place grain: the SERVER refusal, verbatim
+    // since the air spatial lane every sector rides its own streams' geography: a sector
+    // filter at provinces is answered, not refused - the filter reaches the request
     fireEvent.change(screen.getByTestId("period-select"), { target: { value: "FY2023-24" } });
     fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
     fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "power" } });
-    await waitFor(() => expect(screen.getByTestId("refusal-card")).toHaveTextContent("agriculture only"));
+    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["PM2.5"], sectors: ["power"], geography_level: "adm1", group_by: ["province"] }));
     // choosing a gas returns to CO2e
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByTestId("canvas-title")).not.toHaveTextContent("PM₂.₅"));
