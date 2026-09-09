@@ -20,6 +20,7 @@ import { ContourMotif } from "@/components/ui/ContourMotif";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import { DeckCard, Pending, Figure } from "./DeckCard";
+import { GasRail } from "../GasRail";
 
 const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
 const BETA = "Beta estimate · covered sectors only";
@@ -122,6 +123,7 @@ export function AirCards({ pol }: { pol: string }) {
         ) : (
           <Pending q={total} what={`the ${p} total`} />
         )}
+        <GasRail />
       </DeckCard>
       <DeckCard
         id="air-sources"

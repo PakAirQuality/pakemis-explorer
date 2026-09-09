@@ -9,11 +9,13 @@
  *                                writes, so the map and every card follow;
  *   the nine-year series         the trend card's columns and the SERVER's change
  *                                sentence (the browser subtracts nothing);
- *   the three gases              CO2 . CH4 . N2O from the gas partition envelope - the
- *                                total is not CO2e alone, and each gas prints the
- *                                server's own display and share strings.
+ *   the gas rail                 every gas the release estimates (greenhouse three +
+ *                                the seven air species) as a selector: clicking one
+ *                                re-scopes the panel to that gas's metrics.
  *
- * National scope only: a sector, gas, province or district keeps its own card set.
+ * Serves the national AND the chosen-gas scope; a sector, province or district
+ * keeps its own card set, and a pollutant swaps to the air deck (which carries the
+ * same rail).
  */
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
@@ -25,8 +27,9 @@ import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import { SNAPSHOT } from "@/components/overview/copy";
 import type { Scope } from "../cards";
 import { DeckCard, Pending } from "./DeckCard";
-import { CHIP, sentenceOf } from "./SnapshotCard";
-import { lowerName, rankedCells } from "./data";
+import { CHIP, scopeWholeWords, sentenceOf } from "./SnapshotCard";
+import { GasRail } from "../GasRail";
+import { cellFor, lowerName, rankedCells } from "./data";
 import { sectorLabel } from "@/lib/labels";
 
 /** The atlas-style year rail: one tick per fiscal period, the chosen one flagged. */
@@ -62,9 +65,12 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
   const cell = env?.values[0];
   const period = periodShort(labels, state.period);
 
-  const top = rankedCells(deck.breakdown.data)[0] ?? null;
+  const top = scope.kind === "national" ? rankedCells(deck.breakdown.data)[0] ?? null : null;
   const topName = top ? sectorLabel(labels, top.group?.[deck.bodies.breakdown.key]) : "";
   const sentence = cell ? sentenceOf({ scope, place, period, cell, top, topName, labels }) : null;
+  // a chosen gas's chip: its share of the gas partition, from the server's own cell
+  const ranked = deck.bodies.ranked;
+  const mine = scope.kind === "gas" && ranked ? cellFor(deck.ranked.data, ranked.key, ranked.id) : null;
 
   const series = deck.series.data;
   const change = series?.change;
@@ -74,8 +80,6 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
   const last = seriesCells[seriesCells.length - 1];
   const verb = change?.direction === "rose" ? "increased" : change?.direction === "fell" ? "decreased" : "changed";
   const limitation = release.known_limitations.find((l) => /longitudinal|trend/i.test(String(l.id ?? "")));
-
-  const gases = (deck.gases.data?.values ?? []).filter((c) => typeof c.value === "number");
 
   return (
     <DeckCard id={id} title={title} env={env} open={open} onToggle={onToggle} sentence={sentence} note={limitation ? String(limitation.message ?? limitation.id) : undefined}>
@@ -88,6 +92,11 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
           </div>
           {top && top.share_pct_short ? (
             <span className={`${CHIP} mt-2`} data-testid="overview-chip">{SNAPSHOT.from(top.share_pct_short, lowerName(topName))}</span>
+          ) : mine && mine.share_pct_short ? (
+            <span className={`${CHIP} mt-2`} data-testid="overview-chip">
+              <b className="num">{mine.share_pct_short} %</b> of {scopeWholeWords(scope)}
+              {typeof mine.rank === "number" && deck.ranked.data ? <> · rank <b className="num">{String(mine.rank)}</b> of <b className="num">{String(deck.ranked.data.values.length)}</b></> : null}
+            </span>
           ) : null}
         </div>
       ) : (
@@ -105,22 +114,7 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
         ) : null}
       </div>
 
-      {gases.length > 0 && (
-        <div className="mt-4 border-t border-line pt-3" data-testid="overview-gases">
-          <div className="micro mb-2">By gas</div>
-          <div className="grid grid-cols-3 gap-2">
-            {gases.map((g) => (
-              <div key={String(g.group?.gas ?? "")} className="rounded-xl border border-line bg-surface px-3 py-2" data-testid={`gas-${g.group?.gas}`}>
-                <div className="text-xs font-medium text-muted">{gasLabel(labels, g.group?.gas ?? "")}</div>
-                <div className="num mt-0.5 text-sm font-semibold text-fg">{shown(g)}</div>
-                <div className="text-micro normal-case tracking-normal text-muted">
-                  {cellUnit(g)}{g.share_pct_short ? <> · <span className="num">{g.share_pct_short} %</span></> : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <GasRail />
     </DeckCard>
   );
 }

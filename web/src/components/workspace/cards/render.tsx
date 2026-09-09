@@ -26,7 +26,7 @@ import { SourcesCard } from "./SourcesCard";
 
 /** The envelopes each card reads; the deck unions those of its OPEN cards and disables the rest. */
 export const CARD_NEEDS: Record<CardId, (keyof DeckWants)[]> = {
-  overview: ["total", "ranked", "breakdown", "series", "gases"],
+  overview: ["total", "ranked", "breakdown", "series"],
   snapshot: ["total", "ranked", "breakdown"],
   sectors: ["breakdown"],
   categories: ["breakdown"],

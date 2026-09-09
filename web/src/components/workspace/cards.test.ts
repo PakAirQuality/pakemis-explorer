@@ -65,7 +65,7 @@ describe("the card set of each scope", () => {
   const EXPECTED: Record<ScopeKind, CardId[]> = {
     national: ["overview", "sectors", "places"],
     sector: ["snapshot", "categories", "trend", "places"],
-    gas: ["snapshot", "sectors", "trend"],
+    gas: ["overview", "sectors"],
     province: ["snapshot", "composition", "peers", "placement"],
     district: ["snapshot", "composition", "peers", "evidence", "sources"],
   };
@@ -75,7 +75,7 @@ describe("the card set of each scope", () => {
     });
   }
   it("every scope leads with its overview (the national one the merged panel), and the two lineage cards belong to a district alone", () => {
-    for (const kind of SCOPE_KINDS) expect(cardsFor(SCOPES[kind])[0]).toBe(kind === "national" ? "overview" : "snapshot");
+    for (const kind of SCOPE_KINDS) expect(cardsFor(SCOPES[kind])[0]).toBe(kind === "national" || kind === "gas" ? "overview" : "snapshot");
     for (const kind of SCOPE_KINDS) {
       const has = cardsFor(SCOPES[kind]).filter((id) => id === "evidence" || id === "sources");
       expect(has, kind).toEqual(kind === "district" ? ["evidence", "sources"] : []);

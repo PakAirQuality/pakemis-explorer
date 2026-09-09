@@ -72,7 +72,7 @@ export function SnapshotCard({ id, scope, deck, place, title, open, onToggle }: 
 }
 
 /** "the reconstructed inventory" / "the province's allocated total": what the share is a share OF. */
-function scopeWholeWords(scope: Scope): string {
+export function scopeWholeWords(scope: Scope): string {
   if (scope.kind === "sector" || scope.kind === "gas") return "the national total";
   if (scope.kind === "province") return "the national allocated total";
   return "the total";

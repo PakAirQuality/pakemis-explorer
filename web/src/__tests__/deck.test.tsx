@@ -226,10 +226,10 @@ describe("the deck's card set follows the scope", () => {
   it("a gas chosen: its total, which sectors emit it, how it changed — and no placement card", async () => {
     set("?gas=CH4");
     await ready();
-    expect(shownCards()).toEqual(["snapshot", "sectors", "trend"]);
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Gas overview");
-    expect(screen.getByTestId("snapshot-display")).toHaveTextContent("248.75");
-    expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("55.0 % of the national total · rank 1 of 2");
+    expect(shownCards()).toEqual(["overview", "sectors"]);
+    expect(screen.getByTestId("card-overview")).toHaveTextContent("Gas overview");
+    expect(screen.getByTestId("overview-display")).toHaveTextContent("248.75");
+    expect(screen.getByTestId("overview-chip")).toHaveTextContent("55.0 % of the national total · rank 1 of 2");
     expect(screen.getByTestId("card-sectors")).toHaveTextContent("Contributing sectors");
   });
   it("a province selected: its total with the province partition's share and rank, its modules, the provinces ranked, what it retains", async () => {
@@ -289,8 +289,8 @@ describe("the deck re-writes itself from the shared selection", () => {
     await waitFor(() => expect(screen.getByTestId("snapshot-display")).toHaveTextContent("63.37"));
 
     await act(async () => void patch({ sector: null, gas: "CH4" }));
-    await waitFor(() => expect(shownCards()).toEqual(["snapshot", "sectors", "trend"]));
-    await waitFor(() => expect(screen.getByTestId("snapshot-display")).toHaveTextContent("248.75"));
+    await waitFor(() => expect(shownCards()).toEqual(["overview", "sectors"]));
+    await waitFor(() => expect(screen.getByTestId("overview-display")).toHaveTextContent("248.75"));
 
     await act(async () => void patch({ gas: null, geo: "Punjab" }));
     await waitFor(() => expect(shownCards()).toEqual(["snapshot", "composition", "peers", "placement"]));

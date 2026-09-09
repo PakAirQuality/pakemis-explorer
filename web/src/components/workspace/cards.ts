@@ -68,7 +68,7 @@ const CARDS: Record<ScopeKind, readonly CardId[]> = {
   // series + the three gases, folding the old snapshot and trend cards into it
   national: ["overview", "sectors", "places"],
   sector: ["snapshot", "categories", "trend", "places"],
-  gas: ["snapshot", "sectors", "trend"],
+  gas: ["overview", "sectors"],
   province: ["snapshot", "composition", "peers", "placement"],
   district: ["snapshot", "composition", "peers", "evidence", "sources"],
 };

@@ -84,6 +84,7 @@ export const CARD_TITLES: Record<string, string> = {
   "national.overview": "National overview",
   "national.snapshot": "National overview",
   "sector.snapshot": "Sector overview",
+  "gas.overview": "Gas overview",
   "gas.snapshot": "Gas overview",
   "gas.sectors": "Contributing sectors",
   "province.snapshot": "Province overview",
