@@ -144,9 +144,6 @@ export function AirCards({ pol }: { pol: string }) {
               From <b className="num">{sFirst.label}</b> to <b className="num">{sLast.label}</b> {cellUnit(sCell)}, {sFirst.name} to {sLast.name} — covered sources only.
             </p>
           ) : null}
-          <p className="mt-1 text-[11px] leading-snug text-muted/80">
-            Most years borrow the reference year’s within-province geography, rescaled; the weight registry says which, per stream and year.
-          </p>
         </div>
 
         <GasRail />
