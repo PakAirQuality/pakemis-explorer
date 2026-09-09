@@ -188,7 +188,7 @@ AXIS_RULE = (
 )
 
 CHANGE_RULE = (
-    "change compares the two endpoints of an annual timeseries only: from_period and to_period are the lowest "
+    "change compares the two endpoints of an annual timeseries (or of a query_air series grouped by period_id): from_period and to_period are the lowest "
     "and highest period_id among the cells, from_short and to_short their exact at two decimal places, "
     "change_short is (last - first) rounded half to even to two decimal places with an explicit sign (+79.95, "
     "-5.13; a difference below the precision prints <0.01 or >-0.01), change_pct_short is 100 x (last - first) / "
@@ -257,7 +257,7 @@ DERIVED[CHANGE_FIELD] = {
     "mode": "ROUND_HALF_EVEN",
     "decimals": DECIMALS,
     "pct_decimals": SHARE_DECIMALS,
-    "applies_to": "a get_timeseries envelope at the annual step with at least two exact cells in one unit; written on "
+    "applies_to": "a get_timeseries envelope at the annual step, or a query_air envelope grouped by period_id, with at least two exact cells in one unit; written on "
                   "env.change = {from_period, to_period, from_short, to_short, change_short, change_pct_short, "
                   "direction, unit_short, note}",
     "directions": ["rose", "fell", "unchanged"],
@@ -625,10 +625,23 @@ def _timeseries_step(env):
     return req.get("step") if isinstance(req, dict) else None
 
 
+def _air_period_series(env):
+    """Whether `env` is a query_air answer grouped by exactly period_id - the air family's own
+    fiscal series (2026-09-09), which gains the same `change` block as an annual timeseries."""
+    if env.get("request_type") != "query_air":
+        return False
+    try:
+        req = json.loads(env.get("request") or "")
+    except (TypeError, ValueError):
+        return False
+    return isinstance(req, dict) and list(req.get("group_by") or ()) == ["period_id"]
+
+
 def decorate_change(env):
-    """Adds `change` to a get_timeseries envelope at the annual step with two or more exact cells in
-    one unit: the endpoints by period_id, the signed difference and percentage, a direction word."""
-    if _timeseries_step(env) != "annual":
+    """Adds `change` to a get_timeseries envelope at the annual step - and, since 2026-09-09, to a
+    query_air series grouped by period_id - with two or more exact cells in one unit: the endpoints
+    by period_id, the signed difference and percentage, a direction word."""
+    if _timeseries_step(env) != "annual" and not _air_period_series(env):
         return env
     cells = env.get("values") or []
     rows = []

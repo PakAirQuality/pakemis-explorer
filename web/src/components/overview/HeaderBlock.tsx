@@ -21,7 +21,7 @@ import { HEADER } from "./copy";
 const UTILITY = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-fg transition-colors hover:bg-accent-soft";
 const SELECT_ID = "province-select";
 
-export function HeaderBlock({ geo, place, eyebrow = HEADER.eyebrow, onGeo, onReset, showReset = false }: { geo: string | null; place: string; eyebrow?: string; onGeo: (name: string | null) => void; onReset: () => void; showReset?: boolean }) {
+export function HeaderBlock({ geo, title = HEADER.title, onGeo, onReset, showReset = false }: { geo: string | null; title?: string; onGeo: (name: string | null) => void; onReset: () => void; showReset?: boolean }) {
   const { dims, labels } = useExplorer();
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -38,8 +38,7 @@ export function HeaderBlock({ geo, place, eyebrow = HEADER.eyebrow, onGeo, onRes
       <div className="relative px-6 pb-5 pt-4">
         <ContourMotif />
         <div className="relative">
-          <div className="text-micro font-semibold uppercase tracking-[0.08em] text-accent" data-testid="eyebrow">{eyebrow}</div>
-          <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-tight text-fg" data-testid="place-title">{place}</h1>
+          <h1 className="text-[30px] font-semibold leading-tight tracking-tight text-fg" data-testid="place-title">{title}</h1>
           <p className="mt-1 text-[13px] text-muted" data-testid="header-dek">{HEADER.dek}</p>
           <label className="relative mt-3 block">
             <span className="sr-only">{HEADER.selectProvince}</span>

@@ -57,7 +57,9 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
   const reference = dims.periods.find((p) => String(p.is_reference).toLowerCase() === "true")?.period_id ?? dims.fiscalPeriods[dims.fiscalPeriods.length - 1] ?? "";
   const points: ColumnPoint[] = seriesCells.map((x) => ({ id: x.group?.period_id ?? "", name: periodShort(labels, x.group?.period_id ?? ""), value: x.value as number, label: shown(x), reference: x.group?.period_id === reference }));
   const last = seriesCells[seriesCells.length - 1];
-  const verb = change?.direction === "rose" ? "increased" : change?.direction === "fell" ? "decreased" : "changed";
+  const verb = change?.direction === "rose" ? "had risen to" : change?.direction === "fell" ? "had fallen to" : "were unchanged at";
+  const upDown = change?.direction === "rose" ? "up" : change?.direction === "fell" ? "down" : null;
+  const pct = change?.change_pct_short ? change.change_pct_short.replace(/^[+-]/, "") : null;
   const limitation = release.known_limitations.find((l) => /longitudinal|trend/i.test(String(l.id ?? "")));
 
   return (
@@ -80,7 +82,7 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
         {series ? <ColumnChart points={points} ticks={series.axis?.ticks_short} /> : <Pending q={deck.series} what="the annual series" />}
         {change && last ? (
           <p className="mt-2 text-xs text-muted" data-testid="overview-change">
-            Between <b>{periodShort(labels, change.from_period)}</b> and <b>{periodShort(labels, change.to_period)}</b>, emissions {verb} by <b className="num whitespace-nowrap">{change.change_pct_short} %</b>, from <b className="num whitespace-nowrap">{change.from_short} {magnitudeOf(last)}</b> to <b className="num whitespace-nowrap">{change.to_short} {cellUnit(last)}</b>. <span className="text-muted/80">{periodSpanWords(labels, reference)}</span>
+            By <b>{periodShort(labels, change.to_period)}</b>, emissions {verb} <b className="num whitespace-nowrap">{change.to_short} {cellUnit(last)}</b>{upDown && pct ? <>, {upDown} <b className="num whitespace-nowrap">{pct} %</b> from <b className="num whitespace-nowrap">{change.from_short} {magnitudeOf(last)}</b> in <b>{periodShort(labels, change.from_period)}</b></> : null}. <span className="text-muted/80">{periodSpanWords(labels, reference)}</span>
           </p>
         ) : null}
       </div>

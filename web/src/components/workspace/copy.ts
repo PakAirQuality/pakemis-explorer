@@ -5,8 +5,8 @@
  * sector, gas, period, configuration or view comes from the release's own labels.
  */
 
-/** The deck's header card: "INSIGHTS · PAKISTAN" (the place is the release's label, upper-cased). */
-export const DECK_TITLE = (place: string) => `Insights · ${place}`.toUpperCase();
+/** The deck's section bar: what the cards below actually hold - how emissions move over time. */
+export const DECK_TITLE = "Emissions trends".toUpperCase();
 export const DECK_COLLAPSE = "Collapse the insights";
 export const DECK_EXPAND = "Show the insights";
 

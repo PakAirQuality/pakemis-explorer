@@ -39,12 +39,10 @@ export const QUERY_CLOSING = "Queries do not create a separate dataset; they pro
 export const VERSIONED_LINE = "Releases are versioned so that published results can be reproduced.";
 
 
-/** The place card: the eyebrow, the dek, the country, the province select and the utility row. */
+/** The place card: the title (the place once one is chosen), the dek, the province select and the utility row. */
 export const HEADER = {
-  eyebrow: "National emissions",
-  eyebrowProvince: "Provincial emissions",
-  eyebrowDistrict: "District emissions",
-  dek: "Explore emissions by place, sector and year.",
+  title: "National overview",
+  dek: "Explore emissions by sector, pollutant and year.",
   country: "Pakistan",
   reset: "Reset map",
   selectProvince: "Select a province",

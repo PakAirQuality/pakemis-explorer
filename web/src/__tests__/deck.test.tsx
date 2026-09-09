@@ -252,7 +252,8 @@ describe("the deck's card set follows the scope", () => {
     await ready();
     expect(shownCards()).toEqual(["snapshot", "composition", "peers", "evidence", "sources"]);
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "district");
-    expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · LAHORE");
+    expect(screen.getByTestId("deck-header")).toHaveTextContent("EMISSIONS TRENDS");
+    expect(screen.getByTestId("place-title")).toHaveTextContent("Lahore");
     expect(screen.getByTestId("card-snapshot")).toHaveTextContent("District overview");
     // the release bounds an ADM2 total: the card prints its interval string and its badge, and no share
     expect(screen.getByTestId("snapshot-display")).toHaveTextContent("[14.30, 14.32]");
@@ -297,7 +298,7 @@ describe("the deck re-writes itself from the shared selection", () => {
 
     await act(async () => void patch({ gas: null, geo: "Punjab" }));
     await waitFor(() => expect(shownCards()).toEqual(["snapshot", "composition", "peers", "placement"]));
-    await waitFor(() => expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PUNJAB"));
+    await waitFor(() => expect(screen.getByTestId("place-title")).toHaveTextContent("Punjab"));
 
     await act(async () => void patch({ level: "adm2", geo: SHAPE }));
     await waitFor(() => expect(shownCards()).toEqual(["snapshot", "composition", "peers", "evidence", "sources"]));

@@ -96,6 +96,10 @@ export function AirCards({ pol }: { pol: string }) {
   const sFirst = seriesPoints[0];
   const sLast = seriesPoints[seriesPoints.length - 1];
   const sCell = series.data?.values.find((c) => typeof c.value === "number") as Cell | undefined;
+  const sChange = series.data?.change;
+  const sVerb = sChange?.direction === "rose" ? "had risen to" : sChange?.direction === "fell" ? "had fallen to" : "were unchanged at";
+  const sUpDown = sChange?.direction === "rose" ? "up" : sChange?.direction === "fell" ? "down" : null;
+  const sPct = sChange?.change_pct_short ? sChange.change_pct_short.replace(/^[+-]/, "") : null;
   const points: ColumnPoint[] = (trend.data?.values ?? [])
     .filter((c) => typeof c.value === "number")
     .map((c) => ({ id: String(c.group?.year ?? ""), name: String(c.group?.year ?? ""), value: c.value as number, label: shown(c) }));
@@ -131,7 +135,11 @@ export function AirCards({ pol }: { pol: string }) {
 
         <div className="mt-4" data-testid="air-series">
           {seriesPoints.length ? <ColumnChart points={seriesPoints} testId="air-series-chart" /> : <Pending q={series} what="the nine-year series" />}
-          {sFirst && sLast && sCell ? (
+          {sChange && sCell ? (
+            <p className="mt-2 text-xs text-muted" data-testid="air-series-change">
+              By <b>{periodShort(labels, sChange.to_period)}</b>, emissions {sVerb} <b className="num whitespace-nowrap">{sChange.to_short} {cellUnit(sCell)}</b>{sUpDown && sPct ? <>, {sUpDown} <b className="num whitespace-nowrap">{sPct} %</b> from <b>{periodShort(labels, sChange.from_period)}</b></> : null} — covered sources only.
+            </p>
+          ) : sFirst && sLast && sCell ? (
             <p className="mt-2 text-xs text-muted" data-testid="air-series-change">
               From <b className="num">{sFirst.label}</b> to <b className="num">{sLast.label}</b> {cellUnit(sCell)}, {sFirst.name} to {sLast.name} — covered sources only.
             </p>

@@ -458,6 +458,22 @@ def _series_env(step, cells):
             "request": json.dumps(req, sort_keys=True, separators=(",", ":")), "values": cells}
 
 
+def test_decorate_change_on_an_air_period_series():
+    import json as _json
+    env = {"request_type": "query_air",
+           "request": _json.dumps({"_type": "QueryAir", "pollutants": ["BC"], "group_by": ["period_id"]}),
+           "values": [_cell("45.83", unit="kt BC", group={"period_id": "FY2015-16"}),
+                      _cell("56.33", unit="kt BC", group={"period_id": "FY2023-24"})]}
+    out = decorate_change(env)
+    assert out["change"]["from_short"] == "45.83" and out["change"]["to_short"] == "56.33"
+    assert out["change"]["change_pct_short"] == "+22.9" and out["change"]["direction"] == "rose"
+    # a year-grouped air series (the 1990 trend) stays without a change block
+    left = decorate_change({"request_type": "query_air",
+                            "request": _json.dumps({"_type": "QueryAir", "group_by": ["year"]}),
+                            "values": [_cell("1", unit="kt BC", group={"year": "1990"})]})
+    assert "change" not in left
+
+
 def test_decorate_change_on_an_annual_series():
     cells = [_cell("452.34662438", group={"period_id": "FY2023-24"}), _cell("372.39677601", group={"period_id": "FY2015-16"}),
              _cell("400", group={"period_id": "FY2019-20"})]
@@ -560,7 +576,9 @@ def test_phrase_and_rank_only_beside_the_share(client, name, golden):
     env = r.json()
     for c in env["values"]:
         assert ("share_phrase" in c) == ("share_pct_short" in c) == ("rank" in c), name
-    assert ("change" in env) == (golden["function"] == "get_timeseries" and golden["request"].get("step") == "annual"), name
+    change_eligible = (golden["function"] == "get_timeseries" and golden["request"].get("step") == "annual") or (
+        golden["function"] == "query_air" and list(golden["request"].get("group_by") or ()) == ["period_id"] and len(env["values"]) >= 2)
+    assert ("change" in env) == change_eligible, name
     if "axis" in env:
         assert 4 <= len(env["axis"]["ticks_short"]) <= 6 and set(env["axis"]) == {"ticks_short", "min_short", "max_short", "unit_short", "note"}
     if golden.get("expect_receipt"):

@@ -99,7 +99,7 @@ beforeEach(() => {
       if (url.includes("/query/air")) {
         const k = (body as { group_by?: string[] } | undefined)?.group_by?.[0];
         if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air" });
-        if (k === "period_id") return envelope([{ display: "2100.004", display_short: "2100.00", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2020-21" } }, { display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2023-24" } }], { request_type: "query_air", axis: AXIS_250 });
+        if (k === "period_id") return envelope([{ display: "2100.004", display_short: "2100.00", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2020-21" } }, { display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2023-24" } }], { request_type: "query_air", axis: AXIS_250, change: { from_period: "FY2020-21", to_period: "FY2023-24", from_short: "2100.00", to_short: "2784.71", change_short: "+684.71", change_pct_short: "+32.6", direction: "rose", unit_short: "kt NH₃" } });
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "sector_id") return envelope([{ display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { sector_id: "agriculture" }, extra: { share_pct_short: "96.0" } }], { request_type: "query_air", axis: AXIS_250 });
         return envelope([{ display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃" }], {
@@ -180,7 +180,8 @@ describe("the workspace frame", () => {
     const cards = Array.from(deck.children).map((el) => el.getAttribute("data-testid"));
     expect(cards).toEqual(["header-block", "deck-header", "card-overview", "card-sectors", "card-places", "footer"]);
     for (const id of ["card-overview", "card-sectors", "card-places", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
-    expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PAKISTAN");
+    expect(screen.getByTestId("deck-header")).toHaveTextContent("EMISSIONS TRENDS");
+    expect(screen.getByTestId("place-title")).toHaveTextContent("National overview");
     // the filter panel: 340 px, top-right
     const filters = screen.getByTestId("filter-panel");
     for (const c of ["absolute", "right-5", "top-5", "z-20", "w-[340px]", "card", "p-4"]) expect(filters.className, c).toContain(c);
@@ -302,13 +303,13 @@ describe("the workspace's state", () => {
     await waitFor(() => expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "Punjab");
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "province");
-    expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PUNJAB");
+    expect(screen.getByTestId("place-title")).toHaveTextContent("Punjab");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Punjab");
     expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest source of emissions, contributing 123.30 Mt");
     // now a place is picked, "Reset map" appears, and it returns the deck and the map to Pakistan
     expect(screen.getByTestId("header-reset")).toHaveTextContent("Reset map");
     fireEvent.click(screen.getByTestId("header-reset"));
-    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pakistan"));
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("National overview"));
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "PK");
   });
   it("Reset filters clears the level, the place, the sector, the gas and the year at once", async () => {
@@ -354,7 +355,7 @@ describe("the deck's cards", () => {
     expect(screen.queryByTestId("overview-chip")).toBeNull();   // the share rides in the sentence, not a chip
     expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
     expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source of emissions, contributing 223.45 Mt CO₂e (49.4 %). Power followed at 63.37 Mt (14.0 %), with transport at 41.93 Mt (9.3 %).");
-    expect(screen.getByTestId("overview-change")).toHaveTextContent("Between 2020–21 and 2023–24, emissions increased by +21.5 %, from 372.40 Mt to 452.35 Mt CO₂e.");
+    expect(screen.getByTestId("overview-change")).toHaveTextContent("By 2023–24, emissions had risen to 452.35 Mt CO₂e, up 21.5 % from 372.40 Mt in 2020–21.");
     expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share.");
     expect(screen.getByTestId("sectors-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));
@@ -477,7 +478,7 @@ describe("the workspace's audits", () => {
     const airSnap = screen.getByTestId("card-air-snapshot");
     expect(airSnap).toContainElement(screen.getByTestId("year-rail"));
     expect(airSnap).toContainElement(await screen.findByTestId("air-series-chart"));
-    expect(screen.getByTestId("air-series-change")).toHaveTextContent("From 2100.00 to 2784.71 kt NH₃, 2020–21 to 2023–24 — covered sources only.");
+    expect(screen.getByTestId("air-series-change")).toHaveTextContent("By 2023–24, emissions had risen to 2784.71 kt NH₃, up 32.6 % from 2020–21 — covered sources only.");
     expect(screen.queryByTestId("card-air-series")).toBeNull();
     // a rail tick writes `period`, the same key the slider writes
     fireEvent.click(screen.getByTestId("rail-FY2020-21"));

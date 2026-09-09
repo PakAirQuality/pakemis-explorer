@@ -105,9 +105,9 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
 
   const cards = (
     <>
-      <HeaderBlock geo={province} place={place} eyebrow={scope.kind === "province" ? HEADER.eyebrowProvince : scope.kind === "district" ? HEADER.eyebrowDistrict : HEADER.eyebrow} onGeo={onGeo} onReset={onReset} showReset={showReset} />
+      <HeaderBlock geo={province} title={scope.kind === "province" || scope.kind === "district" ? place : HEADER.title} onGeo={onGeo} onReset={onReset} showReset={showReset} />
       <header className={`${DECK_CARD} flex items-center justify-between gap-3 px-5 py-3`} data-testid="deck-header">
-        <h2 className="widget-title min-w-0 truncate">{DECK_TITLE(place)}</h2>
+        <h2 className="widget-title min-w-0 truncate">{DECK_TITLE}</h2>
         <div className="flex shrink-0 items-center gap-1.5">
           <DeckControls count={ids.length} allCollapsed={allCollapsed} onToggleAll={toggleAll} inline />
           {onFilters && (
