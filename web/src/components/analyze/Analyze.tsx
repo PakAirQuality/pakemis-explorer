@@ -14,8 +14,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { NavHeader } from "@/components/shell/NavCapsule";
 import { ContourMotif } from "@/components/ui/ContourMotif";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
-import { DECK_CARD } from "@/components/overview/deck";
-import { gasLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { gasLabel, periodShort } from "@/lib/labels";
 import { ANALYZE } from "./copy";
 import { ChangeSection } from "./ChangeSection";
 import { SharedSourcesSection } from "./SharedSourcesSection";
@@ -114,18 +113,6 @@ export function Analyze() {
               </button>
             </section>
 
-            <section className={`${DECK_CARD} !p-0`} data-testid="analyze-minimap">
-              <div className="px-5 pt-4">
-                <div className="micro text-accent">{ANALYZE.minimap.eyebrow}</div>
-                <div className="text-sm font-semibold text-fg" data-testid="minimap-place">
-                  Pakistan{selected ? <span className="font-normal text-muted"> · {sectorLabel(labels, selected)}&apos;s distribution</span> : null}
-                </div>
-              </div>
-              <div className="pointer-events-none relative mt-2 h-[220px] overflow-hidden" aria-hidden="true">
-                <ExplorerMap variant="workspace" syncCamera={false} override={{ ...(toP ? { period: toP } : {}), sector: selected, level: "adm1" }} />
-              </div>
-              <p className="px-5 py-2.5 text-[11px] text-muted">{ANALYZE.minimap.caption} · {periodShort(labels, toP)}</p>
-            </section>
           </aside>
 
           <div className="flex min-w-0 flex-col gap-4">

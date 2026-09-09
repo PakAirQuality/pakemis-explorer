@@ -15,8 +15,8 @@ import { RELEASE, envelope, mockFetch, type MockBody } from "./fixtures";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/analyze", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("@/components/map/ExplorerMap", () => ({
-  ExplorerMap: ({ override, syncCamera = true }: { override?: { sector?: string | null; period?: string }; syncCamera?: boolean }) => (
-    <div data-testid="map-stub" data-sector={override?.sector ?? ""} data-period={override?.period ?? ""} data-sync={syncCamera ? "1" : "0"} />
+  ExplorerMap: ({ override }: { override?: { sector?: string | null; period?: string } }) => (
+    <div data-testid="map-stub" data-sector={override?.sector ?? ""} data-period={override?.period ?? ""} />
   ),
 }));
 
@@ -168,21 +168,14 @@ describe("Analyze", () => {
     expect(screen.getByTestId("change-note")).toHaveTextContent("Small year-to-year shifts should be interpreted with caution.");
     // no Key finding card anywhere: the explainer replaced it
     expect(screen.queryByTestId("change-key-finding")).toBeNull();
-    // the backdrop follows the To year; the rail's mini-locator is camera-detached
-    const backdrop = within(screen.getByTestId("analyze-map-pane")).getByTestId("map-stub");
-    expect(backdrop).toHaveAttribute("data-period", "FY2023-24");
-    expect(backdrop).toHaveAttribute("data-sync", "1");
-    const mini = within(screen.getByTestId("analyze-minimap")).getByTestId("map-stub");
-    expect(mini).toHaveAttribute("data-sync", "0");
-    expect(mini).toHaveAttribute("data-period", "FY2023-24");
-    expect(screen.getByTestId("minimap-place")).toHaveTextContent(/^Pakistan$/);
+    // the map backdrop follows the To year; selection steers its sector
+    expect(screen.getByTestId("analyze-map-pane")).toContainElement(screen.getByTestId("map-stub"));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-period", "FY2023-24");
     // SELECT agriculture: the bar highlights, the chart stays at sector grain,
     // the explainer becomes the sector's own story - where, never why
     fireEvent.click(screen.getByTestId("change-waterfall-bar-agriculture"));
     await waitFor(() => expect(screen.getByTestId("change-waterfall-bar-agriculture")).toHaveAttribute("data-selected", "1"));
-    expect(backdrop).toHaveAttribute("data-sector", "agriculture");
-    expect(mini).toHaveAttribute("data-sector", "agriculture");
-    expect(screen.getByTestId("minimap-place")).toHaveTextContent("Pakistan · Agriculture's distribution");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "agriculture");
     expect(screen.getByTestId("change-waterfall-bar-power")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Agriculture · +46.95 Mt CO₂e"));
     await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from enteric fermentation."));
@@ -193,7 +186,7 @@ describe("Analyze", () => {
     // back to the whole
     fireEvent.click(screen.getByTestId("explainer-overall"));
     await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from agriculture."));
-    expect(backdrop).toHaveAttribute("data-sector", "");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
   });
 
   it("climate + clean air: a teaser until opened, then contribution rows with tags from the envelopes' own shares, and the full matrix in the details", async () => {
