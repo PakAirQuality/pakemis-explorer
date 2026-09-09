@@ -49,3 +49,16 @@ export function unionOf(boxes: Record<string, [number, number, number, number]> 
   if (!list.length) return null;
   return list.reduce((acc, x) => [Math.min(acc[0], x[0]), Math.min(acc[1], x[1]), Math.max(acc[2], x[2]), Math.max(acc[3], x[3])] as [number, number, number, number]);
 }
+
+/**
+ * What kind of place a `geo` id names. Since the click-drills-down model the URL's `geo`
+ * carries either a PROVINCE NAME (the release's ADM1 row name, e.g. "Punjab" — including
+ * the residual unit's name) or an ADM2 SHAPE ID, and the two are told apart by content,
+ * not by the display level: geoBoundaries gbOpen shapeIDs are digit-prefixed opaque
+ * strings ("60131773B12131197496886") and no province name begins with a digit. This is a
+ * property of the frozen geometry frame (geoBoundaries-gbOpen-PAK-ADM2-2019); if the
+ * frame ever changes, replace this with a dims lookup rather than widening the regex.
+ */
+export function geoGrain(geo: string): "adm1" | "adm2" {
+  return /^\d/.test(geo) ? "adm2" : "adm1";
+}

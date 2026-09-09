@@ -252,7 +252,7 @@ def test_set_map_view_valid_emits_map_action(ask_client, fake):
     events = ask(ask_client, "Punjab agriculture, show it", ui_state={"level": "adm1", "period": "FY2023-24"})
     actions = only(events, "map_action")
     assert actions == [{"level": "adm1", "geo": "Punjab", "period": "FY2023-24", "sector": "agriculture"}]
-    assert only(events, "tool_result")[0]["receipt"] == "87757c94a7d64de786e0c9d7f8a32969"
+    assert only(events, "tool_result")[0]["receipt"] == "bc245a4eedb62092519f1e9c9dd10030"
     assert [c["k"] for c in only(events, "tool_call")] == [1, 2]
     assert only(events, "answer")
     # ui_state was prepended to the user message
@@ -282,17 +282,17 @@ def test_set_map_view_district_name_resolves_to_shape_id(ask_client, fake):
 # --- download and receipts ---------------------------------------------------------------------
 
 def test_download_only_for_receipts_the_conversation_holds(ask_client, fake):
-    fake.load([tool_use("download_query_result", {"receipt_id": "7dc1c7f1d5c36ab8f9684cc284ace699"}), stop("tool_use")],
+    fake.load([tool_use("download_query_result", {"receipt_id": "ccf757b16b72336089825041dec1f0ff"}), stop("tool_use")],
               [text("Run the query first."), stop()])
     events = ask(ask_client, "download it")
     assert only(events, "refusal")[0]["name"] == "download_query_result"
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
-              [tool_use("download_query_result", {"receipt_id": "7dc1c7f1d5c36ab8f9684cc284ace699"}), stop("tool_use")],
+              [tool_use("download_query_result", {"receipt_id": "ccf757b16b72336089825041dec1f0ff"}), stop("tool_use")],
               [text("Links below."), stop()])
     events = ask(ask_client, "total then download")
     results = only(events, "tool_result")
-    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/7dc1c7f1d5c36ab8f9684cc284ace699.csv",
-                                      "receipt_json": "/api/v1/emissions/download/7dc1c7f1d5c36ab8f9684cc284ace699.receipt.json"}
+    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/ccf757b16b72336089825041dec1f0ff.csv",
+                                      "receipt_json": "/api/v1/emissions/download/ccf757b16b72336089825041dec1f0ff.receipt.json"}
     assert ask_client.get(results[1]["download"]["csv"]).status_code == 200
 
 

@@ -56,7 +56,7 @@ describe("request bodies", () => {
     expect(d.byModule.group_by).toEqual(["module"]);
     expect(d.byMonth.months).toEqual(months);
     expect(d.lineage).toEqual({ id: "Punjab", params: { month: "202307", configuration_id: "REF_2023_24" } });
-    const e = detailBodies({ ...base, level: "adm2", geo: "X" }, months);
+    const e = detailBodies({ ...base, level: "adm2", geo: "60131773B12131197496886" }, months);
     expect(e.kind).toBe("district");
     if (e.kind === "district") expect(e.lineage.params).toEqual({ configuration_id: "REF_2023_24" });
     expect(detailBodies({ ...base, level: "grid", cell: "1,2", gas: "CO2" }, months).kind).toBe("cell");

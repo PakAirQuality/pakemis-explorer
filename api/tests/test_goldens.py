@@ -8,6 +8,7 @@ from conftest import load_goldens
 
 ROUTES = {
     "query_emissions": "/api/v1/emissions/query/emissions",
+    "query_air": "/api/v1/emissions/query/air",
     "compare_emissions": "/api/v1/emissions/query/compare",
     "get_timeseries": "/api/v1/emissions/query/timeseries",
     "get_uncertainty": "/api/v1/emissions/query/uncertainty",

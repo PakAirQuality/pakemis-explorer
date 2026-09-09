@@ -52,5 +52,5 @@ def test_pinned_release_starts(client):
     assert body["version"] == client.app.state.service.settings.version
     # 29 at the air beta: dim_pollutant and the four air facts entered the contract
     # (24 was the adm1year follower; this pin exists to notice tables arriving).
-    assert len(body["digests"]["tables"]) == 29
+    assert len(body["digests"]["tables"]) == 32
     assert body["context_bar"]["lulucf"]["status"] == "excluded"

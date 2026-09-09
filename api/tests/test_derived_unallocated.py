@@ -51,11 +51,17 @@ def test_adm1_by_view_and_sector(client):
     assert env["unallocated"]["by_province"] == [] and "derived" not in env
 
 
-def test_adm2_bounded_cells_get_the_total_only(client):
+def test_adm2_cells_are_exact_stream_priced(client):
+    """Since the stream-priced round the ADM2 CO2e is EXACT (each stream's CH4 origin
+    priced before the module aggregation): no interval cell exists anywhere, and the
+    previously bounded modules say exact_stream_priced."""
     env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm2", "group_by": ["module"]}).json()
-    assert any(c.get("exact_high") for c in env["values"]), "adm2 power/residential cells are bounded"
-    assert set(env["derived"]) == {UNALLOCATED_FIELD, "unallocated_by_province_short"} and env["unallocated"]["total_short"] == env["derived"][UNALLOCATED_FIELD]
-    assert "placed_short" not in env["unallocated"]
+    assert not any(c.get("exact_high") for c in env["values"]), "no ADM2 cell is an interval any more"
+    assert any("exact_stream_priced" in (c.get("exactness") or "") for c in env["values"])
+    # with the exact total, the placed share is derivable too - the bounded regime
+    # could not state it and omitted it
+    assert set(env["derived"]) == {UNALLOCATED_FIELD, "unallocated_by_province_short", "placed_short"}
+    assert env["unallocated"]["total_short"] == env["derived"][UNALLOCATED_FIELD]
 
 
 def test_limit_withholds_placed():

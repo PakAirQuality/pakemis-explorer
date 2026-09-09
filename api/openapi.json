@@ -41,6 +41,7 @@
     "type": "object"
    },
    "CompareRequest": {
+    "additionalProperties": false,
     "description": "CompareRequest(left: pakemis_query.models.QueryEmissions, right: pakemis_query.models.QueryEmissions, mode: str = 'absolute')",
     "properties": {
      "left": {
@@ -64,6 +65,7 @@
     "type": "object"
    },
    "CompletenessRequest": {
+    "additionalProperties": false,
     "description": "CompletenessRequest(notation_keys: tuple = (), ipcc_codes: tuple = ())",
     "properties": {
      "ipcc_codes": {
@@ -85,6 +87,7 @@
     "type": "object"
    },
    "GridCellRequest": {
+    "additionalProperties": false,
     "description": "GridCellRequest(lat: float = 0.0, lon: float = 0.0, month: str = '', gas: str = 'CO2', configuration_id: str = '', period_id: str = '', spatial_view: str = '')",
     "properties": {
      "configuration_id": {
@@ -142,6 +145,7 @@
     "type": "object"
    },
    "QueryAir": {
+    "additionalProperties": false,
     "description": "The air beta: native kt of a named species, never CO2e. Seven sectors carry a layer\n(industry, IPPU and fugitives are NE); the spatial and timeseries grains are\nagriculture's alone. A sum across pollutants is refused - the particulate strata\ncontain one another - so a request either filters to one pollutant or groups by it.",
     "properties": {
      "categories": {
@@ -150,6 +154,12 @@
       },
       "title": "Categories",
       "type": "array"
+     },
+     "configuration_id": {
+      "default": "",
+      "description": "panel + spatial by-year: REF_2023_24 (default) | S_HIES1925",
+      "title": "Configuration Id",
+      "type": "string"
      },
      "geography_ids": {
       "items": {
@@ -181,6 +191,13 @@
       "title": "Order By",
       "type": "string"
      },
+     "periods": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Periods",
+      "type": "array"
+     },
      "pollutants": {
       "items": {
        "type": "string"
@@ -207,6 +224,7 @@
     "type": "object"
    },
    "QueryEmissions": {
+    "additionalProperties": false,
     "description": "QueryEmissions(periods: tuple = (), basis: str = '', configuration_id: str = '', gwp_basis: str = '', gases: tuple = (), sectors: tuple = (), ipcc_codes: tuple = (), categories: tuple = (), streams: tuple = (), geography_level: str = '', geography_ids: tuple = (), months: tuple = (), spatial_view: str = '', group_by: tuple = (), order_by: str = '', limit: int = 0, defaults_applied: tuple = ())",
     "properties": {
      "basis": {
@@ -318,6 +336,7 @@
     "type": "object"
    },
    "TimeseriesRequest": {
+    "additionalProperties": false,
     "description": "TimeseriesRequest(query: pakemis_query.models.QueryEmissions, step: str = 'annual')",
     "properties": {
      "query": {
@@ -337,6 +356,7 @@
     "type": "object"
    },
    "UncertaintyRequest": {
+    "additionalProperties": false,
     "description": "UncertaintyRequest(scope: str = 'national', category: str = '', module: str = '', resolution: str = '', configuration_id: str = '', period_id: str = '')",
     "properties": {
      "category": {

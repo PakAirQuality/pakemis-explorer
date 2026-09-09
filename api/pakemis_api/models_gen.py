@@ -15,7 +15,7 @@ import json
 import re
 import typing
 
-from pydantic import Field, create_model
+from pydantic import ConfigDict, Field, create_model
 
 from pakemis_api.settings import import_query_core
 
@@ -72,7 +72,12 @@ def build_models():
                 fields[f.name] = (typ, default)
             else:
                 fields[f.name] = (typ, Field(default, description=desc) if desc else default)
-        models[dc.__name__] = create_model(dc.__name__, __doc__=(dc.__doc__ or "").strip() or None, **fields)
+        # extra="forbid", NOT pydantic's silent default: a field this contract does not
+        # know (a request from a NEWER web app hitting a stale server - `periods` on the
+        # rc47 vendor was the live case) must be a 422, never a request quietly answered
+        # at the wrong scope. A plausible number that is wrong is worse than a refusal.
+        models[dc.__name__] = create_model(dc.__name__, __doc__=(dc.__doc__ or "").strip() or None,
+                                           __config__=ConfigDict(extra="forbid"), **fields)
     return models
 
 

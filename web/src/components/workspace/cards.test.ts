@@ -22,10 +22,15 @@ describe("the scope a state resolves to", () => {
     expect(scopeOf(state({ sector: "power", gas: "CH4" }))).toEqual({ kind: "sector", sector: "power" });
   });
   it("a selected place wins over a chosen sector or gas: the cards are the place's, the filters re-scope them", () => {
+    // a shape id is digit-prefixed in the frozen frame (geoGrain); "60131773B…" is Lahore's shape
     expect(scopeOf(state({ geo: "Punjab" }))).toEqual({ kind: "province", geo: "Punjab" });
-    expect(scopeOf(state({ level: "adm2", geo: "SHAPE" }))).toEqual({ kind: "district", geo: "SHAPE" });
+    expect(scopeOf(state({ level: "adm2", geo: "60131773B12131197496886" }))).toEqual({ kind: "district", geo: "60131773B12131197496886" });
     expect(scopeOf(state({ geo: "Punjab", sector: "power", gas: "CH4" }))).toEqual({ kind: "province", geo: "Punjab" });
-    expect(scopeOf(state({ level: "adm2", geo: "SHAPE", sector: "power" }))).toEqual({ kind: "district", geo: "SHAPE" });
+    expect(scopeOf(state({ level: "adm2", geo: "60131773B12131197496886", sector: "power" }))).toEqual({ kind: "district", geo: "60131773B12131197496886" });
+  });
+  it("the geo names its own grain: a province stays the scope while districts are displayed (click-drills-down)", () => {
+    expect(scopeOf(state({ level: "adm2", geo: "Punjab" }))).toEqual({ kind: "province", geo: "Punjab" });
+    expect(scopeOf(state({ level: "adm1", geo: "60131773B12131197496886" }))).toEqual({ kind: "district", geo: "60131773B12131197496886" });
   });
   it("a grid cell is not a place the deck answers: the scope is never a province or a district there", () => {
     // at grid level the release fills the gas itself (`grid_gas`), so a bare grid state reads as that gas

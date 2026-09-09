@@ -17,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useExplorer } from "@/components/ExplorerContext";
 import { api } from "@/lib/api";
 import { refusalWords } from "@/lib/envelope";
-import { mapBody } from "@/lib/requests";
+import { airMapBody, mapBody } from "@/lib/requests";
 import { periodBasisNote, periodLabel, periodShort } from "@/lib/labels";
 import { mapsPeriod } from "@/components/map/layerModes";
 import { refusalOf } from "@/components/ui/RefusalCard";
@@ -32,9 +32,16 @@ export function sliderTicks(ids: string[], period: string): { ids: string[]; ind
 export function YearSlider() {
   const { state, setState, labels, dims } = useExplorer();
   const { ids, index } = sliderTicks(dims.fiscalPeriods, state.period);
-  const body = useMemo(() => mapBody(state), [state]);
+  const airBody = useMemo(() => airMapBody(state), [state]);
+  const body = useMemo(() => (state.pol ? null : mapBody(state)), [state]);
   // the map's own query key: the refusal shown here is the refusal the map received
-  const mapQ = useQuery({ queryKey: ["map", body], queryFn: () => api.queryEmissions(body!), enabled: !!body, retry: false });
+  // (the air lane included - the slider stands for pollutants since the rc49 family)
+  const mapQ = useQuery({
+    queryKey: ["map", state.pol ? airBody : body],
+    queryFn: () => (state.pol ? api.queryAir(airBody!) : api.queryEmissions(body!)),
+    enabled: state.pol ? !!airBody : !!body,
+    retry: false,
+  });
   if (!ids.length) return null;
   const last = ids.length - 1;
   const current = ids[index];

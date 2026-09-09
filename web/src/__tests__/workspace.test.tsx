@@ -457,11 +457,12 @@ describe("the workspace's audits", () => {
     expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");
     expect(screen.getByTestId("card-air-sources")).toHaveTextContent("Agriculture is the largest estimated source");
     expect(screen.getByTestId("card-air-trend")).toHaveTextContent("the agriculture layer alone");
-    // the layers are single-year: the slider stands down with the reason, and the year chip
-    // names the layer's own year instead of relabeling it with a slider year
-    expect(screen.getByTestId("air-year-note")).toHaveTextContent("Single-year layer (calendar 2024; power and aviation on the 2023–24 fiscal year)");
-    expect(screen.queryByTestId("year-slider")).toBeNull();
-    expect(screen.getByTestId("chip-period")).toHaveTextContent("2024 layer");
+    // the air family is period-aware since rc49: the year slider STANDS with a
+    // pollutant selected and the chip names the slider's year, never a "2024 layer"
+    // stand-in
+    expect(screen.queryByTestId("air-year-note")).toBeNull();
+    expect(screen.getByTestId("year-slider")).toBeInTheDocument();
+    expect(screen.getByTestId("chip-period")).not.toHaveTextContent("2024 layer");
     // clearing through the chip returns to CO₂e
     fireEvent.click(screen.getByTestId("chip-gas-clear"));
     await waitFor(() => expect(screen.getByTestId("gas-select")).toHaveValue(""));

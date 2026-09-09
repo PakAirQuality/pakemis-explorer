@@ -4,7 +4,9 @@ Rules the models cannot express alone live here: a request names one basis, one 
 and one GWP basis; a calendar basis outside agriculture, AR6 at ADM2 and configuration S outside
 FY2023-24 are typed refusals; configuration S totals are composed as REF minus residential(REF)
 plus residential(S) with the formula stated; a spatial aggregate always reports the unallocated
-mass at its level; a bounded ADM2 CO2e cell is an interval, never a midpoint."""
+mass at its level; ADM2 CO2e is EXACT since the stream-priced round (each stream's CH4
+carries its own origin before the module aggregation - the interval the module grain used
+to force is retired, not midpointed)."""
 import dataclasses
 import os
 
@@ -194,12 +196,16 @@ class Engine:
             table, col = "fact_adm1_month", "co2e_Mt_%s" % q.gwp_basis
             geo_col = "province"
         elif set(q.periods) == {REFERENCE_PERIOD}:
-            table, col = "fact_adm2_month", "co2e_Mt_AR5_low"
+            # exact since the stream-priced round: each stream's CH4 carries its own
+            # origin BEFORE the module aggregation, so the interval the module grain
+            # used to force ([x28, x30]) is replaced by the same exact sum the
+            # national total has always made
+            table, col = "fact_adm2_month", "co2e_Mt_AR5"
             geo_col = "shape_id"
         else:
             # The historical periods live in the annual table, keyed on period_id rather than
             # month. Same columns, same closure, same module grain - a different time key.
-            table, col = "fact_adm2_year", "co2e_Mt_AR5_low"
+            table, col = "fact_adm2_year", "co2e_Mt_AR5"
             geo_col = "shape_id"
         where = ["configuration_id = '%s'" % q.configuration_id]
         if table in ("fact_adm2_year", "fact_adm1_year"):
@@ -214,29 +220,23 @@ class Engine:
         groups = list(q.group_by) or [geo_col]
         group_cols = ", ".join(groups)
         if table in ("fact_adm2_month", "fact_adm2_year"):
-            sql = ("SELECT %s, SUM(CAST(co2e_Mt_AR5_low AS %s)) AS exact_low, SUM(CAST(co2e_Mt_AR5_high AS %s)) AS exact_high, "
+            sql = ("SELECT %s, SUM(CAST(co2e_Mt_AR5 AS %s)) AS exact_low, "
                    "SUM(CAST(emissions_Gg AS %s)) AS gg, string_agg(DISTINCT co2e_exactness, ';') AS exactness, COUNT(*) AS n, "
                    "string_agg(result_row_id, ';' ORDER BY result_row_id) AS ids FROM %s WHERE %s AND emissions_Gg <> '' GROUP BY %s"
-                   % (group_cols, DECIMAL, DECIMAL, DECIMAL, table, " AND ".join(where), group_cols))
+                   % (group_cols, DECIMAL, DECIMAL, table, " AND ".join(where), group_cols))
         else:
-            sql = ("SELECT %s, SUM(CAST(%s AS %s)) AS exact_low, SUM(CAST(%s AS %s)) AS exact_high, SUM(CAST(emissions_Gg AS %s)) AS gg, "
+            sql = ("SELECT %s, SUM(CAST(%s AS %s)) AS exact_low, SUM(CAST(emissions_Gg AS %s)) AS gg, "
                    "'exact' AS exactness, COUNT(*) AS n, string_agg(result_row_id, ';' ORDER BY result_row_id) AS ids "
                    "FROM %s WHERE %s AND %s <> '' GROUP BY %s"
-                   % (group_cols, col, DECIMAL, col, DECIMAL, DECIMAL, table, " AND ".join(where), col, group_cols))
+                   % (group_cols, col, DECIMAL, DECIMAL, table, " AND ".join(where), col, group_cols))
         rows = self._fetch(sql + self._order(q, "exact_low"))
         decimals = self.decimals["co2e_Mt"].get(q.geography_level, 4)
         values = []
         for r in rows:
             label = {g: r[g] for g in groups}
-            bounded = "bounded" in (r["exactness"] or "")
-            v = value(str(r["exact_low"]), "Mt CO2e AR5", decimals,
-                      row_ids=(r["ids"] or "").split(";"), formula="SUM(%s) over %d rows" % (col, r["n"]),
-                      group=label, n_rows=r["n"], exactness=r["exactness"], gg=str(r["gg"]))
-            if bounded:
-                v["exact_high"] = str(r["exact_high"])
-                v["display"] = "[%s, %s]" % (v["display"], self._disp(str(r["exact_high"]), decimals))
-                v["interpretation"] = "an interval: the module mixes fossil and biogenic CH4 at the published grain"
-            values.append(v)
+            values.append(value(str(r["exact_low"]), "Mt CO2e AR5", decimals,
+                                row_ids=(r["ids"] or "").split(";"), formula="SUM(%s) over %d rows" % (col, r["n"]),
+                                group=label, n_rows=r["n"], exactness=r["exactness"], gg=str(r["gg"])))
         unallocated = self._unallocated_for(q)
         return envelope(self.release, "query_emissions", canonical_json(q), dataclasses.asdict(q),
                         values, {"kind": "sum", "sql": sql, "table": table, "column": col},
@@ -251,7 +251,7 @@ class Engine:
 
     # --- query_air (the air beta) ---------------------------------------------------------
 
-    AIR_GROUPS = ("pollutant", "sector_id", "category", "subitem", "province", "shape_id", "year")
+    AIR_GROUPS = ("pollutant", "sector_id", "category", "subitem", "province", "shape_id", "year", "period_id")
     AIR_SECTORS = ("agriculture", "aviation", "power", "railways", "residential", "transport", "waste")
 
     def query_air(self, request):
@@ -285,8 +285,15 @@ class Engine:
                 "a sum across pollutants is meaningless (BC is inside PM2.5, PM2.5 inside "
                 "PM10); name exactly one pollutant or group by pollutant", "pollutants_not_additive")
         if q.geography_level != "national":
-            # derived, never declared: the sectors the spatial tables actually hold
-            table_probe = "fact_air_adm1" if q.geography_level == "adm1" else "fact_air_adm2"
+            # derived, never declared: the sectors the spatial tables actually hold.
+            # The by-year family (rc49) holds the six covered sectors; the single-year
+            # layer additionally carries power's screening - so the probe targets the
+            # table the request will actually hit, not a stand-in for it.
+            if q.periods:
+                table_probe = ("fact_air_adm1_year" if q.geography_level == "adm1"
+                               else "fact_air_adm2_year")
+            else:
+                table_probe = "fact_air_adm1" if q.geography_level == "adm1" else "fact_air_adm2"
             have = {r["sector_id"] for r in self._fetch("SELECT DISTINCT sector_id FROM %s" % table_probe)}
             missing = [sec for sec in q.sectors if sec not in have]
             if missing:
@@ -299,6 +306,14 @@ class Engine:
             if q.years:
                 raise E.GrainUnavailable("the air timeseries is national only; provinces and "
                                          "districts carry CY2024 alone", "air_history_national_only")
+        if q.years and q.periods:
+            raise E.GrainUnavailable("years (the calendar agriculture series) and periods "
+                                     "(the fiscal covered panel) are two time bases; ask "
+                                     "for one", "air_two_time_bases")
+        if "period_id" in q.group_by and not q.periods:
+            raise E.GrainUnavailable("a period_id grouping needs the covered panel: name "
+                                     "the fiscal periods (FY2015-16..FY2023-24)",
+                                     "air_panel_national_only")
         # table choice
         if q.years:
             table, geo_col = "fact_air_timeseries", ""
@@ -311,6 +326,57 @@ class Engine:
                                          "air_history_national_only")
             # the source's own TOTAL rows are its sums; a category grouping must not add them in
             base.append("category <> 'TOTAL'" if ("category" in q.group_by or q.categories) else "category = 'TOTAL'")
+        elif q.periods and q.geography_level in ("adm1", "adm2"):
+            # the nine-year spatial family (rc49): the same one allocation the panel,
+            # the grid and both ADM tables are marginals of. Two configurations, like
+            # the panel and for the same reason - an unfiltered sum adds them.
+            cfg = q.configuration_id or "REF_2023_24"
+            if cfg not in ("REF_2023_24", "S_HIES1925"):
+                raise E.UnknownDimensionValue(
+                    "%r is not a configuration of the air panel (REF_2023_24, "
+                    "S_HIES1925)" % cfg, dimension="configuration_id", value=cfg)
+            if q.geography_level == "adm1":
+                table, geo_col = "fact_air_adm1_year", "province"
+                allowed = ("period_id", "pollutant", "sector_id", "province")
+            else:
+                table, geo_col = "fact_air_adm2_year", "shape_id"
+                allowed = ("period_id", "pollutant", "sector_id", "province", "shape_id")
+            bad = [g for g in q.group_by if g not in allowed]
+            if bad:
+                raise E.GrainUnavailable(
+                    "%r is not a grouping of the nine-year spatial air family (%s); "
+                    "category and subitem live at the national grains"
+                    % (bad[0], ", ".join(allowed)), "grain_unavailable")
+            if q.categories:
+                raise E.GrainUnavailable(
+                    "the nine-year spatial air family carries sector grain, not "
+                    "categories; filter by sector or ask the national panel",
+                    "grain_unavailable")
+            base = [self._in("period_id", q.periods),
+                    "configuration_id = '%s'" % cfg]
+            if q.sectors:
+                base.append(self._in("sector_id", q.sectors))
+        elif q.periods:
+            table, geo_col = "fact_air_panel", ""
+            # the panel carries two configurations (REF_2023_24 and the air-only
+            # S_HIES1925 survey-anchored dung series); an unfiltered sum would add
+            # them - the defect the panel golden caught the day the column landed
+            cfg = q.configuration_id or "REF_2023_24"
+            if cfg not in ("REF_2023_24", "S_HIES1925"):
+                raise E.UnknownDimensionValue(
+                    "%r is not a configuration of the air panel (REF_2023_24, "
+                    "S_HIES1925)" % cfg, dimension="configuration_id", value=cfg)
+            base = [self._in("period_id", q.periods),
+                    "configuration_id = '%s'" % cfg]
+            allowed = ("period_id", "pollutant", "sector_id", "category")
+            bad = [g for g in q.group_by if g not in allowed]
+            if bad:
+                raise E.GrainUnavailable("%r is not a grouping of the covered panel (%s); "
+                                         "the panel's grain is period x sector x category "
+                                         "x species" % (bad[0], ", ".join(allowed)),
+                                         "grain_unavailable")
+            if q.sectors:
+                base.append(self._in("sector_id", q.sectors))
         elif q.geography_level == "adm1":
             table, geo_col = "fact_air_adm1", "province"
             base = [self._in("sector_id", q.sectors)] if q.sectors else []
@@ -349,6 +415,8 @@ class Engine:
                                group=label, n_rows=r["n"]))
         prov = self._provenance([table])
         limitations = ["air_beta", "lulucf_excluded"]
+        if table in ("fact_air_panel", "fact_air_adm1_year", "fact_air_adm2_year"):
+            limitations.append("air_covered_sources")
         if q.geography_level != "national" or not q.sectors:
             limitations.append("air_sector_ne")
         return envelope(self.release, "query_air", canonical_json(q), dataclasses.asdict(q),
@@ -415,7 +483,7 @@ class Engine:
     def _limitations_for(self, q):
         hit = ["lulucf_excluded"]
         if q.geography_level == "adm2":
-            hit += ["ar6_adm2_ne", "adm2_co2e_bounded_power_residential", "no_polygon_units"]
+            hit += ["ar6_adm2_ne", "no_polygon_units"]
         if q.configuration_id == "S_2023_24":
             hit.append("config_S_residential_only")
         if q.basis == "calendar":

@@ -379,7 +379,16 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
     const geo = lvl === "adm1" && r && r.members.includes(id) ? r.name : id;
     if (onPickRef.current) onPickRef.current(lvl, lvl === "grid" ? `${props.lat},${props.lon}` : geo);
     else if (lvl === "grid") setStateRef.current({ cell: `${props.lat},${props.lon}` });
-    else setStateRef.current({ geo });
+    else if (lvl === "adm1" && stateRef.current.level === "adm1") {
+      // CLICK DRILLS DOWN AND KEEPS THE SELECTION: a click over Lahore used to hit
+      // the invisible-districts Punjab polygon and the panel showed the province.
+      // Clicking a province now descends the map to its districts while the deck
+      // becomes THAT PROVINCE's (geo names its own grain - lib/geography geoGrain),
+      // so the next click, a district, makes the deck that district's. The fly-to
+      // effect already zooms to a province box at either level; the breadcrumb chip
+      // and the Provinces|Districts segment go back up.
+      setStateRef.current({ level: "adm2", geo });
+    } else setStateRef.current({ geo, level: lvl });
     emitMapPick({ level: lvl, id: geo, props }); // an @mention for an open Ask composer
   }, []);
   const hover = useMapInteractions(map, state.level, onSelect);
@@ -414,6 +423,18 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
       {full && (
         <div className={`absolute left-3 z-20 max-w-[calc(100%-140px)] ${bm.notice ? "top-8" : "top-3"}`}>
           <LayerSwitch compact={isMobile || (size.width > 0 && size.width < 980)} />
+        </div>
+      )}
+      {state.level === "adm2" && (
+        <div className={`absolute left-3 z-20 ${full ? (bm.notice ? "top-[4.5rem]" : "top-14") : bm.notice ? "top-8" : "top-3"}`}>
+          <button
+            onClick={() => { setState({ level: "adm1", geo: null }); fitAll(); }}
+            className="glass pill px-2.5 py-1 text-micro normal-case tracking-normal text-muted hover:text-fg"
+            data-testid="breadcrumb-provinces"
+            title="Back to the provinces"
+          >
+            &lsaquo; Provinces
+          </button>
         </div>
       )}
       {!workspace && (

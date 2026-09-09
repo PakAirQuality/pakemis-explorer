@@ -160,11 +160,11 @@ def get_spatial_lineage(engine, req):
         where.append("gas = '%s'" % req.gas)
     rows = engine._fetch("SELECT * FROM fact_adm2_month WHERE %s ORDER BY module, gas, month, spatial_view" % " AND ".join(where))
     geo = [g for g in engine.release.dim("dim_geography") if g["shape_id"] == req.shape_id] if req.shape_id else []
-    values = [value(r["co2e_Mt_AR5_low"], "Mt CO2e AR5", 4, row_ids=[r["result_row_id"]],
+    values = [value(r["co2e_Mt_AR5"], "Mt CO2e AR5", 4, row_ids=[r["result_row_id"]],
                     formula="ADM2 module x gas x month row", module=r["module"], gas=r["gas"], month=r["month"],
                     spatial_view=r["spatial_view"], allocation_status=r["allocation_status"],
                     absence_reason=r["absence_reason"], emissions_Gg=r["emissions_Gg"],
-                    exactness=r["co2e_exactness"], exact_high=r["co2e_Mt_AR5_high"]) for r in rows]
+                    exactness=r["co2e_exactness"]) for r in rows]
     unalloc = engine._fetch("SELECT module, gas, SUM(CAST(co2e_Mt_AR5 AS %s)) AS exact FROM fact_unallocated WHERE configuration_id = '%s'%s GROUP BY module, gas"
                             % (DECIMAL, conf, (" AND province = '%s'" % (req.province or (geo[0]["parent_id"].split(":")[1] if geo else "")).replace("'", "''")) if (req.province or geo) else ""))
     fields = {"basis": "fiscal", "periods": (REFERENCE_PERIOD,), "configuration_id": conf, "gwp_basis": "AR5",
@@ -172,7 +172,7 @@ def get_spatial_lineage(engine, req):
     return envelope(engine.release, "get_spatial_lineage", canonical_json(req), fields, values,
                     {"kind": "lookup", "table": "fact_adm2_month"}, engine._provenance(["fact_adm2_month", "fact_unallocated"]),
                     evidence={"geography": geo}, unallocated={"by_module_gas": [{"module": r["module"], "gas": r["gas"], "exact": str(r["exact"])} for r in unalloc]},
-                    limitations_hit=["adm2_co2e_bounded_power_residential", "no_polygon_units", "ar6_adm2_ne"])
+                    limitations_hit=["no_polygon_units", "ar6_adm2_ne"])
 
 
 def get_cross_sector_transfer(engine, req):

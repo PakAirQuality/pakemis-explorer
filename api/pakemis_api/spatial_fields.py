@@ -13,7 +13,7 @@ Every cell of an envelope at adm2 grain gains, beside the core's `exactness`:
 
 The rule (SPATIAL_CLASS_RULE, published under /release rounding.presentation.derived.spatial_class):
 the cell's module is the one its group names, else the one sector the request filters, else the
-module whose rows sum to the largest co2e_Mt_AR5_low among the cell's rows (a server-side sum used
+module whose rows sum to the largest co2e_Mt_AR5 among the cell's rows (a server-side sum used
 only to choose, never printed); the module's dominant stream is the stream (of the cell's gas when
 the cell names one) with the largest fact_annual co2e_Mt_AR5 at the reference period and
 configuration, compared as decimals; the class is that stream's fact_evidence row. The fields are
@@ -92,9 +92,9 @@ class SpatialFields:
             elif rows:
                 sums = {}
                 for r in rows:
-                    sums[r["module"]] = sums.get(r["module"], Decimal(0)) + Decimal(r["co2e_Mt_AR5_low"] or "0")
+                    sums[r["module"]] = sums.get(r["module"], Decimal(0)) + Decimal(r["co2e_Mt_AR5"] or "0")
                 module = sorted(sums, key=lambda m: (-sums[m], m))[0]
-                how = "the module whose rows sum to the largest co2e_Mt_AR5_low among the %d rows summed (%d modules)" % (len(rows), len(sums))
+                how = "the module whose rows sum to the largest co2e_Mt_AR5 among the %d rows summed (%d modules)" % (len(rows), len(sums))
             gas = group.get("gas") or (gases[0] if len(gases) == 1 else "")
             stream = self.dominant(module, gas) if module else None
             ev = self.store.evidence_by_stream.get(stream) if stream else None
@@ -114,7 +114,7 @@ class SpatialFields:
         return env
 
     def _rows_by_cell(self, pairs):
-        """{cell index: [{module, allocation_status, co2e_Mt_AR5_low}]} in one query over the cells' rows."""
+        """{cell index: [{module, allocation_status, co2e_Mt_AR5}]} in one query over the cells' rows."""
         if not pairs:
             return {}
         table = pa.table({"cell": pa.array([p[0] for p in pairs], pa.int32()), "result_row_id": pa.array([p[1] for p in pairs], pa.string())})
@@ -122,12 +122,12 @@ class SpatialFields:
             con = self.store.con
             con.register("cell_rows", table)
             try:
-                cur = con.execute("SELECT c.cell, f.module, f.allocation_status, f.co2e_Mt_AR5_low FROM cell_rows c "
+                cur = con.execute("SELECT c.cell, f.module, f.allocation_status, f.co2e_Mt_AR5 FROM cell_rows c "
                                   "JOIN fact_adm2_month f ON f.result_row_id = c.result_row_id")
                 fetched = cur.fetchall()
             finally:
                 con.unregister("cell_rows")
         out = {}
         for cell, module, status, low in fetched:
-            out.setdefault(cell, []).append({"module": module or "", "allocation_status": status or "", "co2e_Mt_AR5_low": low or ""})
+            out.setdefault(cell, []).append({"module": module or "", "allocation_status": status or "", "co2e_Mt_AR5": low or ""})
         return out

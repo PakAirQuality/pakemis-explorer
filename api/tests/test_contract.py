@@ -74,6 +74,18 @@ def test_unknown_receipt_is_404(client):
     assert client.get("/api/v1/emissions/receipt/0000").status_code == 404
 
 
+def test_an_unknown_request_field_is_refused_never_ignored(client):
+    """extra="forbid" on every generated request model: a field this contract does not
+    know (a newer web app against a stale server - `periods` on the rc47 vendor was the
+    live case) must be a 422, never a request quietly answered at the wrong scope."""
+    r = client.post("/api/v1/emissions/query/air",
+                    json={"pollutants": ["PM2.5"], "a_field_no_contract_knows": ["x"]})
+    assert r.status_code == 422
+    r = client.post("/api/v1/emissions/query/emissions",
+                    json={"periods": ["FY2023-24"], "a_field_no_contract_knows": 1})
+    assert r.status_code == 422
+
+
 def test_grid_cell_reads_the_cube(client):
     r = client.post("/api/v1/emissions/spatial/grid", json={"lat": 31.5, "lon": 74.3, "month": "202307", "gas": "CO2"})
     assert r.status_code == 200

@@ -45,7 +45,7 @@ def test_shape_and_breadcrumb(enteric):
     assert [(c["level"], c["id"], c["label"]) for c in rec["breadcrumb"]] == [
         ("sector", "agriculture", "Agriculture"), ("category", "Enteric fermentation", "Enteric fermentation"),
         ("gas", "CH4", "CH₄"), ("geography", "PK", "Pakistan"), ("period", "FY2023-24", "2023–24")]
-    assert rec["release"] == {"release": "PakEmis 1.0.0rc47", "version": "1.0.0rc47", "commit": env["context"]["commit"]}
+    assert rec["release"] == {"release": "PakEmis 1.0.0rc49", "version": "1.0.0rc49", "commit": env["context"]["commit"]}
     # only the page-number absence is missing for this cell
     assert [m["section"] for m in rec["missing"]] == ["sources.pages"]
     assert rec["missing"][0]["message"].startswith("not carried by this release")
@@ -68,7 +68,7 @@ def test_reported_and_calculation(enteric):
     assert rep["gwp"]["basis"] == "AR5" and rep["gwp"]["label"] == "IPCC 2013 (AR5)"
     assert rep["configuration"] == {"id": "REF_2023_24", "label": "Reference estimate", "letter": "L"}
     assert rep["period"] == {"ids": ["FY2023-24"], "labels": ["2023–24"], "months": [], "basis": "fiscal"}
-    assert rep["release"]["release"] == "PakEmis 1.0.0rc47"
+    assert rep["release"]["release"] == "PakEmis 1.0.0rc49"
     calc = rec["calculation"]
     assert calc["sql"] == env["calculation"]["sql"] and calc["table"] == "fact_annual" and calc["column"] == "co2e_Mt_AR5"
     assert calc["rows"] == 6 and calc["result_sha256"] == env["result_sha256"] and calc["receipt"] == env["receipt"]
@@ -196,8 +196,8 @@ def test_adm2_cell_streams_by_module_and_gas(client):
     assert d["calculation"]["table"] == "fact_adm2_month" and d["rows"]["n"] == env["values"][0]["n_rows"]
     assert d["spatial_basis"]["stream_basis"].startswith("the module x gas streams of dim_stream")
     assert all(a["module"] == "agriculture" for a in d["activity"]) and d["spatial_basis"]["n_streams"] == len({a["stream"] for a in d["activity"]})
-    assert [l["id"] for l in d["limitations"]][:4] == ["lulucf_excluded", "ar6_adm2_ne", "adm2_co2e_bounded_power_residential", "no_polygon_units"]
-    assert d["reported"]["geography"]["level"] == "adm2" and d["reported"]["exactness"] == "exact"
+    assert [l["id"] for l in d["limitations"]][:3] == ["lulucf_excluded", "ar6_adm2_ne", "no_polygon_units"]
+    assert d["reported"]["geography"]["level"] == "adm2" and d["reported"]["exactness"] == "exact_stream_priced"
 
 
 def test_monthly_cell_carries_weights(client):

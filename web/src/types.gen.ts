@@ -543,6 +543,12 @@ export interface components {
         QueryAir: {
             /** Categories */
             categories?: string[];
+            /**
+             * Configuration Id
+             * @description panel + spatial by-year: REF_2023_24 (default) | S_HIES1925
+             * @default
+             */
+            configuration_id: string;
             /** Geography Ids */
             geography_ids?: string[];
             /**
@@ -563,6 +569,8 @@ export interface components {
              * @default
              */
             order_by: string;
+            /** Periods */
+            periods?: string[];
             /** Pollutants */
             pollutants?: string[];
             /** Sectors */

@@ -1,13 +1,13 @@
 {
- "digest": "b3a84f3ac0512a8671658d31466d8512c352cbd7a032499fca61b86c918dec41",
+ "digest": "85633b0087fd02c6b915e541f7dad3ffd43b8c4501c0fbcb24c30e998c64f8b1",
  "files": {
   "__init__.py": "b62a1f4439f2724e28903286167094f97058ad8df22e90295e45321ee7590d53",
   "download.py": "82d0980ffeec7dc9505f2d478a9de5d2d2e1cdd5cb05f511703bfa2c364cfe59",
-  "engine.py": "eeb84ca85ad4cb7839b1eff24ba2ae074a8449b706c2e75a294095a32b099942",
+  "engine.py": "21fc5a3089f5c3936724230dca34892f83b517091dd49999fe0de18a0410a1ec",
   "envelope.py": "0e0c4e8ffdac28d366ddaaff8f2984317f79593d0e442a204ac50cceaab0d831",
   "errors.py": "18fd543445d0858d9d1755d41fa2449ca7ecf8e0ba7f1d29014a13b4e39dfee8",
-  "functions.py": "3244fd5342029131643466a9a111a2c01e6bb218642d4644b7680e6fa245eaf4",
-  "models.py": "04254a5d31631e50fb8ed0b49d1ebb34786ca35a18ca70df4fec44c52ba39abc",
+  "functions.py": "2afaf180b103365680353d3952b3921d2a5e39388645fe29df04efac2bf72471",
+  "models.py": "3fd37c1b1121ad41269daeb34e1e393bd59d208a9185bc2124d438b3b52a5a4c",
   "placeholders.py": "1111b8d735f5fe394cb9d4e3cffffe09763894b5b8ee9d7b30ed20b6eb1fe57f",
   "receipt.py": "20f8b18ee58ff7794c353d5a0fea3629c12ebada59448dbef61c9bd391f46dd1",
   "release.py": "1d5dfb37e60622b5cce54666ed9779b1337d3ffa7ce6ff64a7e3172768124913"
@@ -16,12 +16,12 @@
  "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here",
  "schema": "pakemis_explorer.vendor/v1",
  "source": {
-  "commit": "51b5acf9fafcf3fb64af9bc72a1ab5af4880d121",
+  "commit": "1690720da3f5f3e84ac27e2b085a0cb24acb46a4",
   "kind": "git",
   "ref": "HEAD",
   "repository": "/Users/rehanahmad/Desktop/emissions",
   "subdir": "src/pakemis_query",
   "working_tree_dirty_at_vendoring": false
  },
- "vendored_at": "2026-09-07T01:40:20+00:00"
+ "vendored_at": "2026-09-09T09:22:50+00:00"
 }

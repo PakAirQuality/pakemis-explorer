@@ -6,6 +6,7 @@
  * GridCellRequest's word for the twelve-month sum; group keys name the release's columns.
  */
 import type { CompareRequest, GridCellRequest, QueryAir, QueryEmissions, TimeseriesRequest } from "./api";
+import { geoGrain } from "./geography";
 import type { ExplorerState, Level } from "./urlState";
 
 const GRID_ANNUAL = "annual";
@@ -49,14 +50,17 @@ export function mapBody(s: ExplorerState): QueryEmissions | null {
 }
 
 /**
- * The air beta's choropleth request: the agriculture allocation (the only spatial air layer)
- * for one pollutant. No sector filter rides here - the layer IS agriculture's - and no
- * configuration, month or GWP: the air tables are single-estimate CY2024 kilotonnes.
+ * The air choropleth request: one pollutant on the nine-year spatial family (rc49) - the
+ * year slider's period rides the request, and provinces/districts answer for any of the
+ * nine fiscal years on the covered-sources scope (six sectors; power's screening bound
+ * ships beside the panel, never silently inside a map). No month or GWP: the air tables
+ * are native kilotonnes.
  */
-export function airMapBody(s: Pick<ExplorerState, "level" | "pol">): QueryAir | null {
+export function airMapBody(s: Pick<ExplorerState, "level" | "pol" | "period">): QueryAir | null {
   if (!s.pol) return null;
-  if (s.level === "adm1") return { pollutants: [s.pol], geography_level: "adm1", group_by: ["province"] };
-  if (s.level === "adm2") return { pollutants: [s.pol], geography_level: "adm2", group_by: ["shape_id"] };
+  const period = s.period ? { periods: [s.period] } : {};
+  if (s.level === "adm1") return { pollutants: [s.pol], geography_level: "adm1", ...period, group_by: ["province"] };
+  if (s.level === "adm2") return { pollutants: [s.pol], geography_level: "adm2", ...period, group_by: ["shape_id"] };
   return null;
 }
 
@@ -89,7 +93,9 @@ export type DetailBodies =
 export function detailBodies(s: ExplorerState, months: string[]): DetailBodies {
   if (s.level === "grid" && s.cell) return { kind: "cell", cell: gridCellBody(s) };
   if (!s.geo || s.level === "grid") return { kind: "none" };
-  const level: Level = s.level;
+  // the geo names the grain (a province selected while districts are displayed is
+  // still a province) - the display level only says which polygons are on screen
+  const level: Level = geoGrain(s.geo);
   const base = compact({ ...scopeBody(s), geography_level: level, geography_ids: [s.geo], spatial_view: s.view });
   const kind = level === "adm1" ? "province" : "district";
   return {
@@ -141,7 +147,7 @@ export type Selection = { kind: "national" } | { kind: "province"; id: string } 
 export function selectionOf(s: ExplorerState): Selection {
   if (s.level === "grid") return s.cell ? { kind: "cell", id: s.cell } : { kind: "national" };
   if (!s.geo) return { kind: "national" };
-  return s.level === "adm1" ? { kind: "province", id: s.geo } : { kind: "district", id: s.geo };
+  return geoGrain(s.geo) === "adm1" ? { kind: "province", id: s.geo } : { kind: "district", id: s.geo };
 }
 
 export type DrawerBodies = {
@@ -176,7 +182,7 @@ export function drawerBodies(s: ExplorerState, months: string[]): DrawerBodies {
         bySector: d.byModule,
         sectorKey: "module",
         byView: { ...d.total, group_by: ["spatial_view"] },
-        series: { query: { configuration_id: s.config, gwp_basis: s.gwp, ...(s.sector ? { sectors: [s.sector] } : {}), ...(s.gas ? { gases: [s.gas] } : {}), geography_level: s.level, geography_ids: [selection.id], spatial_view: s.view }, step: "annual" },
+        series: { query: { configuration_id: s.config, gwp_basis: s.gwp, ...(s.sector ? { sectors: [s.sector] } : {}), ...(s.gas ? { gases: [s.gas] } : {}), geography_level: selection.kind === "province" ? "adm1" : "adm2", geography_ids: [selection.id], spatial_view: s.view }, step: "annual" },
         lineage: d.lineage,
         provinces,
         cell: null,
@@ -248,7 +254,7 @@ export function deckBodies(s: ExplorerState, defaults: DeckDefaults): DeckBodies
   const d = drawerBodies(s, defaults.months);
   const selection = d.selection;
   const placed = selection.kind === "province" || selection.kind === "district";
-  const geography = placed ? { geography_level: s.level, geography_ids: [selection.id], spatial_view: s.view } : {};
+  const geography = placed ? { geography_level: selection.kind === "province" ? "adm1" : "adm2", geography_ids: [selection.id], spatial_view: s.view } : {};
   const key: DeckBreakdown["key"] = s.sector ? "category" : placed ? "module" : "sector_id";
   const provinces = compact({ ...adm1Body(s), order_by: "value desc" });
   const peers =

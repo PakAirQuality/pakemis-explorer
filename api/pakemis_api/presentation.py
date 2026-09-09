@@ -143,7 +143,7 @@ SPATIAL_CLASS_RULE = (
     "spatial_class is the spatial_class_measured (fact_evidence) of the cell's dominant stream, placement_class and "
     "allocation_surface that stream's, on every cell of a query_emissions envelope at adm2 grain. The cell's module is "
     "the module its group names, else the one sector the request filters, else the module whose rows sum to the largest "
-    "co2e_Mt_AR5_low among the rows the cell sums (a server-side sum used only to choose, never printed); the module's "
+    "co2e_Mt_AR5 among the rows the cell sums (a server-side sum used only to choose, never printed); the module's "
     "dominant stream is the stream (of the cell's gas when the cell names one) with the largest fact_annual co2e_Mt_AR5 "
     "at the reference period and configuration, compared as decimals, ties broken by source_stream_id. allocation_status "
     "is the distinct allocation_status values of the cell's rows joined by ';'. dominant_module, dominant_stream and "
@@ -402,8 +402,8 @@ def _group_keys(env):
     """The request's group_by, read from the envelope's canonical request; None when the
     envelope is not a query_emissions or query_air answer. query_air joined on 2026-09-08:
     one pollutant's cells partition its own total the same way (the one-unit rule guarantees
-    one species) - except a year grouping, which is a series, not a partition; a share of a
-    35-year sum is a number nobody asked for."""
+    one species) - except a year or period grouping, which is a series, not a partition; a
+    share of a 35-year (or nine-period) sum is a number nobody asked for."""
     if env.get("request_type") not in ("query_emissions", "query_air"):
         return None
     try:
@@ -413,7 +413,7 @@ def _group_keys(env):
     if not isinstance(req, dict) or req.get("_type", "QueryEmissions") not in ("QueryEmissions", "QueryAir"):
         return None
     keys = req.get("group_by") or ()
-    if env.get("request_type") == "query_air" and list(keys) == ["year"]:
+    if env.get("request_type") == "query_air" and list(keys) in (["year"], ["period_id"]):
         return None
     return list(keys) if isinstance(keys, (list, tuple)) else None
 

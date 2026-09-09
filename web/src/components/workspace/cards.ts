@@ -14,6 +14,7 @@
  *
  * Nothing here fetches, computes or prints a number; the words live in overview/copy.ts.
  */
+import { geoGrain } from "@/lib/geography";
 import type { ExplorerState } from "@/lib/urlState";
 
 /** Every card the deck can show. The id is also the card's `data-testid` stem and its collapse key. */
@@ -30,12 +31,15 @@ export type ScopeKind = Scope["kind"];
 export const SCOPE_KINDS = ["national", "sector", "gas", "province", "district"] as const;
 
 /**
- * The scope of the current URL state. A `geo` is a province name at `adm1` grain and a shape id
- * at `adm2`; at grid level (no polygon selection the deck can answer) the scope is the country.
+ * The scope of the current URL state. A `geo` carries a province name OR an ADM2 shape id and
+ * NAMES ITS OWN GRAIN (lib/geography geoGrain): clicking Punjab descends the map to districts
+ * while the deck stays Punjab's, and the next click - a district - makes it that district's.
+ * At grid level (no polygon selection the deck can answer) the scope is the country.
  */
 export function scopeOf(s: Pick<ExplorerState, "level" | "geo" | "sector" | "gas">): Scope {
-  if (s.geo && s.level === "adm2") return { kind: "district", geo: s.geo };
-  if (s.geo && s.level === "adm1") return { kind: "province", geo: s.geo };
+  if (s.geo && s.level !== "grid") {
+    return geoGrain(s.geo) === "adm2" ? { kind: "district", geo: s.geo } : { kind: "province", geo: s.geo };
+  }
   if (s.sector) return { kind: "sector", sector: s.sector };
   if (s.gas) return { kind: "gas", gas: s.gas };
   return { kind: "national" };

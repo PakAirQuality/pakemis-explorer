@@ -54,6 +54,9 @@ class QueryAir:
     geography_level: str = ""           # national | adm1 | adm2; empty -> national
     geography_ids: tuple = ()           # province names or district labels
     years: tuple = ()                   # 1990..2024 -> the agriculture timeseries grain
+    periods: tuple = ()                 # FY2015-16..FY2023-24 -> the covered-sources panel,
+                                        # national or (rc49) adm1/adm2 spatial by-year
+    configuration_id: str = ""          # panel + spatial by-year: REF_2023_24 (default) | S_HIES1925
     group_by: tuple = ()                # subset of pollutant sector_id category subitem province district year
     order_by: str = ""
     limit: int = 0

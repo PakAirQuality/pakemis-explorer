@@ -311,7 +311,12 @@ def test_shares_only_on_one_key_partitions(client, name, golden):
     if golden.get("expect_error"):
         return
     env = r.json()
-    one_key = golden["function"] == "query_emissions" and len(golden["request"].get("group_by") or ()) == 1
+    keys = list(golden["request"].get("group_by") or ())
+    # the presentation's own rule: one-key groupings partition, for emissions AND air,
+    # except an air year/period grouping - a series, not a partition
+    one_key = (len(keys) == 1
+               and golden["function"] in ("query_emissions", "query_air")
+               and not (golden["function"] == "query_air" and keys in (["year"], ["period_id"])))
     assert ("partition" in env) == one_key, name
     assert all(("share_pct_short" in c) == one_key for c in env["values"]), name
     if golden.get("expect_receipt"):

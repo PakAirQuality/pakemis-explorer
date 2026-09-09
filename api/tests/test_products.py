@@ -47,12 +47,15 @@ def test_listing_shape(listing, contract):
     tables = {n for n, p in products.items() if p["kind"] == "table"}
     assert tables == set(contract["dimensions"]) | set(contract["facts"])
     # 29 at the air beta: dim_pollutant + the four air facts joined the contract.
-    assert len(tables) == 29
-    assert {n for n, p in products.items() if p["kind"] == "cube"} == {"pakemis_grid_0p05_monthly", "pakemis_grid_0p05_monthly_survey"}
+    assert len(tables) == 32
+    assert {n for n, p in products.items() if p["kind"] == "cube"} == {"pakemis_grid_0p05_monthly", "pakemis_grid_0p05_monthly_survey",
+                                                                     "pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24",
+                                                                     "pakemis_air_grid_0p05_annual_survey_fy2015_16_fy2023_24"}
     assert {n for n, p in products.items() if p["kind"] == "metadata"} == {"semantic_release", "release_manifest"}
     assert {n for n, p in products.items() if p["kind"] == "registry"} == set(REGISTRIES)
-    # 33 + 21 at the air beta: five more tables joined the set
-    assert listing["count"] == 33 + 21 == len(listing["products"])
+    # 38 + 21 since rc49: the panel, the two by-year air spatial tables and the two
+    # air annual cubes joined the set
+    assert listing["count"] == 38 + 21 == len(listing["products"])
     for p in listing["products"]:
         for f in p["formats"]:
             assert set(f) == {"ext", "filename", "bytes", "sha256", "identity", "url"}
@@ -190,7 +193,7 @@ def test_evidence_and_complete_families(listing):
     assert evidence["tables"][:5] == ["fact_evidence", "dim_evidence_class", "dim_stream", "fact_completeness", "fact_completeness_mass"]
     assert set(evidence["tables"][5:]) == set(REGISTRIES) and evidence["formats"] == ["csv", "parquet"]
     complete = fam["complete"]
-    assert complete["tables"] == [p["name"] for p in listing["products"]] and len(complete["tables"]) == 54
+    assert complete["tables"] == [p["name"] for p in listing["products"]] and len(complete["tables"]) == 59
     assert complete["formats"] == ["csv", "parquet", "nc", "json", "zip"]
     assert complete["archive"]["filename"] == "complete.zip" and complete["archive"]["url"].endswith(PREFIX + "/products/complete.zip")
     assert complete["archive"]["members"] == len({f["filename"] for p in listing["products"] for f in p["formats"]}) + 2

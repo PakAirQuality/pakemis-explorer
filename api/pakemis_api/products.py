@@ -39,7 +39,11 @@ MEDIA_TYPES = {
 }
 CACHE_CONTROL = "public, max-age=31536000, immutable"
 
-CUBES = ("pakemis_grid_0p05_monthly.nc", "pakemis_grid_0p05_monthly_survey.nc")
+GHG_CUBES = ("pakemis_grid_0p05_monthly.nc", "pakemis_grid_0p05_monthly_survey.nc")
+# the rc49 air family: nine annual periods, seven species, one file per configuration
+AIR_CUBES = ("pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24.nc",
+             "pakemis_air_grid_0p05_annual_survey_fy2015_16_fy2023_24.nc")
+CUBES = GHG_CUBES + AIR_CUBES
 METADATA = ("semantic_release.json", "release_manifest.json")
 REGISTRIES_DIR = "data/registries"
 ARCHIVE = "complete.zip"
@@ -55,7 +59,7 @@ FAMILIES = (
      "tables": ("fact_monthly",), "formats": ("csv", "parquet")},
     {"id": "spatial", "title": "Spatial inventory",
      "description": "Reference-year administrative and 0.05-degree allocations with fallback, lineage and unallocated-mass tables.",
-     "tables": ("fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence") + tuple(c.rsplit(".", 1)[0] for c in CUBES),
+     "tables": ("fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence") + tuple(c.rsplit(".", 1)[0] for c in GHG_CUBES),
      "formats": ("csv", "parquet", "nc")},
     {"id": "uncertainty", "title": "Uncertainty and scenarios",
      "description": "Common correlated draws, uncertainty summaries, completeness ledgers, transfers and the named structural configurations.",
@@ -66,11 +70,17 @@ FAMILIES = (
                     "claim record joins: emission factors, parameters, source documents, temporal profiles, spatial registries, validation rows, benchmarks, data gaps.",
      "tables": ("fact_evidence", "dim_evidence_class", "dim_stream", "fact_completeness", "fact_completeness_mass", "registries"), "formats": ("csv", "parquet")},
     {"id": "air", "title": "Air quality (beta)",
-     "description": "The companion air-pollutant layer: seven sectors' NOx, SO2, CO, NMVOC, PM2.5, BC and NH3 in native kilotonnes, "
-                    "with agriculture's provincial and district allocations and its 1990-2024 national series. A beta of uneven assurance, outside every greenhouse-gas total.",
-     "tables": ("fact_air_annual", "fact_air_timeseries", "fact_air_adm1", "fact_air_adm2", "dim_pollutant"), "formats": ("csv", "parquet")},
+     "description": "The companion air-pollutant layer: seven sectors' NOx, SO2, CO, NMVOC, PM\u2082.\u2085, BC and NH3 in native kilotonnes - "
+                    "the nine-fiscal-year covered-sources panel, its provincial and district allocations for every year and both "
+                    "configurations, the two 0.05-degree annual cubes, the single-year all-sector layers and agriculture's "
+                    "1990-2024 national series. A beta of uneven assurance, outside every greenhouse-gas total.",
+     "tables": ("fact_air_annual", "fact_air_timeseries", "fact_air_panel", "fact_air_adm1", "fact_air_adm2",
+                "fact_air_adm1_year", "fact_air_adm2_year", "dim_pollutant",
+                "pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24",
+                "pakemis_air_grid_0p05_annual_survey_fy2015_16_fy2023_24"),
+     "formats": ("csv", "parquet", "nc")},
     {"id": "complete", "title": "Complete release",
-     "description": "Every file of the release payload: the 22 tables as CSV and Parquet, the two grid cubes, the contract and manifest, and every registry; "
+     "description": "Every file of the release payload: every semantic table as CSV and Parquet, the grid cubes, the contract and manifest, and every registry; "
                     "also as one zip archive with SHA256SUMS.",
      "tables": ("all",), "formats": ("csv", "parquet", "nc", "json", "zip")},
 )
