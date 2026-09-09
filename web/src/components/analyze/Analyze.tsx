@@ -56,7 +56,7 @@ export function Analyze() {
   return (
     <div className="min-h-dvh bg-ground">
       <NavHeader />
-      <main className="mx-auto w-full max-w-[1600px] px-5 pb-16 pt-1" data-testid="analyze">
+      <main className="w-full px-5 pb-16 pt-1" data-testid="analyze">
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
           <aside className="grid gap-4" data-testid="analyze-rail">
             <header className="relative overflow-hidden rounded-[20px] border border-nav-line bg-nav px-5 py-5 shadow-sm">
