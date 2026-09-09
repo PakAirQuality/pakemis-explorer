@@ -465,8 +465,9 @@ describe("the workspace's audits", () => {
     // engine's completeness block and on Downloads, not on the card
     expect(screen.queryByTestId("air-absence-note")).toBeNull();
     expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("Beta estimate · covered sectors only");
-    expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("covered sources emitted");
-    expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("nationwide");
+    // ONE combined line under the chart: current figure, endpoint, percent - and no
+    // second "covered sources" sentence in the header, no "nationwide"
+    expect(screen.getByTestId("card-air-snapshot")).not.toHaveTextContent("nationwide");
     // the air family is period-aware since rc49: the year slider STANDS with a
     // pollutant selected and the chip names the slider's year, never a "2024 layer"
     // stand-in
@@ -478,7 +479,7 @@ describe("the workspace's audits", () => {
     const airSnap = screen.getByTestId("card-air-snapshot");
     expect(airSnap).toContainElement(screen.getByTestId("year-rail"));
     expect(airSnap).toContainElement(await screen.findByTestId("air-series-chart"));
-    expect(screen.getByTestId("air-series-change")).toHaveTextContent("By 2023–24, emissions had risen to 2784.71 kt NH₃, up 32.6 % from 2020–21 — covered sources only.");
+    expect(screen.getByTestId("air-summary")).toHaveTextContent("Covered sources emitted 2784.71 kt NH₃ in 2023–24 — up 32.6 % from 2100.00 kt in 2020–21.");
     expect(screen.queryByTestId("card-air-series")).toBeNull();
     // a rail tick writes `period`, the same key the slider writes
     fireEvent.click(screen.getByTestId("rail-FY2020-21"));
