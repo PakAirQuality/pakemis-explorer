@@ -8,6 +8,7 @@
  * beneath it that expand in place. Every number on the page is a server string.
  */
 import { useState } from "react";
+import { ExplorerMap } from "@/components/map/ExplorerMap";
 import { RotateCcw } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { NavHeader } from "@/components/shell/NavCapsule";
@@ -33,6 +34,8 @@ export function Analyze() {
   const [toP, setToP] = useState(periods[periods.length - 1] ?? "");
   const [gas, setGas] = useState<string>("");
   const [sharedOpen, setSharedOpen] = useState(false);
+  // the backdrop map mirrors the analysis: the To year, and the source under study
+  const [mapSector, setMapSector] = useState<string | null>(null);
   const [sensitivityOpen, setSensitivityOpen] = useState(false);
   const settings: AnalyzeSettings = { from: fromP, to: toP, gases: gas ? [gas] : null };
   const reset = () => {
@@ -54,7 +57,13 @@ export function Analyze() {
   );
 
   return (
-    <div className="min-h-dvh bg-ground">
+    <div className="relative min-h-dvh">
+      {/* the same ground Explore stands on: the map as a fixed backdrop the cards
+          scroll over - it follows the To year and the drilled source */}
+      <div className="fixed inset-0" data-testid="analyze-map-pane" aria-hidden="true">
+        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: mapSector }} />
+      </div>
+      <div className="relative z-10">
       <NavHeader />
       <main className="w-full px-5 pb-16 pt-1" data-testid="analyze">
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
@@ -108,7 +117,7 @@ export function Analyze() {
           </aside>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <ChangeSection settings={settings} />
+            <ChangeSection settings={settings} onScope={setMapSector} />
             <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
               <SharedSourcesSection settings={settings} open={sharedOpen} onOpen={setSharedOpen} />
               <SensitivitySection settings={settings} open={sensitivityOpen} onOpen={setSensitivityOpen} />
@@ -116,6 +125,7 @@ export function Analyze() {
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }

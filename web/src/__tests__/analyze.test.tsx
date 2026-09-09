@@ -14,6 +14,11 @@ import Page from "@/app/analyze/page";
 import { RELEASE, envelope, mockFetch, type MockBody } from "./fixtures";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/analyze", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock("@/components/map/ExplorerMap", () => ({
+  ExplorerMap: ({ override }: { override?: { sector?: string | null; period?: string } }) => (
+    <div data-testid="map-stub" data-sector={override?.sector ?? ""} data-period={override?.period ?? ""} />
+  ),
+}));
 
 const cmpCell = (delta: string, v: number, left: object, right: object) => ({
   display: delta, display_short: delta.replace(/^[+]/, ""), value: v, unit: "Mt CO2e AR5",
@@ -153,14 +158,17 @@ describe("Analyze", () => {
     expect(screen.getByTestId("change-largest-offset")).toHaveTextContent("Residential -6.50");
     expect(screen.getByTestId("change-note")).toHaveTextContent("small year-to-year movements remain uncertain");
     expect(screen.getByTestId("change-download")).toHaveTextContent("Download chart");
-    // no map on this page: the rail and the chart are the whole composition
-    expect(screen.queryByTestId("analyze-map-pane")).toBeNull();
+    // the map backdrop follows the To year, and the drill steers its sector overlay
+    expect(screen.getByTestId("analyze-map-pane")).toContainElement(screen.getByTestId("map-stub"));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-period", "FY2023-24");
     fireEvent.click(screen.getByTestId("change-waterfall-bar-agriculture"));
     await waitFor(() => expect(screen.getByTestId("change-scope")).toHaveTextContent("Agriculture"));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "agriculture");
     expect(await screen.findByTestId("change-waterfall-bar-Enteric fermentation")).toHaveTextContent("+32.97");
     expect(screen.getByTestId("change-drill-finding")).toHaveTextContent("Inside Agriculture, Enteric fermentation moved the most");
     fireEvent.click(screen.getByTestId("change-back"));
     await waitFor(() => expect(screen.queryByTestId("change-scope")).toBeNull());
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
   });
 
   it("climate + clean air: a teaser until opened, then contribution rows with tags from the envelopes' own shares, and the full matrix in the details", async () => {
