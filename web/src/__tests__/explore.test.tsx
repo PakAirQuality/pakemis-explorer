@@ -269,7 +269,6 @@ describe("/data (the Grapher)", () => {
     expect(screen.getByTestId("reading-estimate")).toHaveTextContent("Every number on this page is the reference estimate. Structural alternatives (Survey-based estimate) are selectable under Estimate.");
     expect(screen.getByTestId("reading-not-official")).toHaveTextContent("Not an official inventory");
     expect(screen.getByTestId("reading-exact")).toHaveTextContent("Every value can expose its data rows, calculation, release and query receipt.");
-    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Data")).toHaveAttribute("aria-current", "page");
   });
   it("Chart · Table · Map show the same envelope: the table carries the Share column, choosing Map carries the scope to every province and draws it", async () => {
     const updates: string[] = [];

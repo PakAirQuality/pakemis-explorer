@@ -169,7 +169,7 @@ describe("the workspace frame", () => {
     // the nav capsule floats at the deck's own left inset, so the two left edges are one line
     const nav = screen.getByTestId("nav-capsule");
     expect(nav.className).toContain("absolute left-5 top-5");
-    expect(screen.getAllByTestId("nav-link").map((a) => a.textContent)).toEqual(["Explore", "Data", "Methods", "Downloads"]);
+    expect(screen.getAllByTestId("nav-link").map((a) => a.textContent)).toEqual(["Explore", "Analyze", "Methods", "Downloads"]);
     // the deck: 420 px, inset 20, under the capsule, its own scroll, letting pointer events through
     const deck = screen.getByTestId("deck");
     // 420 px exactly, so the nav capsule above it shares both edges

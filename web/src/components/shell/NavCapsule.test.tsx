@@ -15,7 +15,7 @@ const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 describe("NavCapsule", () => {
-  it("lists Explore, Data, Methods, Downloads, at the deck's width, and offers no Ask action", () => {
+  it("lists Explore, Analyze, Methods, Downloads, at the deck's width, and offers no Ask action", () => {
     pathname.value = "/";
     resetAskBus();
     const bus = vi.fn();
@@ -23,8 +23,8 @@ describe("NavCapsule", () => {
     render(<NavCapsule floating />);
     expect(screen.getByTestId("nav-capsule").className).toContain("w-[420px]");   // the deck's width: both edges line up
     const links = screen.getAllByTestId("nav-link");
-    expect(links.map((a) => a.textContent)).toEqual(["Explore", "Data", "Methods", "Downloads"]);
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/", "/data", "/methods", "/downloads"]);
+    expect(links.map((a) => a.textContent)).toEqual(["Explore", "Analyze", "Methods", "Downloads"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/", "/analyze", "/methods", "/downloads"]);
     expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_LINKS.map((l) => l.href));
     expect(links[0]).toHaveAttribute("aria-current", "page");
     expect(links[1]).not.toHaveAttribute("aria-current");

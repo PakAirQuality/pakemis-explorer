@@ -149,6 +149,9 @@ export function Downloads() {
               <a href={api.docsUrl()} className={OUTLINE} data-testid="api-docs">
                 <ExternalLink size={15} aria-hidden="true" /> {DOWNLOADS.docs}
               </a>
+              <Link href="/data" className={OUTLINE} data-testid="browse-tables">
+                <Table2 size={15} aria-hidden="true" /> {DOWNLOADS.browseTables}
+              </Link>
             </div>
           </section>
 

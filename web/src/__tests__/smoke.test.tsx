@@ -81,7 +81,8 @@ describe("the Grapher at /data", () => {
     expect(await screen.findByTestId("explore-page")).toBeTruthy();
     expect(await screen.findByTestId("canvas")).toBeTruthy();
     expect(await screen.findByTestId("canvas-title")).toBeTruthy();
-    expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Data")).toHaveAttribute("aria-current", "page");
+    // the Grapher left the nav (Analyze took the slot): no section is current at /data
+    expect(screen.queryByTestId("nav-underline")).toBeNull();
     noRawIds();
   });
 });

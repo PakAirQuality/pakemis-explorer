@@ -44,9 +44,11 @@ describe("static-export link scheme", () => {
       .filter((f) => /["'`]\/(map|explore|about)(["'`?#/])/.test(readFileSync(f, "utf8")));
     expect(hits).toEqual([]);
     for (const rel of ["app/map/page.tsx", "app/explore/page.tsx", "app/about/page.tsx"]) expect(readFileSync(path.join(SRC, rel), "utf8")).toContain("<Redirect");
-    // /data is a real page now (the Grapher), and the nav points at it
+    // /data stays a real page (the Grapher, reachable from Downloads); the nav's fourth
+    // section is Analyze since 2026-09-09
     expect(readFileSync(path.join(SRC, "app/data/page.tsx"), "utf8")).toContain("<Explore");
-    expect(readFileSync(path.join(SRC, "components/shell/NavCapsule.tsx"), "utf8")).toContain('href: "/data"');
+    expect(readFileSync(path.join(SRC, "app/analyze/page.tsx"), "utf8")).toContain("<Analyze");
+    expect(readFileSync(path.join(SRC, "components/shell/NavCapsule.tsx"), "utf8")).toContain('href: "/analyze"');
   });
   it("a receipt's URL is /downloads?receipt=<hash>", () => {
     const id = "0123456789abcdef0123456789abcdef";

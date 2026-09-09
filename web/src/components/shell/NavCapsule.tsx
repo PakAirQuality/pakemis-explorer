@@ -20,7 +20,7 @@ import { BrandLogo } from "./BrandLogo";
 
 export const NAV_LINKS = [
   { href: "/", label: "Explore" },
-  { href: "/data", label: "Data" },
+  { href: "/analyze", label: "Analyze" },
   { href: "/methods", label: "Methods" },
   { href: "/downloads", label: "Downloads" },
 ] as const;

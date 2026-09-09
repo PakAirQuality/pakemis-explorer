@@ -13,6 +13,7 @@ export const DOWNLOADS = {
   archive: "Download everything as one archive",
   cite: { title: "Cite and identify this release", copy: "Copy APA", bibtex: "Copy BibTeX", copied: "Copied" },
   eyebrow: "Data release",
+  browseTables: "Browse the tables",
   hero: "Download the data",
   dekLines: ["Choose what you want to study. We\u2019ll show you the relevant files."],
   chooseSub: "Choose a topic to see the available files.",
