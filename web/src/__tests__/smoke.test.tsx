@@ -61,11 +61,11 @@ function noRawIds() {
 }
 
 describe("the workspace at /", () => {
-  it("renders the map, the deck's snapshot card from an envelope (the server's two-decimal rendering) and the nav marking Explore", async () => {
+  it("renders the map, the deck's overview panel from an envelope (the server's two-decimal rendering) and the nav marking Explore", async () => {
     pathname.value = "/";
     mount(<Workspace />);
     expect(await screen.findByTestId("workspace")).toBeTruthy();
-    expect(await screen.findByTestId("card-snapshot-sentence")).toHaveTextContent("452.35");
+    expect(await screen.findByTestId("card-overview-sentence")).toHaveTextContent("452.35");
     expect(screen.getByTestId("map-stub")).toBeTruthy();
     expect(screen.getByTestId("deck")).toBeTruthy();
     expect(screen.getByTestId("filter-panel")).toBeTruthy();

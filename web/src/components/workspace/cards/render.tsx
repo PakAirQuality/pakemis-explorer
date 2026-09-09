@@ -16,6 +16,7 @@ import type { DeckWants } from "@/lib/queries";
 import { cardTitle } from "@/components/overview/copy";
 import type { CardId, Scope } from "../cards";
 import { SnapshotCard } from "./SnapshotCard";
+import { OverviewPanel } from "./OverviewPanel";
 import { BreakdownCard } from "./BreakdownCard";
 import { TrendCard } from "./TrendCard";
 import { RankingCard } from "./RankingCard";
@@ -25,6 +26,7 @@ import { SourcesCard } from "./SourcesCard";
 
 /** The envelopes each card reads; the deck unions those of its OPEN cards and disables the rest. */
 export const CARD_NEEDS: Record<CardId, (keyof DeckWants)[]> = {
+  overview: ["total", "ranked", "breakdown", "series", "gases"],
   snapshot: ["total", "ranked", "breakdown"],
   sectors: ["breakdown"],
   categories: ["breakdown"],
@@ -53,6 +55,8 @@ export function renderCard({ id, scope, deck, place, open, onToggle, onSector, p
   const title = cardTitle(scope.kind, id);
   const common = { id, scope, deck, title, open, onToggle };
   switch (id) {
+    case "overview":
+      return <OverviewPanel key={id} {...common} place={place} />;
     case "snapshot":
       return <SnapshotCard key={id} {...common} place={place} />;
     case "sectors":
@@ -75,7 +79,7 @@ export function renderCard({ id, scope, deck, place, open, onToggle, onSector, p
 
 /** What the open cards of a set need; everything else stays disabled, so a collapsed card fetches nothing. */
 export function wantsFor(ids: readonly CardId[], isOpen: (id: CardId) => boolean): DeckWants {
-  const wants: DeckWants = { total: false, ranked: false, breakdown: false, provinces: false, peers: false, series: false };
+  const wants: DeckWants = { total: false, ranked: false, breakdown: false, provinces: false, peers: false, series: false, gases: false };
   for (const id of ids) if (isOpen(id)) for (const need of CARD_NEEDS[id]) wants[need] = true;
   return wants;
 }

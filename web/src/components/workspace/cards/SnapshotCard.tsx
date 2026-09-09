@@ -27,7 +27,7 @@ import type { Scope } from "../cards";
 import { DeckCard, Pending, Figure } from "./DeckCard";
 import { cellFor, lowerName, rankedCells } from "./data";
 
-const CHIP = "inline-flex items-center gap-1.5 rounded-full border border-amber/50 bg-amber/15 px-3 py-1 text-xs font-medium text-fg";
+export const CHIP = "inline-flex items-center gap-1.5 rounded-full border border-amber/50 bg-amber/15 px-3 py-1 text-xs font-medium text-fg";
 
 export function SnapshotCard({ id, scope, deck, place, title, open, onToggle }: { id: string; scope: Scope; deck: Deck; place: string; title: string; open: boolean; onToggle: (open: boolean) => void }) {
   const { state, labels } = useExplorer();
@@ -90,7 +90,7 @@ function whatWords(scope: Scope, place: string): string {
  * Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture contributed 223.45 Mt, accounting
  * for 49.4 % of the total."
  */
-function sentenceOf({ scope, place, period, cell, top, topName, labels }: { scope: Scope; place: string; period: string; cell: NonNullable<ReturnType<typeof rankedCells>>[number]; top: ReturnType<typeof rankedCells>[number] | null; topName: string; labels: Parameters<typeof sectorLabel>[0] }): ReactNode {
+export function sentenceOf({ scope, place, period, cell, top, topName, labels }: { scope: Scope; place: string; period: string; cell: NonNullable<ReturnType<typeof rankedCells>>[number]; top: ReturnType<typeof rankedCells>[number] | null; topName: string; labels: Parameters<typeof sectorLabel>[0] }): ReactNode {
   const figure = (
     <b className="num whitespace-nowrap">
       {shown(cell)} {cellUnit(cell)}

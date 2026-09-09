@@ -94,7 +94,7 @@ export function useNationalUncertainty(enabled = true) {
  * ask for nothing, so the deck passes what its open cards need and every other query stays
  * disabled. An absent flag means "wanted": a caller that does not gate gets the whole plan.
  */
-export type DeckWants = { total?: boolean; ranked?: boolean; breakdown?: boolean; provinces?: boolean; peers?: boolean; series?: boolean };
+export type DeckWants = { total?: boolean; ranked?: boolean; breakdown?: boolean; provinces?: boolean; peers?: boolean; series?: boolean; gases?: boolean };
 
 const wanted = (w: DeckWants, k: keyof DeckWants) => w[k] !== false;
 
@@ -125,6 +125,7 @@ export function useDeck(state: ExplorerState, wants: DeckWants = {}) {
     provinces: useEmissions(bodies.provinces, wanted(wants, "provinces")),
     peers: useEmissions(bodies.peers, wanted(wants, "peers") && !!bodies.peers),
     series: useTimeseries(bodies.series, wanted(wants, "series")),
+    gases: useEmissions(bodies.gases, wanted(wants, "gases")),
   };
 }
 export type Deck = ReturnType<typeof useDeck>;

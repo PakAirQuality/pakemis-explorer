@@ -240,6 +240,8 @@ export type DeckBodies = {
   peers: QueryEmissions | null;
   /** The annual series in the current scope (the release refuses it off national grain, by name). */
   series: TimeseriesRequest;
+  /** The gas partition of the current scope (the overview panel's CO2/CH4/N2O row). */
+  gases: QueryEmissions;
   /** The selected geography's lineage rows (the evidence and sources cards). */
   lineage: LineageRequest | null;
 };
@@ -281,6 +283,7 @@ export function deckBodies(s: ExplorerState, defaults: DeckDefaults): DeckBodies
     provinces,
     peers,
     series: d.series,
+    gases: compact({ ...scopeBody(s), ...geography, group_by: ["gas"], order_by: "value desc" }),
     lineage: d.lineage,
   };
 }

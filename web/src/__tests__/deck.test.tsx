@@ -192,21 +192,23 @@ function shownCards(): string[] {
 }
 const set = (search = "") => mount(search);
 async function ready() {
-  await screen.findByTestId("card-snapshot-sentence");
+  // the first card is the overview panel nationally, the snapshot elsewhere
+  await screen.findByTestId(/^card-(overview|snapshot)-sentence$/);
 }
 
 describe("the deck's card set follows the scope", () => {
   it("Pakistan, all sectors, all gases: the total, where it comes from, how it changed, where it is placed", async () => {
     set();
     await ready();
-    expect(shownCards()).toEqual(["snapshot", "sectors", "trend", "places"]);
+    expect(shownCards()).toEqual(["overview", "sectors", "places"]);
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "national");
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("National overview");
-    expect(screen.getByTestId("snapshot-display")).toHaveTextContent("452.35");
-    expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("49.4 % from agriculture");
-    expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
+    expect(screen.getByTestId("card-overview")).toHaveTextContent("National overview");
+    expect(screen.getByTestId("overview-display")).toHaveTextContent("452.35");
+    expect(screen.getByTestId("overview-chip")).toHaveTextContent("49.4 % from agriculture");
+    // the panel folds the trend in: the rail and the series live inside it
+    expect(screen.getByTestId("year-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-series")).toBeInTheDocument();
     expect(screen.getByTestId("card-sectors")).toHaveTextContent("Emission sources");
-    expect(screen.getByTestId("card-trend")).toHaveTextContent("Change over time");
     expect(screen.getByTestId("card-places")).toHaveTextContent("Spatial distribution");
     expect(await screen.findByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share.");
   });
@@ -280,7 +282,7 @@ describe("the deck re-writes itself from the shared selection", () => {
   it("sector, gas, year, level and place, each through setState", async () => {
     set();
     await ready();
-    expect(shownCards()).toEqual(["snapshot", "sectors", "trend", "places"]);
+    expect(shownCards()).toEqual(["overview", "sectors", "places"]);
 
     await act(async () => void patch({ sector: "power" }));
     await waitFor(() => expect(shownCards()).toEqual(["snapshot", "categories", "trend", "places"]));
@@ -298,15 +300,15 @@ describe("the deck re-writes itself from the shared selection", () => {
     await waitFor(() => expect(shownCards()).toEqual(["snapshot", "composition", "peers", "evidence", "sources"]));
 
     await act(async () => void patch({ level: "adm1", geo: null }));
-    await waitFor(() => expect(shownCards()).toEqual(["snapshot", "sectors", "trend", "places"]));
+    await waitFor(() => expect(shownCards()).toEqual(["overview", "sectors", "places"]));
 
     // the year is not part of the scope: the national cards stay, and the spatial one carries the
     // release's own refusal rather than an empty chart
     await act(async () => void patch({ period: "FY2020-21" }));
     await waitFor(() => expect(within(screen.getByTestId("card-places")).getByTestId("refusal-card")).toHaveTextContent("Refused: GrainUnavailable"));
-    expect(shownCards()).toEqual(["snapshot", "sectors", "trend", "places"]);
+    expect(shownCards()).toEqual(["overview", "sectors", "places"]);
     expect(within(screen.getByTestId("card-places")).getByTestId("refusal-card")).toHaveTextContent("spatial products exist for 2023–24 only");
-    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("452.35");
+    expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("452.35");
   });
   it("a sector's categories asked at ADM grain carry the release's typed refusal, never another key", async () => {
     set("?geo=Punjab&sector=power");
@@ -331,7 +333,7 @@ describe("a collapsed card asks for nothing", () => {
     await ready();
     const queries = () => posts.filter((p) => p.url.includes("/query/")).length;
     fireEvent.click(screen.getByTestId("deck-collapse-all"));
-    for (const id of ["snapshot", "sectors", "trend", "places"]) expect(screen.queryByTestId(`card-${id}-sentence`), id).toBeNull();
+    for (const id of ["overview", "sectors", "places"]) expect(screen.queryByTestId(`card-${id}-sentence`), id).toBeNull();
     const before = queries();
     await act(async () => void patch({ period: "FY2020-21" }));
     await waitFor(() => expect(screen.getByTestId("chip-period")).toHaveTextContent("2020–21"));
@@ -395,11 +397,11 @@ describe("every card keeps the deck's affordances", () => {
     set();
     await ready();
     // one family: every deck card wears the amber top edge, the warm hairline and the warm shadow
-    for (const id of ["snapshot", "sectors", "trend", "places"]) {
+    for (const id of ["overview", "sectors", "places"]) {
       const card = screen.getByTestId(`card-${id}`);
       for (const c of ["border-t-brand-gold", "border-nav-line", "shadow-card", "bg-card"]) expect(card.className, `${id}: ${c}`).toContain(c);
     }
-    for (const id of ["snapshot", "sectors", "trend", "places"]) {
+    for (const id of ["overview", "sectors", "places"]) {
       expect(screen.getByTestId(`card-${id}-switch`), id).toHaveAttribute("role", "switch");
       for (const tool of ["info", "download", "share", "claim"]) expect(screen.queryByTestId(`card-${id}-${tool}`), `${id}-${tool}`).toBeNull();
     }

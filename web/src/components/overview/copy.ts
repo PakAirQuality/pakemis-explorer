@@ -81,6 +81,7 @@ export const CARD_TITLES: Record<string, string> = {
   placement: "Spatial placement",
   evidence: "Evidence",
   sources: "Sources",
+  "national.overview": "National overview",
   "national.snapshot": "National overview",
   "sector.snapshot": "Sector overview",
   "gas.snapshot": "Gas overview",

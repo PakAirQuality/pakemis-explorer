@@ -143,7 +143,7 @@ function serverDecimals(): Set<string> {
 }
 
 async function loaded() {
-  await screen.findByTestId("card-snapshot-sentence");
+  await screen.findByTestId(/^card-(overview|snapshot)-sentence$/);
   await screen.findByTestId("card-sectors-sentence");
   await screen.findByTestId("card-places-sentence");
 }
@@ -177,8 +177,8 @@ describe("the workspace frame", () => {
     expect(screen.getByTestId("nav-capsule").className).toContain("w-[420px]");
     expect(deck.className).not.toMatch(/(^|\s)bg-/); // the map shows between the cards
     const cards = Array.from(deck.children).map((el) => el.getAttribute("data-testid"));
-    expect(cards).toEqual(["header-block", "deck-header", "scope-chips", "card-snapshot", "card-sectors", "card-trend", "card-places", "footer"]);
-    for (const id of ["card-snapshot", "card-sectors", "card-trend", "card-places", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
+    expect(cards).toEqual(["header-block", "deck-header", "scope-chips", "card-overview", "card-sectors", "card-places", "footer"]);
+    for (const id of ["card-overview", "card-sectors", "card-places", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PAKISTAN");
     // the filter panel: 340 px, top-right
     const filters = screen.getByTestId("filter-panel");
@@ -334,16 +334,16 @@ describe("the deck's cards", () => {
     await loaded();
     const all = screen.getByTestId("deck-collapse-all");
     expect(all).toHaveTextContent("Collapse all");
-    const ids = ["card-snapshot", "card-sectors", "card-trend", "card-places"];
+    const ids = ["card-overview", "card-sectors", "card-places"];
     const switches = ids.map((id) => screen.getByTestId(`${id}-switch`));
-    expect(screen.getAllByRole("switch")).toHaveLength(4);
+    expect(screen.getAllByRole("switch")).toHaveLength(3);
     for (const sw of switches) expect(sw).toHaveAttribute("aria-checked", "true");
     fireEvent.click(switches[1]);
     expect(switches[1]).toHaveAttribute("aria-checked", "false");
     expect(screen.queryByTestId("card-sectors-sentence")).toBeNull();
     expect(screen.queryByTestId("sectors-bars")).toBeNull();
     expect(screen.getByTestId("card-sectors")).toHaveTextContent("Emission sources");
-    expect(screen.getByTestId("card-trend-sentence")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-change")).toBeInTheDocument();
     fireEvent.click(switches[1]);
     expect(await screen.findByTestId("card-sectors-sentence")).toBeInTheDocument();
     fireEvent.click(all);
@@ -357,17 +357,17 @@ describe("the deck's cards", () => {
   it("each card's sentence is built from the envelope's server strings, and the charts' ticks are the envelopes' own", async () => {
     mount();
     await loaded();
-    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture contributed 223.45 Mt, accounting for 49.4 % of the total.");
-    expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("49.4 % from agriculture");
+    expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture contributed 223.45 Mt, accounting for 49.4 % of the total.");
+    expect(screen.getByTestId("overview-chip")).toHaveTextContent("49.4 % from agriculture");
     expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
     expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source of emissions, contributing 223.45 Mt CO₂e (49.4 %). Power followed at 63.37 Mt (14.0 %), with transport at 41.93 Mt (9.3 %).");
-    expect(screen.getByTestId("card-trend-sentence")).toHaveTextContent("Between 2020–21 and 2023–24, Pakistan's emissions increased by +21.5 %, from 372.40 Mt to 452.35 Mt CO₂e.");
+    expect(screen.getByTestId("overview-change")).toHaveTextContent("Between 2020–21 and 2023–24, emissions increased by +21.5 %, from 372.40 Mt to 452.35 Mt CO₂e.");
     expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share.");
     expect(screen.getByTestId("sectors-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
     expect(screen.getByTestId("column-chart")).toHaveAttribute("data-ticks", SERIES_AXIS.ticks_short.join("|"));
     expect(within(screen.getByTestId("column-chart")).getAllByTestId("column").map((c) => c.textContent)).toEqual(["2020–21 372.40", "2023–24 452.35"]);
     // a card's header is its title and its switch: the toolbar icons were removed on 2026-08-31
-    for (const id of ["card-snapshot", "card-sectors", "card-trend", "card-places"]) {
+    for (const id of ["card-overview", "card-sectors", "card-places"]) {
       expect(screen.getByTestId(`${id}-switch`)).toHaveAttribute("role", "switch");
       for (const tool of ["info", "download", "share", "claim"]) expect(screen.queryByTestId(`${id}-${tool}`), `${id}-${tool}`).toBeNull();
     }
@@ -420,8 +420,8 @@ describe("the narrow workspace: one pane at a time", () => {
     for (const c of ["absolute", "inset-x-0", "top-[72px]", "bottom-0", "mx-auto", "w-full", "max-w-[560px]", "overflow-y-auto", "px-5", "pb-24"]) expect(deck.className, c).toContain(c);
     expect(deck.className).not.toContain("w-[420px]");
     // every card is still there, in the same order
-    expect(Array.from(deck.children).map((el) => el.getAttribute("data-testid"))).toEqual(["header-block", "deck-header", "scope-chips", "card-snapshot", "card-sectors", "card-trend", "card-places", "footer"]);
-    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("452.35 Mt CO₂e");
+    expect(Array.from(deck.children).map((el) => el.getAttribute("data-testid"))).toEqual(["header-block", "deck-header", "scope-chips", "card-overview", "card-sectors", "card-places", "footer"]);
+    expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("452.35 Mt CO₂e");
     // and the map's own chrome is not: no legend capsule, no map buttons, no Map settings
     expect(screen.queryByTestId("legend-capsule")).toBeNull();
     expect(screen.queryByTestId("map-buttons")).toBeNull();

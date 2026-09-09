@@ -18,7 +18,7 @@ import { geoGrain } from "@/lib/geography";
 import type { ExplorerState } from "@/lib/urlState";
 
 /** Every card the deck can show. The id is also the card's `data-testid` stem and its collapse key. */
-export const CARD_IDS = ["snapshot", "sectors", "categories", "trend", "places", "composition", "peers", "placement", "evidence", "sources"] as const;
+export const CARD_IDS = ["overview", "snapshot", "sectors", "categories", "trend", "places", "composition", "peers", "placement", "evidence", "sources"] as const;
 export type CardId = (typeof CARD_IDS)[number];
 
 export type Scope =
@@ -64,7 +64,9 @@ export function scopeOf(s: Pick<ExplorerState, "level" | "geo" | "sector" | "gas
  * spatial card carries the release's own typed refusal instead of a figure.
  */
 const CARDS: Record<ScopeKind, readonly CardId[]> = {
-  national: ["snapshot", "sectors", "trend", "places"],
+  // one LARGE panel nationally (the atlas pattern): figure + nine-year rail +
+  // series + the three gases, folding the old snapshot and trend cards into it
+  national: ["overview", "sectors", "places"],
   sector: ["snapshot", "categories", "trend", "places"],
   gas: ["snapshot", "sectors", "trend"],
   province: ["snapshot", "composition", "peers", "placement"],
