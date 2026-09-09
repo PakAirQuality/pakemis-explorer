@@ -37,6 +37,10 @@ export const ANALYZE = {
     back: "‹ All sectors",
     caution: "Small year-to-year shifts should be interpreted with caution.",
   },
+  minimap: {
+    eyebrow: "Geography",
+    caption: "Shaded by estimated emissions",
+  },
   explainer: {
     mainContributor: "Main contributor",
     itsChange: "Its change",

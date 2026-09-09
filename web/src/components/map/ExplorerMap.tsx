@@ -108,6 +108,9 @@ export type ExplorerMapProps = {
   variant?: "console" | "briefing" | "workspace";
   override?: Partial<ExplorerState>;
   onPick?: (level: Level, id: string) => void;
+  /** false: a LOCATOR instance - never reads or writes the URL camera (a second map
+   * on a page must not fight the primary over `cam`); it always fits the country. */
+  syncCamera?: boolean;
   /** The visible canvas's insets; applied to the initial framing, fitAll and every flyTo. */
   padding?: MapPadding;
   /** The choropleth's fill opacity in percent (the workspace's Map settings owns the slider). */
@@ -147,7 +150,7 @@ export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell
   return k ? `Exception: ${k.label}` : "no known exception here";
 }
 
-export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap }: ExplorerMapProps = {}) {
+export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, syncCamera = true, onMap }: ExplorerMapProps = {}) {
   const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
   const state = useMemo(() => (override ? { ...urlState, ...override } : urlState), [urlState, override]);
   const full = variant === "console";
@@ -243,7 +246,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
       // The token is assigned here and nowhere else; it leaves the page only as the query
       // parameter of Mapbox's own requests.
       mapboxgl.accessToken = bm.token;
-      const initial = stateRef.current.cam?.split(",").map(Number);
+      const initial = syncCamera ? stateRef.current.cam?.split(",").map(Number) : undefined;
       const m = new mapboxgl.Map({
         container: containerRef.current,
         style: bm.style,
@@ -284,10 +287,12 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
         setMap(m);
         onMapRef.current?.(m);
       });
-      m.on("moveend", () => {
-        const c = m.getCenter();
-        setStateRef.current({ cam: `${c.lng.toFixed(4)},${c.lat.toFixed(4)},${m.getZoom().toFixed(2)}` }, { history: "replace" });
-      });
+      if (syncCamera) {
+        m.on("moveend", () => {
+          const c = m.getCenter();
+          setStateRef.current({ cam: `${c.lng.toFixed(4)},${c.lat.toFixed(4)},${m.getZoom().toFixed(2)}` }, { history: "replace" });
+        });
+      }
     })();
     const el = containerRef.current;
     const ro = el && typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => { mapRef.current?.resize(); if (el) setSize({ width: el.clientWidth, height: el.clientHeight }); }) : null;
@@ -308,7 +313,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   useEffect(() => {
     if (!map || !bboxes.data || framed.current) return;
     framed.current = true;
-    if (stateRef.current.cam) return;
+    if (syncCamera && stateRef.current.cam) return;
     const u = unionBbox(bboxes.data.adm1);
     if (u) map.fitBounds([[u[0], u[1]], [u[2], u[3]]], { padding: padRef.current ?? (isMobile ? 16 : 40), maxZoom: OPENING_MAX_ZOOM, duration: 0 });
   }, [map, bboxes.data, isMobile]);
