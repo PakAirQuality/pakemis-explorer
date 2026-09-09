@@ -23,7 +23,7 @@ import { SensitivitySection } from "./SensitivitySection";
 export type AnalyzeSettings = { from: string; to: string; gases: string[] | null };
 
 const TAB = (on: boolean) =>
-  `rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${on ? "bg-accent text-on-accent" : "border border-line bg-surface text-fg/70 hover:text-fg"}`;
+  `whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors ${on ? "bg-accent text-on-accent" : "border border-line bg-surface text-fg/70 hover:text-fg"}`;
 
 export function Analyze() {
   const { labels, dims } = useExplorer();
@@ -57,14 +57,14 @@ export function Analyze() {
     <div className="min-h-dvh bg-ground">
       <NavHeader />
       <main className="mx-auto w-full max-w-[1600px] px-5 pb-16 pt-1" data-testid="analyze">
-        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
           <aside className="grid gap-4" data-testid="analyze-rail">
-            <header className="relative overflow-hidden rounded-[20px] border border-nav-line bg-nav px-6 py-5 shadow-sm">
+            <header className="relative overflow-hidden rounded-[20px] border border-nav-line bg-nav px-5 py-5 shadow-sm">
               <ContourMotif />
               <div className="relative">
                 <h1 className="text-[30px] font-semibold leading-tight tracking-tight text-fg" data-testid="analyze-title">{ANALYZE.title}</h1>
                 <p className="mt-1 text-[13.5px] text-muted">{ANALYZE.dek}</p>
-                <nav className="mt-3 flex flex-wrap gap-1.5" aria-label="Analyses" data-testid="analyze-questions">
+                <nav className="mt-3 flex flex-wrap gap-1" aria-label="Analyses" data-testid="analyze-questions">
                   {ANALYZE.questions.map((q) => (
                     <a key={q.id} href={`#${q.id}`} onClick={() => pickTab(q.id)} className={TAB(tab === q.id)} aria-current={tab === q.id ? "true" : undefined} data-testid={`analyze-tab-${q.id}`}>
                       {q.label}
