@@ -464,9 +464,13 @@ describe("the workspace's audits", () => {
     expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");
     expect(screen.getByTestId("card-air-sources")).toHaveTextContent("Agriculture is the largest estimated source");
     expect(screen.getByTestId("card-air-trend")).toHaveTextContent("the agriculture layer alone");
-    // the typed-absence note: scenario ends beside the panel, never summed in
-    expect(screen.getByTestId("air-absence-note")).toHaveTextContent("Outside the panel");
-    expect(screen.getByTestId("air-absence-note")).toHaveTextContent("never summed");
+    // the snapshot stays the three lines the briefing specifies: sentence, figure,
+    // "Beta estimate · covered sectors only" - the absence screening lives in the
+    // engine's completeness block and on Downloads, not on the card
+    expect(screen.queryByTestId("air-absence-note")).toBeNull();
+    expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("Beta estimate · covered sectors only");
+    expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("covered sources emitted");
+    expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("nationwide");
     // the air family is period-aware since rc49: the year slider STANDS with a
     // pollutant selected and the chip names the slider's year, never a "2024 layer"
     // stand-in
