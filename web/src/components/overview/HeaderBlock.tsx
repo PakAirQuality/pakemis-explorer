@@ -1,7 +1,7 @@
 "use client";
 /**
- * The place card, the deck's first card. 420 px wide, 20 px radius, a thin saffron edge along
- * its top rather than a flood of yellow: the ivory block (`--color-nav`) carries the eyebrow
+ * The place card, the deck's first card. 420 px wide, 20 px radius: the ivory block
+ * (`--color-nav`) carries the eyebrow
  * "Pakistan Emissions Explorer", the place's name, one line saying what the tool does and the
  * province select — the location control the card exists for — and a white utility row beneath
  * it, separated by spacing and one hairline, holds Share and Download.
@@ -35,7 +35,6 @@ export function HeaderBlock({ geo, place, onGeo, onReset, showReset = false }: {
   };
   return (
     <header className="pointer-events-auto relative shrink-0 overflow-hidden rounded-[20px] border border-nav-line bg-nav text-nav-fg shadow-lg" data-testid="header-block">
-      <div className="h-1 w-full bg-brand-gold" aria-hidden="true" data-testid="header-edge" />
       <div className="relative px-6 pb-5 pt-5">
         <ContourMotif />
         <div className="relative">

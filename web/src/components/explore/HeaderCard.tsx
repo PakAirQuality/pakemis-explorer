@@ -42,7 +42,6 @@ export function HeaderCard({ state, dispatch, labels, dims, env }: { state: Expl
   };
   return (
     <header className="relative shrink-0 overflow-hidden rounded-[20px] border border-nav-line bg-nav text-nav-fg shadow-card" data-testid="data-header">
-      <div className="h-1 w-full bg-brand-gold" aria-hidden="true" data-testid="data-header-edge" />
       <div className="relative px-6 pb-5 pt-5">
         <ContourMotif />
         <div className="relative">
