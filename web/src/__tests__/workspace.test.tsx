@@ -318,16 +318,22 @@ describe("the workspace's state", () => {
     await loaded();
     fireEvent.click(screen.getByTestId("place-picker"));
     expect(screen.getByTestId("place-dialog")).toBeInTheDocument();
-    // no query: All provinces + the provinces; the districts arrive with a query
-    expect(screen.getByTestId("place-option-all")).toBeInTheDocument();
+    // nothing selected: no redundant "All provinces" row (the field already says it);
+    // the provinces AND the districts ride in the dropdown without typing
+    expect(screen.queryByTestId("place-option-all")).toBeNull();
     expect(screen.getByTestId("place-option-Balochistan")).toBeInTheDocument();
+    expect(screen.getByTestId("place-option-60131773B12131197496886")).toBeInTheDocument();
+    // the search narrows the same list
     fireEvent.change(screen.getByTestId("place-search"), { target: { value: "lah" } });
+    expect(screen.queryByTestId("place-option-Balochistan")).toBeNull();
     fireEvent.click(screen.getByTestId("place-option-60131773B12131197496886"));
     await waitFor(() => expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "district"));
     expect(screen.queryByTestId("place-dialog")).toBeNull();
     expect(screen.getByTestId("place-picker")).toHaveTextContent("Lahore");
-    // Esc closes; the backdrop closes
+    // with a place selected, the way back to the country appears
     fireEvent.click(screen.getByTestId("place-picker"));
+    expect(screen.getByTestId("place-option-all")).toBeInTheDocument();
+    // Esc closes; the backdrop closes
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(screen.queryByTestId("place-dialog")).toBeNull());
     fireEvent.click(screen.getByTestId("place-picker"));

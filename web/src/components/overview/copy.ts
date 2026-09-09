@@ -50,7 +50,6 @@ export const HEADER = {
   pickerSearch: "Search provinces and districts",
   pickerProvinces: "Provinces",
   pickerDistricts: "Districts",
-  pickerHint: "Type to search the districts.",
   pickerEmpty: "No place matches that.",
   share: "Share",
   shared: "Link copied",

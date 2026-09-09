@@ -32,7 +32,11 @@ export function PlacePicker() {
       ? districtName(dims, state.geo)
       : state.geo;
 
-  const districts = useMemo(() => districtOptions(dims), [dims]);
+  // groups alphabetically, the catch-all "Other" (AJK/GB/ICT) last
+  const districts = useMemo(
+    () => districtOptions(dims).sort((a, b) => (a[0] === "Other" ? 1 : b[0] === "Other" ? -1 : a[0].localeCompare(b[0]))),
+    [dims],
+  );
   const needle = q.trim().toLowerCase();
   const provinces = dims.adm1
     .map((r) => ({ name: r.name, label: labels.geographies[r.geography_id] ?? r.name }))
@@ -102,7 +106,7 @@ export function PlacePicker() {
               />
             </div>
             <div className="min-h-0 overflow-y-auto p-2">
-              {!needle && (
+              {!needle && state.geo && (
                 <button type="button" onClick={() => pick({ geo: null, level: "adm1" })} className={ROW} data-testid="place-option-all">
                   <MapPin size={14} className="shrink-0 text-accent" aria-hidden="true" />
                   {HEADER.allProvinces}
@@ -128,7 +132,18 @@ export function PlacePicker() {
                   )}
                 </>
               ) : (
-                <div className="px-3 pb-2 pt-3 text-xs text-muted">{HEADER.pickerHint}</div>
+                // every district rides in the dropdown itself, grouped by province;
+                // the search only narrows what is already here
+                districts.map(([province, list]) => (
+                  <div key={province}>
+                    <div className="micro px-3 pb-1 pt-2">{province} · {HEADER.pickerDistricts.toLowerCase()}</div>
+                    {list.map((d) => (
+                      <button key={d.id} type="button" onClick={() => pick({ geo: d.id, level: "adm2" })} className={ROW} data-testid={`place-option-${d.id}`}>
+                        {d.name}
+                      </button>
+                    ))}
+                  </div>
+                ))
               )}
             </div>
           </div>
