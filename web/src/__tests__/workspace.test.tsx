@@ -41,8 +41,8 @@ vi.mock("@/components/charts/BarsWithAxis", () => ({
   ),
 }));
 vi.mock("@/components/charts/ColumnChart", () => ({
-  ColumnChart: ({ points, ticks }: { points: Item[]; ticks?: string[] | null }) => (
-    <div data-testid="column-chart" data-ticks={(ticks ?? []).join("|")}>
+  ColumnChart: ({ points, ticks, testId = "column-chart" }: { points: Item[]; ticks?: string[] | null; testId?: string }) => (
+    <div data-testid={testId} data-ticks={(ticks ?? []).join("|")}>
       {(ticks ?? []).map((t, i) => <span key={i} data-testid="axis-tick">{t}</span>)}
       {points.map((p) => <span key={p.id} data-testid="column">{p.name} {p.label}</span>)}
     </div>
@@ -99,6 +99,7 @@ beforeEach(() => {
       if (url.includes("/query/air")) {
         const k = (body as { group_by?: string[] } | undefined)?.group_by?.[0];
         if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air" });
+        if (k === "period_id") return envelope([{ display: "2100.004", display_short: "2100.00", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2020-21" } }, { display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2023-24" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "sector_id") return envelope([{ display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { sector_id: "agriculture" }, extra: { share_pct_short: "96.0" } }], { request_type: "query_air", axis: AXIS_250 });
         return envelope([{ display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃" }], {
@@ -480,6 +481,16 @@ describe("the workspace's audits", () => {
     expect(screen.queryByTestId("air-year-note")).toBeNull();
     expect(screen.getByTestId("year-slider")).toBeInTheDocument();
     expect(screen.getByTestId("chip-period")).not.toHaveTextContent("2024 layer");
+    // parity with the greenhouse panel: the year rail and the nine-year series live
+    // INSIDE the snapshot card, and the separate series card is gone
+    const airSnap = screen.getByTestId("card-air-snapshot");
+    expect(airSnap).toContainElement(screen.getByTestId("year-rail"));
+    expect(airSnap).toContainElement(await screen.findByTestId("air-series-chart"));
+    expect(screen.getByTestId("air-series-change")).toHaveTextContent("From 2100.00 to 2784.71 kt NH₃, 2020–21 to 2023–24 — covered sources only.");
+    expect(screen.queryByTestId("card-air-series")).toBeNull();
+    // a rail tick writes `period`, the same key the slider writes
+    fireEvent.click(screen.getByTestId("rail-FY2020-21"));
+    await waitFor(() => expect(screen.getByTestId("chip-period")).toHaveTextContent("2020–21"));
     // clearing through the chip returns to CO₂e
     fireEvent.click(screen.getByTestId("chip-gas-clear"));
     await waitFor(() => expect(screen.getByTestId("gas-select")).toHaveValue(""));

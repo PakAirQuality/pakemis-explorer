@@ -21,13 +21,14 @@ import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import { DeckCard, Pending, Figure } from "./DeckCard";
 import { GasRail } from "../GasRail";
+import { YearRail } from "../YearRail";
 
 const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
 const BETA = "Beta estimate · covered sectors only";
 
 
 export function AirCards({ pol }: { pol: string }) {
-  const { state, labels, dims, defaults } = useExplorer();
+  const { state, setState, labels, dims, defaults } = useExplorer();
   const p = POLLUTANT_LABELS[pol] ?? pol;
   const period = state.period ?? defaults.period_id;
   const placeLevel = state.geo && state.level !== "grid" ? geoGrain(state.geo) : null;
@@ -81,6 +82,7 @@ export function AirCards({ pol }: { pol: string }) {
     color: rampByRank(i, all.length),
   }));
   const order = new Map(dims.fiscalPeriods.map((id, i) => [id, i]));
+  const reference = dims.periods.find((x) => String(x.is_reference).toLowerCase() === "true")?.period_id ?? dims.fiscalPeriods[dims.fiscalPeriods.length - 1] ?? "";
   const seriesPoints: ColumnPoint[] = (series.data?.values ?? [])
     .filter((c) => typeof c.value === "number")
     .sort((a, b) => (order.get(String(a.group?.period_id)) ?? 0) - (order.get(String(b.group?.period_id)) ?? 0))
@@ -89,6 +91,7 @@ export function AirCards({ pol }: { pol: string }) {
       name: periodShort(labels, String(c.group?.period_id ?? "")),
       value: c.value as number,
       label: shown(c),
+      reference: c.group?.period_id === reference,
     }));
   const sFirst = seriesPoints[0];
   const sLast = seriesPoints[seriesPoints.length - 1];
@@ -123,6 +126,21 @@ export function AirCards({ pol }: { pol: string }) {
         ) : (
           <Pending q={total} what={`the ${p} total`} />
         )}
+
+        <YearRail periods={dims.fiscalPeriods} current={period} onPick={(pd) => setState({ period: pd })} labels={labels} />
+
+        <div className="mt-4" data-testid="air-series">
+          {seriesPoints.length ? <ColumnChart points={seriesPoints} testId="air-series-chart" /> : <Pending q={series} what="the nine-year series" />}
+          {sFirst && sLast && sCell ? (
+            <p className="mt-2 text-xs text-muted" data-testid="air-series-change">
+              From <b className="num">{sFirst.label}</b> to <b className="num">{sLast.label}</b> {cellUnit(sCell)}, {sFirst.name} to {sLast.name} — covered sources only.
+            </p>
+          ) : null}
+          <p className="mt-1 text-[11px] leading-snug text-muted/80">
+            Most years borrow the reference year’s within-province geography, rescaled; the weight registry says which, per stream and year.
+          </p>
+        </div>
+
         <GasRail />
       </DeckCard>
       <DeckCard
@@ -149,17 +167,6 @@ export function AirCards({ pol }: { pol: string }) {
           {provBars.length ? <BarsWithAxis items={provBars} ticks={province ? undefined : provinces.data?.axis?.ticks_short} testId="air-prov-bars" /> : <Pending q={provinces} what={province ? "the district layer" : "the provincial layer"} />}
         </DeckCard>
       )}
-      <DeckCard
-        id="air-series"
-        title={`${p} across the nine years${placeName ? ` · ${placeName}` : ""}`}
-        env={series.data}
-        open={isOpen("series")}
-        onToggle={toggle("series")}
-        sentence={sFirst && sLast && sCell ? <>From <b className="num">{sFirst.label}</b> to <b className="num">{sLast.label}</b> {cellUnit(sCell)}, {sFirst.name} to {sLast.name} — covered sources only.</> : null}
-        caption="Most years borrow the reference year’s within-province geography, rescaled; the weight registry says which, per stream and year."
-      >
-        {seriesPoints.length ? <ColumnChart points={seriesPoints} testId="air-series-chart" /> : <Pending q={series} what="the nine-year series" />}
-      </DeckCard>
       {!placeName && (
         <DeckCard
           id="air-trend"
