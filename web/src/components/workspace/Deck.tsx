@@ -21,7 +21,7 @@
  * `interval_short`, `change.*`, `derived.*`, `axis.ticks_short`); the deck computes nothing.
  *
  * Under 1280 px it is the whole pane rather than a column beside the map (`full`): the same
- * cards, the same order, in one scrolling column inset 20 px and capped at 560 px, centred. The
+ * cards, the same order, in one scrolling column inset 20 px and capped at 640 px, centred. The
  * bottom sheet it used to be under 1024 px — peek / half / full over the map — retired on
  * 2026-08-31, when the nav capsule's Dashboard | Map switch replaced it: a half-screen laptop
  * window is not a phone, and one pane at a time serves it better than a drawer.
@@ -51,7 +51,7 @@ export const DECK_CLASS =
  * 20 px, under the nav capsule and scrolling to the bottom of the window.
  */
 export const DECK_FULL_CLASS =
-  "absolute inset-x-0 top-[72px] bottom-0 z-20 mx-auto w-full max-w-[560px] overflow-y-auto overscroll-contain scrollbar-none px-5 pb-24 flex flex-col gap-3";
+  "absolute inset-x-0 top-[72px] bottom-0 z-20 mx-auto w-full max-w-[640px] overflow-y-auto overscroll-contain scrollbar-none px-5 pb-24 flex flex-col gap-3";
 
 export type DeckProps = {
   /**

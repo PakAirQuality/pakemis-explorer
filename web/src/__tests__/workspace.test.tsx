@@ -379,7 +379,7 @@ describe("the narrow workspace: one pane at a time", () => {
     for (const c of ["left-5", "top-5"]) expect(pill.className, c).toContain(c);
     const nav = screen.getByTestId("nav-capsule");
     expect(nav).not.toContainElement(sw);
-    for (const c of ["bottom-4", "left-1/2", "-translate-x-1/2", "w-[calc(100vw-40px)]", "max-w-[520px]"]) expect(nav.className, c).toContain(c);
+    for (const c of ["bottom-4", "left-1/2", "-translate-x-1/2", "w-[calc(100vw-40px)]", "max-w-[600px]"]) expect(nav.className, c).toContain(c);
     expect(nav.className).not.toContain("w-[420px]");
     expect(screen.getByTestId("pane-map")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("pane-dashboard")).toHaveAttribute("aria-pressed", "false");
@@ -410,7 +410,7 @@ describe("the narrow workspace: one pane at a time", () => {
     // pill, its bottom padding clearing the docked nav
     const deck = screen.getByTestId("deck");
     expect(deck).toHaveAttribute("data-full", "1");
-    for (const c of ["absolute", "inset-x-0", "top-[72px]", "bottom-0", "mx-auto", "w-full", "max-w-[560px]", "overflow-y-auto", "px-5", "pb-24"]) expect(deck.className, c).toContain(c);
+    for (const c of ["absolute", "inset-x-0", "top-[72px]", "bottom-0", "mx-auto", "w-full", "max-w-[640px]", "overflow-y-auto", "px-5", "pb-24"]) expect(deck.className, c).toContain(c);
     expect(deck.className).not.toContain("w-[420px]");
     // every card is still there, in the same order
     expect(Array.from(deck.children).map((el) => el.getAttribute("data-testid"))).toEqual(["header-block", "deck-header", "card-overview", "card-sectors", "card-places", "footer"]);

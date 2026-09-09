@@ -36,7 +36,7 @@ export function isActive(pathname: string | null, href: string): boolean {
 }
 
 /** The pill itself: the classes the deck's left inset and radius family are matched to. */
-export const CAPSULE_CLASS = "rounded-full bg-nav text-nav-fg border border-nav-line shadow-lg px-5 py-2.5 flex items-center gap-6";
+export const CAPSULE_CLASS = "rounded-full bg-nav text-nav-fg border border-nav-line shadow-lg px-5 flex items-center gap-6";
 /** Floating, the capsule is exactly the deck's width, so its left AND right edges line up with the cards beneath it. */
 export const CAPSULE_WIDTH = "w-[420px] justify-between";
 /**
@@ -51,10 +51,10 @@ export const CAPSULE_FLOATING = "absolute left-5 top-5 z-30";
 /** The docked placement: a narrow workspace parks the nav at the bottom centre (the pane
  * switch owns the top-left there), the way the reference atlas parks its menu bar. */
 export const CAPSULE_DOCKED = "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 shadow-xl";
-/** Docked, the bar SPANS the deck column - the full-pane deck is mx-auto max-w-[560px]
- * px-5, so its card edges sit at min(100vw,560) - 40; the bar keeps those exact edges,
+/** Docked, the bar SPANS the deck column - the full-pane deck is mx-auto max-w-[640px]
+ * px-5, so its card edges sit at min(100vw,640) - 40; the bar keeps those exact edges,
  * the way the reference atlas's bottom bar keeps its panel's. */
-export const CAPSULE_WIDTH_DOCKED = "w-[calc(100vw-40px)] max-w-[520px] justify-between";
+export const CAPSULE_WIDTH_DOCKED = "w-[calc(100vw-40px)] max-w-[600px] justify-between";
 
 export function NavCapsule({ floating = false, docked = false, children }: { floating?: boolean; docked?: boolean; children?: ReactNode }) {
   const pathname = usePathname();
@@ -77,7 +77,7 @@ export function NavCapsule({ floating = false, docked = false, children }: { flo
     // ONE SIZE EVERYWHERE (chrome-cleanup round): the capsule keeps the deck's 420 px on
     // every page, not just the workspace, so the pill never changes size between Explore
     // and Data - and the pages align their first column to the same width beneath it.
-    <div className={`${floating ? `${CAPSULE_FLOATING} ` : docked ? `${CAPSULE_DOCKED} ` : ""}${docked ? CAPSULE_WIDTH_DOCKED : children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ${CAPSULE_CLASS}${docked ? "" : " max-w-[calc(100vw-40px)]"} overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
+    <div className={`${floating ? `${CAPSULE_FLOATING} ` : docked ? `${CAPSULE_DOCKED} ` : ""}${docked ? CAPSULE_WIDTH_DOCKED : children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ${CAPSULE_CLASS} ${docked ? "py-3.5" : "py-2.5"}${docked ? "" : " max-w-[calc(100vw-40px)]"} overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
       <Link href="/" className="flex shrink-0 items-center" data-testid="brand" title="Pakistan Air Quality Initiative">
         <BrandLogo className="h-7 object-contain" />
       </Link>
