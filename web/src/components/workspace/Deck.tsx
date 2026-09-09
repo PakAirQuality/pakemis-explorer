@@ -62,7 +62,8 @@ export type DeckProps = {
   geo?: string | null;
   /** The place as the release names it; the deck names the scope's own place when it has one. */
   place?: string;
-  onGeo: (name: string | null) => void;
+  /** Accepted and unused since the place picker (2026-09-09): the picker writes `geo` itself. */
+  onGeo?: (name: string | null) => void;
   onReset: () => void;
   /** Whether the place card offers "Reset map": only once a move or a selection has something to undo. */
   showReset?: boolean;
@@ -76,7 +77,7 @@ export type DeckProps = {
   onFilters?: () => void;
 };
 
-export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showReset = false, full = false }: DeckProps) {
+export function Deck({ onReset, onSector, onCollapse, onFilters, showReset = false, full = false }: DeckProps) {
   const { state, labels, dims } = useExplorer();
   const [collapsed, setCollapsed] = useState<Partial<Record<string, boolean>>>({});
   const [picked, setPicked] = useState<string | null>(null);
@@ -95,7 +96,6 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
   }, [deck.total.data, deck.total.isError]);
 
   // the deck's own place: the country, the selected province, or the selected district's shape
-  const province = scope.kind === "province" ? scope.geo : null;
   const place = scope.kind === "province" ? geographyName(labels, scope.geo) : scope.kind === "district" ? districtName(dims, scope.geo) : HEADER.country;
 
   const toggle = (id: string) => (open: boolean) => setCollapsed((c) => ({ ...c, [id]: !open }));
@@ -107,7 +107,7 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
 
   const cards = (
     <>
-      <HeaderBlock geo={province} title={scope.kind === "province" || scope.kind === "district" ? place : HEADER.title} onGeo={onGeo} onReset={onReset} showReset={showReset} />
+      <HeaderBlock title={scope.kind === "province" || scope.kind === "district" ? place : HEADER.title} onReset={onReset} showReset={showReset} />
       <header className={`${DECK_CARD} flex items-center justify-between gap-3 px-5 py-3`} data-testid="deck-header">
         <h2 className="widget-title min-w-0 truncate">{DECK_TITLE}</h2>
         <div className="flex shrink-0 items-center gap-1.5">

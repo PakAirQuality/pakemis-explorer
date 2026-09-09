@@ -299,7 +299,8 @@ describe("the workspace's state", () => {
     expect(screen.getByTestId("header-utilities")).toHaveTextContent("Share");
     expect(screen.getByTestId("header-utilities")).toHaveTextContent("Download");
     // the province select writes `geo`, and the deck re-writes itself to the province's cards
-    fireEvent.change(screen.getByTestId("province-select"), { target: { value: "Punjab" } });
+    fireEvent.click(screen.getByTestId("place-picker"));
+    fireEvent.click(screen.getByTestId("place-option-Punjab"));
     await waitFor(() => expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "Punjab");
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "province");
@@ -311,6 +312,27 @@ describe("the workspace's state", () => {
     fireEvent.click(screen.getByTestId("header-reset"));
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("National overview"));
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "PK");
+  });
+  it("the place picker: a pop-up with search - a district pick lands the district deck, Esc and the backdrop close it", async () => {
+    mount();
+    await loaded();
+    fireEvent.click(screen.getByTestId("place-picker"));
+    expect(screen.getByTestId("place-dialog")).toBeInTheDocument();
+    // no query: All provinces + the provinces; the districts arrive with a query
+    expect(screen.getByTestId("place-option-all")).toBeInTheDocument();
+    expect(screen.getByTestId("place-option-Balochistan")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("place-search"), { target: { value: "lah" } });
+    fireEvent.click(screen.getByTestId("place-option-60131773B12131197496886"));
+    await waitFor(() => expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "district"));
+    expect(screen.queryByTestId("place-dialog")).toBeNull();
+    expect(screen.getByTestId("place-picker")).toHaveTextContent("Lahore");
+    // Esc closes; the backdrop closes
+    fireEvent.click(screen.getByTestId("place-picker"));
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("place-dialog")).toBeNull());
+    fireEvent.click(screen.getByTestId("place-picker"));
+    fireEvent.click(screen.getByTestId("place-backdrop"));
+    await waitFor(() => expect(screen.queryByTestId("place-dialog")).toBeNull());
   });
   it("Reset filters clears the level, the place, the sector, the gas and the year at once", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];

@@ -13,16 +13,14 @@
  */
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Download, RotateCcw, Share2 } from "lucide-react";
-import { useExplorer } from "@/components/ExplorerContext";
+import { Download, RotateCcw, Share2 } from "lucide-react";
 import { ContourMotif } from "@/components/ui/ContourMotif";
+import { PlacePicker } from "./PlacePicker";
 import { HEADER } from "./copy";
 
 const UTILITY = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-fg transition-colors hover:bg-accent-soft";
-const SELECT_ID = "province-select";
 
-export function HeaderBlock({ geo, title = HEADER.title, onGeo, onReset, showReset = false }: { geo: string | null; title?: string; onGeo: (name: string | null) => void; onReset: () => void; showReset?: boolean }) {
-  const { dims, labels } = useExplorer();
+export function HeaderBlock({ title = HEADER.title, onReset, showReset = false }: { title?: string; onReset: () => void; showReset?: boolean }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -40,23 +38,7 @@ export function HeaderBlock({ geo, title = HEADER.title, onGeo, onReset, showRes
         <div className="relative">
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight text-fg" data-testid="place-title">{title}</h1>
           <p className="mt-1 text-[13px] text-muted" data-testid="header-dek">{HEADER.dek}</p>
-          <label className="relative mt-3 block">
-            <span className="sr-only">{HEADER.selectProvince}</span>
-            <select
-              id={SELECT_ID}
-              className="h-[42px] w-full cursor-pointer appearance-none rounded-xl border border-line bg-card pl-4 pr-10 text-sm font-medium text-fg shadow-sm outline-none focus:ring-2 focus:ring-accent/40"
-              value={geo ?? ""}
-              onChange={(e) => onGeo(e.target.value || null)}
-              aria-label={HEADER.selectProvince}
-              data-testid="province-select"
-            >
-              <option value="">{HEADER.allProvinces}</option>
-              {dims.adm1.map((r) => (
-                <option key={r.geography_id} value={r.name}>{labels.geographies[r.geography_id] ?? r.name}</option>
-              ))}
-            </select>
-            <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
-          </label>
+          <PlacePicker />
         </div>
       </div>
       <div className="flex h-10 items-center justify-between border-t border-nav-line bg-card px-4" data-testid="header-utilities">

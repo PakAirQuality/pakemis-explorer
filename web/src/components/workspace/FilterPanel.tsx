@@ -16,7 +16,7 @@
 import { ChevronsLeft, ChevronsRight, Factory, MapPin, RotateCcw, Wind, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Level } from "@/lib/urlState";
-import { districtName, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabel } from "@/lib/labels";
+import { districtName, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabel, districtOptions } from "@/lib/labels";
 import { POLLUTANTS, POLLUTANT_LABELS } from "@/lib/explore/query";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { SEGMENT_GROUP_CLASS, segmentClass } from "./PaneSwitch";
@@ -202,17 +202,3 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
   );
 }
 
-/** The districts of the release's dims, grouped by their province and named by their shape. */
-function districtOptions(dims: ReturnType<typeof useExplorer>["dims"]): [string, { id: string; name: string }[]][] {
-  const byProvince = new Map<string, { id: string; name: string }[]>();
-  const seen = new Set<string>();
-  for (const r of dims.adm2) {
-    if (!r.shape_id || seen.has(r.shape_id)) continue;
-    seen.add(r.shape_id);
-    const p = r.parent_id.replace(/^ADM1:/, "");
-    const list = byProvince.get(p) ?? [];
-    list.push({ id: r.shape_id, name: districtName(dims, r.shape_id) });
-    byProvince.set(p, list);
-  }
-  return Array.from(byProvince.entries()).map(([p, list]) => [p, list.sort((a, b) => a.name.localeCompare(b.name))]);
-}

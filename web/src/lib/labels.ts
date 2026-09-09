@@ -228,6 +228,22 @@ export function districtName(dims: Dims, shapeId: string): string {
   if (!rows.length) return shapeId;
   return rows[0].shape_name || rows.map((r) => r.name).join(" / ");
 }
+/** Districts grouped by province - one row per unique shape, sorted, named by districtName.
+ * Shared by the filter panel's district select and the header's place picker. */
+export function districtOptions(dims: Dims): [string, { id: string; name: string }[]][] {
+  const byProvince = new Map<string, { id: string; name: string }[]>();
+  const seen = new Set<string>();
+  for (const r of dims.adm2) {
+    if (!r.shape_id || seen.has(r.shape_id)) continue;
+    seen.add(r.shape_id);
+    const p = r.parent_id.replace(/^ADM1:/, "");
+    const list = byProvince.get(p) ?? [];
+    list.push({ id: r.shape_id, name: districtName(dims, r.shape_id) });
+    byProvince.set(p, list);
+  }
+  return Array.from(byProvince.entries()).map(([p, list]) => [p, list.sort((a, b) => a.name.localeCompare(b.name))]);
+}
+
 export function provinceOfShape(dims: Dims, shapeId: string): string {
   const row = adm2RowsForShape(dims, shapeId)[0];
   return row ? row.parent_id.replace(/^ADM1:/, "") : "";
