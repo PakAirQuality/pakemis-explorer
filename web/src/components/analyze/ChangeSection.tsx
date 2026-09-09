@@ -206,7 +206,7 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
   return (
     <AnalysisCard
       id="change"
-      eyebrow={<span className="rounded bg-amber/25 px-1.5 py-0.5">{periodShort(labels, fromP)} → {periodShort(labels, toP)}</span>}
+      eyebrow={<span className="rounded bg-amber/25 px-1.5 py-0.5">{periodShort(labels, fromP)} to {periodShort(labels, toP)}</span>}
       title={ANALYZE.change.title}
       action={
         <button type="button" onClick={download} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft" data-testid="change-download">

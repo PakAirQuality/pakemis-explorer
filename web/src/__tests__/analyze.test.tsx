@@ -150,7 +150,7 @@ describe("Analyze", () => {
     const wf = await screen.findByTestId("change-waterfall");
     // the card: chip eyebrow (the span), the static answer title, server ticks
     const card = screen.getByTestId("analyze-change");
-    expect(card).toHaveTextContent("2020–21 → 2023–24");
+    expect(card).toHaveTextContent("2020–21 to 2023–24");
     expect(card).toHaveTextContent("How the total changed");
     expect(wf).toHaveTextContent("600");
     expect(screen.getByTestId("change-chart-panel")).toHaveTextContent("Sector contributions");
