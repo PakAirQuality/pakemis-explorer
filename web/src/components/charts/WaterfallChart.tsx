@@ -20,7 +20,7 @@ const W = 840;
 const H = 320;
 const PAD = { top: 26, bottom: 44, left: 52, right: 8 };
 
-export function WaterfallChart({ steps, unit, ticks, onPick, testId = "waterfall" }: { steps: WaterfallStep[]; unit?: string; ticks?: readonly string[] | null; onPick?: (id: string) => void; testId?: string }) {
+export function WaterfallChart({ steps, unit, ticks, selected = null, onPick, testId = "waterfall" }: { steps: WaterfallStep[]; unit?: string; ticks?: readonly string[] | null; selected?: string | null; onPick?: (id: string) => void; testId?: string }) {
   if (!steps.length) return null;
   // geometry only: the running level after each bar
   let level = 0;
@@ -61,10 +61,12 @@ export function WaterfallChart({ steps, unit, ticks, onPick, testId = "waterfall
         const top = y(Math.max(b.from, b.to));
         const h = Math.max(1.5, Math.abs(y(b.from) - y(b.to)));
         const fill = b.kind !== "delta" ? "var(--color-line-strong)" : b.value >= 0 ? "var(--color-accent-bright)" : "var(--color-brand-gold)";
+        const isSelected = selected != null && b.id === selected;
+        const dimmed = selected != null && b.kind === "delta" && !isSelected;
         const next = bars[i + 1];
         return (
-          <g key={b.id} data-testid={`${testId}-bar-${b.id}`} onClick={onPick && b.kind === "delta" ? () => onPick(b.id) : undefined} className={onPick && b.kind === "delta" ? "cursor-pointer" : undefined}>
-            <rect x={x} y={top} width={barW} height={h} rx={3} fill={fill} opacity={b.kind === "delta" ? 0.92 : 1}>
+          <g key={b.id} data-testid={`${testId}-bar-${b.id}`} data-selected={isSelected ? "1" : undefined} onClick={onPick && b.kind === "delta" ? () => onPick(b.id) : undefined} className={onPick && b.kind === "delta" ? "cursor-pointer" : undefined}>
+            <rect x={x} y={top} width={barW} height={h} rx={3} fill={fill} opacity={isSelected ? 1 : dimmed ? 0.35 : b.kind === "delta" ? 0.92 : 1} stroke={isSelected ? "var(--color-fg)" : undefined} strokeWidth={isSelected ? 1.5 : undefined}>
               <title>{`${b.name}: ${b.label}${unit ? ` ${unit}` : ""}`}</title>
             </rect>
             {next && <line x1={x + barW} y1={y(b.to)} x2={PAD.left + slot * (i + 1) + (slot - barW) / 2} y2={y(b.to)} stroke="var(--color-line-strong)" strokeDasharray="3 3" strokeWidth={1} />}

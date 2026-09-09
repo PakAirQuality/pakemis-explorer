@@ -24,13 +24,18 @@ export const ANALYZE = {
     allGases: "All gases (CO₂e)",
   },
   change: {
+    title: "How the total changed",
+    plainLanguage: "In plain language",
+    sectorContributions: "Sector contributions",
+    selectHint: "Select any bar to explain that sector.",
+    overallBack: "‹ Overall change",
     loading: "Comparing the two years…",
     download: "Download chart",
     keyFinding: "Key finding",
     overallChange: "Overall change",
     largestOffset: "Largest offset",
     back: "‹ All sectors",
-    caution: "The chart shows where the change is coming from, but small shifts between years should be treated with caution.",
+    caution: "Small year-to-year shifts should be interpreted with caution.",
   },
   explainer: {
     mainContributor: "Main contributor",
@@ -43,7 +48,7 @@ export const ANALYZE = {
     eyebrow: "Climate + clean air",
     title: "Which sources matter for both?",
     teaser: "See how different sectors contribute to the change in emissions and to current levels, and identify candidates for climate and clean-air co-benefits.",
-    cta: "Explore source contributions",
+    cta: "Explore co-benefits",
     hide: "Hide source contributions",
     dekOf: (from: string, to: string) => `Selected sectors and their estimated contributions to the ${from} to ${to} change (Mt CO₂e).`,
     tagBoth: "both",
@@ -72,3 +77,35 @@ export const ANALYZE = {
     more: "The range is the release's own joint-draw interval for this pair of years under the typed-parameter correlation scenario; the other two scenarios (time-correlated, time-independent) are listed below, and \"robust\" means every scenario's interval keeps the same sign as the central estimate. L and S are the release's two queryable configurations; the category bands are structural envelopes with no probability attached, and rankings are each envelope's own server-computed ranks.",
   },
 } as const;
+
+/**
+ * A COARSE VERBAL BAND for the ratio of two server values - the same idea as the
+ * server's own share_phrase ("nearly half"): words wide enough to invent no
+ * precision, never a computed digit.
+ */
+export function fractionWords(part: number, total: number): string | null {
+  if (!Number.isFinite(part) || !Number.isFinite(total) || total === 0) return null;
+  const r = Math.abs(part) / Math.abs(total);
+  if (r >= 1.05) return "more than the whole";
+  if (r >= 0.9) return "almost all";
+  if (r >= 0.78) return "nearly four-fifths";
+  if (r >= 0.7) return "about three-quarters";
+  if (r >= 0.6) return "nearly two-thirds";
+  if (r >= 0.45) return "about half";
+  if (r >= 0.28) return "about a third";
+  if (r >= 0.18) return "about a quarter";
+  return null;
+}
+
+/** A label lowercased for mid-sentence use, leaving acronyms (IPPU) alone. */
+export function midSentence(label: string): string {
+  if (/^[A-Z]{2,}/.test(label)) return label;
+  return label.charAt(0).toLowerCase() + label.slice(1);
+}
+
+/** "power, IPPU and waste" - an English list of mid-sentence names. */
+export function nameList(labels: string[]): string {
+  const l = labels.map(midSentence);
+  if (l.length <= 1) return l[0] ?? "";
+  return `${l.slice(0, -1).join(", ")} and ${l[l.length - 1]}`;
+}

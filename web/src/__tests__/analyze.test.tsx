@@ -137,57 +137,56 @@ describe("Analyze", () => {
     expect(within(settings).getByTestId("analyze-metric")).toHaveValue("");
     expect(within(settings).getByTestId("change-from")).toHaveValue("FY2020-21");
     expect(within(settings).getByTestId("change-to")).toHaveValue("FY2023-24");
+    // the rail is hero + settings only now
+    expect(screen.queryByTestId("change-key-finding")).toBeNull();
     // Reset returns the pair to first->latest
     fireEvent.change(within(settings).getByTestId("change-to"), { target: { value: "FY2020-21" } });
     fireEvent.click(screen.getByTestId("analyze-reset"));
     await waitFor(() => expect(within(settings).getByTestId("change-to")).toHaveValue("FY2023-24"));
   });
 
-  it("what changed: the waterfall on server ticks, the key finding with the relative percent and the largest offset, and the drill", async () => {
+  it("what changed: the explainer beside the chart, selection swaps the story, the bar highlights", async () => {
     mount();
     const wf = await screen.findByTestId("change-waterfall");
-    expect(wf).toBeInTheDocument();
-    // the card heading ANSWERS the tab: span eyebrow, dynamic headline, supporting line
+    // the card: chip eyebrow (the span), the static answer title, server ticks
     const card = screen.getByTestId("analyze-change");
     expect(card).toHaveTextContent("2020–21 → 2023–24");
-    // +46.95 of +71.83 is more than half: "drove most of the rise"
-    await waitFor(() => expect(card).toHaveTextContent("Agriculture drove most of the rise"));
-    expect(card).toHaveTextContent("How each sector contributed to the 71.83 Mt CO₂e increase.");
-    expect(screen.getByTestId("change-waterfall-bar-start")).toHaveTextContent("394.09");
-    expect(screen.getByTestId("change-waterfall-bar-agriculture")).toHaveTextContent("+46.95");
-    // the y gridlines carry the SERVER's tick labels
+    expect(card).toHaveTextContent("How the total changed");
     expect(wf).toHaveTextContent("600");
-    const panel = screen.getByTestId("change-key-finding");
-    expect(panel).toHaveTextContent("Key finding");
-    expect(screen.getByTestId("analyze-rail")).toContainElement(panel);
-    expect(screen.getByTestId("change-finding")).toHaveTextContent("Emissions increased by +71.83 Mt CO₂e between 2020–21 and 2023–24.");
-    expect(screen.getByTestId("change-finding-top")).toHaveTextContent("Agriculture contributed the largest increase: +46.95 Mt CO₂e.");
-    expect(screen.getByTestId("change-overall-pct")).toHaveTextContent("+18.23 %");
-    expect(screen.getByTestId("change-largest-offset")).toHaveTextContent("Residential -6.50");
-    expect(screen.getByTestId("change-note")).toHaveTextContent("small shifts between years should be treated with caution");
-    expect(screen.queryByTestId("analyze-more-change")).toBeNull();
+    expect(screen.getByTestId("change-chart-panel")).toHaveTextContent("Sector contributions");
     expect(screen.getByTestId("change-download")).toHaveTextContent("Download chart");
-    // the map backdrop follows the To year, and the drill steers its sector overlay
+    // the default explainer: the mockup's copy from server strings + verbal bands
+    await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from agriculture."));
+    expect(screen.getByTestId("explainer-para")).toHaveTextContent(
+      "Pakistan's estimated emissions rose from 394.09 to 465.92 Mt CO₂e. Agriculture added 46.95 Mt — nearly two-thirds of the net increase.",
+    );
+    expect(screen.getByTestId("explainer-para2")).toHaveTextContent("Power also increased. Declines in residential offset part of that growth, but not enough to reverse it.");
+    expect(screen.getByTestId("explainer-stat")).toHaveTextContent("+71.83 Mt CO₂e");
+    expect(screen.getByTestId("explainer-stat")).toHaveTextContent("net increase · +18.23%");
+    expect(screen.getByTestId("explainer-sector-link")).toHaveTextContent("What changed within agriculture?");
+    expect(screen.getByTestId("explainer-hint")).toHaveTextContent("Select any bar to explain that sector.");
+    expect(screen.getByTestId("change-note")).toHaveTextContent("Small year-to-year shifts should be interpreted with caution.");
+    // no Key finding card anywhere: the explainer replaced it
+    expect(screen.queryByTestId("change-key-finding")).toBeNull();
+    // the map backdrop follows the To year; selection steers its sector
     expect(screen.getByTestId("analyze-map-pane")).toContainElement(screen.getByTestId("map-stub"));
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-period", "FY2023-24");
+    // SELECT agriculture: the bar highlights, the chart stays at sector grain,
+    // the explainer becomes the sector's own story - where, never why
     fireEvent.click(screen.getByTestId("change-waterfall-bar-agriculture"));
-    await waitFor(() => expect(screen.getByTestId("change-scope")).toHaveTextContent("Agriculture"));
+    await waitFor(() => expect(screen.getByTestId("change-waterfall-bar-agriculture")).toHaveAttribute("data-selected", "1"));
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "agriculture");
-    expect(await screen.findByTestId("change-waterfall-bar-Enteric fermentation")).toHaveTextContent("+32.97");
-    expect(screen.getByTestId("change-drill-finding")).toHaveTextContent("Inside Agriculture, Enteric fermentation moved the most");
-    // the rail's key finding becomes the SECTOR EXPLAINER - where, never why
-    expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Agriculture · +46.95 Mt CO₂e");
-    expect(screen.getByTestId("explainer-title")).toHaveTextContent("Where the increase is concentrated");
-    expect(screen.getByTestId("explainer-sentence")).toHaveTextContent("The estimated increase is concentrated in Enteric fermentation (+32.97).");
-    expect(screen.getByTestId("explainer-main")).toHaveTextContent("Enteric fermentation");
-    expect(await screen.findByTestId("explainer-envelope")).toHaveTextContent("-30.0 / +40.0 %");
+    expect(screen.getByTestId("change-waterfall-bar-power")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Agriculture · +46.95 Mt CO₂e"));
+    await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from enteric fermentation."));
+    expect(screen.getByTestId("explainer-para")).toHaveTextContent("Agriculture's estimated emissions rose by +46.95 Mt CO₂e. Enteric fermentation added 32.97 Mt");
+    expect(await screen.findByTestId("explainer-stat")).toHaveTextContent("envelope -30.0 / +40.0 %");
     expect(screen.getByTestId("explainer-methods")).toHaveAttribute("href", "/methods/sectors/agriculture");
     expect(screen.getByTestId("explainer-footer")).toHaveTextContent("year-by-year activity data");
-    expect(screen.queryByTestId("change-finding")).toBeNull();
-    fireEvent.click(screen.getByTestId("change-back"));
-    await waitFor(() => expect(screen.queryByTestId("change-scope")).toBeNull());
+    // back to the whole
+    fireEvent.click(screen.getByTestId("explainer-overall"));
+    await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from agriculture."));
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
-    expect(screen.getByTestId("change-finding")).toHaveTextContent("Emissions increased by +71.83 Mt CO₂e");
   });
 
   it("climate + clean air: a teaser until opened, then contribution rows with tags from the envelopes' own shares, and the full matrix in the details", async () => {

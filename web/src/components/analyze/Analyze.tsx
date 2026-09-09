@@ -17,7 +17,6 @@ import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { gasLabel, periodShort } from "@/lib/labels";
 import { ANALYZE } from "./copy";
 import { ChangeSection } from "./ChangeSection";
-import { KeyFindingCard } from "./KeyFindingCard";
 import { SharedSourcesSection } from "./SharedSourcesSection";
 import { SensitivitySection } from "./SensitivitySection";
 
@@ -34,15 +33,15 @@ export function Analyze() {
   const [toP, setToP] = useState(periods[periods.length - 1] ?? "");
   const [gas, setGas] = useState<string>("");
   const [sharedOpen, setSharedOpen] = useState(false);
-  // the drill is page state: the chart draws it, the rail explains it, the map mirrors it
-  const [drill, setDrill] = useState<{ sector: string | null; category: string | null }>({ sector: null, category: null });
+  // the selection is page state: the chart highlights it, the explainer tells it, the map mirrors it
+  const [selected, setSelected] = useState<string | null>(null);
   const [sensitivityOpen, setSensitivityOpen] = useState(false);
   const settings: AnalyzeSettings = { from: fromP, to: toP, gases: gas ? [gas] : null };
   const reset = () => {
     setFromP(periods[0] ?? "");
     setToP(periods[periods.length - 1] ?? "");
     setGas("");
-    setDrill({ sector: null, category: null });
+    setSelected(null);
   };
   const pickTab = (id: string) => {
     setTab(id);
@@ -62,7 +61,7 @@ export function Analyze() {
       {/* the same ground Explore stands on: the map as a fixed backdrop the cards
           scroll over - it follows the To year and the drilled source */}
       <div className="fixed inset-0" data-testid="analyze-map-pane" aria-hidden="true">
-        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: drill.sector }} />
+        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: selected }} />
       </div>
       <div className="relative z-10">
       <NavHeader />
@@ -114,11 +113,10 @@ export function Analyze() {
               </button>
             </section>
 
-            <KeyFindingCard settings={settings} drill={drill} />
           </aside>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <ChangeSection settings={settings} drill={drill} onDrill={setDrill} />
+            <ChangeSection settings={settings} selected={selected} onSelect={setSelected} />
             <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
               <SharedSourcesSection settings={settings} open={sharedOpen} onOpen={setSharedOpen} />
               <SensitivitySection settings={settings} open={sensitivityOpen} onOpen={setSensitivityOpen} />

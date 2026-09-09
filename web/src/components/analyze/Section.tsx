@@ -8,7 +8,7 @@ import { ContourMotif } from "@/components/ui/ContourMotif";
 import { DECK_CARD } from "@/components/overview/deck";
 import { ANALYZE } from "./copy";
 
-export function AnalysisCard({ id, eyebrow, title, dek, action, more, moreOpen, children }: { id: string; eyebrow: string; title: string; dek?: string; action?: ReactNode; more?: string; moreOpen?: boolean; children: ReactNode }) {
+export function AnalysisCard({ id, eyebrow, title, dek, action, more, moreOpen, children }: { id: string; eyebrow: ReactNode; title: string; dek?: string; action?: ReactNode; more?: string; moreOpen?: boolean; children: ReactNode }) {
   return (
     <section id={id} className={`${DECK_CARD} scroll-mt-24`} data-testid={`analyze-${id}`}>
       <div className="flex items-start justify-between gap-3">

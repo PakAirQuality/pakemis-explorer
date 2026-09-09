@@ -1,20 +1,25 @@
 "use client";
 /**
- * The WHAT CHANGED card: the waterfall at the left on a real y-axis (the national
- * series envelope's own tick labels), the KEY FINDING panel at the right - the bold
- * sentence, the overall relative change (the compare function's own percent cell),
- * and the largest offsetting source. Every delta is compare_emissions' exact
- * difference; clicking a bar re-asks the question inside that source. The browser
- * signs positive labels and sizes bars; it subtracts nothing.
+ * The WHAT CHANGED card, the mockup's balance: roughly a third PLAIN-LANGUAGE
+ * EXPLAINER beside two-thirds chart. The chart stays at SECTOR grain; clicking a bar
+ * SELECTS it - the bar highlights and the explainer re-tells that sector's own story
+ * (its category steps, its envelope, the door to its method) - clicking again, or
+ * "Overall change", returns to the national story. The explainer never says WHY: the
+ * release has subsector deltas but no year-by-year activity data, so it says what
+ * changed and where it is concentrated, and its fractions are coarse verbal bands
+ * (the server's own share_phrase idea), never computed digits. Every printed number
+ * is a server string.
  */
 import { useRef } from "react";
-import { Download } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Download } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { useCompare, useNationalSeries } from "@/lib/queries";
+import { useCompare, useNationalSeries, useUncertainty } from "@/lib/queries";
 import { cellUnit, periodShort, sectorLabel } from "@/lib/labels";
+import { magnitudeOf } from "@/lib/uncertainty";
 import { type Cell } from "@/lib/envelope";
 import { WaterfallChart, type WaterfallStep } from "@/components/charts/WaterfallChart";
-import { ANALYZE } from "./copy";
+import { ANALYZE, fractionWords, midSentence, nameList } from "./copy";
 import { AnalysisCard, InfoStrip } from "./Section";
 import type { AnalyzeSettings } from "./Analyze";
 
@@ -22,8 +27,8 @@ type Side = { display_short?: string; value?: number | null; unit?: string; unit
 export const side = (c: Cell, which: "left" | "right") => (c as unknown as Record<string, Side | undefined>)[which];
 export const signed = (c: Cell) => ((c.value ?? 0) > 0 ? `+${c.display_short ?? c.display}` : (c.display_short ?? c.display));
 
-/** The sector compare's aligned delta cells (misaligned pairs dropped - the engine
- * zips by position; found 2026-09-09), sorted by magnitude. */
+/** The compare's aligned delta cells (misaligned pairs dropped - the engine zips by
+ * position; found 2026-09-09), sorted by magnitude. */
 export function alignedDeltas(cells: Cell[] | undefined, groupKey: string) {
   return (cells ?? [])
     .filter((c) => typeof c.value === "number")
@@ -36,79 +41,69 @@ export function alignedDeltas(cells: Cell[] | undefined, groupKey: string) {
     .sort((a, b) => Math.abs(b.c.value as number) - Math.abs(a.c.value as number));
 }
 
-export type Drill = { sector: string | null; category: string | null };
+type Delta = ReturnType<typeof alignedDeltas>[number];
 
-export function ChangeSection({ settings, drill, onDrill }: { settings: AnalyzeSettings; drill: Drill; onDrill: (d: Drill) => void }) {
+/** The dynamic first line: "Most of the rise came from agriculture." and its
+ * variants - sign and ratio are compared, never printed. */
+function headlineOf(top: Delta | undefined, totalValue: number | undefined, name: string): string {
+  if (!top || typeof totalValue !== "number" || totalValue === 0) return ANALYZE.change.loading;
+  const d = top.c.value as number;
+  const riseWord = totalValue > 0 ? "rise" : "reduction";
+  if ((d >= 0) === (totalValue > 0)) {
+    return Math.abs(d) > Math.abs(totalValue) / 2
+      ? `Most of the ${riseWord} came from ${midSentence(name)}.`
+      : `${name} made the largest contribution to the ${riseWord}.`;
+  }
+  return `${name} made the largest contribution to the change.`;
+}
+
+/** "Power, IPPU and waste also increased. Declines in industry and transport offset
+ * part of that growth, but not enough to reverse it." */
+function othersSentence(deltas: Delta[], topId: string, rising: boolean, nameOf: (id: string) => string): string | null {
+  const same = deltas.filter((d) => d.id !== topId && ((d.c.value as number) >= 0) === rising).map((d) => nameOf(d.id));
+  const opposite = deltas.filter((d) => ((d.c.value as number) >= 0) !== rising).map((d) => nameOf(d.id));
+  const parts: string[] = [];
+  if (same.length) parts.push(`${nameList(same.slice(0, 4)).replace(/^./, (ch) => ch.toUpperCase())} also ${rising ? "increased" : "decreased"}.`);
+  if (opposite.length) parts.push(`${rising ? "Declines" : "Increases"} in ${nameList(opposite.slice(0, 3))} offset part of that ${rising ? "growth" : "decline"}, but not enough to reverse it.`);
+  return parts.length ? parts.join(" ") : null;
+}
+
+export function ChangeSection({ settings, selected, onSelect }: { settings: AnalyzeSettings; selected: string | null; onSelect: (id: string | null) => void }) {
   const { labels } = useExplorer();
   const { from: fromP, to: toP, gases } = settings;
-  const setDrill = onDrill;
   const chartRef = useRef<HTMLDivElement>(null);
 
   const gasFilter = gases ? { gases } : {};
   const enabled = !!fromP && !!toP && fromP !== toP;
-  const pair = (extra: object, group: string, mode: "absolute" | "relative" = "absolute") => ({
-    left: { periods: [fromP], group_by: [group], ...gasFilter, ...extra },
-    right: { periods: [toP], group_by: [group], ...gasFilter, ...extra },
-    mode,
-  });
   const total = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "absolute" }, enabled);
-  const grain = drill.category && drill.sector
-    ? pair({ sectors: [drill.sector], categories: [drill.category] }, "subitem")
-    : drill.sector
-      ? pair({ sectors: [drill.sector] }, "category")
-      : pair({}, "sector_id");
-  const cmp = useCompare(grain, enabled);
-  const sectorCmp = useCompare(pair({}, "sector_id"), enabled);
+  const relative = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "relative" }, enabled);
+  const cmp = useCompare({ left: { periods: [fromP], group_by: ["sector_id"], ...gasFilter }, right: { periods: [toP], group_by: ["sector_id"], ...gasFilter }, mode: "absolute" }, enabled);
+  const catCmp = useCompare(
+    selected
+      ? { left: { periods: [fromP], group_by: ["category"], sectors: [selected], ...gasFilter }, right: { periods: [toP], group_by: ["category"], sectors: [selected], ...gasFilter }, mode: "absolute" }
+      : null,
+    enabled && !!selected,
+  );
+  const envs = useUncertainty({ scope: "categories", resolution: "annual_national" }, !!selected);
   const series = useNationalSeries();
 
   const totalCell = total.data?.values[0];
+  const relCell = relative.data?.values[0];
   const tLeft = totalCell ? side(totalCell, "left") : undefined;
   const tRight = totalCell ? side(totalCell, "right") : undefined;
-  const groupKey = drill.category ? "subitem" : drill.sector ? "category" : "sector_id";
-  const nameOf = (id: string) => (groupKey === "sector_id" ? sectorLabel(labels, id) : id);
-  const deltas = alignedDeltas(cmp.data?.values, groupKey);
+  const deltas = alignedDeltas(cmp.data?.values, "sector_id");
+  const nameOf = (id: string) => sectorLabel(labels, id);
+  const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";
+  const mag = tLeft ? magnitudeOf(tLeft as Cell) : "Mt";
+  const rising = (totalCell?.value ?? 0) >= 0;
 
   const steps: WaterfallStep[] = [];
-  if (!drill.sector && totalCell && tLeft && tRight) {
+  if (totalCell && tLeft && tRight) {
     steps.push({ id: "start", name: periodShort(labels, fromP), value: (tLeft.value as number) ?? 0, label: tLeft.display_short ?? "", kind: "start" });
-  }
-  for (const { c, id } of deltas) steps.push({ id, name: nameOf(id), value: c.value as number, label: signed(c), kind: "delta" });
-  if (!drill.sector && totalCell && tLeft && tRight) {
+    for (const { c, id } of deltas) steps.push({ id, name: nameOf(id), value: c.value as number, label: signed(c), kind: "delta" });
     steps.push({ id: "end", name: periodShort(labels, toP), value: (tRight.value as number) ?? 0, label: tRight.display_short ?? "", kind: "end" });
   }
-
   const top = deltas[0];
-  const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";
-  const title = drill.category ?? (drill.sector ? sectorLabel(labels, drill.sector) : null);
-
-  // THE HEADING ANSWERS THE TAB. The denominator for "most of" is the scope's own
-  // total: the national change, or the drilled sector's own step. Sign and ratio
-  // are compared, never printed - every printed number stays a server string.
-  const sectorDeltas = alignedDeltas(sectorCmp.data?.values, "sector_id");
-  const denomCell: Cell | null = drill.category
-    ? null
-    : drill.sector
-      ? (sectorDeltas.find((d) => d.id === drill.sector)?.c ?? null)
-      : (totalCell ?? null);
-  const wordOf = (v: number, rise: string, fall: string, flat: string) => (v > 0 ? rise : v < 0 ? fall : flat);
-  const spanWords = `${periodShort(labels, fromP)} → ${periodShort(labels, toP)}`;
-  const eyebrow = title ? `${title} · ${spanWords}` : spanWords;
-  const headline = ((): string => {
-    if (!top) return ANALYZE.change.loading;
-    const name = nameOf(top.id);
-    const d = top.c.value as number;
-    const t = denomCell?.value;
-    if (typeof t !== "number" || t === 0) return `${name} made the largest contribution to the change`;
-    if (t > 0 && d >= 0) return Math.abs(d) > Math.abs(t) / 2 ? `${name} drove most of the rise` : `${name} made the largest contribution to the rise`;
-    if (t < 0 && d <= 0) return Math.abs(d) > Math.abs(t) / 2 ? `${name} accounted for most of the reduction` : `${name} accounted for the largest reduction`;
-    return `${name} made the largest contribution to the change`;
-  })();
-  const dek = ((): string | undefined => {
-    if (drill.category) return `How each stream contributed to the change inside ${drill.category}.`;
-    if (drill.sector && denomCell) return `How each category contributed to ${sectorLabel(labels, drill.sector)}'s ${signed(denomCell)} ${unit} ${wordOf(denomCell.value ?? 0, "increase", "decrease", "change")}.`;
-    if (totalCell) return `How each sector contributed to the ${totalCell.display_short ?? totalCell.display} ${unit} ${wordOf(totalCell.value ?? 0, "increase", "decrease", "change")}.`;
-    return undefined;
-  })();
 
   const download = () => {
     const svg = chartRef.current?.querySelector("svg");
@@ -121,44 +116,126 @@ export function ChangeSection({ settings, drill, onDrill }: { settings: AnalyzeS
     URL.revokeObjectURL(a.href);
   };
 
+  // --- the explainer's two stories ------------------------------------------------
+
+  const explainer = (() => {
+    if (!totalCell || !tLeft || !tRight || !top) {
+      return <p className="text-sm text-muted">{ANALYZE.change.loading}</p>;
+    }
+    if (selected) {
+      const step = deltas.find((d) => d.id === selected)?.c ?? null;
+      const stepRising = (step?.value ?? 0) >= 0;
+      const catDeltas = alignedDeltas(catCmp.data?.values, "category");
+      const sameSign = catDeltas.filter(({ c }) => ((c.value as number) >= 0) === stepRising);
+      const [cat1, cat2] = sameSign;
+      const envRow = (envs.data?.values ?? [])
+        .map((c) => c as Cell & { category?: string; module?: string; envelope?: { low_pct?: string; high_pct?: string } })
+        .find((c) => c.module === selected && c.category === cat1?.id);
+      const frac = step && cat1 ? fractionWords(cat1.c.value as number, step.value as number) : null;
+      const catOthers = othersSentence(catDeltas, cat1?.id ?? "", stepRising, (id) => id);
+      return (
+        <>
+          <div className="text-xs font-semibold text-accent" data-testid="explainer-eyebrow">
+            <span className="uppercase tracking-[0.08em]">{nameOf(selected)}</span>
+            {step ? <> · <span className="num">{signed(step)} {unit}</span></> : null}
+          </div>
+          <h3 className="mt-2 text-[19px] font-semibold leading-snug tracking-tight text-fg" data-testid="explainer-headline">
+            {cat1 && step ? headlineOf(cat1, step.value as number, cat1.id) : ANALYZE.change.loading}
+          </h3>
+          {cat1 && step && (
+            <p className="mt-2.5 text-sm leading-relaxed text-fg/85" data-testid="explainer-para">
+              {nameOf(selected)}&apos;s estimated emissions {stepRising ? "rose" : "fell"} by{" "}
+              <b className="num whitespace-nowrap">{signed(step)} {unit}</b>. {cat1.id} {(cat1.c.value as number) >= 0 ? "added" : "cut"}{" "}
+              <b className="num whitespace-nowrap">{cat1.c.display_short ?? cat1.c.display} {mag}</b>
+              {frac ? <> — {frac} of the sector&apos;s {stepRising ? "increase" : "decrease"}</> : null}.
+              {cat2 ? <> {cat2.id} followed at <b className="num whitespace-nowrap">{signed(cat2.c)} {mag}</b>.</> : null}
+            </p>
+          )}
+          {catOthers && <p className="mt-2 text-sm leading-relaxed text-fg/85" data-testid="explainer-para2">{catOthers}</p>}
+          {step && (
+            <div className="mt-3.5 rounded-xl bg-surface px-4 py-3" data-testid="explainer-stat">
+              <div className="num text-2xl font-semibold tracking-tight text-accent">{signed(step)} {unit}</div>
+              <div className="mt-0.5 text-sm text-muted">
+                {midSentence(nameOf(selected))}&apos;s net {stepRising ? "increase" : "decrease"}
+                {envRow?.envelope?.low_pct ? <> · envelope <span className="num">{envRow.envelope.low_pct} / +{envRow.envelope.high_pct} %</span></> : null}
+              </div>
+            </div>
+          )}
+          <Link href={`/methods/sectors/${selected}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline" data-testid="explainer-methods">
+            {ANALYZE.explainer.methods} <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+          <div className="mt-3 border-t border-line/70 pt-2.5">
+            <button type="button" onClick={() => onSelect(null)} className="text-sm font-medium text-accent hover:underline" data-testid="explainer-overall">
+              {ANALYZE.change.overallBack}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted/90" data-testid="explainer-footer">{ANALYZE.explainer.footer}</p>
+        </>
+      );
+    }
+    const topName = nameOf(top.id);
+    const frac = fractionWords(top.c.value as number, totalCell.value as number);
+    const others = othersSentence(deltas, top.id, rising, nameOf);
+    return (
+      <>
+        <div className="micro text-accent">{ANALYZE.change.plainLanguage}</div>
+        <h3 className="mt-2 text-[21px] font-semibold leading-snug tracking-tight text-fg" data-testid="explainer-headline">
+          {headlineOf(top, totalCell.value as number, topName)}
+        </h3>
+        <p className="mt-2.5 text-sm leading-relaxed text-fg/85" data-testid="explainer-para">
+          Pakistan&apos;s estimated emissions {rising ? "rose" : "fell"} from <b className="num whitespace-nowrap">{tLeft.display_short}</b> to{" "}
+          <b className="num whitespace-nowrap">{tRight.display_short} {unit}</b>. {topName} {(top.c.value as number) >= 0 ? "added" : "cut"}{" "}
+          <b className="num whitespace-nowrap">{top.c.display_short ?? top.c.display} {mag}</b>
+          {frac && ((top.c.value as number) >= 0) === rising ? <> — {frac} of the net {rising ? "increase" : "decrease"}</> : null}.
+        </p>
+        {others && <p className="mt-2 text-sm leading-relaxed text-fg/85" data-testid="explainer-para2">{others}</p>}
+        <div className="mt-3.5 rounded-xl bg-surface px-4 py-3" data-testid="explainer-stat">
+          <div className="num text-[26px] font-semibold tracking-tight text-accent">{signed(totalCell)} {unit}</div>
+          <div className="mt-0.5 text-sm text-muted">
+            net {rising ? "increase" : "decrease"}{relCell ? <> · <span className="num">{signed(relCell)}%</span></> : null}
+          </div>
+        </div>
+        <button type="button" onClick={() => onSelect(top.id)} className="mt-3.5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline" data-testid="explainer-sector-link">
+          What changed within {midSentence(topName)}? <ArrowRight size={14} aria-hidden="true" />
+        </button>
+        <p className="mt-3 border-t border-line/70 pt-2.5 text-xs text-muted" data-testid="explainer-hint">{ANALYZE.change.selectHint}</p>
+      </>
+    );
+  })();
+
   return (
     <AnalysisCard
       id="change"
-      eyebrow={eyebrow}
-      title={headline}
-      dek={dek}
+      eyebrow={<span className="rounded bg-amber/25 px-1.5 py-0.5">{periodShort(labels, fromP)} → {periodShort(labels, toP)}</span>}
+      title={ANALYZE.change.title}
       action={
         <button type="button" onClick={download} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft" data-testid="change-download">
           <Download size={14} aria-hidden="true" /> {ANALYZE.change.download}
         </button>
       }
     >
-      {title && (
-        <div className="mb-3 flex items-center gap-3" data-testid="change-breadcrumb">
-          <button type="button" className="pill border border-line bg-surface px-3 py-1.5 text-xs font-medium text-fg hover:bg-accent-soft" onClick={() => setDrill(drill.category ? { sector: drill.sector, category: null } : { sector: null, category: null })} data-testid="change-back">
-            {ANALYZE.change.back}
-          </button>
-          <span className="text-sm font-semibold text-fg" data-testid="change-scope">{title}</span>
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(280px,34fr)_minmax(0,66fr)]">
+        <aside className="relative overflow-hidden rounded-xl bg-nav/60 p-5 pl-6" data-testid="change-explainer">
+          <span className="absolute inset-y-0 left-0 w-1 bg-brand-gold" aria-hidden="true" />
+          {explainer}
+        </aside>
+        <div className="rounded-xl border border-line p-4" data-testid="change-chart-panel">
+          <div className="micro mb-1">{ANALYZE.change.sectorContributions}</div>
+          <div ref={chartRef}>
+            {steps.length > 2 ? (
+              <WaterfallChart
+                steps={steps}
+                unit={unit}
+                ticks={series.data?.axis?.ticks_short}
+                selected={selected}
+                onPick={(id) => onSelect(selected === id ? null : id)}
+                testId="change-waterfall"
+              />
+            ) : (
+              <p className="py-10 text-sm text-muted" data-testid="change-pending">{cmp.isError ? "The release refuses this comparison." : "Comparing…"}</p>
+            )}
+          </div>
         </div>
-      )}
-
-      <div ref={chartRef}>
-        {steps.length > (drill.sector ? 0 : 2) ? (
-          <WaterfallChart
-            steps={steps}
-            unit={unit}
-            ticks={drill.sector ? undefined : series.data?.axis?.ticks_short}
-            onPick={drill.category ? undefined : (id) => setDrill(drill.sector ? { sector: drill.sector, category: id } : { sector: id, category: null })}
-            testId="change-waterfall"
-          />
-        ) : (
-          <p className="py-10 text-sm text-muted" data-testid="change-pending">{cmp.isError ? "The release refuses this comparison." : "Comparing…"}</p>
-        )}
-        {drill.sector && top && (
-          <p className="mt-1 text-sm text-muted" data-testid="change-drill-finding">
-            Inside <b className="text-fg">{title}</b>, <b className="text-fg">{top.id}</b> moved the most between {periodShort(labels, fromP)} and {periodShort(labels, toP)}: <b className="num whitespace-nowrap text-fg">{signed(top.c)} {unit}</b>.
-          </p>
-        )}
       </div>
 
       <InfoStrip>{ANALYZE.change.caution}</InfoStrip>
