@@ -37,7 +37,6 @@ import { HeaderBlock } from "@/components/overview/HeaderBlock";
 import { DeckControls } from "@/components/overview/DeckControls";
 import { HEADER, licenceLine } from "@/components/overview/copy";
 import { DECK_CARD } from "@/components/overview/deck";
-import { ScopeChips } from "./ScopeChips";
 import { cardsFor, scopeOf, type CardId } from "./cards";
 import { AirCards } from "./cards/AirCards";
 import { renderCard, wantsFor } from "./cards/render";
@@ -106,7 +105,7 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
 
   const cards = (
     <>
-      <HeaderBlock geo={province} place={place} onGeo={onGeo} onReset={onReset} showReset={showReset} />
+      <HeaderBlock geo={province} place={place} eyebrow={scope.kind === "province" ? HEADER.eyebrowProvince : scope.kind === "district" ? HEADER.eyebrowDistrict : HEADER.eyebrow} onGeo={onGeo} onReset={onReset} showReset={showReset} />
       <header className={`${DECK_CARD} flex items-center justify-between gap-3 px-5 py-3`} data-testid="deck-header">
         <h2 className="widget-title min-w-0 truncate">{DECK_TITLE(place)}</h2>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -123,7 +122,6 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
           )}
         </div>
       </header>
-      <ScopeChips />
       {state.pol
         ? <AirCards pol={state.pol} />
         : ids.map((id) => renderCard({ id, scope, deck, place, open: isOpen(id), onToggle: toggle(id), onSector: pickSector, picked }))}

@@ -2,7 +2,7 @@
 /**
  * The place card, the deck's first card. 420 px wide, 20 px radius: the ivory block
  * (`--color-nav`) carries the eyebrow
- * "Pakistan Emissions Explorer", the place's name, one line saying what the tool does and the
+ * "National emissions" (or the provincial / district variant), the place's name, one line saying what the tool does and the
  * province select — the location control the card exists for — and a white utility row beneath
  * it, separated by spacing and one hairline, holds Share and Download.
  *
@@ -21,7 +21,7 @@ import { HEADER } from "./copy";
 const UTILITY = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-fg transition-colors hover:bg-accent-soft";
 const SELECT_ID = "province-select";
 
-export function HeaderBlock({ geo, place, onGeo, onReset, showReset = false }: { geo: string | null; place: string; onGeo: (name: string | null) => void; onReset: () => void; showReset?: boolean }) {
+export function HeaderBlock({ geo, place, eyebrow = HEADER.eyebrow, onGeo, onReset, showReset = false }: { geo: string | null; place: string; eyebrow?: string; onGeo: (name: string | null) => void; onReset: () => void; showReset?: boolean }) {
   const { dims, labels } = useExplorer();
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -35,13 +35,13 @@ export function HeaderBlock({ geo, place, onGeo, onReset, showReset = false }: {
   };
   return (
     <header className="pointer-events-auto relative shrink-0 overflow-hidden rounded-[20px] border border-nav-line bg-nav text-nav-fg shadow-lg" data-testid="header-block">
-      <div className="relative px-6 pb-5 pt-5">
+      <div className="relative px-6 pb-5 pt-4">
         <ContourMotif />
         <div className="relative">
-          <div className="text-micro font-semibold uppercase tracking-[0.08em] text-accent" data-testid="eyebrow">{HEADER.eyebrow}</div>
-          <h1 className="mt-1.5 text-[30px] font-semibold leading-tight tracking-tight text-fg" data-testid="place-title">{place}</h1>
+          <div className="text-micro font-semibold uppercase tracking-[0.08em] text-accent" data-testid="eyebrow">{eyebrow}</div>
+          <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-tight text-fg" data-testid="place-title">{place}</h1>
           <p className="mt-1 text-[13px] text-muted" data-testid="header-dek">{HEADER.dek}</p>
-          <label className="relative mt-4 block">
+          <label className="relative mt-3 block">
             <span className="sr-only">{HEADER.selectProvince}</span>
             <select
               id={SELECT_ID}
@@ -60,7 +60,7 @@ export function HeaderBlock({ geo, place, onGeo, onReset, showReset = false }: {
           </label>
         </div>
       </div>
-      <div className="flex h-11 items-center justify-between border-t border-nav-line bg-card px-4" data-testid="header-utilities">
+      <div className="flex h-10 items-center justify-between border-t border-nav-line bg-card px-4" data-testid="header-utilities">
         {showReset ? (
           <button type="button" onClick={onReset} className={UTILITY} data-testid="header-reset">
             <RotateCcw size={15} className="text-accent" aria-hidden="true" /> {HEADER.reset}

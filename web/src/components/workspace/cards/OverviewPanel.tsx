@@ -24,13 +24,12 @@ import { cellUnit, gasLabel, periodShort, periodSpanWords } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { ContourMotif } from "@/components/ui/ContourMotif";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
-import { SNAPSHOT } from "@/components/overview/copy";
 import type { Scope } from "../cards";
 import { DeckCard, Pending } from "./DeckCard";
-import { CHIP, scopeWholeWords, sentenceOf } from "./SnapshotCard";
+import { scopeWholeWords, sentenceOf } from "./SnapshotCard";
 import { GasRail } from "../GasRail";
 import { YearRail } from "../YearRail";
-import { cellFor, lowerName, rankedCells } from "./data";
+import { cellFor, rankedCells } from "./data";
 import { sectorLabel } from "@/lib/labels";
 
 export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }: { id: string; scope: Scope; deck: Deck; place: string; title: string; open: boolean; onToggle: (open: boolean) => void }) {
@@ -41,10 +40,16 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
 
   const top = scope.kind === "national" ? rankedCells(deck.breakdown.data)[0] ?? null : null;
   const topName = top ? sectorLabel(labels, top.group?.[deck.bodies.breakdown.key]) : "";
-  const sentence = cell ? sentenceOf({ scope, place, period, cell, top, topName, labels }) : null;
-  // a chosen gas's chip: its share of the gas partition, from the server's own cell
+  // a chosen gas's share of the gas partition, from the server's own cell - folded
+  // into the sentence (the chip it used to ride on is gone)
   const ranked = deck.bodies.ranked;
   const mine = scope.kind === "gas" && ranked ? cellFor(deck.ranked.data, ranked.key, ranked.id) : null;
+  const gasShare = mine && mine.share_pct_short ? (
+    <> That is <b className="num">{mine.share_pct_short} %</b> of {scopeWholeWords(scope)}
+      {typeof mine.rank === "number" && deck.ranked.data ? <> — rank <b className="num">{String(mine.rank)}</b> of <b className="num">{String(deck.ranked.data.values.length)}</b></> : null}.
+    </>
+  ) : null;
+  const sentence = cell ? <>{sentenceOf({ scope, place, period, cell, top, topName, labels })}{gasShare}</> : null;
 
   const series = deck.series.data;
   const change = series?.change;
@@ -64,14 +69,6 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
             <span className="num text-4xl font-semibold tracking-tight text-accent" data-testid="overview-display" title={`${cell.display} ${cell.unit}`}>{shown(cell)}</span>
             <span className="text-sm text-muted">{cellUnit(cell)}</span>
           </div>
-          {top && top.share_pct_short ? (
-            <span className={`${CHIP} mt-2`} data-testid="overview-chip">{SNAPSHOT.from(top.share_pct_short, lowerName(topName))}</span>
-          ) : mine && mine.share_pct_short ? (
-            <span className={`${CHIP} mt-2`} data-testid="overview-chip">
-              <b className="num">{mine.share_pct_short} %</b> of {scopeWholeWords(scope)}
-              {typeof mine.rank === "number" && deck.ranked.data ? <> · rank <b className="num">{String(mine.rank)}</b> of <b className="num">{String(deck.ranked.data.values.length)}</b></> : null}
-            </span>
-          ) : null}
         </div>
       ) : (
         <Pending q={deck.total} what="the national total" />

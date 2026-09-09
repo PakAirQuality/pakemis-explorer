@@ -204,7 +204,9 @@ describe("the deck's card set follows the scope", () => {
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "national");
     expect(screen.getByTestId("card-overview")).toHaveTextContent("National overview");
     expect(screen.getByTestId("overview-display")).toHaveTextContent("452.35");
-    expect(screen.getByTestId("overview-chip")).toHaveTextContent("49.4 % from agriculture");
+    // the share-rank chip is gone; the sentence itself carries the share
+    expect(screen.queryByTestId("overview-chip")).toBeNull();
+    expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("49.4 %");
     // the panel folds the trend in: the rail and the series live inside it
     expect(screen.getByTestId("year-rail")).toBeInTheDocument();
     expect(screen.getByTestId("overview-series")).toBeInTheDocument();
@@ -229,7 +231,8 @@ describe("the deck's card set follows the scope", () => {
     expect(shownCards()).toEqual(["overview", "sectors"]);
     expect(screen.getByTestId("card-overview")).toHaveTextContent("Gas overview");
     expect(screen.getByTestId("overview-display")).toHaveTextContent("248.75");
-    expect(screen.getByTestId("overview-chip")).toHaveTextContent("55.0 % of the national total · rank 1 of 2");
+    expect(screen.queryByTestId("overview-chip")).toBeNull();
+    expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("That is 55.0 % of the national total — rank 1 of 2.");
     expect(screen.getByTestId("card-sectors")).toHaveTextContent("Contributing sectors");
   });
   it("a province selected: its total with the province partition's share and rank, its modules, the provinces ranked, what it retains", async () => {
@@ -336,7 +339,6 @@ describe("a collapsed card asks for nothing", () => {
     for (const id of ["overview", "sectors", "places"]) expect(screen.queryByTestId(`card-${id}-sentence`), id).toBeNull();
     const before = queries();
     await act(async () => void patch({ period: "FY2020-21" }));
-    await waitFor(() => expect(screen.getByTestId("chip-period")).toHaveTextContent("2020–21"));
     expect(queries()).toBe(before);
     // one card back open, and its own envelope — and only its own — is asked for, in the new year
     const mark = posts.length;

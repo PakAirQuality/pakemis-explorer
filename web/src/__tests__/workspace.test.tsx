@@ -178,7 +178,7 @@ describe("the workspace frame", () => {
     expect(screen.getByTestId("nav-capsule").className).toContain("w-[420px]");
     expect(deck.className).not.toMatch(/(^|\s)bg-/); // the map shows between the cards
     const cards = Array.from(deck.children).map((el) => el.getAttribute("data-testid"));
-    expect(cards).toEqual(["header-block", "deck-header", "scope-chips", "card-overview", "card-sectors", "card-places", "footer"]);
+    expect(cards).toEqual(["header-block", "deck-header", "card-overview", "card-sectors", "card-places", "footer"]);
     for (const id of ["card-overview", "card-sectors", "card-places", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("INSIGHTS · PAKISTAN");
     // the filter panel: 340 px, top-right
@@ -266,27 +266,19 @@ describe("the workspace's state", () => {
     // the active view line reads the same scope back in words
     expect(screen.getByTestId("active-view")).toHaveTextContent("Pakistan · Power · CH₄ · 2020–21");
   });
-  it("a scope read from the URL becomes the chips, and each chip clears back to its default", async () => {
+  it("a scope read from the URL becomes the filter panel's values (the chips row is gone), and clearing each returns to the defaults", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
     mount("?sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
     await screen.findByTestId("card-snapshot-sentence");
-    const chips = screen.getByTestId("scope-chips");
-    expect(within(chips).getByTestId("chip-sector")).toHaveTextContent("Power");
-    expect(within(chips).getByTestId("chip-gas")).toHaveTextContent("CH₄");
-    expect(within(chips).getByTestId("chip-period")).toHaveTextContent("2020–21");
-    for (const id of ["chip-sector", "chip-gas", "chip-period"]) expect(screen.getByTestId(id)).toHaveAttribute("data-default", "0");
-    fireEvent.click(screen.getByTestId("chip-sector-clear"));
-    await waitFor(() => expect(screen.getByTestId("chip-sector")).toHaveTextContent("All sectors"));
-    fireEvent.click(screen.getByTestId("chip-gas-clear"));
-    await waitFor(() => expect(screen.getByTestId("chip-gas")).toHaveTextContent("All gases"));
-    fireEvent.click(screen.getByTestId("chip-period-clear"));
-    await waitFor(() => expect(screen.getByTestId("chip-period")).toHaveTextContent("2023–24"));
-    // a chip at its default carries no clear button
-    for (const id of ["chip-sector", "chip-gas", "chip-period"]) {
-      expect(screen.getByTestId(id)).toHaveAttribute("data-default", "1");
-      expect(screen.queryByTestId(`${id}-clear`), id).toBeNull();
-    }
-    expect(updates[updates.length - 1].queryString).toBe("");
+    expect(screen.queryByTestId("scope-chips")).toBeNull();
+    expect(screen.getByTestId("sector-select")).toHaveValue("power");
+    expect(screen.getByTestId("gas-select")).toHaveValue("CH4");
+    await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21"));
+    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "" } });
+    fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
+    fireEvent.change(screen.getByTestId("year-range"), { target: { value: "1" } });
+    await waitFor(() => expect(updates[updates.length - 1].queryString).toBe(""));
+    await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2023–24"));
   });
   it("the province card re-scopes the deck; the hovered sector steers the map without reaching the URL", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
@@ -325,7 +317,7 @@ describe("the workspace's state", () => {
     await screen.findByTestId("card-snapshot-sentence");
     fireEvent.click(screen.getByTestId("reset-filters"));
     await waitFor(() => expect(updates[updates.length - 1].queryString).toBe(""));
-    expect(screen.getByTestId("chip-sector")).toHaveTextContent("All sectors");
+    expect(screen.getByTestId("sector-select")).toHaveValue("");
   });
 });
 
@@ -359,7 +351,7 @@ describe("the deck's cards", () => {
     mount();
     await loaded();
     expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture contributed 223.45 Mt, accounting for 49.4 % of the total.");
-    expect(screen.getByTestId("overview-chip")).toHaveTextContent("49.4 % from agriculture");
+    expect(screen.queryByTestId("overview-chip")).toBeNull();   // the share rides in the sentence, not a chip
     expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
     expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source of emissions, contributing 223.45 Mt CO₂e (49.4 %). Power followed at 63.37 Mt (14.0 %), with transport at 41.93 Mt (9.3 %).");
     expect(screen.getByTestId("overview-change")).toHaveTextContent("Between 2020–21 and 2023–24, emissions increased by +21.5 %, from 372.40 Mt to 452.35 Mt CO₂e.");
@@ -421,7 +413,7 @@ describe("the narrow workspace: one pane at a time", () => {
     for (const c of ["absolute", "inset-x-0", "top-[72px]", "bottom-0", "mx-auto", "w-full", "max-w-[560px]", "overflow-y-auto", "px-5", "pb-24"]) expect(deck.className, c).toContain(c);
     expect(deck.className).not.toContain("w-[420px]");
     // every card is still there, in the same order
-    expect(Array.from(deck.children).map((el) => el.getAttribute("data-testid"))).toEqual(["header-block", "deck-header", "scope-chips", "card-overview", "card-sectors", "card-places", "footer"]);
+    expect(Array.from(deck.children).map((el) => el.getAttribute("data-testid"))).toEqual(["header-block", "deck-header", "card-overview", "card-sectors", "card-places", "footer"]);
     expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("452.35 Mt CO₂e");
     // and the map's own chrome is not: no legend capsule, no map buttons, no Map settings
     expect(screen.queryByTestId("legend-capsule")).toBeNull();
@@ -464,7 +456,6 @@ describe("the workspace's audits", () => {
     await screen.findByTestId("deck");
     expect(screen.getByTestId("gas-select")).toHaveValue("pol:NH3");
     expect(await screen.findByTestId("air-display")).toHaveTextContent("2784.71");
-    expect(screen.getByTestId("chip-gas")).toHaveTextContent("NH₃ (air beta)");
     expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");
     expect(screen.getByTestId("card-air-sources")).toHaveTextContent("Agriculture is the largest estimated source");
     expect(screen.getByTestId("card-air-trend")).toHaveTextContent("the agriculture layer alone");
@@ -480,7 +471,7 @@ describe("the workspace's audits", () => {
     // stand-in
     expect(screen.queryByTestId("air-year-note")).toBeNull();
     expect(screen.getByTestId("year-slider")).toBeInTheDocument();
-    expect(screen.getByTestId("chip-period")).not.toHaveTextContent("2024 layer");
+    expect(screen.getByTestId("year-value")).not.toHaveTextContent("2024 layer");
     // parity with the greenhouse panel: the year rail and the nine-year series live
     // INSIDE the snapshot card, and the separate series card is gone
     const airSnap = screen.getByTestId("card-air-snapshot");
@@ -490,9 +481,9 @@ describe("the workspace's audits", () => {
     expect(screen.queryByTestId("card-air-series")).toBeNull();
     // a rail tick writes `period`, the same key the slider writes
     fireEvent.click(screen.getByTestId("rail-FY2020-21"));
-    await waitFor(() => expect(screen.getByTestId("chip-period")).toHaveTextContent("2020–21"));
-    // clearing through the chip returns to CO₂e
-    fireEvent.click(screen.getByTestId("chip-gas-clear"));
+    await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21"));
+    // clearing through the select returns to CO₂e
+    fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByTestId("gas-select")).toHaveValue(""));
     expect(screen.getByTestId("year-slider")).toBeInTheDocument();
   });
