@@ -101,7 +101,7 @@ beforeEach(() => {
           ], { request_type: "get_uncertainty" });
         }
         return envelope([
-          { display: "151.660", display_short: "151.66", value: 151.66, extra: { category: "Enteric fermentation", envelope: { low_pct: "-30.0", high_pct: "40.0", kind: "structural" } } },
+          { display: "151.660", display_short: "151.66", value: 151.66, extra: { category: "Enteric fermentation", module: "agriculture", envelope: { low_pct: "-30.0", high_pct: "40.0", kind: "structural" } } },
           { display: "63.370", display_short: "63.37", value: 63.37, extra: { category: "Grid electricity", envelope: { low_pct: "-10.0", high_pct: "15.0", kind: "structural" } } },
         ], { request_type: "get_uncertainty" });
       }
@@ -129,6 +129,8 @@ describe("Analyze", () => {
     expect(await screen.findByTestId("analyze-title")).toHaveTextContent("Analyze");
     expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Analyze")).toHaveAttribute("aria-current", "page");
     expect(screen.getByTestId("analyze-tab-change")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("analyze-tab-shared")).toHaveTextContent("What matters for both?");
+    expect(screen.getByTestId("analyze-tab-sensitivity")).toHaveTextContent("How certain is it?");
     const settings = screen.getByTestId("analyze-settings");
     expect(settings).toHaveTextContent("Analysis settings");
     expect(within(settings).getByTestId("analyze-geo")).toHaveValue("PK");
@@ -145,6 +147,12 @@ describe("Analyze", () => {
     mount();
     const wf = await screen.findByTestId("change-waterfall");
     expect(wf).toBeInTheDocument();
+    // the card heading ANSWERS the tab: span eyebrow, dynamic headline, supporting line
+    const card = screen.getByTestId("analyze-change");
+    expect(card).toHaveTextContent("2020–21 → 2023–24");
+    // +46.95 of +71.83 is more than half: "drove most of the rise"
+    await waitFor(() => expect(card).toHaveTextContent("Agriculture drove most of the rise"));
+    expect(card).toHaveTextContent("How each sector contributed to the 71.83 Mt CO₂e increase.");
     expect(screen.getByTestId("change-waterfall-bar-start")).toHaveTextContent("394.09");
     expect(screen.getByTestId("change-waterfall-bar-agriculture")).toHaveTextContent("+46.95");
     // the y gridlines carry the SERVER's tick labels
@@ -167,9 +175,19 @@ describe("Analyze", () => {
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "agriculture");
     expect(await screen.findByTestId("change-waterfall-bar-Enteric fermentation")).toHaveTextContent("+32.97");
     expect(screen.getByTestId("change-drill-finding")).toHaveTextContent("Inside Agriculture, Enteric fermentation moved the most");
+    // the rail's key finding becomes the SECTOR EXPLAINER - where, never why
+    expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Agriculture · +46.95 Mt CO₂e");
+    expect(screen.getByTestId("explainer-title")).toHaveTextContent("Where the increase is concentrated");
+    expect(screen.getByTestId("explainer-sentence")).toHaveTextContent("The estimated increase is concentrated in Enteric fermentation (+32.97).");
+    expect(screen.getByTestId("explainer-main")).toHaveTextContent("Enteric fermentation");
+    expect(await screen.findByTestId("explainer-envelope")).toHaveTextContent("-30.0 / +40.0 %");
+    expect(screen.getByTestId("explainer-methods")).toHaveAttribute("href", "/methods/sectors/agriculture");
+    expect(screen.getByTestId("explainer-footer")).toHaveTextContent("year-by-year activity data");
+    expect(screen.queryByTestId("change-finding")).toBeNull();
     fireEvent.click(screen.getByTestId("change-back"));
     await waitFor(() => expect(screen.queryByTestId("change-scope")).toBeNull());
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
+    expect(screen.getByTestId("change-finding")).toHaveTextContent("Emissions increased by +71.83 Mt CO₂e");
   });
 
   it("climate + clean air: a teaser until opened, then contribution rows with tags from the envelopes' own shares, and the full matrix in the details", async () => {

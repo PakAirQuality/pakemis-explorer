@@ -11,8 +11,8 @@ export const ANALYZE = {
   moreLabel: "More about this analysis",
   questions: [
     { id: "change", label: "What changed?" },
-    { id: "shared", label: "Climate and clean air" },
-    { id: "sensitivity", label: "Does it hold?" },
+    { id: "shared", label: "What matters for both?" },
+    { id: "sensitivity", label: "How certain is it?" },
   ],
   settings: {
     eyebrow: "Analysis settings",
@@ -24,14 +24,20 @@ export const ANALYZE = {
     allGases: "All gases (CO₂e)",
   },
   change: {
-    eyebrow: "What changed",
-    title: "What drove the change",
+    loading: "Comparing the two years…",
     download: "Download chart",
     keyFinding: "Key finding",
     overallChange: "Overall change",
     largestOffset: "Largest offset",
     back: "‹ All sectors",
     caution: "The chart shows where the change is coming from, but small shifts between years should be treated with caution.",
+  },
+  explainer: {
+    mainContributor: "Main contributor",
+    itsChange: "Its change",
+    envelopeRow: "Estimate envelope",
+    footer: "Attribution to activity or emission factors needs year-by-year activity data the release does not yet publish; this card says where the change sits.",
+    methods: "View sources and method",
   },
   shared: {
     eyebrow: "Climate + clean air",

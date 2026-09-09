@@ -34,14 +34,15 @@ export function Analyze() {
   const [toP, setToP] = useState(periods[periods.length - 1] ?? "");
   const [gas, setGas] = useState<string>("");
   const [sharedOpen, setSharedOpen] = useState(false);
-  // the backdrop map mirrors the analysis: the To year, and the source under study
-  const [mapSector, setMapSector] = useState<string | null>(null);
+  // the drill is page state: the chart draws it, the rail explains it, the map mirrors it
+  const [drill, setDrill] = useState<{ sector: string | null; category: string | null }>({ sector: null, category: null });
   const [sensitivityOpen, setSensitivityOpen] = useState(false);
   const settings: AnalyzeSettings = { from: fromP, to: toP, gases: gas ? [gas] : null };
   const reset = () => {
     setFromP(periods[0] ?? "");
     setToP(periods[periods.length - 1] ?? "");
     setGas("");
+    setDrill({ sector: null, category: null });
   };
   const pickTab = (id: string) => {
     setTab(id);
@@ -61,7 +62,7 @@ export function Analyze() {
       {/* the same ground Explore stands on: the map as a fixed backdrop the cards
           scroll over - it follows the To year and the drilled source */}
       <div className="fixed inset-0" data-testid="analyze-map-pane" aria-hidden="true">
-        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: mapSector }} />
+        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: drill.sector }} />
       </div>
       <div className="relative z-10">
       <NavHeader />
@@ -113,11 +114,11 @@ export function Analyze() {
               </button>
             </section>
 
-            <KeyFindingCard settings={settings} />
+            <KeyFindingCard settings={settings} drill={drill} />
           </aside>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <ChangeSection settings={settings} onScope={setMapSector} />
+            <ChangeSection settings={settings} drill={drill} onDrill={setDrill} />
             <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
               <SharedSourcesSection settings={settings} open={sharedOpen} onOpen={setSharedOpen} />
               <SensitivitySection settings={settings} open={sensitivityOpen} onOpen={setSensitivityOpen} />
