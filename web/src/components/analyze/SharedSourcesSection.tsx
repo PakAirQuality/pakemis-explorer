@@ -71,7 +71,7 @@ export function SharedSourcesSection() {
   const maxY = Math.max(10, ...points.map((p) => p.y));
 
   return (
-    <Section id="shared" title={ANALYZE.shared.title} dek={ANALYZE.shared.dek}>
+    <Section id="shared" title={ANALYZE.shared.title} dek={ANALYZE.shared.dek} more={ANALYZE.shared.more}>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           Year

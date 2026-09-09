@@ -14,6 +14,11 @@ import Page from "@/app/analyze/page";
 import { RELEASE, envelope, mockFetch, type MockBody } from "./fixtures";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/analyze", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock("@/components/map/ExplorerMap", () => ({
+  ExplorerMap: ({ override }: { override?: { sector?: string | null; period?: string } }) => (
+    <div data-testid="map-stub" data-sector={override?.sector ?? ""} data-period={override?.period ?? ""} />
+  ),
+}));
 
 const cmpCell = (delta: string, v: number, left: object, right: object) => ({
   display: delta, display_short: delta.replace(/^[+]/, ""), value: v, unit: "Mt CO2e AR5",
@@ -118,17 +123,23 @@ describe("Analyze", () => {
     expect(screen.getByTestId("change-waterfall-bar-agriculture")).toHaveTextContent("+46.95");
     expect(screen.getByTestId("change-waterfall-bar-residential")).toHaveTextContent("-6.50");
     expect(screen.getByTestId("change-finding")).toHaveTextContent(
-      "Between 2020–21 and 2023–24, the national total rose from 394.09 to 465.92 Mt CO₂e — a change of +71.83. Agriculture contributed the largest single step, +46.95.",
+      "Emissions grew by +71.83 Mt CO₂e between 2020–21 and 2023–24 — from 394.09 to 465.92. Agriculture contributed the largest single step of that change: +46.95.",
     );
-    // the honesty line rides under the chart
-    expect(screen.getByTestId("change-note")).toHaveTextContent("smaller than the estimate's uncertainty");
-    // drill: agriculture opens into its categories
+    // the plain caution rides under the chart; the precise wording folds into "More"
+    expect(screen.getByTestId("change-note")).toHaveTextContent("wider than most year-to-year moves");
+    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("compare function");
+    // the workspace shell: the map behind, following the To year
+    expect(screen.getByTestId("analyze-map-pane")).toContainElement(screen.getByTestId("map-stub"));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-period", "FY2023-24");
+    // drill: agriculture opens into its categories, and the map's sector overlay follows
     fireEvent.click(screen.getByTestId("change-waterfall-bar-agriculture"));
     await waitFor(() => expect(screen.getByTestId("change-scope")).toHaveTextContent("Agriculture"));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "agriculture");
     expect(await screen.findByTestId("change-waterfall-bar-Enteric fermentation")).toHaveTextContent("+32.97");
-    expect(screen.getByTestId("change-finding")).toHaveTextContent("Inside Agriculture, the largest step");
+    expect(screen.getByTestId("change-finding")).toHaveTextContent("Inside Agriculture, Enteric fermentation moved the most");
     fireEvent.click(screen.getByTestId("change-back"));
     await waitFor(() => expect(screen.queryByTestId("change-scope")).toBeNull());
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
   });
 
   it("the matrix: each column its own share, an NE cell that is typed (with the screening's ends), and the scatter's combined-weight finding", async () => {

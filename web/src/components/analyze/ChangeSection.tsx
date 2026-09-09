@@ -6,7 +6,7 @@
  * re-asks the same question inside that source (sector → categories → streams). The
  * browser signs a positive label and sizes the bars; it subtracts nothing.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { useCompare } from "@/lib/queries";
 import { cellUnit, periodShort, sectorLabel } from "@/lib/labels";
@@ -20,12 +20,17 @@ type Side = { display_short?: string; value?: number | null; unit?: string; unit
 const side = (c: Cell, which: "left" | "right") => (c as unknown as Record<string, Side | undefined>)[which];
 const signed = (c: Cell) => ((c.value ?? 0) > 0 ? `+${c.display_short ?? c.display}` : (c.display_short ?? c.display));
 
-export function ChangeSection() {
-  const { labels, dims, release } = useExplorer();
+export type ChangeScope = { period: string | null; sector: string | null };
+
+export function ChangeSection({ onScope }: { onScope?: (s: ChangeScope) => void }) {
+  const { labels, dims } = useExplorer();
   const periods = dims.fiscalPeriods;
   const [fromP, setFromP] = useState(periods[0] ?? "");
   const [toP, setToP] = useState(periods[periods.length - 1] ?? "");
   const [drill, setDrill] = useState<{ sector: string | null; category: string | null }>({ sector: null, category: null });
+
+  // the map beside the column mirrors this section: the To year and the source under study
+  useEffect(() => onScope?.({ period: toP || null, sector: drill.sector }), [onScope, toP, drill.sector]);
 
   const pair = (extra: object, group: string) => ({
     left: { periods: [fromP], group_by: [group], ...extra },
@@ -77,12 +82,11 @@ export function ChangeSection() {
 
   const top = deltas[0];
   const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";
-  const moved = totalCell && (totalCell.value ?? 0) >= 0 ? "rose" : "fell";
-  const longitudinal = release.known_limitations.find((l) => /longitudinal|trend/i.test(String(l.id ?? "")));
+  const grewOrFell = totalCell && (totalCell.value ?? 0) >= 0 ? "grew" : "fell";
 
   const title = drill.category ?? (drill.sector ? sectorLabel(labels, drill.sector) : null);
   return (
-    <Section id="change" title={ANALYZE.change.title} dek={ANALYZE.change.dek}>
+    <Section id="change" title={ANALYZE.change.title} dek={ANALYZE.change.dek} more={ANALYZE.change.more}>
       <div className="mb-4 flex flex-wrap items-end gap-3" data-testid="change-controls">
         <label className="flex flex-col gap-1 text-xs text-muted">
           {ANALYZE.change.from}
@@ -117,22 +121,19 @@ export function ChangeSection() {
 
       {totalCell && tLeft && tRight && top && !drill.sector ? (
         <Finding testId="change-finding">
-          Between <b>{periodShort(labels, fromP)}</b> and <b>{periodShort(labels, toP)}</b>, the national total {moved} from{" "}
-          <b className="num whitespace-nowrap">{tLeft.display_short}</b> to <b className="num whitespace-nowrap">{tRight.display_short} {unit}</b> —{" "}
-          a change of <b className="num whitespace-nowrap">{signed(totalCell)}</b>. <b>{nameOf(top.id)}</b> contributed the largest single step,{" "}
-          <b className="num whitespace-nowrap">{signed(top.c)}</b>.
+          Emissions {grewOrFell} by <b className="num whitespace-nowrap">{signed(totalCell)} {unit}</b> between{" "}
+          <b>{periodShort(labels, fromP)}</b> and <b>{periodShort(labels, toP)}</b> — from{" "}
+          <b className="num whitespace-nowrap">{tLeft.display_short}</b> to <b className="num whitespace-nowrap">{tRight.display_short}</b>.{" "}
+          <b>{nameOf(top.id)}</b> contributed the largest single step of that change: <b className="num whitespace-nowrap">{signed(top.c)}</b>.
         </Finding>
       ) : top && drill.sector ? (
         <Finding testId="change-finding">
-          Inside <b>{title}</b>, the largest step between <b>{periodShort(labels, fromP)}</b> and <b>{periodShort(labels, toP)}</b> is{" "}
-          <b>{top.id}</b> at <b className="num whitespace-nowrap">{signed(top.c)} {unit}</b>.
+          Inside <b>{title}</b>, <b>{top.id}</b> moved the most between <b>{periodShort(labels, fromP)}</b> and{" "}
+          <b>{periodShort(labels, toP)}</b>: <b className="num whitespace-nowrap">{signed(top.c)} {unit}</b>.
         </Finding>
       ) : null}
 
-      <p className="mt-3 text-xs text-muted/90" data-testid="change-note">
-        {ANALYZE.change.limitationNote}
-        {longitudinal ? <> {String(longitudinal.message ?? "")}</> : null}
-      </p>
+      <p className="mt-3 text-xs text-muted/90" data-testid="change-note">{ANALYZE.change.caution}</p>
     </Section>
   );
 }

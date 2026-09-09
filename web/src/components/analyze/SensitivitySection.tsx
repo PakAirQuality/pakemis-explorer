@@ -50,7 +50,7 @@ export function SensitivitySection() {
   }));
 
   return (
-    <Section id="sensitivity" title={ANALYZE.sensitivity.title} dek={ANALYZE.sensitivity.dek}>
+    <Section id="sensitivity" title={ANALYZE.sensitivity.title} dek={ANALYZE.sensitivity.dek} more={ANALYZE.sensitivity.more}>
       <h3 className="text-sm font-semibold text-fg">{ANALYZE.sensitivity.configs}</h3>
       <div className="mt-2 overflow-x-auto">
         <table className="w-full min-w-[560px] text-xs" data-testid="sensitivity-table">
