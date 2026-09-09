@@ -7,7 +7,7 @@
  * write the same keys the map's own clicks write (`geo` names its own grain): a
  * province {geo: name, level: "adm1"}, a district {geo: shape_id, level: "adm2"}.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, MapPin, Search } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { geoGrain } from "@/lib/geography";
@@ -21,6 +21,10 @@ export function PlacePicker() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // the panel DROPS DOWN from the field (a combobox, not a centred modal), so it is
+  // fixed at the trigger's own rect - the header card's overflow-hidden cannot clip it
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const label = !state.geo
     ? HEADER.allProvinces
@@ -36,6 +40,17 @@ export function PlacePicker() {
   const matches = needle
     ? districts.flatMap(([province, list]) => list.filter((d) => d.name.toLowerCase().includes(needle)).map((d) => ({ ...d, province })))
     : [];
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = triggerRef.current?.getBoundingClientRect();
+      if (r) setAnchor({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +72,7 @@ export function PlacePicker() {
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
         className="relative mt-3 flex h-[42px] w-full cursor-pointer items-center rounded-xl border border-line bg-card pl-4 pr-10 text-sm font-medium text-fg shadow-sm outline-none transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-accent/40"
@@ -69,8 +85,11 @@ export function PlacePicker() {
       </button>
       {open && (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={HEADER.pickerTitle} data-testid="place-dialog">
-          <button type="button" className="absolute inset-0 h-full w-full cursor-default bg-black/20" onClick={close} aria-label="Close" data-testid="place-backdrop" />
-          <div className="absolute left-1/2 top-20 w-[min(420px,calc(100vw-40px))] -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-card shadow-2xl">
+          <button type="button" className="absolute inset-0 h-full w-full cursor-default" onClick={close} aria-label="Close" data-testid="place-backdrop" />
+          <div
+            className="absolute flex max-h-[min(420px,calc(100vh-140px))] flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-2xl"
+            style={anchor ? { top: anchor.top, left: anchor.left, width: anchor.width } : { left: "50%", top: 80, transform: "translateX(-50%)", width: "min(420px, calc(100vw - 40px))" }}
+          >
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
               <Search size={15} className="shrink-0 text-muted" aria-hidden="true" />
               <input
@@ -82,7 +101,7 @@ export function PlacePicker() {
                 data-testid="place-search"
               />
             </div>
-            <div className="max-h-[60vh] overflow-y-auto p-2">
+            <div className="min-h-0 overflow-y-auto p-2">
               {!needle && (
                 <button type="button" onClick={() => pick({ geo: null, level: "adm1" })} className={ROW} data-testid="place-option-all">
                   <MapPin size={14} className="shrink-0 text-accent" aria-hidden="true" />
