@@ -381,14 +381,14 @@ describe("the narrow workspace: one pane at a time", () => {
     mount();
     const sw = await screen.findByTestId("pane-switch");
     // the atlas pattern: the switch is its OWN pill top-left, never in the nav -
-    // and the nav docks to the bottom centre, keeping its fixed width
+    // and the nav docks to the bottom centre, spanning the deck column's edges
     const pill = screen.getByTestId("pane-switch-pill");
     expect(pill).toContainElement(sw);
     for (const c of ["left-5", "top-5"]) expect(pill.className, c).toContain(c);
     const nav = screen.getByTestId("nav-capsule");
     expect(nav).not.toContainElement(sw);
-    for (const c of ["bottom-4", "left-1/2", "-translate-x-1/2"]) expect(nav.className, c).toContain(c);
-    expect(nav.className).toContain("w-[420px]");
+    for (const c of ["bottom-4", "left-1/2", "-translate-x-1/2", "w-[calc(100vw-40px)]", "max-w-[520px]"]) expect(nav.className, c).toContain(c);
+    expect(nav.className).not.toContain("w-[420px]");
     expect(screen.getByTestId("pane-map")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("pane-dashboard")).toHaveAttribute("aria-pressed", "false");
     expect([screen.getByTestId("pane-dashboard").textContent, screen.getByTestId("pane-map").textContent]).toEqual(["Dashboard", "Map"]);

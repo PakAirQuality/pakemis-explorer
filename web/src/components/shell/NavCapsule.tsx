@@ -51,6 +51,10 @@ export const CAPSULE_FLOATING = "absolute left-5 top-5 z-30";
 /** The docked placement: a narrow workspace parks the nav at the bottom centre (the pane
  * switch owns the top-left there), the way the reference atlas parks its menu bar. */
 export const CAPSULE_DOCKED = "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 shadow-xl";
+/** Docked, the bar SPANS the deck column - the full-pane deck is mx-auto max-w-[560px]
+ * px-5, so its card edges sit at min(100vw,560) - 40; the bar keeps those exact edges,
+ * the way the reference atlas's bottom bar keeps its panel's. */
+export const CAPSULE_WIDTH_DOCKED = "w-[calc(100vw-40px)] max-w-[520px] justify-between";
 
 export function NavCapsule({ floating = false, docked = false, children }: { floating?: boolean; docked?: boolean; children?: ReactNode }) {
   const pathname = usePathname();
@@ -73,11 +77,11 @@ export function NavCapsule({ floating = false, docked = false, children }: { flo
     // ONE SIZE EVERYWHERE (chrome-cleanup round): the capsule keeps the deck's 420 px on
     // every page, not just the workspace, so the pill never changes size between Explore
     // and Data - and the pages align their first column to the same width beneath it.
-    <div className={`${floating ? `${CAPSULE_FLOATING} ` : docked ? `${CAPSULE_DOCKED} ` : ""}${children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
+    <div className={`${floating ? `${CAPSULE_FLOATING} ` : docked ? `${CAPSULE_DOCKED} ` : ""}${docked ? CAPSULE_WIDTH_DOCKED : children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ${CAPSULE_CLASS}${docked ? "" : " max-w-[calc(100vw-40px)]"} overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
       <Link href="/" className="flex shrink-0 items-center" data-testid="brand" title="Pakistan Air Quality Initiative">
         <BrandLogo className="h-7 object-contain" />
       </Link>
-      <nav className="flex items-center gap-5" aria-label="Sections">
+      <nav className={`flex items-center gap-5${docked ? " grow justify-evenly" : ""}`} aria-label="Sections">
         {NAV_LINKS.map((l) => link(l.href, l.label))}
       </nav>
       {children}
