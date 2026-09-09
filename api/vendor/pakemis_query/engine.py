@@ -419,9 +419,28 @@ class Engine:
             limitations.append("air_covered_sources")
         if q.geography_level != "national" or not q.sectors:
             limitations.append("air_sector_ne")
+        # THE ABSENCE-SCREENING BLOCK (the completeness-mass rule applied to air):
+        # a fiscal-period answer carries what the panel's typed absences plausibly
+        # hold - power's controlled..uncontrolled scenario pair and industry's
+        # uncontrolled end - BESIDE the values, never inside them. The headline sum
+        # is byte-unchanged by these rows; summing a covered total with a scenario
+        # end would produce a number that is neither an estimate nor a bound.
+        completeness = []
+        if q.periods and table in ("fact_air_panel", "fact_air_adm1_year",
+                                   "fact_air_adm2_year"):
+            where_abs = [self._in("period_id", q.periods)]
+            if q.pollutants:
+                where_abs.append(self._in("pollutant", q.pollutants))
+            completeness = self._fetch(
+                "SELECT period_id, sector_id, pollutant, scenario_controlled_kt, "
+                "scenario_uncontrolled_kt, controlled_absence_reason, factor_basis, "
+                "gap_id FROM fact_air_absence_screening WHERE %s "
+                "ORDER BY period_id, sector_id, pollutant"
+                % " AND ".join(where_abs))
         return envelope(self.release, "query_air", canonical_json(q), dataclasses.asdict(q),
                         values, {"kind": "sum", "sql": sql, "table": table, "column": "emissions_kt"},
-                        prov, limitations_hit=limitations, defaults_applied=q.defaults_applied)
+                        prov, completeness=completeness, limitations_hit=limitations,
+                        defaults_applied=q.defaults_applied)
 
     def _order(self, q, column="exact"):
         sql = ""

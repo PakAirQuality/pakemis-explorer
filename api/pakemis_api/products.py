@@ -75,7 +75,7 @@ FAMILIES = (
                     "configurations, the two 0.05-degree annual cubes, the single-year all-sector layers and agriculture's "
                     "1990-2024 national series. A beta of uneven assurance, outside every greenhouse-gas total.",
      "tables": ("fact_air_annual", "fact_air_timeseries", "fact_air_panel", "fact_air_adm1", "fact_air_adm2",
-                "fact_air_adm1_year", "fact_air_adm2_year", "dim_pollutant",
+                "fact_air_adm1_year", "fact_air_adm2_year", "fact_air_absence_screening", "dim_pollutant",
                 "pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24",
                 "pakemis_air_grid_0p05_annual_survey_fy2015_16_fy2023_24"),
      "formats": ("csv", "parquet", "nc")},

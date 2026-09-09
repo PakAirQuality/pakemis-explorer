@@ -1,9 +1,9 @@
 {
  "digests": {
-  "release_manifest.json": "7475ceb11786c4cca6ca2d25735bf31e54ad1182d3e50a64d032a6a3f6aee47f",
-  "semantic_release.json": "c8cf69088f01199fd07e130c13870ec34b05e028af956555475670e2ad1c2cba"
+  "release_manifest.json": "714f62b19c8e08e558e2bb03077a12555f90a04e7866b73c9bd4737583bc747f",
+  "semantic_release.json": "a608bb378551258ebe15e69564e57abfe94049db515b9cdb83843c78858b2ff8"
  },
- "fetched_at": "2026-09-09T09:22:39+00:00",
+ "fetched_at": "2026-09-09T12:07:20+00:00",
  "files": {
   "data/adm2_canonical.csv": {
    "bytes": 28154,
@@ -176,8 +176,8 @@
    "sha256": "42008b16141c8233ec3af0ef25d4c995fc3de894360bfb30de2724eb1460e79c"
   },
   "outputs/release_manifest.json": {
-   "bytes": 133724,
-   "sha256": "7475ceb11786c4cca6ca2d25735bf31e54ad1182d3e50a64d032a6a3f6aee47f"
+   "bytes": 134297,
+   "sha256": "714f62b19c8e08e558e2bb03077a12555f90a04e7866b73c9bd4737583bc747f"
   },
   "outputs/semantic/dim_category.csv": {
    "bytes": 8997,
@@ -299,13 +299,21 @@
    "bytes": 1475764,
    "sha256": "602d7862cbd20ee1a2d131db55f43b7ac531a5eaa5963aa2c1b3abe8860e8722"
   },
+  "outputs/semantic/fact_air_absence_screening.csv": {
+   "bytes": 24648,
+   "sha256": "21c510cece6adfe46992f4206cb7e5cd6d2fcd3053a946e8aa1c3a36d0523418"
+  },
+  "outputs/semantic/fact_air_absence_screening.parquet": {
+   "bytes": 8055,
+   "sha256": "a1f0e962ff378a8dafeea4aac157e1d7d87a2b146d3f0ae1d7348ae16d933bbf"
+  },
   "outputs/semantic/fact_air_adm1.csv": {
    "bytes": 350234,
-   "sha256": "95f62f6744109e811dd9473efea7e3bacb6e70efec985af479f298bcfe9e9af5"
+   "sha256": "cd85a5b57fa46480206af929e8acefca87cd7fa34508e5991ceeb9ba471400d4"
   },
   "outputs/semantic/fact_air_adm1.parquet": {
-   "bytes": 83792,
-   "sha256": "89c3e9f3e10ad0b8769835473dc6093eba6b37969ec6447b93c18f66ef0b6b55"
+   "bytes": 83794,
+   "sha256": "5fef1cd10516b103bb8c90796873a7d6e34c769ff056bc69120a4fc150f6cae2"
   },
   "outputs/semantic/fact_air_adm1_year.csv": {
    "bytes": 2236666,
@@ -316,12 +324,12 @@
    "sha256": "9b21a264fb742a9669ed19b69ff6014ae33e5ccf3675fb5483dd1bd47b8c0942"
   },
   "outputs/semantic/fact_air_adm2.csv": {
-   "bytes": 9209361,
-   "sha256": "9a153ff2c5f6028f0ab38f63bfd565e1fc24a0cbc54d01998b230bd4255cf21e"
+   "bytes": 9209360,
+   "sha256": "41e8bccd472d91402054392ab8c9a57266a7d6bd9b84ef6f2ba0abc26a237006"
   },
   "outputs/semantic/fact_air_adm2.parquet": {
-   "bytes": 1678612,
-   "sha256": "9f56b56d59e3e635246515a340073322986d32d1994c9564a4ce45b7b41f006b"
+   "bytes": 1678618,
+   "sha256": "ddedf327268ac89dffdd547bcc14a2008218ce46ef4b98c2189000d8e299d9e7"
   },
   "outputs/semantic/fact_air_adm2_year.csv": {
    "bytes": 12483847,
@@ -333,11 +341,11 @@
   },
   "outputs/semantic/fact_air_annual.csv": {
    "bytes": 50464,
-   "sha256": "621f2e58c98ac6a33177dc174a9cd99bee6d36577d8e76c1144bda0b8e6d2f7e"
+   "sha256": "979eeeef45244adb6d118652bd8c80ee899afa0faca1f1aedad523523a995ddf"
   },
   "outputs/semantic/fact_air_annual.parquet": {
-   "bytes": 21470,
-   "sha256": "27de01ee389797cdf5635c3f7f6511d792faeeba1ce64d8e66f1bd0d0962b66e"
+   "bytes": 21467,
+   "sha256": "25488d8982376e93997a846598bb68326fa3f80021ea530b6a599865b5564644"
   },
   "outputs/semantic/fact_air_panel.csv": {
    "bytes": 103564,
@@ -436,8 +444,8 @@
    "sha256": "0a56b8ed1e7ee42d3204873ba52b57fac9f0a4fbc2ca876f02daacd60ce9b50d"
   },
   "outputs/semantic/semantic_release.json": {
-   "bytes": 281080,
-   "sha256": "c8cf69088f01199fd07e130c13870ec34b05e028af956555475670e2ad1c2cba"
+   "bytes": 294707,
+   "sha256": "a608bb378551258ebe15e69564e57abfe94049db515b9cdb83843c78858b2ff8"
   }
  },
  "registries": [
@@ -466,9 +474,9 @@
  "release_id": "PakEmis 1.0.0rc49",
  "schema": "pakemis_explorer.fetch/v1",
  "source": {
-  "commit": "1690720da3f5f3e84ac27e2b085a0cb24acb46a4",
+  "commit": "37204cc27cf32594b58e4680fb6533fcaaa7c885",
   "kind": "git",
-  "manifest_describes_commit": "563eeb3fc7bf05f066c718730e99a12babf8f871",
+  "manifest_describes_commit": "432c39e7ffcedd6e235997ce4ff86a67ae06dcfe",
   "ref": "HEAD",
   "repository": "/Users/rehanahmad/Desktop/emissions"
  },

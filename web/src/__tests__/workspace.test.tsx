@@ -101,7 +101,14 @@ beforeEach(() => {
         if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air" });
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "sector_id") return envelope([{ display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { sector_id: "agriculture" }, extra: { share_pct_short: "96.0" } }], { request_type: "query_air", axis: AXIS_250 });
-        return envelope([{ display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃" }], { request_type: "query_air" });
+        return envelope([{ display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃" }], {
+          request_type: "query_air",
+          // the absence-screening block the engine serves beside a period answer
+          completeness: [
+            { period_id: "FY2023-24", sector_id: "power", pollutant: "NH3", scenario_controlled_kt: "0.6800", scenario_uncontrolled_kt: "0.6800", gap_id: "air-power-controlled" },
+            { period_id: "FY2023-24", sector_id: "industry", pollutant: "NH3", scenario_controlled_kt: "", scenario_uncontrolled_kt: "0.0100" },
+          ],
+        });
       }
       if (body?.group_by?.includes("sector_id")) return envelope(SECTORS, { axis: AXIS_250, partition: { n: 3 } });
       if (body?.group_by?.includes("module")) return envelope(PUNJAB_SECTORS, { axis: { ticks_short: ["0", "25", "50", "75", "100", "125"], unit_short: "Mt CO₂e" }, partition: { n: 2 } });
@@ -457,6 +464,9 @@ describe("the workspace's audits", () => {
     expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");
     expect(screen.getByTestId("card-air-sources")).toHaveTextContent("Agriculture is the largest estimated source");
     expect(screen.getByTestId("card-air-trend")).toHaveTextContent("the agriculture layer alone");
+    // the typed-absence note: scenario ends beside the panel, never summed in
+    expect(screen.getByTestId("air-absence-note")).toHaveTextContent("Outside the panel");
+    expect(screen.getByTestId("air-absence-note")).toHaveTextContent("never summed");
     // the air family is period-aware since rc49: the year slider STANDS with a
     // pollutant selected and the chip names the slider's year, never a "2024 layer"
     // stand-in

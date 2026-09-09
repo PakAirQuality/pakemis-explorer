@@ -22,7 +22,16 @@ import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import { DeckCard, Pending, Figure } from "./DeckCard";
 
 const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
-const BETA = "A labelled beta in native kilotonnes, outside the CO₂e totals; covered sources only — power and industry are typed absences, and assurance is uneven across the sectors.";
+const BETA = "A labelled beta in native kilotonnes, outside the CO₂e totals; covered sources only — assurance is uneven across the sectors.";
+
+/** The absence-screening block the engine serves BESIDE a fiscal-period answer:
+ * scenario ends for the panel's typed absences (power's controlled..uncontrolled
+ * pair, industry's uncontrolled end), server strings, never summed into anything. */
+type AbsenceRow = { sector_id?: unknown; pollutant?: unknown; scenario_controlled_kt?: unknown; scenario_uncontrolled_kt?: unknown };
+function absenceOf(rows: Record<string, unknown>[] | undefined, pol: string, sector: string): AbsenceRow | null {
+  return (rows ?? []).find((r) => r.pollutant === pol && r.sector_id === sector) ?? null;
+}
+const kt = (v: unknown) => (typeof v === "string" && v !== "" ? v : null);
 
 export function AirCards({ pol }: { pol: string }) {
   const { state, labels, dims, defaults } = useExplorer();
@@ -121,6 +130,29 @@ export function AirCards({ pol }: { pol: string }) {
         ) : (
           <Pending q={total} what={`the ${p} total`} />
         )}
+        {!placeName && (() => {
+          const rows = (total.data?.completeness ?? []) as Record<string, unknown>[];
+          const power = absenceOf(rows, pol, "power");
+          const industry = absenceOf(rows, pol, "industry");
+          const pLo = kt(power?.scenario_controlled_kt);
+          const pHi = kt(power?.scenario_uncontrolled_kt);
+          const iHi = kt(industry?.scenario_uncontrolled_kt);
+          if (!pHi && !iHi) return null;
+          return (
+            <p className="mt-2 text-xs text-muted" data-testid="air-absence-note">
+              Outside the panel:{" "}
+              {pHi ? (
+                <>power&rsquo;s screening range <b className="num">{pLo ?? "—"}&ndash;{pHi}</b> kt
+                {pLo ? " (controlled-case to uncontrolled scenarios)" : " (uncontrolled scenario; no controlled case priced)"}</>
+              ) : null}
+              {pHi && iHi ? "; " : null}
+              {iHi ? (
+                <>industry&rsquo;s uncontrolled screening <b className="num">{iHi}</b> kt (its low end is a typed absence)</>
+              ) : null}
+              {" "}&mdash; scenario ends beside the covered panel, never summed into it.
+            </p>
+          );
+        })()}
       </DeckCard>
       <DeckCard
         id="air-sources"
