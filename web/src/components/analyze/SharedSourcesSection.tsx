@@ -16,7 +16,7 @@ import { POLLUTANTS, POLLUTANT_LABELS } from "@/lib/explore/query";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import type { Envelope } from "@/lib/envelope";
 import { ANALYZE } from "./copy";
-import { AnalysisCard, Finding } from "./Section";
+import { AnalysisCard, Finding, TeaserCard } from "./Section";
 import { alignedDeltas, signed } from "./ChangeSection";
 import type { AnalyzeSettings } from "./Analyze";
 
@@ -41,17 +41,17 @@ function absenceWords(env: Envelope | undefined, sector: string): string {
   return ends.length ? `${ANALYZE.shared.neTitle} Screening for this period: ${ends.join("; ")}.` : ANALYZE.shared.neTitle;
 }
 
-export function SharedSourcesSection({ settings }: { settings: AnalyzeSettings }) {
+export function SharedSourcesSection({ settings, open, onOpen }: { settings: AnalyzeSettings; open: boolean; onOpen: (open: boolean) => void }) {
   const { labels, dims } = useExplorer();
   const { from: fromP, to: toP } = settings;
   const period = toP;
   const [scatterPol, setScatterPol] = useState<string>("PM2.5");
 
   const enabled = !!fromP && !!toP && fromP !== toP;
-  const cmp = useCompare({ left: { periods: [fromP], group_by: ["sector_id"] }, right: { periods: [toP], group_by: ["sector_id"] }, mode: "absolute" }, enabled);
-  const co2e = useEmissions({ periods: [period], group_by: ["sector_id"] });
-  const ch4 = useEmissions({ periods: [period], gases: ["CH4"], group_by: ["sector_id"] });
-  const airBodies = useMemo(() => POLLUTANTS.map((pl) => ({ pollutants: [pl], periods: [period], group_by: ["sector_id"] })), [period]);
+  const cmp = useCompare({ left: { periods: [fromP], group_by: ["sector_id"] }, right: { periods: [toP], group_by: ["sector_id"] }, mode: "absolute" }, enabled && open);
+  const co2e = useEmissions({ periods: [period], group_by: ["sector_id"] }, open);
+  const ch4 = useEmissions({ periods: [period], gases: ["CH4"], group_by: ["sector_id"] }, open);
+  const airBodies = useMemo(() => POLLUTANTS.map((pl) => (open ? { pollutants: [pl], periods: [period], group_by: ["sector_id"] } : null)), [period, open]);
   const air = useAirMany(airBodies);
 
   const deltas = alignedDeltas(cmp.data?.values, "sector_id").slice(0, 6);
@@ -86,12 +86,16 @@ export function SharedSourcesSection({ settings }: { settings: AnalyzeSettings }
   const maxX = Math.max(10, ...points.map((p) => p.x));
   const maxY = Math.max(10, ...points.map((p) => p.y));
 
+  if (!open) {
+    return <TeaserCard id="shared" eyebrow={ANALYZE.shared.eyebrow} title={ANALYZE.shared.title} teaser={ANALYZE.shared.teaser} cta={ANALYZE.shared.cta} testId="shared-explore" onOpen={() => onOpen(true)} />;
+  }
   return (
     <AnalysisCard
       id="shared"
       eyebrow={ANALYZE.shared.eyebrow}
       title={ANALYZE.shared.title}
       dek={ANALYZE.shared.dekOf(periodShort(labels, fromP), periodShort(labels, toP))}
+      action={<button type="button" onClick={() => onOpen(false)} className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-accent hover:bg-accent-soft" data-testid="shared-hide">{ANALYZE.shared.hide}</button>}
       more={ANALYZE.shared.more}
     >
       <div className="flex flex-col gap-2" data-testid="shared-contributions">

@@ -3,7 +3,8 @@
  * eyebrow, a question title, an optional action at the right, the analysis body, and
  * the precise caveats folded into a "More about this analysis" line at the foot. */
 import type { ReactNode } from "react";
-import { Info } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
+import { ContourMotif } from "@/components/ui/ContourMotif";
 import { DECK_CARD } from "@/components/overview/deck";
 import { ANALYZE } from "./copy";
 
@@ -47,5 +48,22 @@ export function Finding({ children, testId }: { children: ReactNode; testId: str
     <p className="mt-4 rounded-xl bg-surface px-4 py-3 text-sm leading-relaxed text-fg" data-testid={testId}>
       {children}
     </p>
+  );
+}
+
+/** A secondary analysis, closed: the question, one plain sentence, and the door in. */
+export function TeaserCard({ id, eyebrow, title, teaser, cta, testId, onOpen }: { id: string; eyebrow: string; title: string; teaser: string; cta: string; testId: string; onOpen: () => void }) {
+  return (
+    <section id={id} className="relative overflow-hidden rounded-[20px] border border-line border-t-[3px] border-t-brand-gold bg-card p-5 shadow-card scroll-mt-24" data-testid={`analyze-${id}`}>
+      <ContourMotif corner="bottom-right" />
+      <div className="relative">
+        <div className="micro text-accent">{eyebrow}</div>
+        <h2 className="mt-0.5 text-xl font-semibold tracking-tight text-fg">{title}</h2>
+        <p className="mt-1.5 max-w-[52ch] text-[13px] leading-relaxed text-muted">{teaser}</p>
+        <button type="button" onClick={onOpen} className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-soft" data-testid={testId}>
+          {cta} <ArrowRight size={15} aria-hidden="true" />
+        </button>
+      </div>
+    </section>
   );
 }

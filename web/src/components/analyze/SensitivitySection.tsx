@@ -12,21 +12,21 @@ import { useEmissions, useUncertainty } from "@/lib/queries";
 import { configLabel, periodShort, sectorLabel } from "@/lib/labels";
 import { shown, type Cell } from "@/lib/envelope";
 import { ANALYZE } from "./copy";
-import { AnalysisCard } from "./Section";
+import { AnalysisCard, TeaserCard } from "./Section";
 import type { AnalyzeSettings } from "./Analyze";
 
 type SeriesCell = Cell & { scenario?: string; quantiles_short?: Record<string, string>; interval_short?: string; quantiles?: Record<string, string> };
 
-export function SensitivitySection({ settings }: { settings: AnalyzeSettings }) {
+export function SensitivitySection({ settings, open, onOpen }: { settings: AnalyzeSettings; open: boolean; onOpen: (open: boolean) => void }) {
   const { labels, dims, defaults } = useExplorer();
   const { from: fromP, to: toP } = settings;
   const pairKey = `${fromP}->${toP}`;
   const alt = dims.configurations.find((c) => c !== defaults.configuration_id);
 
-  const pairU = useUncertainty({ scope: "series", period_id: pairKey }, !!fromP && !!toP && fromP !== toP);
-  const ref = useEmissions({ periods: [defaults.period_id], group_by: ["sector_id"] });
-  const survey = useEmissions(alt ? { periods: [defaults.period_id], configuration_id: alt, group_by: ["sector_id"] } : null, !!alt);
-  const envs = useUncertainty({ scope: "categories", resolution: "annual_national" });
+  const pairU = useUncertainty({ scope: "series", period_id: pairKey }, open && !!fromP && !!toP && fromP !== toP);
+  const ref = useEmissions({ periods: [defaults.period_id], group_by: ["sector_id"] }, open);
+  const survey = useEmissions(alt ? { periods: [defaults.period_id], configuration_id: alt, group_by: ["sector_id"] } : null, open && !!alt);
+  const envs = useUncertainty({ scope: "categories", resolution: "annual_national" }, open);
 
   const scenarios = (pairU.data?.values ?? []).filter((c): c is SeriesCell => typeof c.value === "number");
   const typed = scenarios.find((c) => c.scenario === "parameter_typed") ?? scenarios[0];
@@ -69,6 +69,9 @@ export function SensitivitySection({ settings }: { settings: AnalyzeSettings }) 
     return (c.value ?? 0) * (1 + (e?.high_pct ? parseFloat(e.high_pct) / 100 : 0));
   }));
 
+  if (!open) {
+    return <TeaserCard id="sensitivity" eyebrow={ANALYZE.sensitivity.eyebrow} title={ANALYZE.sensitivity.title} teaser={ANALYZE.sensitivity.teaser} cta={ANALYZE.sensitivity.cta} testId="sensitivity-explore" onOpen={() => onOpen(true)} />;
+  }
   return (
     <AnalysisCard
       id="sensitivity"
@@ -76,12 +79,15 @@ export function SensitivitySection({ settings }: { settings: AnalyzeSettings }) 
       title={ANALYZE.sensitivity.title}
       dek={ANALYZE.sensitivity.dek}
       action={
-        scenarios.length > 0 ? (
-          <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${robust ? "bg-green-700/10 text-green-800" : "bg-note-bg text-note-text"}`} data-testid="robustness-badge">
-            <span className={`h-2 w-2 rounded-full ${robust ? "bg-green-700" : "bg-amber"}`} aria-hidden="true" />
-            {robust ? ANALYZE.sensitivity.robust : ANALYZE.sensitivity.uncertain}
-          </span>
-        ) : undefined
+        <span className="flex items-center gap-2">
+          {scenarios.length > 0 && (
+            <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${robust ? "bg-green-700/10 text-green-800" : "bg-note-bg text-note-text"}`} data-testid="robustness-badge">
+              <span className={`h-2 w-2 rounded-full ${robust ? "bg-green-700" : "bg-amber"}`} aria-hidden="true" />
+              {robust ? ANALYZE.sensitivity.robust : ANALYZE.sensitivity.uncertain}
+            </span>
+          )}
+          <button type="button" onClick={() => onOpen(false)} className="rounded-lg px-2 py-1 text-sm font-medium text-accent hover:bg-accent-soft" data-testid="sensitivity-hide">{ANALYZE.sensitivity.hide}</button>
+        </span>
       }
       more={ANALYZE.sensitivity.more}
     >

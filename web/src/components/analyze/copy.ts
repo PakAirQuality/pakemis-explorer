@@ -37,6 +37,9 @@ export const ANALYZE = {
   shared: {
     eyebrow: "Climate + clean air",
     title: "Which sources matter for both?",
+    teaser: "See how different sectors contribute to the change in emissions and to current levels, and identify candidates for climate and clean-air co-benefits.",
+    cta: "Explore source contributions",
+    hide: "Hide source contributions",
     dekOf: (from: string, to: string) => `Selected sectors and their estimated contributions to the ${from} to ${to} change (Mt CO₂e).`,
     tagBoth: "both",
     tagClimate: "climate",
@@ -51,6 +54,9 @@ export const ANALYZE = {
   sensitivity: {
     eyebrow: "Robustness",
     title: "Does the conclusion hold?",
+    teaser: "Test how sensitive the result is to alternative assumptions, data sources, and methodological choices.",
+    cta: "Explore robustness",
+    hide: "Hide robustness detail",
     dek: "Estimated overall change with uncertainty range (Mt CO₂e).",
     robust: "Direction is robust",
     uncertain: "Direction is uncertain",

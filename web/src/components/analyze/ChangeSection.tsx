@@ -7,7 +7,7 @@
  * difference; clicking a bar re-asks the question inside that source. The browser
  * signs positive labels and sizes bars; it subtracts nothing.
  */
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { useCompare, useNationalSeries } from "@/lib/queries";
@@ -36,11 +36,10 @@ export function alignedDeltas(cells: Cell[] | undefined, groupKey: string) {
     .sort((a, b) => Math.abs(b.c.value as number) - Math.abs(a.c.value as number));
 }
 
-export function ChangeSection({ settings, onScope }: { settings: AnalyzeSettings; onScope?: (sector: string | null) => void }) {
+export function ChangeSection({ settings }: { settings: AnalyzeSettings }) {
   const { labels } = useExplorer();
   const { from: fromP, to: toP, gases } = settings;
   const [drill, setDrill] = useState<{ sector: string | null; category: string | null }>({ sector: null, category: null });
-  useEffect(() => onScope?.(drill.sector), [onScope, drill.sector]);
   const chartRef = useRef<HTMLDivElement>(null);
 
   const gasFilter = gases ? { gases } : {};
@@ -51,7 +50,6 @@ export function ChangeSection({ settings, onScope }: { settings: AnalyzeSettings
     mode,
   });
   const total = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "absolute" }, enabled);
-  const relative = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "relative" }, enabled);
   const grain = drill.category && drill.sector
     ? pair({ sectors: [drill.sector], categories: [drill.category] }, "subitem")
     : drill.sector
@@ -61,7 +59,6 @@ export function ChangeSection({ settings, onScope }: { settings: AnalyzeSettings
   const series = useNationalSeries();
 
   const totalCell = total.data?.values[0];
-  const relCell = relative.data?.values[0];
   const tLeft = totalCell ? side(totalCell, "left") : undefined;
   const tRight = totalCell ? side(totalCell, "right") : undefined;
   const groupKey = drill.category ? "subitem" : drill.sector ? "category" : "sector_id";
@@ -78,9 +75,7 @@ export function ChangeSection({ settings, onScope }: { settings: AnalyzeSettings
   }
 
   const top = deltas[0];
-  const largestOffset = deltas.find(({ c }) => (c.value as number) < 0);
   const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";
-  const grew = (totalCell?.value ?? 0) >= 0;
   const title = drill.category ?? (drill.sector ? sectorLabel(labels, drill.sector) : null);
 
   const download = () => {
@@ -115,56 +110,23 @@ export function ChangeSection({ settings, onScope }: { settings: AnalyzeSettings
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div ref={chartRef}>
-          {steps.length > (drill.sector ? 0 : 2) ? (
-            <WaterfallChart
-              steps={steps}
-              unit={unit}
-              ticks={drill.sector ? undefined : series.data?.axis?.ticks_short}
-              onPick={drill.category ? undefined : (id) => setDrill(drill.sector ? { sector: drill.sector, category: id } : { sector: id, category: null })}
-              testId="change-waterfall"
-            />
-          ) : (
-            <p className="py-10 text-sm text-muted" data-testid="change-pending">{cmp.isError ? "The release refuses this comparison." : "Comparing…"}</p>
-          )}
-        </div>
-
-        <aside className="rounded-xl bg-surface p-4" data-testid="change-key-finding">
-          <div className="micro">{ANALYZE.change.keyFinding}</div>
-          {totalCell && tLeft && tRight && top ? (
-            <>
-              <p className="mt-2 text-[15px] font-semibold leading-snug text-fg" data-testid="change-finding">
-                {drill.sector ? (
-                  <>Inside {title}, <b>{top.id}</b> moved the most: <span className="num whitespace-nowrap">{signed(top.c)} {unit}</span>.</>
-                ) : (
-                  <>Emissions {grew ? "increased" : "decreased"} by <span className="num whitespace-nowrap">{signed(totalCell)} {unit}</span> between {periodShort(labels, fromP)} and {periodShort(labels, toP)}.</>
-                )}
-              </p>
-              {!drill.sector && (
-                <p className="mt-1.5 text-sm text-muted" data-testid="change-finding-top">
-                  {nameOf(top.id)} contributed the largest {(top.c.value as number) >= 0 ? "increase" : "decrease"}: <b className="num whitespace-nowrap text-fg">{signed(top.c)} {unit}</b>.
-                </p>
-              )}
-              <dl className="mt-3.5 flex flex-col gap-1.5 text-sm">
-                {relCell && (
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                    <dt className="text-muted">{ANALYZE.change.overallChange}</dt>
-                    <dd className="num font-semibold text-fg" data-testid="change-overall-pct">{signed(relCell)} %</dd>
-                  </div>
-                )}
-                {!drill.sector && largestOffset && (
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                    <dt className="text-muted">{ANALYZE.change.largestOffset}</dt>
-                    <dd className="num font-semibold text-fg" data-testid="change-largest-offset">{nameOf(largestOffset.id)} {signed(largestOffset.c)}</dd>
-                  </div>
-                )}
-              </dl>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-muted">Comparing…</p>
-          )}
-        </aside>
+      <div ref={chartRef}>
+        {steps.length > (drill.sector ? 0 : 2) ? (
+          <WaterfallChart
+            steps={steps}
+            unit={unit}
+            ticks={drill.sector ? undefined : series.data?.axis?.ticks_short}
+            onPick={drill.category ? undefined : (id) => setDrill(drill.sector ? { sector: drill.sector, category: id } : { sector: id, category: null })}
+            testId="change-waterfall"
+          />
+        ) : (
+          <p className="py-10 text-sm text-muted" data-testid="change-pending">{cmp.isError ? "The release refuses this comparison." : "Comparing…"}</p>
+        )}
+        {drill.sector && top && (
+          <p className="mt-1 text-sm text-muted" data-testid="change-drill-finding">
+            Inside <b className="text-fg">{title}</b>, <b className="text-fg">{top.id}</b> moved the most between {periodShort(labels, fromP)} and {periodShort(labels, toP)}: <b className="num whitespace-nowrap text-fg">{signed(top.c)} {unit}</b>.
+          </p>
+        )}
       </div>
 
       <InfoStrip>{ANALYZE.change.caution}</InfoStrip>
