@@ -8,7 +8,6 @@
  * the Data page, never silently inside these cards). The 1990-2024 series remains the
  * agriculture layer alone, national, and says so.
  */
-import { useState } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { geoGrain } from "@/lib/geography";
 import { shown, type Cell } from "@/lib/envelope";
@@ -27,7 +26,11 @@ const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
 const BETA = "Beta estimate · covered sectors only";
 
 
-export function AirCards({ pol }: { pol: string }) {
+/** The air deck's collapse keys, owned by the Deck's one collapsed map so Collapse all
+ * reaches these cards exactly as it reaches the greenhouse set. */
+export const AIR_OPEN_IDS = ["snap", "sources", "prov", "trend"] as const;
+
+export function AirCards({ pol, isOpen, toggle }: { pol: string; isOpen: (id: string) => boolean; toggle: (id: string) => (open: boolean) => void }) {
   const { state, setState, labels, dims, defaults } = useExplorer();
   const p = POLLUTANT_LABELS[pol] ?? pol;
   const period = state.period ?? defaults.period_id;
@@ -55,9 +58,6 @@ export function AirCards({ pol }: { pol: string }) {
   );
   const series = useAir({ pollutants: [pol], periods: dims.fiscalPeriods, ...place, group_by: ["period_id"] });
   const trend = useAir({ pollutants: [pol], years: AIR_YEARS, group_by: ["year"] });
-  const [open, setOpen] = useState<Record<string, boolean>>({});
-  const isOpen = (id: string) => open[id] !== false;
-  const toggle = (id: string) => (o: boolean) => setOpen((c) => ({ ...c, [id]: o }));
 
   const cell = total.data?.values.find((c) => typeof c.value === "number") ?? null;
   const top = sources.data?.values.find((c) => typeof c.value === "number") ?? null;

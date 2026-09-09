@@ -483,6 +483,13 @@ describe("the workspace's audits", () => {
     // a rail tick writes `period`, the same key the slider writes
     fireEvent.click(screen.getByTestId("rail-FY2020-21"));
     await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21"));
+    // Collapse all reaches the air deck's own cards (its keys live in the deck's one map)
+    fireEvent.click(screen.getByTestId("deck-collapse-all"));
+    await waitFor(() => expect(screen.queryByTestId("air-figure")).toBeNull());
+    expect(screen.queryByTestId("air-sources-bars")).toBeNull();
+    expect(screen.getByTestId("deck-collapse-all")).toHaveTextContent("Expand all");
+    fireEvent.click(screen.getByTestId("deck-collapse-all"));
+    await waitFor(() => expect(screen.getByTestId("air-figure")).toBeInTheDocument());
     // clearing through the select returns to CO₂e
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByTestId("gas-select")).toHaveValue(""));

@@ -38,7 +38,7 @@ import { DeckControls } from "@/components/overview/DeckControls";
 import { HEADER, licenceLine } from "@/components/overview/copy";
 import { DECK_CARD } from "@/components/overview/deck";
 import { cardsFor, scopeOf, type CardId } from "./cards";
-import { AirCards } from "./cards/AirCards";
+import { AirCards, AIR_OPEN_IDS } from "./cards/AirCards";
 import { renderCard, wantsFor } from "./cards/render";
 import { DECK_COLLAPSE, DECK_EXPAND, DECK_TITLE, FILTERS } from "./copy";
 
@@ -78,13 +78,15 @@ export type DeckProps = {
 
 export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showReset = false, full = false }: DeckProps) {
   const { state, labels, dims } = useExplorer();
-  const [collapsed, setCollapsed] = useState<Partial<Record<CardId, boolean>>>({});
+  const [collapsed, setCollapsed] = useState<Partial<Record<string, boolean>>>({});
   const [picked, setPicked] = useState<string | null>(null);
 
   const scope = useMemo(() => scopeOf(state), [state]);
   const ids = useMemo(() => cardsFor(scope), [scope]);
-  const isOpen = (id: CardId) => !collapsed[id];
-  const allCollapsed = ids.every((id) => !isOpen(id));
+  const isOpen = (id: string) => !collapsed[id];
+  // the ids Collapse all reaches: the air deck's own keys when a pollutant is the metric
+  const activeIds: readonly string[] = state.pol ? AIR_OPEN_IDS : ids;
+  const allCollapsed = activeIds.every((id) => !isOpen(id));
   const wants = useMemo(() => wantsFor(ids, (id) => !collapsed[id]), [ids, collapsed]);
   const deck = useDeck(state, wants);
   // the loading screen's third stage: the deck's first envelope answered (or was refused)
@@ -96,8 +98,8 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
   const province = scope.kind === "province" ? scope.geo : null;
   const place = scope.kind === "province" ? geographyName(labels, scope.geo) : scope.kind === "district" ? districtName(dims, scope.geo) : HEADER.country;
 
-  const toggle = (id: CardId) => (open: boolean) => setCollapsed((c) => ({ ...c, [id]: !open }));
-  const toggleAll = () => setCollapsed((c) => ({ ...c, ...Object.fromEntries(ids.map((id) => [id, !allCollapsed])) }));
+  const toggle = (id: string) => (open: boolean) => setCollapsed((c) => ({ ...c, [id]: !open }));
+  const toggleAll = () => setCollapsed((c) => ({ ...c, ...Object.fromEntries(activeIds.map((id) => [id, !allCollapsed])) }));
   const pickSector = (id: string | null) => {
     setPicked(id);
     onSector?.(id);
@@ -123,7 +125,7 @@ export function Deck({ onGeo, onReset, onSector, onCollapse, onFilters, showRese
         </div>
       </header>
       {state.pol
-        ? <AirCards pol={state.pol} />
+        ? <AirCards pol={state.pol} isOpen={isOpen} toggle={toggle} />
         : ids.map((id) => renderCard({ id, scope, deck, place, open: isOpen(id), onToggle: toggle(id), onSector: pickSector, picked }))}
       <DeckFooter />
     </>
