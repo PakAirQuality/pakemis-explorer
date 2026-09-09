@@ -78,7 +78,7 @@ export function WaterfallChart({ steps, unit, ticks, selected = null, onPick, te
         const top = y(Math.max(b.from, b.to));
         const h = Math.max(1.5, Math.abs(y(b.from) - y(b.to)));
         const fill = b.kind !== "delta"
-          ? "var(--color-map-outline)"
+          ? "var(--color-fg)"
           : b.value >= 0
             ? columnColor(b.value, riseMin, riseMax)
             : fallColor(Math.abs(b.value), fallMax);
@@ -87,7 +87,7 @@ export function WaterfallChart({ steps, unit, ticks, selected = null, onPick, te
         const next = bars[i + 1];
         return (
           <g key={b.id} data-testid={`${testId}-bar-${b.id}`} data-selected={isSelected ? "1" : undefined} onClick={onPick && b.kind === "delta" ? () => onPick(b.id) : undefined} className={onPick && b.kind === "delta" ? "cursor-pointer" : undefined}>
-            <rect x={x} y={top} width={barW} height={h} rx={3} fill={fill} opacity={isSelected ? 1 : dimmed ? 0.35 : b.kind !== "delta" ? 0.75 : 1} stroke={isSelected ? "var(--color-fg)" : undefined} strokeWidth={isSelected ? 1.5 : undefined}>
+            <rect x={x} y={top} width={barW} height={h} rx={3} fill={fill} opacity={isSelected ? 1 : dimmed ? 0.35 : 1} stroke={isSelected ? "var(--color-fg)" : undefined} strokeWidth={isSelected ? 1.5 : undefined}>
               <title>{`${b.name}: ${b.label}${unit ? ` ${unit}` : ""}`}</title>
             </rect>
             {next && <line x1={x + barW} y1={y(b.to)} x2={PAD.left + slot * (i + 1) + (slot - barW) / 2} y2={y(b.to)} stroke="var(--color-line-strong)" strokeDasharray="3 3" strokeWidth={1} />}
