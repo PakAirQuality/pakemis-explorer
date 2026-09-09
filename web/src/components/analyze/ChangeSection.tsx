@@ -7,7 +7,7 @@
  * difference; clicking a bar re-asks the question inside that source. The browser
  * signs positive labels and sizes bars; it subtracts nothing.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { useCompare, useNationalSeries } from "@/lib/queries";
@@ -36,10 +36,11 @@ export function alignedDeltas(cells: Cell[] | undefined, groupKey: string) {
     .sort((a, b) => Math.abs(b.c.value as number) - Math.abs(a.c.value as number));
 }
 
-export function ChangeSection({ settings }: { settings: AnalyzeSettings }) {
+export function ChangeSection({ settings, onScope }: { settings: AnalyzeSettings; onScope?: (sector: string | null) => void }) {
   const { labels } = useExplorer();
   const { from: fromP, to: toP, gases } = settings;
   const [drill, setDrill] = useState<{ sector: string | null; category: string | null }>({ sector: null, category: null });
+  useEffect(() => onScope?.(drill.sector), [onScope, drill.sector]);
   const chartRef = useRef<HTMLDivElement>(null);
 
   const gasFilter = gases ? { gases } : {};

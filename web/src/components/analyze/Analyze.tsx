@@ -7,6 +7,7 @@
  * string; parsing happens only to shade, place or size.
  */
 import { useState } from "react";
+import { ExplorerMap } from "@/components/map/ExplorerMap";
 import { RotateCcw } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { NavHeader } from "@/components/shell/NavCapsule";
@@ -30,6 +31,8 @@ export function Analyze() {
   const [fromP, setFromP] = useState(periods[0] ?? "");
   const [toP, setToP] = useState(periods[periods.length - 1] ?? "");
   const [gas, setGas] = useState<string>("");
+  // the backdrop map mirrors the analysis: the To year, and the source under study
+  const [mapSector, setMapSector] = useState<string | null>(null);
   const settings: AnalyzeSettings = { from: fromP, to: toP, gases: gas ? [gas] : null };
   const reset = () => {
     setFromP(periods[0] ?? "");
@@ -45,9 +48,15 @@ export function Analyze() {
   );
 
   return (
-    <div className="min-h-dvh bg-ground">
-      <NavHeader />
-      <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-5 pb-16 pt-1" data-testid="analyze">
+    <div className="relative min-h-dvh">
+      {/* the same ground Explore stands on: the map as a fixed backdrop the cards
+          scroll over - it follows the To year and the drilled source */}
+      <div className="fixed inset-0" data-testid="analyze-map-pane" aria-hidden="true">
+        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: mapSector }} />
+      </div>
+      <div className="relative z-10">
+        <NavHeader />
+        <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-5 pb-16 pt-1" data-testid="analyze">
         <header className="relative overflow-hidden rounded-[20px] border border-nav-line bg-nav px-7 py-6 shadow-sm">
           <ContourMotif />
           <ContourMotif corner="bottom-right" />
@@ -94,12 +103,13 @@ export function Analyze() {
           </div>
         </section>
 
-        <ChangeSection settings={settings} />
+        <ChangeSection settings={settings} onScope={setMapSector} />
         <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
           <SharedSourcesSection settings={settings} />
           <SensitivitySection settings={settings} />
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
