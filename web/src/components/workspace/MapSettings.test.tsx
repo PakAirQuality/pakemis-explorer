@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * Map settings, the workspace's bottom-right popover: the eight groups it holds, in order, and
+ * The map display controls (now inside the filter panel's "Map display" disclosure -
+ * the floating pill came off the map): the eight groups they hold, in order, and
  * what each one writes. The five with a URL key (map layer, scale, grid raster, month, estimate,
  * warming potentials, spatial view) write it through `setState` and nothing else; the three that
  * are chrome (opacity, basemap, boundaries) call the page's own setters and never touch the URL.
@@ -16,7 +17,7 @@ import type { ExplorerState } from "@/lib/urlState";
 import { RELEASE } from "@/__tests__/fixtures";
 import { avoidPhrasesIn, namesDataset } from "@/__tests__/vocabulary";
 import type { BasemapChoice } from "@/components/map/basemap";
-import { MapSettings } from "./MapSettings";
+import { MapSettingsControls } from "./MapSettings";
 import { SETTINGS } from "./copy";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
@@ -34,7 +35,7 @@ function mount(state: Partial<ExplorerState> = {}, chrome: { opacity?: number; b
   const h = { onOpacity: vi.fn<(pct: number) => void>(), onBasemap: vi.fn<(c: BasemapChoice) => void>(), onBoundaries: vi.fn<(on: boolean) => void>(), setState: vi.fn<ExplorerContextValue["setState"]>() } satisfies Handlers;
   const r = render(
     <ExplorerContext.Provider value={ctx({ ...base, ...state }, h.setState)}>
-      <MapSettings open onToggle={() => {}} opacity={chrome.opacity ?? 80} onOpacity={h.onOpacity} basemap={chrome.basemap ?? "light"} onBasemap={h.onBasemap} boundaries={chrome.boundaries ?? true} onBoundaries={h.onBoundaries} />
+      <MapSettingsControls opacity={chrome.opacity ?? 80} onOpacity={h.onOpacity} basemap={chrome.basemap ?? "light"} onBasemap={h.onBasemap} boundaries={chrome.boundaries ?? true} onBoundaries={h.onBoundaries} />
     </ExplorerContext.Provider>,
   );
   return { ...r, ...h };

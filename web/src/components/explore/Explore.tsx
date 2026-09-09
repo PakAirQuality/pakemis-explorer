@@ -94,7 +94,7 @@ export function Explore() {
     <div className="min-h-dvh bg-surface" data-testid="explore-page">
       <NavHeader />
       <main className="px-5 pb-5 pt-3">
-        <div className="grid grid-cols-1 gap-5 xl:min-h-[calc(100dvh-112px)] xl:grid-cols-[340px_minmax(0,1fr)_300px]">
+        <div className="grid grid-cols-1 gap-5 xl:min-h-[calc(100dvh-112px)] xl:grid-cols-[420px_minmax(0,1fr)_300px]">
         <div className="flex flex-col gap-4">
           <HeaderCard state={state} dispatch={dispatch} labels={labels} dims={dims} env={env} />
           <ResultChips state={state} ctx={ctx} dispatch={dispatch} labels={labels} place={place} />

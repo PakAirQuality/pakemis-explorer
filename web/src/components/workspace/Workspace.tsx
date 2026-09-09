@@ -6,12 +6,12 @@
  *
  *   [nav capsule, left 20 top 20]                       [filter panel, right 20 top 20]
  *   [insight deck, 420 px, left 20, under the capsule]                  [⊕ ⊖ ⌖ ⛶ buttons]
- *   [legend capsule, bottom left of the map, right of the deck]      [⚙ Map settings]
+ *   [legend capsule, bottom left of the map, right of the deck]
  *
  * The URL is the single source of truth for level, geo, cell, sector, gas, period, config, gwp,
  * view, layer and scale; a hovered sector stays in React state and never reaches the URL.
  * Whether a panel is open is chrome, not state: it lives in this component and not in the URL,
- * and so do Map settings' three display choices — the shading opacity, the basemap and whether
+ * and so do the Map display choices (now inside the filter panel) — the shading opacity, the basemap and whether
  * the boundaries are drawn — which change how the map LOOKS and never what it answers.
  *
  * The camera keeps Pakistan centred in the VISIBLE canvas rather than under a panel: the page
@@ -44,7 +44,6 @@ import { Deck, DeckRail } from "./Deck";
 import { PaneSwitch } from "./PaneSwitch";
 import { FILTER_GAP_PX, FILTER_INSET_PX, FILTER_WIDTH, FilterPanel, RAIL_WIDTH } from "./FilterPanel";
 import { LegendCapsule } from "./LegendCapsule";
-import { MapSettings } from "./MapSettings";
 import { FILTERS, MAP_BUTTONS } from "./copy";
 import type { Pane } from "@/lib/urlState";
 
@@ -95,7 +94,6 @@ export function Workspace() {
   const choosePane = useCallback((next: Pane) => setState({ pane: next }), [setState]);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   // three display settings the page owns: they change what the map looks like, never what it answers
   const [opacity, setOpacity] = useState(OPACITY_DEFAULT);
   const [basemapChoice, setBasemapChoice] = useState<BasemapChoice>(BASEMAP_DEFAULT);
@@ -194,9 +192,9 @@ export function Workspace() {
       ) : null}
 
       {wide ? (
-        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} onResetView={resetCamera} />
+        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} onResetView={resetCamera} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
       ) : (
-        <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={place} mobile onResetView={resetCamera} />
+        <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={place} mobile onResetView={resetCamera} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
       )}
 
       {showMap && <LegendCapsule />}
@@ -224,9 +222,6 @@ export function Workspace() {
         </div>
       )}
 
-      {showMap && (
-        <MapSettings open={settingsOpen} onToggle={setSettingsOpen} opacity={opacity} onOpacity={setOpacity} basemap={basemapChoice} onBasemap={setBasemapChoice} boundaries={boundaries} onBoundaries={setBoundaries} />
-      )}
     </div>
   );
 }

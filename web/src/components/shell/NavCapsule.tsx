@@ -67,7 +67,10 @@ export function NavCapsule({ floating = false, children }: { floating?: boolean;
     );
   };
   return (
-    <div className={`${floating ? `${CAPSULE_FLOATING} ${children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ` : ""}${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
+    // ONE SIZE EVERYWHERE (chrome-cleanup round): the capsule keeps the deck's 420 px on
+    // every page, not just the workspace, so the pill never changes size between Explore
+    // and Data - and the pages align their first column to the same width beneath it.
+    <div className={`${floating ? `${CAPSULE_FLOATING} ` : ""}${children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
       <Link href="/" className="flex shrink-0 items-center" data-testid="brand" title="Pakistan Air Quality Initiative">
         <BrandLogo className="h-7 object-contain" />
       </Link>

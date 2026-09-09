@@ -124,9 +124,21 @@
 @utility map-frame { border: 1px solid var(--color-line-strong); border-radius: var(--radius-card); overflow: hidden; background: var(--color-card); }
 
 /* Mapbox GL chrome over the basemap */
+/* Mapbox's terms require the attribution and wordmark, so they stay - MUTED: barely
+   there until pointed at, full strength on hover/focus for anyone who wants them. */
 .mapboxgl-ctrl-attrib { font-size: 10px; background: rgba(255, 255, 255, 0.8) !important; color: var(--color-muted); }
 .mapboxgl-ctrl-attrib a { color: var(--color-muted); }
-.mapboxgl-ctrl-attrib-button { background-color: rgba(255, 255, 255, 0.8) !important; }
+.mapboxgl-ctrl-attrib-button { background-color: transparent !important; }
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-logo {
+  opacity: 0.3;
+  transition: opacity 0.15s ease;
+}
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib:hover,
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib:focus-within,
+.mapboxgl-ctrl-logo:hover {
+  opacity: 1;
+}
 .mapboxgl-canvas:focus { outline: none; }
 
 /* Chart decal for bounded cells (the same diagonal hatch as the map). */

@@ -5,7 +5,7 @@ import "@testing-library/jest-dom/vitest";
  * `share_phrase`, `rank`, `axis.ticks_short`, `change`, `derived`):
  *
  *  · the frame — the map full-bleed behind everything, the nav capsule, the 420 px insight
- *    deck, the filter panel and the legend capsule over it, the map buttons and Map settings;
+ *    deck, the filter panel and the legend capsule over it, and the map buttons;
  *  · the URL round trip — the level, sector, gas and year the filter panel writes come back as
  *    the deck's and the map's scope, and nothing but the URL carries them;
  *  · the scope chips clearing each of the three back to its default;
@@ -155,7 +155,7 @@ async function urlWith(updates: Parameters<OnUrlUpdateFunction>[0][], part: stri
 }
 
 describe("the workspace frame", () => {
-  it("one full-bleed map behind everything, with the nav capsule, the deck, the filter panel, the legend capsule, the map buttons and Map settings over it", async () => {
+  it("one full-bleed map behind everything, with the nav capsule, the deck, the filter panel, the legend capsule, and the map buttons over it", async () => {
     mount();
     await loaded();
     const page = screen.getByTestId("workspace");
@@ -195,12 +195,13 @@ describe("the workspace frame", () => {
     expect(screen.queryByTestId("legend")).toBeNull(); // never two legends at once
     expect(screen.queryByTestId("layer-legend")).toBeNull();
     expect(screen.queryByTestId("opacity-pill")).toBeNull();
-    // the map's own buttons, bottom-right, and the Map settings pill under them
+    // the map's own buttons, bottom-right; the Map settings pill came off the map
     const buttons = screen.getByTestId("map-buttons");
     expect(buttons.className).toContain("right-5");
     for (const id of ["map-zoom-in", "map-zoom-out", "map-locate", "map-fullscreen"]) expect(within(buttons).getByTestId(id).className, id).toContain("glass");
-    expect(screen.getByTestId("map-settings-button")).toHaveTextContent("Map settings");
-    expect(screen.queryByTestId("map-settings-panel")).toBeNull();
+    expect(screen.queryByTestId("map-settings-button")).toBeNull();
+    // the display controls live inside the filter panel's Map display disclosure now
+    expect(screen.getByTestId("map-display-section")).toContainElement(screen.getByTestId("map-settings-panel"));
     // at 1280 px and above both panes are on screen, so nothing offers a choice between them
     expect(screen.queryByTestId("pane-switch")).toBeNull();
     expect(screen.getByTestId("map-pane")).not.toHaveAttribute("aria-hidden");
@@ -230,12 +231,11 @@ describe("the workspace frame", () => {
     fireEvent.click(screen.getByTestId("filters-expand"));
     expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16 + M));
   });
-  it("Map settings carries what left the filter panel plus the map's own display choices: the layer, the scale, the opacity, the raster, the basemap, the boundaries, the month, the estimate, the warming potentials and the spatial view", async () => {
+  it("the filter panel's Map display disclosure carries the map's display choices: the layer, the scale, the opacity, the raster, the basemap, the boundaries, the month, the estimate, the warming potentials and the spatial view", async () => {
     mount();
     await loaded();
-    // none of them is in the panel any more
-    for (const id of ["config-select", "gwp-select", "view-select", "layer-switch", "opacity-range", "raster-toggle"]) expect(screen.queryByTestId(id), id).toBeNull();
-    fireEvent.click(screen.getByTestId("map-settings-button"));
+    // no floating pill on the map any more; the disclosure lives in the filter panel
+    expect(screen.queryByTestId("map-settings-button")).toBeNull();
     const panel = screen.getByTestId("map-settings-panel");
     for (const id of ["layer-switch", "scale-select", "opacity-range", "raster-toggle", "basemap-select", "boundaries-toggle", "month-select", "config-select", "gwp-select", "view-select"]) expect(within(panel).getByTestId(id), id).toBeInTheDocument();
     expect((within(panel).getByTestId("config-select") as HTMLSelectElement).options[0].textContent).toBe("Reference estimate");
@@ -244,8 +244,6 @@ describe("the workspace frame", () => {
     fireEvent.change(within(panel).getByTestId("opacity-range"), { target: { value: "40" } });
     expect(screen.getByTestId("opacity-value")).toHaveTextContent("40%");
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-opacity", "40");
-    fireEvent.click(screen.getByTestId("map-settings-close"));
-    expect(screen.queryByTestId("map-settings-panel")).toBeNull();
   });
 });
 

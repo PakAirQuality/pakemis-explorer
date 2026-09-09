@@ -20,6 +20,7 @@ import { districtName, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabe
 import { POLLUTANTS, POLLUTANT_LABELS } from "@/lib/explore/query";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { SEGMENT_GROUP_CLASS, segmentClass } from "./PaneSwitch";
+import { MapSettingsControls } from "./MapSettings";
 import { YearSlider } from "./YearSlider";
 import { FILTERS } from "./copy";
 
@@ -56,9 +57,12 @@ export type FilterPanelProps = {
   mobile?: boolean;
   /** Reset filters also hands the camera back: the workspace passes its fit-the-country here. */
   onResetView?: () => void;
+  /** The map display controls (opacity, basemap, boundaries + the URL-keyed map choices),
+   * folded in here when the floating "Map settings" pill came off the map. */
+  display?: import("./MapSettings").MapSettingsProps;
 };
 
-export function FilterPanel({ open, onToggle, place, mobile = false, onResetView }: FilterPanelProps) {
+export function FilterPanel({ open, onToggle, place, mobile = false, onResetView, display }: FilterPanelProps) {
   const { state, setState, labels, dims, defaults } = useExplorer();
   const districts = districtOptions(dims);
   const reset = () => {
@@ -140,6 +144,14 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
       <button type="button" onClick={reset} className="flex items-center gap-1.5 self-start text-xs font-semibold text-accent hover:underline" data-testid="reset-filters">
         <RotateCcw size={13} aria-hidden="true" /> {FILTERS.reset}
       </button>
+      {display && (
+        <details data-testid="map-display-section">
+          <summary className="micro cursor-pointer select-none py-1">Map display</summary>
+          <div className="mt-2">
+            <MapSettingsControls {...display} />
+          </div>
+        </details>
+      )}
     </div>
   );
 

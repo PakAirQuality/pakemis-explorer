@@ -7,6 +7,8 @@ import type { NextConfig } from "next";
  * receipt's URL is /data?receipt=<hash> (a dynamic /r/<receipt> route cannot be exported).
  */
 const nextConfig: NextConfig = {
+  // the dev-tools "N" badge sat over the map's bottom-left corner; nothing in it is used
+  devIndicators: false,
   output: "export",
   trailingSlash: true,
   images: { unoptimized: true },

@@ -1,25 +1,23 @@
 "use client";
 /**
- * Map settings: the bottom-right pill (left of the Ask button the layout fixes in the corner) and the
- * popover it opens, holding everything that is about the MAP rather than about the question, in
- * this order —
+ * The map display controls, in this order -
  *
  *   Map layer      the five layers of map/layerModes.ts (URL `layer`)
  *   Scale          Relative | Fixed | Absolute (URL `scale`), one line of explanation each
  *   Opacity        the choropleth's fill-opacity; the page owns it, nothing writes it down
  *   Grid raster    the visual-only raster (URL `raster`)
- *   Basemap        Light | Streets (map/basemap.ts) — a local display choice, no env var
+ *   Basemap        Light | Streets (map/basemap.ts) - a local display choice, no env var
  *   Boundaries     the province and district outlines, shown or hidden
- *   Month          the months of the reference year (URL `month`), where map/TimelineBar.tsx's
- *                  month row went when the year slider replaced the timeline
- *   Estimate · Warming potentials · Spatial view   the three that left the filter panel
+ *   Month          the months of the reference year (URL `month`)
+ *   Estimate . Warming potentials . Spatial view
  *
- * Every choice with a URL key writes it, so any view stays a shareable link; the opacity, the
- * basemap and the boundaries are chrome and stay in the page's own state. Every option's word
- * is a release label; nothing here prints a number but the opacity slider's own integer.
+ * Until 2026-09-09 these lived behind a floating "Map settings" pill on the map itself;
+ * the pill came off the map (the chrome cleanup round) and the controls moved into the
+ * filter panel's "Map display" disclosure - one home for every choice, nothing floating
+ * over the data. Every choice with a URL key writes it, so any view stays a shareable
+ * link; the opacity, the basemap and the boundaries are chrome and stay in the page's
+ * own state.
  */
-import { useEffect } from "react";
-import { Settings2, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { configLabel, configTooltip, gwpLabel, gwpTooltip, monthLabel, periodLabel, viewLabel } from "@/lib/labels";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
@@ -30,8 +28,6 @@ import { SCALE_MODES, type ScaleMode } from "@/lib/urlState";
 import { SCALE_NOTES, SETTINGS } from "./copy";
 
 export type MapSettingsProps = {
-  open: boolean;
-  onToggle: (open: boolean) => void;
   opacity: number;
   onOpacity: (pct: number) => void;
   basemap: BasemapChoice;
@@ -43,7 +39,7 @@ export type MapSettingsProps = {
 const GROUP = "pill flex overflow-hidden border border-line bg-surface p-0.5";
 const SEGMENT = (on: boolean) => `pill flex-1 py-1 text-xs ${on ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`;
 
-export function MapSettings({ open, onToggle, opacity, onOpacity, basemap, onBasemap, boundaries, onBoundaries }: MapSettingsProps) {
+export function MapSettingsControls({ opacity, onOpacity, basemap, onBasemap, boundaries, onBoundaries }: MapSettingsProps) {
   const { state, setState, labels, dims, contract } = useExplorer();
   const gwps = contract?.gwp?.length ? contract.gwp : Object.keys(labels.gwp).length ? Object.keys(labels.gwp) : [state.gwp];
   const views = Object.keys(labels.views).length ? Object.keys(labels.views) : [state.view];
@@ -51,25 +47,8 @@ export function MapSettings({ open, onToggle, opacity, onOpacity, basemap, onBas
   // months are genuinely reference-only (the monthly grain refusal), whatever the level -
   // this is the release's monthly-evidence fact, not the retired reference-only map rule
   const months = (labels.periods[state.period]?.is_reference ?? true) ? (dims.monthsByPeriod[state.period] ?? []) : [];
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onToggle(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onToggle]);
   return (
-    <div className="absolute bottom-5 right-[92px] z-20 flex flex-col items-end gap-2" data-testid="map-settings">
-      {open && (
-        <div className="card max-h-[calc(100dvh-140px)] w-[300px] max-w-[calc(100vw-40px)] overflow-y-auto p-4 shadow-lg" role="dialog" aria-label={SETTINGS.title} data-testid="map-settings-panel">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="micro">{SETTINGS.title}</div>
-            <button type="button" aria-label={SETTINGS.close} onClick={() => onToggle(false)} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg" data-testid="map-settings-close">
-              <X size={14} />
-            </button>
-          </div>
-          <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-3.5" data-testid="map-settings-panel">
             <div>
               <div className="micro mb-1.5">{SETTINGS.layer}</div>
               <LayerSwitch compact wrap />
@@ -155,18 +134,6 @@ export function MapSettings({ open, onToggle, opacity, onOpacity, basemap, onBas
                 ))}
               </select>
             </div>
-          </div>
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => onToggle(!open)}
-        aria-expanded={open}
-        className="glass pill flex h-9 items-center gap-1.5 px-3.5 text-xs font-semibold text-fg"
-        data-testid="map-settings-button"
-      >
-        <Settings2 size={14} aria-hidden="true" /> {SETTINGS.title}
-      </button>
     </div>
   );
 }
