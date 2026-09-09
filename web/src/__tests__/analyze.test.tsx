@@ -156,7 +156,8 @@ describe("Analyze", () => {
     expect(screen.getByTestId("change-finding-top")).toHaveTextContent("Agriculture contributed the largest increase: +46.95 Mt CO₂e.");
     expect(screen.getByTestId("change-overall-pct")).toHaveTextContent("+18.23 %");
     expect(screen.getByTestId("change-largest-offset")).toHaveTextContent("Residential -6.50");
-    expect(screen.getByTestId("change-note")).toHaveTextContent("small year-to-year movements remain uncertain");
+    expect(screen.getByTestId("change-note")).toHaveTextContent("small shifts between years should be treated with caution");
+    expect(screen.queryByTestId("analyze-more-change")).toBeNull();
     expect(screen.getByTestId("change-download")).toHaveTextContent("Download chart");
     // the map backdrop follows the To year, and the drill steers its sector overlay
     expect(screen.getByTestId("analyze-map-pane")).toContainElement(screen.getByTestId("map-stub"));

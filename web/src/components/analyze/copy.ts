@@ -31,8 +31,7 @@ export const ANALYZE = {
     overallChange: "Overall change",
     largestOffset: "Largest offset",
     back: "‹ All sectors",
-    caution: "Read the chart as a guide to where the change sits; small year-to-year movements remain uncertain.",
-    more: "Each bar is the exact difference between that source's totals in the two chosen years, computed by the release's own compare function; the bars sum to the change in the national total by construction. A dark bar pushed emissions up, a gold bar pulled them down; click a bar to open the source. These are contributions to change, not attributions to activity, technology or efficiency - separating those needs year-by-year activity data the release does not yet publish. Air pollutants are not offered as the metric because the release serves no cross-year comparison for them yet.",
+    caution: "The chart shows where the change is coming from, but small shifts between years should be treated with caution.",
   },
   shared: {
     eyebrow: "Climate + clean air",

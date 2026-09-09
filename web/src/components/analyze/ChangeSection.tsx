@@ -100,7 +100,6 @@ export function ChangeSection({ settings, onScope }: { settings: AnalyzeSettings
           <Download size={14} aria-hidden="true" /> {ANALYZE.change.download}
         </button>
       }
-      more={ANALYZE.change.more}
     >
       {title && (
         <div className="mb-3 flex items-center gap-3" data-testid="change-breadcrumb">
