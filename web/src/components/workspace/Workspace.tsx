@@ -173,7 +173,19 @@ export function Workspace() {
         <ExplorerMap variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} override={override} />
       </div>
 
-      <NavCapsule floating>{wide ? undefined : <PaneSwitch pane={pane} onPane={choosePane} />}</NavCapsule>
+      {/* The pane switch is its OWN pill (the atlas pattern): top-left on a narrow
+          window, never embedded in the nav - and the nav itself docks to the bottom
+          there, leaving the top to the one control the narrow workspace needs. */}
+      {wide ? (
+        <NavCapsule floating />
+      ) : (
+        <>
+          <div className="glass pill absolute left-5 top-5 z-30 p-1" data-testid="pane-switch-pill">
+            <PaneSwitch pane={pane} onPane={choosePane} />
+          </div>
+          <NavCapsule docked />
+        </>
+      )}
 
       {showDeck ? (
         <Deck

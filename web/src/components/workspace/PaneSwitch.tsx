@@ -2,7 +2,7 @@
 /**
  * The pane switch: **Dashboard | Map**, the one control a narrow workspace adds. Under 1280 px
  * the two panes cannot share the screen, so the workspace shows one at a time and this segmented
- * control — in the nav capsule's `children` slot, beside the four sections — says which. It
+ * control — its own pill at the top left, while the nav docks to the bottom — says which. It
  * wears the filter panel's own segment classes (`SEGMENT_GROUP_CLASS` / `segmentClass`, the
  * Provinces | Districts switch), so the two read as one family: an oxblood fill on the chosen
  * side, muted type on the other.

@@ -375,15 +375,19 @@ describe("the deck's cards", () => {
 });
 
 describe("the narrow workspace: one pane at a time", () => {
-  it("the map pane is the map alone — its legend, its buttons and its filters sheet — with the Dashboard | Map switch in the nav capsule and no deck", async () => {
+  it("the map pane is the map alone — its legend, its buttons and its filters sheet — with the Dashboard | Map switch as its own pill and the nav docked to the bottom", async () => {
     stubNarrowViewport();
     mount();
     const sw = await screen.findByTestId("pane-switch");
-    // the switch lives in the capsule, which grows to hold it rather than clipping the links
+    // the atlas pattern: the switch is its OWN pill top-left, never in the nav -
+    // and the nav docks to the bottom centre, keeping its fixed width
+    const pill = screen.getByTestId("pane-switch-pill");
+    expect(pill).toContainElement(sw);
+    for (const c of ["left-5", "top-5"]) expect(pill.className, c).toContain(c);
     const nav = screen.getByTestId("nav-capsule");
-    expect(nav).toContainElement(sw);
-    expect(nav.className).not.toContain("w-[420px]");
-    expect(nav.className).toContain("w-auto");
+    expect(nav).not.toContainElement(sw);
+    for (const c of ["bottom-4", "left-1/2", "-translate-x-1/2"]) expect(nav.className, c).toContain(c);
+    expect(nav.className).toContain("w-[420px]");
     expect(screen.getByTestId("pane-map")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("pane-dashboard")).toHaveAttribute("aria-pressed", "false");
     expect([screen.getByTestId("pane-dashboard").textContent, screen.getByTestId("pane-map").textContent]).toEqual(["Dashboard", "Map"]);
@@ -409,10 +413,11 @@ describe("the narrow workspace: one pane at a time", () => {
     await loaded();
     expect(await urlWith(updates, "pane=dashboard")).toContain("pane=dashboard");
     expect(screen.getByTestId("pane-dashboard")).toHaveAttribute("aria-pressed", "true");
-    // the deck is the pane: full width, inset 20, capped and centred, under the nav capsule
+    // the deck is the pane: full width, inset 20, capped and centred, under the switch
+    // pill, its bottom padding clearing the docked nav
     const deck = screen.getByTestId("deck");
     expect(deck).toHaveAttribute("data-full", "1");
-    for (const c of ["absolute", "inset-x-0", "top-[84px]", "bottom-0", "mx-auto", "w-full", "max-w-[560px]", "overflow-y-auto", "px-5"]) expect(deck.className, c).toContain(c);
+    for (const c of ["absolute", "inset-x-0", "top-[72px]", "bottom-0", "mx-auto", "w-full", "max-w-[560px]", "overflow-y-auto", "px-5", "pb-24"]) expect(deck.className, c).toContain(c);
     expect(deck.className).not.toContain("w-[420px]");
     // every card is still there, in the same order
     expect(Array.from(deck.children).map((el) => el.getAttribute("data-testid"))).toEqual(["header-block", "deck-header", "scope-chips", "card-snapshot", "card-sectors", "card-trend", "card-places", "footer"]);

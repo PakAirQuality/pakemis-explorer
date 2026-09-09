@@ -48,8 +48,11 @@ export const CAPSULE_WIDTH = "w-[420px] justify-between";
 export const CAPSULE_WIDTH_WITH_CHILDREN = "w-auto max-w-[calc(100vw-40px)] justify-between";
 /** The floating placement on the workspace: the same left inset (20 px) and width as the deck beneath it. */
 export const CAPSULE_FLOATING = "absolute left-5 top-5 z-30";
+/** The docked placement: a narrow workspace parks the nav at the bottom centre (the pane
+ * switch owns the top-left there), the way the reference atlas parks its menu bar. */
+export const CAPSULE_DOCKED = "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 shadow-xl";
 
-export function NavCapsule({ floating = false, children }: { floating?: boolean; children?: ReactNode }) {
+export function NavCapsule({ floating = false, docked = false, children }: { floating?: boolean; docked?: boolean; children?: ReactNode }) {
   const pathname = usePathname();
   const link = (href: string, label: string) => {
     const active = isActive(pathname, href);
@@ -70,7 +73,7 @@ export function NavCapsule({ floating = false, children }: { floating?: boolean;
     // ONE SIZE EVERYWHERE (chrome-cleanup round): the capsule keeps the deck's 420 px on
     // every page, not just the workspace, so the pill never changes size between Explore
     // and Data - and the pages align their first column to the same width beneath it.
-    <div className={`${floating ? `${CAPSULE_FLOATING} ` : ""}${children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
+    <div className={`${floating ? `${CAPSULE_FLOATING} ` : docked ? `${CAPSULE_DOCKED} ` : ""}${children ? CAPSULE_WIDTH_WITH_CHILDREN : CAPSULE_WIDTH} ${CAPSULE_CLASS} max-w-[calc(100vw-40px)] overflow-x-auto scrollbar-none`} data-testid="nav-capsule">
       <Link href="/" className="flex shrink-0 items-center" data-testid="brand" title="Pakistan Air Quality Initiative">
         <BrandLogo className="h-7 object-contain" />
       </Link>

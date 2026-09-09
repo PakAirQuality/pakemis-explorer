@@ -52,7 +52,7 @@ export const DECK_CLASS =
  * 20 px, under the nav capsule and scrolling to the bottom of the window.
  */
 export const DECK_FULL_CLASS =
-  "absolute inset-x-0 top-[84px] bottom-0 z-20 mx-auto w-full max-w-[560px] overflow-y-auto overscroll-contain scrollbar-none px-5 pb-5 flex flex-col gap-3";
+  "absolute inset-x-0 top-[72px] bottom-0 z-20 mx-auto w-full max-w-[560px] overflow-y-auto overscroll-contain scrollbar-none px-5 pb-24 flex flex-col gap-3";
 
 export type DeckProps = {
   /**
