@@ -17,10 +17,10 @@ export type WaterfallStep = {
 };
 
 const W = 840;
-const H = 300;
-const PAD = { top: 26, bottom: 44, left: 8, right: 8 };
+const H = 320;
+const PAD = { top: 26, bottom: 44, left: 52, right: 8 };
 
-export function WaterfallChart({ steps, unit, onPick, testId = "waterfall" }: { steps: WaterfallStep[]; unit?: string; onPick?: (id: string) => void; testId?: string }) {
+export function WaterfallChart({ steps, unit, ticks, onPick, testId = "waterfall" }: { steps: WaterfallStep[]; unit?: string; ticks?: readonly string[] | null; onPick?: (id: string) => void; testId?: string }) {
   if (!steps.length) return null;
   // geometry only: the running level after each bar
   let level = 0;
@@ -30,8 +30,11 @@ export function WaterfallChart({ steps, unit, onPick, testId = "waterfall" }: { 
     level = to;
     return { ...s, from, to };
   });
-  const lo = Math.min(0, ...bars.flatMap((b) => [b.from, b.to]));
-  const hi = Math.max(...bars.flatMap((b) => [b.from, b.to]));
+  // the y scale: the server's own tick labels when given (parsed for geometry only,
+  // the axisFromTicks convention), else the bars' own extent
+  const tickVals = (ticks ?? []).map((t) => parseFloat(t)).filter((v) => Number.isFinite(v));
+  const lo = Math.min(0, ...bars.flatMap((b) => [b.from, b.to]), ...tickVals);
+  const hi = Math.max(...bars.flatMap((b) => [b.from, b.to]), ...tickVals);
   const span = hi - lo || 1;
   const y = (v: number) => PAD.top + ((hi - v) / span) * (H - PAD.top - PAD.bottom);
   const innerW = W - PAD.left - PAD.right;
@@ -40,6 +43,19 @@ export function WaterfallChart({ steps, unit, onPick, testId = "waterfall" }: { 
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={bars.map((b) => `${b.name} ${b.label}`).join("; ")} data-testid={testId}>
+      {(ticks ?? []).map((t, i) => {
+        const v = tickVals[i];
+        if (!Number.isFinite(v)) return null;
+        return (
+          <g key={t}>
+            <line x1={PAD.left} y1={y(v)} x2={W - PAD.right} y2={y(v)} stroke="var(--color-line)" strokeWidth={1} />
+            <text x={PAD.left - 6} y={y(v) + 3.5} textAnchor="end" fontSize={10.5} fill="var(--color-muted)" className="num">{t}</text>
+          </g>
+        );
+      })}
+      {unit && (
+        <text x={12} y={H / 2} textAnchor="middle" fontSize={10.5} fill="var(--color-muted)" transform={`rotate(-90 12 ${H / 2})`}>{`Emissions (${unit})`}</text>
+      )}
       {bars.map((b, i) => {
         const x = PAD.left + slot * i + (slot - barW) / 2;
         const top = y(Math.max(b.from, b.to));
@@ -59,7 +75,6 @@ export function WaterfallChart({ steps, unit, onPick, testId = "waterfall" }: { 
           </g>
         );
       })}
-      {unit && <text x={W - PAD.right} y={14} textAnchor="end" fontSize={10.5} fill="var(--color-muted)">{unit}</text>}
     </svg>
   );
 }

@@ -1,24 +1,44 @@
 "use client";
-/** One analysis as a deck-style card: title, a plain-words dek that says how to read the
- * chart, the controls and chart, a finding in words beneath - and the precise caveats
- * folded into a "More about this analysis" line at the card's foot. */
+/** The analysis card (the mockup's shape): a gold-top deck-style card with a micro
+ * eyebrow, a question title, an optional action at the right, the analysis body, and
+ * the precise caveats folded into a "More about this analysis" line at the foot. */
 import type { ReactNode } from "react";
+import { Info } from "lucide-react";
 import { DECK_CARD } from "@/components/overview/deck";
 import { ANALYZE } from "./copy";
 
-export function Section({ id, title, dek, more, children }: { id: string; title: string; dek: string; more?: string; children: ReactNode }) {
+export function AnalysisCard({ id, eyebrow, title, dek, action, more, moreOpen, children }: { id: string; eyebrow: string; title: string; dek?: string; action?: ReactNode; more?: string; moreOpen?: boolean; children: ReactNode }) {
   return (
     <section id={id} className={`${DECK_CARD} scroll-mt-24`} data-testid={`analyze-${id}`}>
-      <h2 className="text-base font-semibold tracking-tight text-fg">{title}</h2>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{dek}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="micro text-accent">{eyebrow}</div>
+          <h2 className="mt-0.5 text-xl font-semibold tracking-tight text-fg">{title}</h2>
+          {dek && <p className="mt-1 text-[13px] leading-relaxed text-muted">{dek}</p>}
+        </div>
+        {action && <div className="shrink-0 pt-1">{action}</div>}
+      </div>
       <div className="mt-4">{children}</div>
       {more && (
-        <details className="mt-3 border-t border-line pt-2.5" data-testid={`analyze-more-${id}`}>
+        <details className="mt-4 border-t border-line pt-2.5" open={moreOpen} data-testid={`analyze-more-${id}`}>
           <summary className="micro cursor-pointer select-none">{ANALYZE.moreLabel}</summary>
-          <p className="mt-2 text-xs leading-relaxed text-muted">{more}</p>
+          <p className="mt-2 max-w-[90ch] text-xs leading-relaxed text-muted">{more}</p>
         </details>
       )}
     </section>
+  );
+}
+
+/** The info strip beneath a chart: the plain caution at the left, a link-looking toggle at the right. */
+export function InfoStrip({ children, right }: { children: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface px-4 py-2.5 text-xs text-muted" data-testid="change-note">
+      <span className="flex min-w-0 items-center gap-2">
+        <Info size={14} className="shrink-0 text-accent" aria-hidden="true" />
+        {children}
+      </span>
+      {right}
+    </div>
   );
 }
 
