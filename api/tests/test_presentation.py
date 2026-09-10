@@ -502,12 +502,16 @@ def test_national_annual_series_carries_axis_and_change(client):
     assert env["receipt"] == golden["expect_receipt"]                   # the receipt was minted before the decoration
     # rc47 pins: the rc46 re-base moved the whole series (the activation exists in
     # every year of the window), so both endpoints and the change moved with it.
-    assert env["change"] == {"from_period": "FY2015-16", "to_period": "FY2023-24", "from_short": "394.09", "to_short": "465.92",
-                             "change_short": "+71.83", "change_pct_short": "+18.2", "direction": "rose", "unit_short": "Mt CO₂e",
+    # rc50 pins: the clinker re-base moved the EIGHT HISTORICAL years (+3.96..+5.57 Mt of
+    # 2.A.1 on the census-implied fraction) and not the reference year, so the FROM endpoint
+    # rose (394.09 -> 398.05), the TO endpoint held (465.92), and the change narrowed
+    # (+71.83 -> +67.87, +18.2 -> +17.0 percent); the series peak FY2021-22 rose to 493.98.
+    assert env["change"] == {"from_period": "FY2015-16", "to_period": "FY2023-24", "from_short": "398.05", "to_short": "465.92",
+                             "change_short": "+67.87", "change_pct_short": "+17.0", "direction": "rose", "unit_short": "Mt CO₂e",
                              "note": "compares the first and last period only"}
     assert env["axis"]["ticks_short"] == ["0", "100", "200", "300", "400", "500"] and env["axis"]["unit_short"] == "Mt CO₂e"
-    # the axis max is the SERIES peak - FY2020-21 since the rc46 re-base, not the last year
-    assert env["axis"]["max_short"] == "488.61" and env["axis"]["min_short"] == min(c["display_short"] for c in env["values"])
+    # the axis max is the SERIES peak - FY2021-22 since the rc46 re-base, not the last year
+    assert env["axis"]["max_short"] == "493.98" and env["axis"]["min_short"] == min(c["display_short"] for c in env["values"])
     # the replay carries both; the downloads carry neither
     again = client.get("/api/v1/emissions/receipt/%s" % env["receipt"]).json()
     assert again["change"] == env["change"] and again["axis"] == env["axis"] and again["result_sha256"] == env["result_sha256"]
