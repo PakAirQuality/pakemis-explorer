@@ -25,11 +25,16 @@ const cmpCell = (delta: string, v: number, left: object, right: object) => ({
   extra: { left, right },
 });
 const L = (short: string, v: number, sector?: string) => ({ display_short: short, value: v, unit_short: "Mt CO₂e", group: sector ? { sector_id: sector } : {} });
+/** An economic-view side: the server's derived group key. */
+const EC = (short: string, v: number, id: string) => ({ display_short: short, value: v, unit_short: "Mt CO₂e", group: { economic_sector: id } });
+/** The bodies the page sent, for asserting what a bar click asks the server. */
+const sent: MockBody[] = [];
 
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     mockFetch((url: string, body: MockBody | undefined) => {
+      if (body) sent.push(body);
       if (url.endsWith("/release")) return RELEASE;
       if (url.endsWith("/openapi.json")) return { paths: {}, components: { schemas: {} } };
       if (url.includes("/tiles/")) return { adm1: {}, adm2: {} };
@@ -52,7 +57,22 @@ beforeEach(() => {
             cmpCell("-6.50", -6.5, L("48.43", 48.43, "residential"), L("41.93", 41.93, "residential")),
           ], { request_type: "compare_emissions" });
         }
+        if (g === "economic_sector") {
+          return envelope([
+            cmpCell("+46.95", 46.95, EC("176.50", 176.5, "agriculture"), EC("223.45", 223.45, "agriculture")),
+            cmpCell("-9.60", -9.6, EC("59.54", 59.54, "industrial"), EC("49.95", 49.95, "industrial")),
+            cmpCell("+8.50", 8.5, EC("47.00", 47.0, "power"), EC("55.50", 55.5, "power")),
+          ], { request_type: "compare_emissions" });
+        }
         if (g === "category") {
+          const left = b.left as { ipcc_codes?: string[]; sectors?: string[] };
+          if (left.ipcc_codes) {
+            // the economic aggregate's drill: an IPCC-code filter, no sector
+            return envelope([
+              cmpCell("-11.69", -11.69, { display_short: "34.27", value: 34.27, group: { category: "Industrial fuel combustion (1A2)" } }, { display_short: "22.58", value: 22.58, group: { category: "Industrial fuel combustion (1A2)" } }),
+              cmpCell("+4.04", 4.04, { display_short: "17.78", value: 17.78, group: { category: "Cement production" } }, { display_short: "21.82", value: 21.82, group: { category: "Cement production" } }),
+            ], { request_type: "compare_emissions" });
+          }
           return envelope([
             cmpCell("+32.97", 32.97, { display_short: "118.69", value: 118.69, group: { category: "Enteric fermentation" } }, { display_short: "151.66", value: 151.66, group: { category: "Enteric fermentation" } }),
           ], { request_type: "compare_emissions" });
@@ -166,10 +186,11 @@ describe("Analyze", () => {
     expect(screen.getByTestId("explainer-sector-link")).toHaveTextContent("What changed within agriculture?");
     expect(screen.getByTestId("explainer-hint")).toHaveTextContent("Select any bar to explain that sector.");
     expect(screen.getByTestId("change-note")).toHaveTextContent("Small year-to-year shifts should be interpreted with caution.");
-    // the interim disclosure: the industry reported-fuel caveat folds under "More about this analysis"
-    // (words, no digits; the fixture carries no server limitation for it, so the authored copy renders)
-    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("Industry: reported-fuel estimate");
+    // the industry caveat folds under "More about this analysis" (words, no digits; the fixture
+    // carries no server limitation for it, so the authored copy renders)
+    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("Covered industrial-combustion emissions fell, reflecting lower recorded fuel use.");
     expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("should not be interpreted as a verified reduction");
+    expect(screen.getByTestId("analyze-more-change")).not.toHaveTextContent("economic-sector view");
     // no Key finding card anywhere: the explainer replaced it
     expect(screen.queryByTestId("change-key-finding")).toBeNull();
     // the map backdrop follows the To year; selection steers its sector
@@ -226,5 +247,40 @@ describe("Analyze", () => {
     expect(row).toHaveTextContent("24.34");
     expect(screen.getByTestId("sensitivity-finding")).toHaveTextContent("Agriculture leads the reference estimate and keeps the lead under");
     expect(screen.getByTestId("envelope-Enteric fermentation")).toHaveTextContent("-30.0 / +40.0 %");
+  });
+  it("economic sectors: the toggle regroups the same atoms; the industrial aggregate drills by IPCC code and carries the covered-sources note", async () => {
+    mount();
+    await screen.findByTestId("change-waterfall");
+    sent.length = 0;
+    const toggle = screen.getByTestId("analyze-view-economic");
+    expect(screen.getByTestId("analyze-view-ipcc")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // the compare asked for the server's derived key, and the bar is the economic id
+    const bar = await screen.findByTestId("change-waterfall-bar-industrial");
+    expect(sent.some((b) => (b as { left?: { group_by?: string[] } }).left?.group_by?.[0] === "economic_sector")).toBe(true);
+    expect(screen.queryByTestId("change-waterfall-bar-residential")).toBeNull();
+    // the axis prints the short economic label; the title keeps the full one
+    const wf = screen.getByTestId("change-waterfall");
+    expect(wf).toHaveTextContent("Industrial");
+    expect(wf.querySelector("title")?.textContent ?? "").toContain("2020–21");
+    // the prose uses the short forms; the fold carries the view's note AND the industry caveat
+    await waitFor(() => expect(screen.getByTestId("explainer-para2")).toHaveTextContent("Power also increased. Declines in industrial offset part of that growth, but not enough to reverse it."));
+    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("economic-sector view regroups the same sources");
+    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("Covered industrial-combustion emissions fell");
+    // select the aggregate: the eyebrow is the full label, the drill is an IPCC-code filter (never a sector), the caveat shows, the map steers no sector
+    fireEvent.click(bar);
+    await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Industrial (covered direct sources)"));
+    await waitFor(() => expect(screen.getByTestId("explainer-para")).toHaveTextContent("Industrial's estimated emissions fell by -9.60 Mt CO₂e. Industrial fuel combustion (1A2) cut 11.69 Mt — more than the whole of the sector's decrease."));
+    const drill = sent.filter((b) => (b as { left?: { group_by?: string[] } }).left?.group_by?.[0] === "category").pop() as { left: { ipcc_codes?: string[]; sectors?: string[] } } | undefined;
+    expect(drill?.left.ipcc_codes).toEqual(["1.A.2", "2"]);
+    expect(drill?.left.sectors).toBeUndefined();
+    expect(screen.getByTestId("explainer-industry-caveat")).toHaveTextContent("covers direct industrial sources only");
+    expect(screen.getByTestId("explainer-methods")).toHaveAttribute("href", "/methods/sectors/industry");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
+    // back to IPCC: the selection clears and the module bars return
+    fireEvent.click(screen.getByTestId("analyze-view-ipcc"));
+    await screen.findByTestId("change-waterfall-bar-residential");
+    expect(screen.queryByTestId("explainer-eyebrow")).toBeNull();
   });
 });

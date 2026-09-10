@@ -19,13 +19,36 @@ const riseColor = (magnitude: number, max: number) => grade(ORANGE, RED, max > 0
 const fallColor = (magnitude: number, max: number) => grade(GOLD, GOLD_DEEP, max > 0 ? magnitude / max : 0);
 export type WaterfallStep = {
   id: string;
+  /** The full label: the bar's title and the aria text. */
   name: string;
+  /** The axis form when the full label is long ("Industrial fuel use"); the name when absent. */
+  shortName?: string;
   /** The server's numeric value (a total for the ends, a signed delta for a step). */
   value: number;
   /** The printed number: the cell's display_short, signed by the caller for steps. */
   label: string;
   kind: "start" | "delta" | "end";
 };
+
+/** An axis label: one line up to AXIS_CHARS, else words wrapped onto two lines, the second ellipsised. */
+const AXIS_CHARS = 12;
+export function wrapAxis(text: string): string[] {
+  if (text.length <= AXIS_CHARS) return [text];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(/\s+/)) {
+    if (!current) current = word;
+    else if (`${current} ${word}`.length <= AXIS_CHARS) current = `${current} ${word}`;
+    else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  const clip = (s: string) => (s.length > AXIS_CHARS ? `${s.slice(0, AXIS_CHARS - 1)}\u2026` : s);
+  if (lines.length > 2) return [clip(lines[0]), `${lines.slice(1).join(" ").slice(0, AXIS_CHARS - 1)}\u2026`];
+  return lines.map(clip);
+}
 
 const W = 840;
 const H = 320;
@@ -91,9 +114,11 @@ export function WaterfallChart({ steps, unit, ticks, selected = null, onPick, te
             </rect>
             {next && <line x1={x + barW} y1={y(b.to)} x2={PAD.left + slot * (i + 1) + (slot - barW) / 2} y2={y(b.to)} stroke="var(--color-line-strong)" strokeDasharray="3 3" strokeWidth={1} />}
             <text x={x + barW / 2} y={top - 6} textAnchor="middle" fontSize={11} fill="var(--color-fg)" className="num">{b.label}</text>
-            <text x={x + barW / 2} y={H - PAD.bottom + 16} textAnchor="middle" fontSize={10.5} fill="var(--color-muted)">
-              {b.name.length > 12 ? `${b.name.slice(0, 11)}…` : b.name}
-            </text>
+            {wrapAxis(b.shortName ?? b.name).map((line, li) => (
+              <text key={li} x={x + barW / 2} y={H - PAD.bottom + 16 + li * 12} textAnchor="middle" fontSize={10.5} fill="var(--color-muted)">
+                {line}
+              </text>
+            ))}
           </g>
         );
         });

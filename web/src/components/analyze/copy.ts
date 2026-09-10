@@ -15,6 +15,11 @@ export const ANALYZE = {
     { id: "sensitivity", label: "How certain is it?" },
   ],
   settings: {
+    view: "Sector grouping",
+    viewIpcc: "IPCC sectors",
+    viewEconomic: "Economic sectors",
+    viewIpccTitle: "Each sector is the module that computed it: industry is direct industrial fuel use (1.A.2), captive generation sits in power, cement process CO\u2082 in IPPU.",
+    viewEconomicTitle: "The same sources regrouped by what the IPCC code says the activity is: industrial = 1.A.2 fuel use including captive generation, plus the 2.x process categories. Covered direct industrial sources only.",
     eyebrow: "Analysis settings",
     geography: "Geography",
     metric: "Metric",
@@ -36,9 +41,10 @@ export const ANALYZE = {
     largestOffset: "Largest offset",
     back: "‹ All sectors",
     caution: "Small year-to-year shifts should be interpreted with caution.",
-    // 2026-09-10 interim disclosure (words only, no number). The server's own limitation string is
-    // preferred once the next release payload carries it; this is the same wording until then.
-    industryCaveat: "Industry: reported-fuel estimate. The estimated decline is strongly influenced by the official industrial-coal series. Its magnitude has not yet been independently reconciled with production and fuel-supply evidence and should not be interpreted as a verified reduction from mitigation or efficiency improvements.",
+    // 2026-09-11 (words only, no number). The server's own limitation strings are preferred once the
+    // next release payload carries them; these are the same wording until then.
+    industryCaveat: "Covered industrial-combustion emissions fell, reflecting lower recorded fuel use. This does not mean Pakistan's total industrial emissions declined; several industrial sources are reported elsewhere or remain outside the inventory. The estimated decline is strongly influenced by the official industrial-coal series, whose magnitude has not yet been independently reconciled with production and fuel-supply evidence and should not be interpreted as a verified reduction from mitigation or efficiency improvements.",
+    economicNote: "The economic-sector view regroups the same sources by what the IPCC code says the activity is: industrial = manufacturing fuel use (including captive generation, which the power module computes) plus cement process emissions. It is additive with the IPCC view. Its industrial aggregate covers direct industrial sources only: ammonia and nitric acid process emissions, HFCs, iron and steel, lime, glass, lubricants and industrial wastewater are screened or absent and are not inside it; each enters only as a full 2015\u201316 to 2023\u201324 series, never in the latest year alone.",
   },
   explainer: {
     mainContributor: "Main contributor",

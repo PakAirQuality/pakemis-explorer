@@ -95,11 +95,18 @@ BASIS_PREFIX = re.compile(r"^(FY|CY)")
 BASIS_NOTES = {"fiscal": "a fiscal year runs from July to June", "calendar": "a calendar year runs from January to December"}
 SUBSCRIPT_DIGITS = str.maketrans("0123456789", "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089")
 ACRONYMS = {"ippu": "IPPU"}   # the one sector id that is an acronym; every other label is title-cased
-# 2026-09-10 interim disclosure: the industry sector is a REPORTED-FUEL estimate - its two largest
-# streams are the official HDIP coal-by-consumer allocation, whose sharp post-FY2021 decline is under
-# independent reconciliation against production and fuel-supply evidence. The label says so on every
-# surface (waterfall bar, explainer, Ask) until the reconstruction's reference decision. Words only.
-SECTOR_LABEL_OVERRIDES = {"industry": "Industry: reported-fuel estimate"}
+# 2026-09-11: the industry MODULE is IPCC 1.A.2 direct industrial fuels only (the official HDIP coal
+# allocation, OGRA industrial gas, OCAC industry liquids) - not Pakistan's industrial sector. Its
+# label says so on every surface: the FULL label where there is room (bar tooltip, explainer eyebrow,
+# tables, Ask), the SHORT one mid-sentence and on a chart axis. Captive generation (1.A.2, computed
+# by the power module) and cement process CO2 (2.A.1) belong to the ECONOMIC sector 'industrial',
+# served as a second grouping of the same atoms (group_by economic_sector; engine.ECONOMIC_SECTOR_SQL)
+# and labelled "covered direct industrial sources" until every screened industrial category
+# back-casts to FY2015-16. Words only; no number moves.
+SECTOR_LABEL_OVERRIDES = {"industry": "Industrial fuel use \u2014 covered sources"}
+SECTOR_SHORT_LABELS = {"industry": "Industrial fuel use"}
+ECONOMIC_SECTOR_LABELS = {"industrial": "Industrial (covered direct sources)"}
+ECONOMIC_SECTOR_SHORT_LABELS = {"industrial": "Industrial"}
 # the three placements, worded as the release's spatial products contract words them
 # (docs/spatial_products_contract.md, "what a placement claims to be"); "all" adds the three
 VIEW_MEANINGS = {
@@ -606,6 +613,11 @@ class Service:
             "limitations": {l["id"]: worded(l["message"]) for l in c["known_limitations"]},
             "gases": {g: g.translate(SUBSCRIPT_DIGITS) for g in sorted(self.release.dim_values("dim_gas", "gas"))},
             "sectors": {m: SECTOR_LABEL_OVERRIDES.get(m, ACRONYMS.get(m, humanise(m))) for m in sorted(self.release.dim_values("dim_stream", "module"))},
+            # the mid-sentence / axis forms; a sector absent here reads its full label
+            "sectors_short": dict(SECTOR_SHORT_LABELS),
+            # the economic-sector view's own ids (every other economic sector IS a module and reads its label)
+            "economic_sectors": dict(ECONOMIC_SECTOR_LABELS),
+            "economic_sectors_short": dict(ECONOMIC_SECTOR_SHORT_LABELS),
             "geographies": self.geography_labels(),
         }
 

@@ -65,7 +65,10 @@ export const RELEASE = {
       grid_not_tabular: "the map tiles are visual only",
     },
     gases: { CH4: "CH₄", CO2: "CO₂", N2O: "N₂O" },
-    sectors: { agriculture: "Agriculture", power: "Power", residential: "Residential" },
+    sectors: { agriculture: "Agriculture", power: "Power", residential: "Residential", industry: "Industrial fuel use — covered sources" },
+    sectors_short: { industry: "Industrial fuel use" },
+    economic_sectors: { industrial: "Industrial (covered direct sources)" },
+    economic_sectors_short: { industrial: "Industrial" },
     geographies: { "ADM1:Punjab": "Punjab", "ADM1:Other": "ICT, AJK & Gilgit-Baltistan (combined)" },
   },
   release: {

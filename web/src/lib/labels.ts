@@ -205,6 +205,29 @@ export function sectorLabel(labels: Labels, id: string | null | undefined): stri
   if (!id) return "All sectors";
   return labels.sectors[id] ?? id;
 }
+/** The mid-sentence / axis form of a sector ("Industrial fuel use"); the full label where the server gives no short one. */
+export function sectorShortLabel(labels: Labels, id: string | null | undefined): string {
+  if (!id) return "All sectors";
+  return labels.sectors_short[id] ?? sectorLabel(labels, id);
+}
+/** An economic-sector id: the view's own ids ('industrial') read their label, every other id is a module. */
+export function economicSectorLabel(labels: Labels, id: string | null | undefined): string {
+  if (!id) return "All sectors";
+  return labels.economic_sectors[id] ?? sectorLabel(labels, id);
+}
+export function economicSectorShortLabel(labels: Labels, id: string | null | undefined): string {
+  if (!id) return "All sectors";
+  return labels.economic_sectors_short[id] ?? labels.economic_sectors[id] ?? sectorShortLabel(labels, id);
+}
+/** The two groupings of the same atoms: by the module that computed them (IPCC) or by what the code says the activity is (economic). */
+export type SectorView = "ipcc" | "economic";
+export const SECTOR_VIEW_GROUP_KEY: Record<SectorView, string> = { ipcc: "sector_id", economic: "economic_sector" };
+export function viewSectorLabel(labels: Labels, view: SectorView, id: string | null | undefined): string {
+  return view === "economic" ? economicSectorLabel(labels, id) : sectorLabel(labels, id);
+}
+export function viewSectorShortLabel(labels: Labels, view: SectorView, id: string | null | undefined): string {
+  return view === "economic" ? economicSectorShortLabel(labels, id) : sectorShortLabel(labels, id);
+}
 export function gasLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "All gases";
   return labels.gases[id] ?? labels.gases[id.toUpperCase()] ?? id;

@@ -97,6 +97,10 @@ export function Methodology() {
           )}
           <p className="mt-2 leading-relaxed">Where nothing is estimated, the cell says so with a notation key rather than a value: NE (not estimated), NO (not occurring) or IE (included elsewhere). A blank is not a zero, and a refusal is not an error.</p>
           <p className="mt-2 leading-relaxed">Every number is graded by the evidence behind it, traceable to the document and the code that produced it, and carries a receipt: a hash of the request, the release and the result that anyone can replay through the API to get the same envelope.</p>
+          <p className="mt-2 leading-relaxed" data-testid="about-sector-views">
+            <b>Two sector groupings</b> of the same sources. The IPCC grouping names the module that computed each source: &ldquo;industrial fuel use&rdquo; is direct industrial fuel combustion only, captive generation sits in power and cement process CO&#8322; in IPPU. The economic grouping, on the Analyze page, joins what the IPCC code says is industrial: 1.A.2 fuel use including captive generation, plus the process categories. It is additive with the IPCC grouping and its industrial aggregate covers direct industrial sources only; it never stands for Pakistan&apos;s whole industrial sector.
+            {lim("economic_sector_view") ? <> {lim("economic_sector_view")}.</> : null}
+          </p>
         </section>
 
         <section className="card mb-5 p-4 text-sm" data-testid="about-map">

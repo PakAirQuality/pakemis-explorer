@@ -14,13 +14,13 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { NavHeader } from "@/components/shell/NavCapsule";
 import { ContourMotif } from "@/components/ui/ContourMotif";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
-import { gasLabel, periodShort } from "@/lib/labels";
+import { gasLabel, periodShort, type SectorView } from "@/lib/labels";
 import { ANALYZE } from "./copy";
 import { ChangeSection } from "./ChangeSection";
 import { SharedSourcesSection } from "./SharedSourcesSection";
 import { SensitivitySection } from "./SensitivitySection";
 
-export type AnalyzeSettings = { from: string; to: string; gases: string[] | null };
+export type AnalyzeSettings = { from: string; to: string; gases: string[] | null; view: SectorView };
 
 const TAB = (on: boolean) =>
   `whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors ${on ? "bg-accent text-on-accent" : "border border-line bg-surface text-fg/70 hover:text-fg"}`;
@@ -32,15 +32,23 @@ export function Analyze() {
   const [fromP, setFromP] = useState(periods[0] ?? "");
   const [toP, setToP] = useState(periods[periods.length - 1] ?? "");
   const [gas, setGas] = useState<string>("");
+  // the sector grouping: by the module that computed the atoms (IPCC, the default - the
+  // reference is IPCC-coded) or by what the code says the activity is (economic)
+  const [view, setView] = useState<SectorView>("ipcc");
   const [sharedOpen, setSharedOpen] = useState(false);
   // the selection is page state: the chart highlights it, the explainer tells it, the map mirrors it
   const [selected, setSelected] = useState<string | null>(null);
   const [sensitivityOpen, setSensitivityOpen] = useState(false);
-  const settings: AnalyzeSettings = { from: fromP, to: toP, gases: gas ? [gas] : null };
+  const settings: AnalyzeSettings = { from: fromP, to: toP, gases: gas ? [gas] : null, view };
   const reset = () => {
     setFromP(periods[0] ?? "");
     setToP(periods[periods.length - 1] ?? "");
     setGas("");
+    setView("ipcc");
+    setSelected(null);
+  };
+  const pickView = (v: SectorView) => {
+    setView(v);
     setSelected(null);
   };
   const pickTab = (id: string) => {
@@ -61,7 +69,8 @@ export function Analyze() {
       {/* the same ground Explore stands on: the map as a fixed backdrop the cards
           scroll over - it follows the To year and the drilled source */}
       <div className="fixed inset-0" data-testid="analyze-map-pane" aria-hidden="true">
-        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: selected }} />
+        {/* the map is module-grained: the economic 'industrial' aggregate is not a module, so it steers no sector */}
+        <ExplorerMap variant="workspace" override={{ ...(toP ? { period: toP } : {}), sector: selected === "industrial" ? null : selected }} />
       </div>
       <div className="relative z-10">
       <NavHeader />
@@ -107,6 +116,17 @@ export function Analyze() {
                     {periods.map((p) => <option key={p} value={p}>{periodShort(labels, p)}</option>)}
                   </select>
                 ))}
+              </div>
+              <div className="mt-3 flex flex-col gap-1 text-xs text-muted" data-testid="analyze-view">
+                {ANALYZE.settings.view}
+                <div className="flex flex-wrap gap-1" role="group" aria-label={ANALYZE.settings.view}>
+                  <button type="button" onClick={() => pickView("ipcc")} className={TAB(view === "ipcc")} aria-pressed={view === "ipcc"} title={ANALYZE.settings.viewIpccTitle} data-testid="analyze-view-ipcc">
+                    {ANALYZE.settings.viewIpcc}
+                  </button>
+                  <button type="button" onClick={() => pickView("economic")} className={TAB(view === "economic")} aria-pressed={view === "economic"} title={ANALYZE.settings.viewEconomicTitle} data-testid="analyze-view-economic">
+                    {ANALYZE.settings.viewEconomic}
+                  </button>
+                </div>
               </div>
               <button type="button" onClick={reset} className="mt-3 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft" data-testid="analyze-reset">
                 <RotateCcw size={14} aria-hidden="true" /> {ANALYZE.settings.reset}

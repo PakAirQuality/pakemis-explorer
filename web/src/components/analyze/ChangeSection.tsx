@@ -15,7 +15,7 @@ import Link from "next/link";
 import { ArrowRight, Download } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { useCompare, useNationalSeries, useUncertainty } from "@/lib/queries";
-import { cellUnit, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, periodShort, SECTOR_VIEW_GROUP_KEY, viewSectorLabel, viewSectorShortLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { type Cell } from "@/lib/envelope";
 import { WaterfallChart, type WaterfallStep } from "@/components/charts/WaterfallChart";
@@ -26,6 +26,8 @@ import type { AnalyzeSettings } from "./Analyze";
 type Side = { display_short?: string; value?: number | null; unit?: string; unit_short?: string; group?: Record<string, string | null> };
 export const side = (c: Cell, which: "left" | "right") => (c as unknown as Record<string, Side | undefined>)[which];
 export const signed = (c: Cell) => ((c.value ?? 0) > 0 ? `+${c.display_short ?? c.display}` : (c.display_short ?? c.display));
+/** The server's printed magnitude after a verb that already carries the sign ("cut 11.69", never "cut -11.69"). */
+export const magnitude = (c: Cell) => (c.display_short ?? c.display ?? "").replace(/^[-−+]/, "");
 
 /** The compare's aligned delta cells (misaligned pairs dropped - the engine zips by
  * position; found 2026-09-09), sorted by magnitude. */
@@ -70,17 +72,24 @@ function othersSentence(deltas: Delta[], topId: string, rising: boolean, nameOf:
 
 export function ChangeSection({ settings, selected, onSelect }: { settings: AnalyzeSettings; selected: string | null; onSelect: (id: string | null) => void }) {
   const { labels } = useExplorer();
-  const { from: fromP, to: toP, gases } = settings;
+  const { from: fromP, to: toP, gases, view } = settings;
   const chartRef = useRef<HTMLDivElement>(null);
 
   const gasFilter = gases ? { gases } : {};
   const enabled = !!fromP && !!toP && fromP !== toP;
+  // the grouping key: the module that computed the atoms (IPCC) or what the code says the
+  // activity is (economic) - the same atoms either way, the server's derived key for the latter
+  const groupKey = SECTOR_VIEW_GROUP_KEY[view];
+  // drilling into a bar: a module filters by sector_id; the economic 'industrial' aggregate is
+  // not a module, so it filters by the IPCC codes that define it (1.A.2 exact or its children,
+  // and every 2.x process category) - the engine's own prefix rule
+  const drillFilter = (id: string) => (view === "economic" && id === "industrial" ? { ipcc_codes: ["1.A.2", "2"] } : { sectors: [id] });
   const total = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "absolute" }, enabled);
   const relative = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "relative" }, enabled);
-  const cmp = useCompare({ left: { periods: [fromP], group_by: ["sector_id"], ...gasFilter }, right: { periods: [toP], group_by: ["sector_id"], ...gasFilter }, mode: "absolute" }, enabled);
+  const cmp = useCompare({ left: { periods: [fromP], group_by: [groupKey], ...gasFilter }, right: { periods: [toP], group_by: [groupKey], ...gasFilter }, mode: "absolute" }, enabled);
   const catCmp = useCompare(
     selected
-      ? { left: { periods: [fromP], group_by: ["category"], sectors: [selected], ...gasFilter }, right: { periods: [toP], group_by: ["category"], sectors: [selected], ...gasFilter }, mode: "absolute" }
+      ? { left: { periods: [fromP], group_by: ["category"], ...drillFilter(selected), ...gasFilter }, right: { periods: [toP], group_by: ["category"], ...drillFilter(selected), ...gasFilter }, mode: "absolute" }
       : null,
     enabled && !!selected,
   );
@@ -91,12 +100,24 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
   const relCell = relative.data?.values[0];
   const tLeft = totalCell ? side(totalCell, "left") : undefined;
   const tRight = totalCell ? side(totalCell, "right") : undefined;
-  const deltas = alignedDeltas(cmp.data?.values, "sector_id");
-  const nameOf = (id: string) => sectorLabel(labels, id);
-  // 2026-09-10 interim disclosure: industry is a reported-fuel estimate under reconciliation. The
-  // server's limitation string is preferred (it lands with the next release payload); until then
-  // the same wording is authored in copy.ts - words only, no number, per this file's header.
-  const industryNote = labels.limitations.industry_reported_fuel_series ?? ANALYZE.change.industryCaveat;
+  const deltas = alignedDeltas(cmp.data?.values, groupKey);
+  // the FULL label where there is room (eyebrow, bar title), the SHORT one mid-sentence and on the axis
+  const nameOf = (id: string) => viewSectorLabel(labels, view, id);
+  const shortOf = (id: string) => viewSectorShortLabel(labels, view, id);
+  // 2026-09-11: the industry module is direct industrial fuel use, covered sources only, and its
+  // coal series is under reconciliation; the economic view's industrial aggregate is the covered
+  // direct boundary. The server's limitation strings are preferred (they land with the next
+  // release payload); until then the same wording is authored in copy.ts - words only, no number.
+  // a contract limitation is worded as a clause ("the industry (1.A.2) series is ..."); read on its
+  // own or after another note it must stand as a sentence
+  const sentence = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}${/[.!?]$/.test(s.trim()) ? "" : "."}`;
+  const industryNote = sentence(labels.limitations.industry_reported_fuel_series ?? ANALYZE.change.industryCaveat);
+  const economicNote = sentence(labels.limitations.economic_sector_view ?? ANALYZE.change.economicNote);
+  const moreNote = view === "economic" ? `${economicNote} ${industryNote}` : industryNote;
+  const caveatFor = (id: string | null) =>
+    view === "ipcc" && id === "industry" ? industryNote : view === "economic" && id === "industrial" ? `${economicNote} ${industryNote}` : null;
+  // the method pages are per MODULE; the economic aggregate's door is the industry module's
+  const methodsSector = (id: string) => (id === "industrial" ? "industry" : id);
   const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";
   const mag = tLeft ? magnitudeOf(tLeft as Cell) : "Mt";
   const rising = (totalCell?.value ?? 0) >= 0;
@@ -104,7 +125,7 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
   const steps: WaterfallStep[] = [];
   if (totalCell && tLeft && tRight) {
     steps.push({ id: "start", name: periodShort(labels, fromP), value: (tLeft.value as number) ?? 0, label: tLeft.display_short ?? "", kind: "start" });
-    for (const { c, id } of deltas) steps.push({ id, name: nameOf(id), value: c.value as number, label: signed(c), kind: "delta" });
+    for (const { c, id } of deltas) steps.push({ id, name: nameOf(id), shortName: shortOf(id), value: c.value as number, label: signed(c), kind: "delta" });
     steps.push({ id: "end", name: periodShort(labels, toP), value: (tRight.value as number) ?? 0, label: tRight.display_short ?? "", kind: "end" });
   }
   const top = deltas[0];
@@ -148,9 +169,9 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
           </h3>
           {cat1 && step && (
             <p className="mt-2.5 text-sm leading-relaxed text-fg/85" data-testid="explainer-para">
-              {nameOf(selected)}&apos;s estimated emissions {stepRising ? "rose" : "fell"} by{" "}
+              {shortOf(selected)}&apos;s estimated emissions {stepRising ? "rose" : "fell"} by{" "}
               <b className="num whitespace-nowrap">{signed(step)} {unit}</b>. {cat1.id} {(cat1.c.value as number) >= 0 ? "added" : "cut"}{" "}
-              <b className="num whitespace-nowrap">{cat1.c.display_short ?? cat1.c.display} {mag}</b>
+              <b className="num whitespace-nowrap">{magnitude(cat1.c)} {mag}</b>
               {frac ? <> — {frac} of the sector&apos;s {stepRising ? "increase" : "decrease"}</> : null}.
               {cat2 ? <> {cat2.id} followed at <b className="num whitespace-nowrap">{signed(cat2.c)} {mag}</b>.</> : null}
             </p>
@@ -160,15 +181,15 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
             <div className="mt-3.5 rounded-xl bg-surface px-4 py-3" data-testid="explainer-stat">
               <div className="num text-2xl font-semibold tracking-tight text-accent">{signed(step)} {unit}</div>
               <div className="mt-0.5 text-sm text-muted">
-                {midSentence(nameOf(selected))}&apos;s net {stepRising ? "increase" : "decrease"}
+                {midSentence(shortOf(selected))}&apos;s net {stepRising ? "increase" : "decrease"}
                 {envRow?.envelope?.low_pct ? <> · envelope <span className="num">{envRow.envelope.low_pct} / +{envRow.envelope.high_pct} %</span></> : null}
               </div>
             </div>
           )}
-          {selected === "industry" && (
-            <p className="mt-3 rounded-lg bg-amber/15 px-3 py-2 text-[11px] leading-relaxed text-fg/80" data-testid="explainer-industry-caveat">{industryNote}</p>
+          {caveatFor(selected) && (
+            <p className="mt-3 rounded-lg bg-amber/15 px-3 py-2 text-[11px] leading-relaxed text-fg/80" data-testid="explainer-industry-caveat">{caveatFor(selected)}</p>
           )}
-          <Link href={`/methods/sectors/${selected}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline" data-testid="explainer-methods">
+          <Link href={`/methods/sectors/${methodsSector(selected)}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline" data-testid="explainer-methods">
             {ANALYZE.explainer.methods} <ArrowRight size={14} aria-hidden="true" />
           </Link>
           <div className="mt-3 border-t border-line/70 pt-2.5">
@@ -180,9 +201,9 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
         </>
       );
     }
-    const topName = nameOf(top.id);
+    const topName = shortOf(top.id);
     const frac = fractionWords(top.c.value as number, totalCell.value as number);
-    const others = othersSentence(deltas, top.id, rising, nameOf);
+    const others = othersSentence(deltas, top.id, rising, shortOf);
     return (
       <>
         <div className="micro text-accent">{ANALYZE.change.plainLanguage}</div>
@@ -192,7 +213,7 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
         <p className="mt-2.5 text-sm leading-relaxed text-fg/85" data-testid="explainer-para">
           Pakistan&apos;s estimated emissions {rising ? "rose" : "fell"} from <b className="num whitespace-nowrap">{tLeft.display_short}</b> to{" "}
           <b className="num whitespace-nowrap">{tRight.display_short} {unit}</b>. {topName} {(top.c.value as number) >= 0 ? "added" : "cut"}{" "}
-          <b className="num whitespace-nowrap">{top.c.display_short ?? top.c.display} {mag}</b>
+          <b className="num whitespace-nowrap">{magnitude(top.c)} {mag}</b>
           {frac && ((top.c.value as number) >= 0) === rising ? <> — {frac} of the net {rising ? "increase" : "decrease"}</> : null}.
         </p>
         {others && <p className="mt-2 text-sm leading-relaxed text-fg/85" data-testid="explainer-para2">{others}</p>}
@@ -215,7 +236,7 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
       id="change"
       eyebrow={<span className="rounded bg-amber/25 px-1.5 py-0.5">{periodShort(labels, fromP)} to {periodShort(labels, toP)}</span>}
       title={ANALYZE.change.title}
-      more={industryNote}
+      more={moreNote}
       action={
         <button type="button" onClick={download} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft" data-testid="change-download">
           <Download size={14} aria-hidden="true" /> {ANALYZE.change.download}

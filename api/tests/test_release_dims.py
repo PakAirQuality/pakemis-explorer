@@ -65,8 +65,13 @@ def test_labels_cover_every_id(release):
     assert labels["gases"] == {"CH4": "CH₄", "CO2": "CO₂", "N2O": "N₂O"}
     assert set(labels["sectors"]) == set(dims["sectors"])
     assert labels["sectors"]["ippu"] == "IPPU" and labels["sectors"]["agriculture"] == "Agriculture"
-    # the 2026-09-10 interim disclosure: industry is labelled a reported-fuel estimate on every surface
-    assert labels["sectors"]["industry"] == "Industry: reported-fuel estimate"
+    # 2026-09-11: the industry module is direct industrial FUEL USE, covered sources only - the full
+    # label where there is room, the short one mid-sentence and on an axis; the economic view's
+    # 'industrial' aggregate carries its own label pair
+    assert labels["sectors"]["industry"] == "Industrial fuel use \u2014 covered sources"
+    assert labels["sectors_short"] == {"industry": "Industrial fuel use"}
+    assert labels["economic_sectors"] == {"industrial": "Industrial (covered direct sources)"}
+    assert labels["economic_sectors_short"] == {"industrial": "Industrial"}
     assert labels["geographies"]["ADM1:Punjab"] == "Punjab"
 
 
