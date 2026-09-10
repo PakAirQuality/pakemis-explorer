@@ -93,6 +93,10 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
   const tRight = totalCell ? side(totalCell, "right") : undefined;
   const deltas = alignedDeltas(cmp.data?.values, "sector_id");
   const nameOf = (id: string) => sectorLabel(labels, id);
+  // 2026-09-10 interim disclosure: industry is a reported-fuel estimate under reconciliation. The
+  // server's limitation string is preferred (it lands with the next release payload); until then
+  // the same wording is authored in copy.ts - words only, no number, per this file's header.
+  const industryNote = labels.limitations.industry_reported_fuel_series ?? ANALYZE.change.industryCaveat;
   const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";
   const mag = tLeft ? magnitudeOf(tLeft as Cell) : "Mt";
   const rising = (totalCell?.value ?? 0) >= 0;
@@ -161,6 +165,9 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
               </div>
             </div>
           )}
+          {selected === "industry" && (
+            <p className="mt-3 rounded-lg bg-amber/15 px-3 py-2 text-[11px] leading-relaxed text-fg/80" data-testid="explainer-industry-caveat">{industryNote}</p>
+          )}
           <Link href={`/methods/sectors/${selected}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline" data-testid="explainer-methods">
             {ANALYZE.explainer.methods} <ArrowRight size={14} aria-hidden="true" />
           </Link>
@@ -208,6 +215,7 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
       id="change"
       eyebrow={<span className="rounded bg-amber/25 px-1.5 py-0.5">{periodShort(labels, fromP)} to {periodShort(labels, toP)}</span>}
       title={ANALYZE.change.title}
+      more={industryNote}
       action={
         <button type="button" onClick={download} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft" data-testid="change-download">
           <Download size={14} aria-hidden="true" /> {ANALYZE.change.download}

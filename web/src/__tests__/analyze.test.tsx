@@ -166,6 +166,10 @@ describe("Analyze", () => {
     expect(screen.getByTestId("explainer-sector-link")).toHaveTextContent("What changed within agriculture?");
     expect(screen.getByTestId("explainer-hint")).toHaveTextContent("Select any bar to explain that sector.");
     expect(screen.getByTestId("change-note")).toHaveTextContent("Small year-to-year shifts should be interpreted with caution.");
+    // the interim disclosure: the industry reported-fuel caveat folds under "More about this analysis"
+    // (words, no digits; the fixture carries no server limitation for it, so the authored copy renders)
+    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("Industry: reported-fuel estimate");
+    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("should not be interpreted as a verified reduction");
     // no Key finding card anywhere: the explainer replaced it
     expect(screen.queryByTestId("change-key-finding")).toBeNull();
     // the map backdrop follows the To year; selection steers its sector

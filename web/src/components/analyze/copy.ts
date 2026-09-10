@@ -36,6 +36,9 @@ export const ANALYZE = {
     largestOffset: "Largest offset",
     back: "‹ All sectors",
     caution: "Small year-to-year shifts should be interpreted with caution.",
+    // 2026-09-10 interim disclosure (words only, no number). The server's own limitation string is
+    // preferred once the next release payload carries it; this is the same wording until then.
+    industryCaveat: "Industry: reported-fuel estimate. The estimated decline is strongly influenced by the official industrial-coal series. Its magnitude has not yet been independently reconciled with production and fuel-supply evidence and should not be interpreted as a verified reduction from mitigation or efficiency improvements.",
   },
   explainer: {
     mainContributor: "Main contributor",

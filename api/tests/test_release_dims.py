@@ -65,6 +65,8 @@ def test_labels_cover_every_id(release):
     assert labels["gases"] == {"CH4": "CH₄", "CO2": "CO₂", "N2O": "N₂O"}
     assert set(labels["sectors"]) == set(dims["sectors"])
     assert labels["sectors"]["ippu"] == "IPPU" and labels["sectors"]["agriculture"] == "Agriculture"
+    # the 2026-09-10 interim disclosure: industry is labelled a reported-fuel estimate on every surface
+    assert labels["sectors"]["industry"] == "Industry: reported-fuel estimate"
     assert labels["geographies"]["ADM1:Punjab"] == "Punjab"
 
 

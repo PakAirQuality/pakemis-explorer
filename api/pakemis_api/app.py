@@ -95,6 +95,11 @@ BASIS_PREFIX = re.compile(r"^(FY|CY)")
 BASIS_NOTES = {"fiscal": "a fiscal year runs from July to June", "calendar": "a calendar year runs from January to December"}
 SUBSCRIPT_DIGITS = str.maketrans("0123456789", "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089")
 ACRONYMS = {"ippu": "IPPU"}   # the one sector id that is an acronym; every other label is title-cased
+# 2026-09-10 interim disclosure: the industry sector is a REPORTED-FUEL estimate - its two largest
+# streams are the official HDIP coal-by-consumer allocation, whose sharp post-FY2021 decline is under
+# independent reconciliation against production and fuel-supply evidence. The label says so on every
+# surface (waterfall bar, explainer, Ask) until the reconstruction's reference decision. Words only.
+SECTOR_LABEL_OVERRIDES = {"industry": "Industry: reported-fuel estimate"}
 # the three placements, worded as the release's spatial products contract words them
 # (docs/spatial_products_contract.md, "what a placement claims to be"); "all" adds the three
 VIEW_MEANINGS = {
@@ -600,7 +605,7 @@ class Service:
             "views": dict(VIEW_MEANINGS),
             "limitations": {l["id"]: worded(l["message"]) for l in c["known_limitations"]},
             "gases": {g: g.translate(SUBSCRIPT_DIGITS) for g in sorted(self.release.dim_values("dim_gas", "gas"))},
-            "sectors": {m: ACRONYMS.get(m, humanise(m)) for m in sorted(self.release.dim_values("dim_stream", "module"))},
+            "sectors": {m: SECTOR_LABEL_OVERRIDES.get(m, ACRONYMS.get(m, humanise(m))) for m in sorted(self.release.dim_values("dim_stream", "module"))},
             "geographies": self.geography_labels(),
         }
 

@@ -214,6 +214,7 @@ export function SectorRoute({ sector }: { sector: string }) {
                 <div className="mt-2"><Loading what="the completeness ledger" /></div>
               )}
               {labels.limitations.config_S_residential_only && sector === "residential" && <p className="mt-2 text-xs text-muted">{labels.limitations.config_S_residential_only}</p>}
+              {labels.limitations.industry_reported_fuel_series && sector === "industry" && <p className="mt-2 text-xs text-muted" data-testid="industry-reported-fuel-note">{labels.limitations.industry_reported_fuel_series}</p>}
             </div>
           </div>
         </Widget>

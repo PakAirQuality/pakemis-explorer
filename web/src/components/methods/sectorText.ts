@@ -28,9 +28,9 @@ export const SECTOR_TEXT: Record<string, SectorText> = {
     method: "Segment factors from the IPCC guidelines applied to each part of the chain.",
   },
   industry: {
-    summary: "Fuel burnt in manufacturing, from the petroleum companies' sectoral sales and the regulator's industrial gas offtake.",
-    sources: "Sectoral petroleum sales from the oil companies' advisory council and industrial gas from the oil and gas regulator.",
-    activity: "Each fuel's quantity delivered to industry.",
+    summary: "Fuel burnt in manufacturing: the petroleum companies' sectoral sales, the regulator's industrial gas offtake, and the official coal-by-consumer allocation for brick kilns and the cement sector - a reported-fuel estimate whose coal series is under independent reconciliation.",
+    sources: "Sectoral petroleum sales from the oil companies' advisory council, industrial gas from the oil and gas regulator, and the Finance Division's HDIP coal-by-consumer table (an estimated allocation, not metered).",
+    activity: "Each fuel's quantity delivered to industry, with coal split as the source allocates it between brick kilns and the cement sector.",
     method: "Fuel-based combustion factors by fuel.",
   },
   ippu: {
