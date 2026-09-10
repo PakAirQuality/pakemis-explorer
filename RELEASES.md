@@ -6,10 +6,11 @@ are the bytes of `outputs/semantic/semantic_release.json` (the semantic contract
 carries the sha256 of every semantic table) and `outputs/release_manifest.json` (the
 release manifest, which carries the sha256 of every product including the two grid cubes).
 
-pinned: 1.0.0rc50
+pinned: 1.0.0rc51
 
 | version | semantic_release.json sha256 | release_manifest.json sha256 | source |
 |---|---|---|---|
+| 1.0.0rc51 | aff51ddb9e74c251bc2ec23b761a3e2c4ebddf0a859469c85c134a30f072bf87 | c11fe8783cab39cfaefe3f020f16a74972ee4b4da1c68d34e63124a0fd07eb8b | git 9acbf489 (the industrial boundary, Wave A: the `industry_reported_fuel_series` limitation now leads with the covered-sources reading, the `economic_sector_view` limitation enters the contract beside the query core's derived `economic_sector` group key, the rc50 bridge repaired, the nine-year EDGAR diagnostic; national pins unmoved); Zenodo: no deposit yet |
 | 1.0.0rc50 | 014cfcfce78ae439b4b5f9f110f0302e1bbdb6df47a87e4805f9fe5c18b8a9c6 | 5a82b58bd742a8426154941776f1592c06568e5e3afa9619201a03171105615f | git 19fb48c3 (the clinker re-base: eight historical 2.A.1 years on the census-implied fraction, national pins unmoved; the industrial-coal reconstruction held open beside it - the `industry_reported_fuel_series` limitation enters the contract); Zenodo: no deposit yet |
 | 1.0.0rc49 | a608bb378551258ebe15e69564e57abfe94049db515b9cdb83843c78858b2ff8 | 714f62b19c8e08e558e2bb03077a12555f90a04e7866b73c9bd4737583bc747f | git latest record (air spatial family + exact district CO2e + the absence-screening ledger); Zenodo: no deposit yet |
 | 1.0.0rc47 | 3fbe78f1263e5047993809f65e38706f021948277b2d31e2c9ffde0e56818957 | 848a1460559da96a74766b93c9cc1eb7955ccf906767803e7cd557afb4ddb56d | git 51b5acf9 (the air spatial lane: all-sector fact_air_adm1/adm2 on the canonical frame, the per-stream ADM2 reference, the join repairs); Zenodo: no deposit yet |
