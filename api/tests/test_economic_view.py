@@ -23,8 +23,8 @@ def test_both_views_sum_to_the_same_total_and_industrial_is_the_covered_boundary
         a = sum(Decimal(c["exact"]) for (pp, _), c in ipcc.items() if pp == p)
         b = sum(Decimal(c["exact"]) for (pp, _), c in econ.items() if pp == p)
         assert a == b, p
-    assert econ[("FY2023-24", "industrial")]["display_short"] == "49.95"
-    assert econ[("FY2015-16", "industrial")]["display_short"] == "59.54"
+    assert econ[("FY2023-24", "industrial")]["display_short"] == "53.67"   # rc52: + ammonia, steel, lubricants
+    assert econ[("FY2015-16", "industrial")]["display_short"] == "62.58"
     assert "industry" not in {k[1] for k in econ} and "ippu" not in {k[1] for k in econ}
     # the derived key names its limitation (the pinned payload may not yet word it; the id is there)
     assert "economic_sector_view" in {l["id"] for l in env["limitations_hit"]}
@@ -36,8 +36,8 @@ def test_compare_regroups_by_the_economic_key(client):
     r = client.post(BASE + "/compare", json=body)
     assert r.status_code == 200, r.text
     cells = {c["left"]["group"]["economic_sector"]: c for c in r.json()["values"]}
-    assert cells["industrial"]["display_short"] == "-9.60"
-    assert cells["industrial"]["left"]["display_short"] == "59.54" and cells["industrial"]["right"]["display_short"] == "49.95"
+    assert cells["industrial"]["display_short"] == "-8.91"
+    assert cells["industrial"]["left"]["display_short"] == "62.58" and cells["industrial"]["right"]["display_short"] == "53.67"
 
 
 def test_the_industrial_drill_is_the_ipcc_code_filter(client):

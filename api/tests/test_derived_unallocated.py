@@ -3,7 +3,7 @@ query_emissions envelope whose unallocated block lists provinces with exacts; ab
 national envelope, from every other function and from the downloads.
 
 rc47 pins: industry left S4 (Wave 4), so the unallocated mass is the three cruise
-streams (0.25 Mt) and the placed mass is nearly the whole total (465.67 of 465.92).
+streams (0.25 Mt) and the placed mass is nearly the whole total (469.39 of 469.64, rc52).
 """
 from decimal import Decimal
 
@@ -22,13 +22,13 @@ def adm1(client):
 
 
 def test_adm1_by_province(adm1):
-    assert {k: v for k, v in adm1["derived"].items() if k != "unallocated_by_province_short"} == {"unallocated_total_short": "0.25", "placed_short": "465.67"}
-    assert adm1["unallocated"]["total_short"] == "0.25" and adm1["unallocated"]["placed_short"] == "465.67"
+    assert {k: v for k, v in adm1["derived"].items() if k != "unallocated_by_province_short"} == {"unallocated_total_short": "0.25", "placed_short": "469.39"}
+    assert adm1["unallocated"]["total_short"] == "0.25" and adm1["unallocated"]["placed_short"] == "469.39"
     cells = sum(Decimal(c["exact"]) for c in adm1["values"])
     unallocated = sum(Decimal(r["exact"]) for r in adm1["unallocated"]["by_province"])
     assert str(unallocated.quantize(Decimal("0.01"))) == "0.25"
-    assert str((cells - unallocated).quantize(Decimal("0.01"))) == "465.67"
-    assert str(cells.quantize(Decimal("0.01"))) == "465.92"      # the cells sum to the national total
+    assert str((cells - unallocated).quantize(Decimal("0.01"))) == "469.39"
+    assert str(cells.quantize(Decimal("0.01"))) == "469.64"      # the cells sum to the national total (rc52)
 
 
 def test_national_has_no_derived(client):
@@ -38,7 +38,7 @@ def test_national_has_no_derived(client):
 
 def test_adm1_by_view_and_sector(client):
     env = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "group_by": ["spatial_view"]}).json()
-    assert env["derived"]["unallocated_total_short"] == "0.25" and env["derived"]["placed_short"] == "465.67"
+    assert env["derived"]["unallocated_total_short"] == "0.25" and env["derived"]["placed_short"] == "469.39"
     # rc47: fact_unallocated holds AVIATION rows only (industry got its geography at
     # Wave 4; what stays at ADM1 is the cruise share, whose corridors no held evidence
     # can draw). A sector with rows gets both fields, one without gets neither - and

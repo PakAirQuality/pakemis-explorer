@@ -170,7 +170,7 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
           {cat1 && step && (
             <p className="mt-2.5 text-sm leading-relaxed text-fg/85" data-testid="explainer-para">
               {shortOf(selected)}&apos;s estimated emissions {stepRising ? "rose" : "fell"} by{" "}
-              <b className="num whitespace-nowrap">{signed(step)} {unit}</b>. {cat1.id} {(cat1.c.value as number) >= 0 ? "added" : "cut"}{" "}
+              <b className="num whitespace-nowrap">{magnitude(step)} {unit}</b>. {cat1.id} {(cat1.c.value as number) >= 0 ? "added" : "cut"}{" "}
               <b className="num whitespace-nowrap">{magnitude(cat1.c)} {mag}</b>
               {frac ? <> — {frac} of the sector&apos;s {stepRising ? "increase" : "decrease"}</> : null}.
               {cat2 ? <> {cat2.id} followed at <b className="num whitespace-nowrap">{signed(cat2.c)} {mag}</b>.</> : null}

@@ -199,7 +199,7 @@ def test_correction_turn_can_succeed(ask_client, fake):
               [text("It is {{result_1_cell_0}} {{result_1_cell_0.unit}}."), stop()])
     events = ask(ask_client, "national total?")
     answer = only(events, "answer")
-    assert answer and "465.91851" in answer[0]["text"]
+    assert answer and "469.63822" in answer[0]["text"]
     assert not only(events, "error")
 
 
@@ -222,7 +222,7 @@ def test_multi_result_placeholders(ask_client, fake):
     answer = only(events, "answer")[0]
     cites = CITE.findall(answer["text"])
     assert [c[0] for c in cites] == ["1", "2", "2", "2"]        # value, value, unit, legacy (= last result)
-    assert cites[0][3] == "465.91851" and cites[1][3] == "460.78572" and cites[2][3] == "Mt CO₂e" and cites[3][3] == "460.78572"
+    assert cites[0][3] == "469.63822" and cites[1][3] == "464.50543" and cites[2][3] == "Mt CO₂e" and cites[3][3] == "464.50543"
     assert answer["receipts"] == [results[0]["receipt"], results[1]["receipt"]]
     # both tool results went back in one user message, in order
     tr = fake.calls[1]["messages"][-1]["content"]
@@ -252,8 +252,8 @@ def test_set_map_view_valid_emits_map_action(ask_client, fake):
     events = ask(ask_client, "Punjab agriculture, show it", ui_state={"level": "adm1", "period": "FY2023-24"})
     actions = only(events, "map_action")
     assert actions == [{"level": "adm1", "geo": "Punjab", "period": "FY2023-24", "sector": "agriculture"}]
-    # rc51 payload: receipts carry the release identity, so every pinned receipt moved at the jump
-    assert only(events, "tool_result")[0]["receipt"] == "1625173f641e9c346676688def9abb3b"
+    # rc52 payload: receipts carry the release identity, so every pinned receipt moved at the jump
+    assert only(events, "tool_result")[0]["receipt"] == "b1bcb56cc9294c238b199f93d92d2487"
     assert [c["k"] for c in only(events, "tool_call")] == [1, 2]
     assert only(events, "answer")
     # ui_state was prepended to the user message
@@ -283,17 +283,17 @@ def test_set_map_view_district_name_resolves_to_shape_id(ask_client, fake):
 # --- download and receipts ---------------------------------------------------------------------
 
 def test_download_only_for_receipts_the_conversation_holds(ask_client, fake):
-    fake.load([tool_use("download_query_result", {"receipt_id": "c877be8af28bb33dcda7b1286c978286"}), stop("tool_use")],
+    fake.load([tool_use("download_query_result", {"receipt_id": "1b331724b4404ba2ed9e7cde71c403e8"}), stop("tool_use")],
               [text("Run the query first."), stop()])
     events = ask(ask_client, "download it")
     assert only(events, "refusal")[0]["name"] == "download_query_result"
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
-              [tool_use("download_query_result", {"receipt_id": "c877be8af28bb33dcda7b1286c978286"}), stop("tool_use")],
+              [tool_use("download_query_result", {"receipt_id": "1b331724b4404ba2ed9e7cde71c403e8"}), stop("tool_use")],
               [text("Links below."), stop()])
     events = ask(ask_client, "total then download")
     results = only(events, "tool_result")
-    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/c877be8af28bb33dcda7b1286c978286.csv",
-                                      "receipt_json": "/api/v1/emissions/download/c877be8af28bb33dcda7b1286c978286.receipt.json"}
+    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/1b331724b4404ba2ed9e7cde71c403e8.csv",
+                                      "receipt_json": "/api/v1/emissions/download/1b331724b4404ba2ed9e7cde71c403e8.receipt.json"}
     assert ask_client.get(results[1]["download"]["csv"]).status_code == 200
 
 
@@ -404,7 +404,7 @@ def test_answer_scope_and_tool_result_additions(ask_client, fake):
     tr = results[0]
     unc = tr["uncertainty"]
     assert unc["source"] == "fact_uncertainty" and unc["resolution"] == "annual_national" and unc["rows"] and unc["interpretation"]
-    assert all(r["resolution"] == "annual_national" for r in unc["rows"]) and len(unc["rows"]) == 20
+    assert all(r["resolution"] == "annual_national" for r in unc["rows"]) and len(unc["rows"]) == 23
     row = unc["rows"][0]
     assert {"category", "module", "resolution", "envelope_low_pct", "envelope_high_pct", "envelope_kind", "aggregation_rule"} <= set(row)
     assert all(isinstance(v, str) for v in row.values())

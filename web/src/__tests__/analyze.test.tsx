@@ -204,7 +204,7 @@ describe("Analyze", () => {
     expect(screen.getByTestId("change-waterfall-bar-power")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Agriculture · +46.95 Mt CO₂e"));
     await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from enteric fermentation."));
-    expect(screen.getByTestId("explainer-para")).toHaveTextContent("Agriculture's estimated emissions rose by +46.95 Mt CO₂e. Enteric fermentation added 32.97 Mt");
+    expect(screen.getByTestId("explainer-para")).toHaveTextContent("Agriculture's estimated emissions rose by 46.95 Mt CO₂e. Enteric fermentation added 32.97 Mt");
     expect(await screen.findByTestId("explainer-stat")).toHaveTextContent("envelope -30.0 / +40.0 %");
     expect(screen.getByTestId("explainer-methods")).toHaveAttribute("href", "/methods/sectors/agriculture");
     expect(screen.getByTestId("explainer-footer")).toHaveTextContent("year-by-year activity data");
@@ -271,7 +271,7 @@ describe("Analyze", () => {
     // select the aggregate: the eyebrow is the full label, the drill is an IPCC-code filter (never a sector), the caveat shows, the map steers no sector
     fireEvent.click(bar);
     await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Industrial (covered direct sources)"));
-    await waitFor(() => expect(screen.getByTestId("explainer-para")).toHaveTextContent("Industrial's estimated emissions fell by -9.60 Mt CO₂e. Industrial fuel combustion (1A2) cut 11.69 Mt — more than the whole of the sector's decrease."));
+    await waitFor(() => expect(screen.getByTestId("explainer-para")).toHaveTextContent("Industrial's estimated emissions fell by 9.60 Mt CO₂e. Industrial fuel combustion (1A2) cut 11.69 Mt — more than the whole of the sector's decrease."));
     const drill = sent.filter((b) => (b as { left?: { group_by?: string[] } }).left?.group_by?.[0] === "category").pop() as { left: { ipcc_codes?: string[]; sectors?: string[] } } | undefined;
     expect(drill?.left.ipcc_codes).toEqual(["1.A.2", "2"]);
     expect(drill?.left.sectors).toBeUndefined();

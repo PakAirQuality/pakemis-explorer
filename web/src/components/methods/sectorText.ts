@@ -34,10 +34,10 @@ export const SECTOR_TEXT: Record<string, SectorText> = {
     method: "Fuel-based combustion factors by fuel.",
   },
   ippu: {
-    summary: "Process emissions from cement, from the producers' own annual reports and the clinker they declare.",
-    sources: "The cement producers' annual reports.",
-    activity: "Clinker made, with the kilns named for placement.",
-    method: "The clinker-based process equation with the release's clinker factor.",
+    summary: "Process emissions from cement (the producers' own clinker), ammonia (fertilizer production by product, a factor calibrated to Pakistan's official inventory, net of the CO\u2082 recovered into urea), iron and steel (crude steel at the electric-route factor) and lubricant use (the oxidised share of lubricants sold). Nitric acid is carried as a pair, not a point; soda ash is not an IPPU emission for a Solvay country.",
+    sources: "The cement producers' annual reports; NFDC fertilizer production statistics; PBS's Quantum Index of Manufacturing (billets and ingots); OCAC's non-energy sectoral sales.",
+    activity: "Clinker made, with the kilns named for placement; ammonia embodied in fertilizer output; crude steel melted; lubricants and greases sold.",
+    method: "The clinker-based process equation with the release's clinker factor; IPCC Tier 1 for ammonia (calibrated), steel (EAF) and lubricants (oxidised-during-use fraction).",
   },
   power: {
     summary: "Grid electricity from every plant's fuel as the regulator reports it, with captive generation from industrial gas and sugar-mill bagasse.",

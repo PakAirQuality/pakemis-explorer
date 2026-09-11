@@ -30,7 +30,7 @@ def test_agriculture(client, registry):
     assert env["provenance"]["tables"][0]["path"] == "data/method_registry.csv"
 
 
-@pytest.mark.parametrize("sector,n", [("power", 6), ("transport", 6), ("ippu", 1)])
+@pytest.mark.parametrize("sector,n", [("power", 6), ("transport", 6), ("ippu", 4)])
 def test_every_sector(client, registry, sector, n):
     env = client.get(PREFIX + "/method/%s" % sector).json()
     assert len(env["values"]) == n == sum(1 for row in registry if row["sector"] == sector)

@@ -28,7 +28,7 @@ def test_adm1_answers_the_same_keys(client):
     cells = {c["group"]["spatial_view"]: c["share_pct_short"] for c in r.json()["values"]}
     # rc47: industry's view relabel (accounting -> physical, the metered-at-premises
     # argument) and the cruise split regrouped the partition.
-    assert cells == {"physical": "82.8", "accounting": "9.1", "origin": "8.1"}
+    assert cells == {"physical": "82.9", "accounting": "9.0", "origin": "8.1"}
     r = client.post(PREFIX + "/query/emissions", json={"group_by": ["month"], "months": ["202307"]})
     assert r.status_code == 200, r.text
 

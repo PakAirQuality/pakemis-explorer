@@ -177,7 +177,7 @@ def test_national_total_short_is_two_decimals(client):
     env = client.post("/api/v1/emissions/query/emissions", json={"periods": ["FY2023-24"]}).json()
     cell = env["values"][0]
     # rc47 pin: rc46's re-base moved the national total (industrial solid fuels activated)
-    assert re.match(r"^\d+\.\d\d$", cell["display_short"]) and cell["display_short"] == "465.92"
+    assert re.match(r"^\d+\.\d\d$", cell["display_short"]) and cell["display_short"] == "469.64"
     assert cell["unit_words"] == "million tonnes CO₂e" and cell["unit_short"] == "Mt CO₂e"
 
 
@@ -266,8 +266,8 @@ def test_sector_breakdown_carries_shares_summing_to_100(client):
     assert len(cells) > 1 and all(re.match(r"^\d+\.\d$|^<0\.1$", c["share_pct_short"]) for c in cells), cells
     assert env["partition"] == {"of": "the sum of these cells", "n": len(cells), "share_field": "share_pct_short", "rule": PARTITION_RULE}
     top = cells[0]
-    # 48.0 at rc47: agriculture's share of a larger total (the +13.57 activation is industry's)
-    assert top["group"] == {"sector_id": "agriculture"} and top["share_pct_short"] == "48.0"
+    # 47.6 at rc52: agriculture's share of a larger total (the +3.72 activation is IPPU's)
+    assert top["group"] == {"sector_id": "agriculture"} and top["share_pct_short"] == "47.6"
     shares = [Decimal(c["share_pct_short"]) for c in cells if not c["share_pct_short"].startswith("<")]
     assert abs(sum(shares) - 100) <= Decimal("0.1") + Decimal("0.05") * len(cells), shares
     # each share is the declared arithmetic on the exacts
@@ -358,12 +358,12 @@ def test_series_uncertainty_cells_carry_the_interval(client):
     # the three scenarios bound the same total differently: the parameter-typed draws are the widest
     by_scenario = {c["scenario"]: c for c in levels}
     assert len(levels) == 3 and set(by_scenario) == {"time_correlated", "time_independent", "parameter_typed"}
-    assert by_scenario["parameter_typed"]["interval_short"] == "413.51–528.56"
-    assert by_scenario["time_correlated"]["interval_short"] == "419.94–521.18"
-    assert by_scenario["time_independent"]["interval_short"] == "419.20–520.31"
+    assert by_scenario["parameter_typed"]["interval_short"] == "417.19–532.17"
+    assert by_scenario["time_correlated"]["interval_short"] == "423.66–524.94"
+    assert by_scenario["time_independent"]["interval_short"] == "422.91–524.01"
     assert {c["scenario_label"] for c in levels} == {"time-correlated draws", "time-independent draws", "parameter-typed draws"}
-    # the MC central sits just under the deterministic 465.92 at rc47 (464.1x-464.3x)
-    assert all(c["key"] == "FY2023-24" and re.match(r"^464\.\d\d$", c["display_short"]) for c in levels)
+    # the MC central sits just under the deterministic 469.64 at rc52 (467.9x-468.0x)
+    assert all(c["key"] == "FY2023-24" and re.match(r"^46[78]\.\d\d$", c["display_short"]) for c in levels)
     assert "partition" not in env and all("share_pct_short" not in c for c in cells)
     # the receipt download is the core's envelope, without the derived strings
     receipt = client.get("/api/v1/emissions/download/%s.receipt.json" % env["receipt"])
@@ -506,12 +506,14 @@ def test_national_annual_series_carries_axis_and_change(client):
     # 2.A.1 on the census-implied fraction) and not the reference year, so the FROM endpoint
     # rose (394.09 -> 398.05), the TO endpoint held (465.92), and the change narrowed
     # (+71.83 -> +67.87, +18.2 -> +17.0 percent); the series peak FY2021-22 rose to 493.98.
-    assert env["change"] == {"from_period": "FY2015-16", "to_period": "FY2023-24", "from_short": "398.05", "to_short": "465.92",
-                             "change_short": "+67.87", "change_pct_short": "+17.0", "direction": "rose", "unit_short": "Mt CO₂e",
+    # rc52: ammonia, steel and lubricants entered every year (+3.04..+3.80): 401.09 -> 469.64,
+    # +68.55 (+17.1 percent), peak 497.77.
+    assert env["change"] == {"from_period": "FY2015-16", "to_period": "FY2023-24", "from_short": "401.09", "to_short": "469.64",
+                             "change_short": "+68.55", "change_pct_short": "+17.1", "direction": "rose", "unit_short": "Mt CO₂e",
                              "note": "compares the first and last period only"}
     assert env["axis"]["ticks_short"] == ["0", "100", "200", "300", "400", "500"] and env["axis"]["unit_short"] == "Mt CO₂e"
     # the axis max is the SERIES peak - FY2021-22 since the rc46 re-base, not the last year
-    assert env["axis"]["max_short"] == "493.98" and env["axis"]["min_short"] == min(c["display_short"] for c in env["values"])
+    assert env["axis"]["max_short"] == "497.77" and env["axis"]["min_short"] == min(c["display_short"] for c in env["values"])
     # the replay carries both; the downloads carry neither
     again = client.get("/api/v1/emissions/receipt/%s" % env["receipt"]).json()
     assert again["change"] == env["change"] and again["axis"] == env["axis"] and again["result_sha256"] == env["result_sha256"]
