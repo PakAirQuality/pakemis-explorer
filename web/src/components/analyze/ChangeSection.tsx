@@ -15,7 +15,7 @@ import Link from "next/link";
 import { ArrowRight, Download } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { useCompare, useNationalSeries, useUncertainty } from "@/lib/queries";
-import { cellUnit, periodShort, SECTOR_VIEW_GROUP_KEY, viewSectorLabel, viewSectorShortLabel } from "@/lib/labels";
+import { cellUnit, computedInModules, periodShort, sectorShortLabel, SECTOR_VIEW_GROUP_KEY, viewSectorLabel, viewSectorShortLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { type Cell } from "@/lib/envelope";
 import { WaterfallChart, type WaterfallStep } from "@/components/charts/WaterfallChart";
@@ -77,13 +77,15 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
 
   const gasFilter = gases ? { gases } : {};
   const enabled = !!fromP && !!toP && fromP !== toP;
-  // the grouping key: the module that computed the atoms (IPCC) or what the code says the
-  // activity is (economic) - the same atoms either way, the server's derived key for the latter
+  // the grouping key: where IPCC 2006 REPORTS the atoms (the default view) or what the code says
+  // the activity is (economic) - the same atoms either way, both declared server-side
   const groupKey = SECTOR_VIEW_GROUP_KEY[view];
-  // drilling into a bar: a module filters by sector_id; the economic 'industrial' aggregate is
-  // not a module, so it filters by the IPCC codes that define it (1.A.2 exact or its children,
-  // and every 2.x process category) - the engine's own prefix rule
-  const drillFilter = (id: string) => (view === "economic" && id === "industrial" ? { ipcc_codes: ["1.A.2", "2"] } : { sectors: [id] });
+  // drilling into a bar. Both views filter on the reporting axis now: a reporting sector by its own
+  // id, and the economic 'industrial' aggregate by the two reporting sectors that define it. Using
+  // sector_id here would have reopened the bug the axis closes - clicking "industrial fuel use"
+  // would fetch the industry MODULE and silently drop the captive generation the bar includes.
+  const drillFilter = (id: string) =>
+    view === "economic" && id === "industrial" ? { reporting_sectors: ["industry", "ippu"] } : { reporting_sectors: [id] };
   const total = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "absolute" }, enabled);
   const relative = useCompare({ left: { periods: [fromP], ...gasFilter }, right: { periods: [toP], ...gasFilter }, mode: "relative" }, enabled);
   const cmp = useCompare({ left: { periods: [fromP], group_by: [groupKey], ...gasFilter }, right: { periods: [toP], group_by: [groupKey], ...gasFilter }, mode: "absolute" }, enabled);
@@ -113,9 +115,26 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
   const sentence = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}${/[.!?]$/.test(s.trim()) ? "" : "."}`;
   const industryNote = sentence(labels.limitations.industry_reported_fuel_series ?? ANALYZE.change.industryCaveat);
   const economicNote = sentence(labels.limitations.economic_sector_view ?? ANALYZE.change.economicNote);
-  const moreNote = view === "economic" ? `${economicNote} ${industryNote}` : industryNote;
+  const reportingNote = sentence(labels.limitations.reporting_sector_view ?? ANALYZE.change.reportingNote);
+  // a sector whose atoms are computed in more than one module says so, because a reader comparing
+  // this bar with a module table is owed the reason the two differ
+  const computedNote = (id: string | null) => {
+    const mods = computedInModules(labels, id);
+    return mods.length ? `Computed in the ${mods.map((m) => sectorShortLabel(labels, m)).join(" and ")} modules.` : null;
+  };
+  const moreNote = view === "economic" ? `${economicNote} ${industryNote}` : `${reportingNote} ${industryNote}`;
+  // the inline caveat stays readable: what this bar CONTAINS, then the caveat about the series.
+  // The axis's own contract paragraph is long by design (it is the machine-readable limitation) and
+  // belongs in the fold, where moreNote already carries it - repeating it here buried the sentence
+  // a reader of this card actually needs.
   const caveatFor = (id: string | null) =>
-    view === "ipcc" && id === "industry" ? industryNote : view === "economic" && id === "industrial" ? `${economicNote} ${industryNote}` : null;
+    view === "ipcc" && id === "industry"
+      ? [computedNote(id), industryNote].filter(Boolean).join(" ")
+      : view === "economic" && id === "industrial"
+        ? `${economicNote} ${industryNote}`
+        : view === "ipcc"
+          ? computedNote(id)
+          : null;
   // the method pages are per MODULE; the economic aggregate's door is the industry module's
   const methodsSector = (id: string) => (id === "industrial" ? "industry" : id);
   const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";

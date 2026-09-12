@@ -28,7 +28,7 @@ export const SECTOR_TEXT: Record<string, SectorText> = {
     method: "Segment factors from the IPCC guidelines applied to each part of the chain.",
   },
   industry: {
-    summary: "Direct industrial fuel use, covered sources only (IPCC 1.A.2): the petroleum companies' sectoral sales, the regulator's industrial gas offtake, and the official coal-by-consumer allocation for brick kilns and the cement sector - a reported-fuel estimate whose coal series is under independent reconciliation. Not Pakistan's industrial sector: captive generation is computed in power, cement process CO2 in IPPU, and several industrial sources remain screened or outside the inventory; the Analyze page's economic view joins the covered ones.",
+    summary: "Industrial fuel use, covered sources only (IPCC 1.A.2, including the captive self-generation the power module computes): the petroleum companies' sectoral sales, the regulator's industrial gas offtake, and the official coal-by-consumer allocation for brick kilns and the cement sector - a reported-fuel estimate whose coal series is under independent reconciliation. Not Pakistan's industrial sector: captive generation is computed in power, cement process CO2 in IPPU, and several industrial sources remain screened or outside the inventory; the Analyze page's economic view joins the covered ones.",
     sources: "Sectoral petroleum sales from the oil companies' advisory council, industrial gas from the oil and gas regulator, and the Finance Division's HDIP coal-by-consumer table (an estimated allocation, not metered).",
     activity: "Each fuel's quantity delivered to industry, with coal split as the source allocates it between brick kilns and the cement sector.",
     method: "Fuel-based combustion factors by fuel.",

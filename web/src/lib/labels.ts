@@ -219,14 +219,32 @@ export function economicSectorShortLabel(labels: Labels, id: string | null | und
   if (!id) return "All sectors";
   return labels.economic_sectors_short[id] ?? labels.economic_sectors[id] ?? sectorShortLabel(labels, id);
 }
-/** The two groupings of the same atoms: by the module that computed them (IPCC) or by what the code says the activity is (economic). */
+/** A reporting-sector id: where IPCC 2006 files the stream, beside the module that computed it. */
+export function reportingSectorLabel(labels: Labels, id: string | null | undefined): string {
+  if (!id) return "All sectors";
+  return labels.reporting_sectors?.[id] ?? sectorLabel(labels, id);
+}
+export function reportingSectorShortLabel(labels: Labels, id: string | null | undefined): string {
+  if (!id) return "All sectors";
+  return labels.reporting_sectors_short?.[id] ?? labels.reporting_sectors?.[id] ?? sectorShortLabel(labels, id);
+}
+/** The modules that compute a reporting sector, when they are not just the sector itself. A reader
+ *  of "industrial fuel use" is owed the fact that part of it is computed in the power module. */
+export function computedInModules(labels: Labels, id: string | null | undefined): string[] {
+  const mods = (id && labels.reporting_sector_modules?.[id]) || [];
+  return mods.length > 1 || (mods.length === 1 && mods[0] !== id) ? mods : [];
+}
+/** The two groupings of the same atoms: by where IPCC 2006 REPORTS them (the default, and the one
+ *  whose bars carry IPCC category names), or by what the activity is economically. Before rc53 the
+ *  first grouping was the computing MODULE, which put captive self-generation - 1.A.2 autoproducer
+ *  generation - in the power bar while the industry bar was labelled with that same code. */
 export type SectorView = "ipcc" | "economic";
-export const SECTOR_VIEW_GROUP_KEY: Record<SectorView, string> = { ipcc: "sector_id", economic: "economic_sector" };
+export const SECTOR_VIEW_GROUP_KEY: Record<SectorView, string> = { ipcc: "reporting_sector", economic: "economic_sector" };
 export function viewSectorLabel(labels: Labels, view: SectorView, id: string | null | undefined): string {
-  return view === "economic" ? economicSectorLabel(labels, id) : sectorLabel(labels, id);
+  return view === "economic" ? economicSectorLabel(labels, id) : reportingSectorLabel(labels, id);
 }
 export function viewSectorShortLabel(labels: Labels, view: SectorView, id: string | null | undefined): string {
-  return view === "economic" ? economicSectorShortLabel(labels, id) : sectorShortLabel(labels, id);
+  return view === "economic" ? economicSectorShortLabel(labels, id) : reportingSectorShortLabel(labels, id);
 }
 export function gasLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "All gases";

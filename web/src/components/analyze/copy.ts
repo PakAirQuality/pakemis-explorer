@@ -18,7 +18,7 @@ export const ANALYZE = {
     view: "Sector grouping",
     viewIpcc: "IPCC sectors",
     viewEconomic: "Economic sectors",
-    viewIpccTitle: "Each sector is the module that computed it: industry is direct industrial fuel use (1.A.2), captive generation sits in power, cement process CO\u2082 in IPPU.",
+    viewIpccTitle: "Each sector is where IPCC 2006 reports it: industrial fuel use is the whole of 1.A.2, including the captive self-generation the power module computes; cement process CO\u2082 is IPPU.",
     viewEconomicTitle: "The same sources regrouped by what the IPCC code says the activity is: industrial = 1.A.2 fuel use including captive generation, plus the 2.x process categories. Covered direct industrial sources only.",
     eyebrow: "Analysis settings",
     geography: "Geography",
@@ -44,6 +44,8 @@ export const ANALYZE = {
     // 2026-09-11 (words only, no number). The server's own limitation strings are preferred once the
     // next release payload carries them; these are the same wording until then.
     industryCaveat: "Covered industrial-combustion emissions fell, reflecting lower recorded fuel use. This does not mean Pakistan's total industrial emissions declined; several industrial sources are reported elsewhere or remain outside the inventory. The estimated decline is strongly influenced by the official industrial-coal series, whose magnitude has not yet been independently reconciled with production and fuel-supply evidence and should not be interpreted as a verified reduction from mitigation or efficiency improvements.",
+    reportingNote:
+      "Sectors are grouped by where IPCC 2006 reports each source, not by the module that computed it: captive self-generation is industrial fuel combustion (1.A.2) and is reported under industrial fuel use although the power module computes it. The grouping is additive - the power total loses exactly what the industrial total gains - so no emissions are added or removed.",
     economicNote: "The economic-sector view regroups the same sources by what the IPCC code says the activity is: industrial = manufacturing fuel use (including captive generation, which the power module computes) plus the industrial process categories. It is additive with the IPCC view. Its industrial aggregate covers direct industrial sources only: cement, ammonia, iron and steel and lubricant use are inside it as nine-year series; nitric acid (a pair), HFCs, lime, glass, soda ash and industrial wastewater are screened or absent and are not; each enters only as a full 2015\u201316 to 2023\u201324 series, never in the latest year alone.",
   },
   explainer: {

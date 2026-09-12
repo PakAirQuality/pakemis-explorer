@@ -107,6 +107,30 @@ SECTOR_LABEL_OVERRIDES = {"industry": "Industrial fuel use \u2014 covered source
 SECTOR_SHORT_LABELS = {"industry": "Industrial fuel use"}
 ECONOMIC_SECTOR_LABELS = {"industrial": "Industrial (covered direct sources)"}
 ECONOMIC_SECTOR_SHORT_LABELS = {"industrial": "Industrial"}
+# 2026-09-12 (rc53): the REPORTING-SECTOR axis. The release now declares, per stream, the sector
+# IPCC 2006 files it under, beside the module that computed it (data/stream_reporting_sector.csv).
+# One stream moves: captive gas self-generation is 1.A.2 autoproducer generation, computed in the
+# power module and reported under industry. The axis is additive - the power bar loses exactly what
+# the industry bar gains - so these labels name a BOUNDARY, not a bigger number, and the industry
+# label keeps its covered-sources caveat because the boundary is still only the priced part.
+REPORTING_SECTOR_LABELS = {
+    "industry": "Industrial fuel use incl. captive generation \u2014 covered sources",
+    "power": "Power (grid generation)",
+}
+REPORTING_SECTOR_SHORT_LABELS = {"industry": "Industrial fuel use", "power": "Power"}
+
+
+def reporting_sector_modules(release):
+    """{reporting_sector: [modules that compute it]}, read from the stream dimension.
+
+    The axis moves a stream's REPORTING home without moving where it was COMPUTED, and a reader of
+    a sector table is owed both: "industrial fuel use" includes captive generation, and captive
+    generation is computed in the power module. Derived rather than hard-coded so a future
+    declaration in data/stream_reporting_sector.csv reaches the surfaces without an API edit."""
+    pairs = {}
+    for row in release.dim("dim_stream"):
+        pairs.setdefault(row["reporting_sector"], set()).add(row["module"])
+    return {k: sorted(v) for k, v in sorted(pairs.items())}
 # the three placements, worded as the release's spatial products contract words them
 # (docs/spatial_products_contract.md, "what a placement claims to be"); "all" adds the three
 VIEW_MEANINGS = {
@@ -618,6 +642,12 @@ class Service:
             # the economic-sector view's own ids (every other economic sector IS a module and reads its label)
             "economic_sectors": dict(ECONOMIC_SECTOR_LABELS),
             "economic_sectors_short": dict(ECONOMIC_SECTOR_SHORT_LABELS),
+            "reporting_sectors": {r: REPORTING_SECTOR_LABELS.get(r, ACRONYMS.get(r, humanise(r)))
+                                  for r in sorted(self.release.dim_values("dim_stream", "reporting_sector"))},
+            "reporting_sectors_short": dict(REPORTING_SECTOR_SHORT_LABELS),
+            # which MODULES compute each reporting sector, so a surface can say where a number was
+            # computed without a second request: {"industry": ["industry", "power"], ...}
+            "reporting_sector_modules": reporting_sector_modules(self.release),
             "geographies": self.geography_labels(),
         }
 

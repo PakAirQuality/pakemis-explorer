@@ -25,6 +25,8 @@ const cmpCell = (delta: string, v: number, left: object, right: object) => ({
   extra: { left, right },
 });
 const L = (short: string, v: number, sector?: string) => ({ display_short: short, value: v, unit_short: "Mt CO₂e", group: sector ? { sector_id: sector } : {} });
+/** rc53: the default view groups by where IPCC 2006 REPORTS a stream, not by the computing module. */
+const R = (short: string, v: number, sector: string) => ({ display_short: short, value: v, unit_short: "Mt CO₂e", group: { reporting_sector: sector } });
 /** An economic-view side: the server's derived group key. */
 const EC = (short: string, v: number, id: string) => ({ display_short: short, value: v, unit_short: "Mt CO₂e", group: { economic_sector: id } });
 /** The bodies the page sent, for asserting what a bar click asks the server. */
@@ -50,6 +52,17 @@ beforeEach(() => {
           return envelope([{ display: "18.230", display_short: "18.23", value: 18.23, unit: "percent", extra: { left: L("394.09", 394.09), right: L("465.92", 465.92) } }], { request_type: "compare_emissions" });
         }
         const g = b.left.group_by?.[0];
+        if (g === "reporting_sector") {
+          // the industry bar now holds the captive generation the power module computes, so it
+          // falls further (-13.63) and the power bar rises less (+12.88) - same atoms, same total
+          return envelope([
+            cmpCell("+46.95", 46.95, R("176.50", 176.5, "agriculture"), R("223.45", 223.45, "agriculture")),
+            cmpCell("+12.88", 12.88, R("44.94", 44.94, "power"), R("57.82", 57.82, "power")),
+            cmpCell("-13.63", -13.63, R("41.76", 41.76, "industry"), R("28.13", 28.13, "industry")),
+            cmpCell("-6.50", -6.5, R("48.43", 48.43, "residential"), R("41.93", 41.93, "residential")),
+          ], { request_type: "compare_emissions" });
+        }
+        // surfaces that still group by the computing MODULE (the co-benefits tab, the module tables)
         if (g === "sector_id") {
           return envelope([
             cmpCell("+46.95", 46.95, L("176.50", 176.5, "agriculture"), L("223.45", 223.45, "agriculture")),
@@ -65,7 +78,21 @@ beforeEach(() => {
           ], { request_type: "compare_emissions" });
         }
         if (g === "category") {
-          const left = b.left as { ipcc_codes?: string[]; sectors?: string[] };
+          const left = b.left as { ipcc_codes?: string[]; sectors?: string[]; reporting_sectors?: string[] };
+          if (left.reporting_sectors && left.reporting_sectors.length > 1) {
+            // the economic aggregate's drill: the two reporting sectors that define it
+            return envelope([
+              cmpCell("-11.69", -11.69, { display_short: "34.27", value: 34.27, group: { category: "Industrial fuel combustion (1A2)" } }, { display_short: "22.58", value: 22.58, group: { category: "Industrial fuel combustion (1A2)" } }),
+              cmpCell("+4.04", 4.04, { display_short: "17.78", value: 17.78, group: { category: "Cement production" } }, { display_short: "21.82", value: 21.82, group: { category: "Cement production" } }),
+            ], { request_type: "compare_emissions" });
+          }
+          if (left.reporting_sectors?.[0] === "industry") {
+            // the reporting industry bar's drill: BOTH 1.A.2 categories, the captive one included
+            return envelope([
+              cmpCell("-11.69", -11.69, { display_short: "34.27", value: 34.27, group: { category: "Industrial fuel combustion (1A2)" } }, { display_short: "22.58", value: 22.58, group: { category: "Industrial fuel combustion (1A2)" } }),
+              cmpCell("-1.95", -1.95, { display_short: "7.50", value: 7.5, group: { category: "Captive gas self-generation (1A2)" } }, { display_short: "5.55", value: 5.55, group: { category: "Captive gas self-generation (1A2)" } }),
+            ], { request_type: "compare_emissions" });
+          }
           if (left.ipcc_codes) {
             // the economic aggregate's drill: an IPCC-code filter, no sector
             return envelope([
@@ -180,7 +207,7 @@ describe("Analyze", () => {
     expect(screen.getByTestId("explainer-para")).toHaveTextContent(
       "Pakistan's estimated emissions rose from 394.09 to 465.92 Mt CO₂e. Agriculture added 46.95 Mt — nearly two-thirds of the net increase.",
     );
-    expect(screen.getByTestId("explainer-para2")).toHaveTextContent("Power also increased. Declines in residential offset part of that growth, but not enough to reverse it.");
+    expect(screen.getByTestId("explainer-para2")).toHaveTextContent("Power also increased. Declines in industrial fuel use and residential offset part of that growth, but not enough to reverse it.");
     expect(screen.getByTestId("explainer-stat")).toHaveTextContent("+71.83 Mt CO₂e");
     expect(screen.getByTestId("explainer-stat")).toHaveTextContent("net increase · +18.23%");
     expect(screen.getByTestId("explainer-sector-link")).toHaveTextContent("What changed within agriculture?");
@@ -248,7 +275,7 @@ describe("Analyze", () => {
     expect(screen.getByTestId("sensitivity-finding")).toHaveTextContent("Agriculture leads the reference estimate and keeps the lead under");
     expect(screen.getByTestId("envelope-Enteric fermentation")).toHaveTextContent("-30.0 / +40.0 %");
   });
-  it("economic sectors: the toggle regroups the same atoms; the industrial aggregate drills by IPCC code and carries the covered-sources note", async () => {
+  it("economic sectors: the toggle regroups the same atoms; the industrial aggregate drills on the reporting axis and carries the covered-sources note", async () => {
     mount();
     await screen.findByTestId("change-waterfall");
     sent.length = 0;
@@ -272,9 +299,12 @@ describe("Analyze", () => {
     fireEvent.click(bar);
     await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Industrial (covered direct sources)"));
     await waitFor(() => expect(screen.getByTestId("explainer-para")).toHaveTextContent("Industrial's estimated emissions fell by 9.60 Mt CO₂e. Industrial fuel combustion (1A2) cut 11.69 Mt — more than the whole of the sector's decrease."));
-    const drill = sent.filter((b) => (b as { left?: { group_by?: string[] } }).left?.group_by?.[0] === "category").pop() as { left: { ipcc_codes?: string[]; sectors?: string[] } } | undefined;
-    expect(drill?.left.ipcc_codes).toEqual(["1.A.2", "2"]);
+    const drill = sent.filter((b) => (b as { left?: { group_by?: string[] } }).left?.group_by?.[0] === "category").pop() as { left: { ipcc_codes?: string[]; sectors?: string[]; reporting_sectors?: string[] } } | undefined;
+    // rc53: the aggregate drills on the REPORTING axis - the two reporting sectors that define it.
+    // A sector_id filter here would fetch the industry MODULE and drop captive generation.
+    expect(drill?.left.reporting_sectors).toEqual(["industry", "ippu"]);
     expect(drill?.left.sectors).toBeUndefined();
+    expect(drill?.left.ipcc_codes).toBeUndefined();
     expect(screen.getByTestId("explainer-industry-caveat")).toHaveTextContent("covers direct industrial sources only");
     expect(screen.getByTestId("explainer-methods")).toHaveAttribute("href", "/methods/sectors/industry");
     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");

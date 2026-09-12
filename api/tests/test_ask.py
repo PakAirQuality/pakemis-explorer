@@ -252,8 +252,8 @@ def test_set_map_view_valid_emits_map_action(ask_client, fake):
     events = ask(ask_client, "Punjab agriculture, show it", ui_state={"level": "adm1", "period": "FY2023-24"})
     actions = only(events, "map_action")
     assert actions == [{"level": "adm1", "geo": "Punjab", "period": "FY2023-24", "sector": "agriculture"}]
-    # rc52 payload: receipts carry the release identity, so every pinned receipt moved at the jump
-    assert only(events, "tool_result")[0]["receipt"] == "b1bcb56cc9294c238b199f93d92d2487"
+    # rc53 payload: receipts carry the release identity, so every pinned receipt moved at the jump
+    assert only(events, "tool_result")[0]["receipt"] == "fd6fcb33aa6c659af671e71ebb93f233"
     assert [c["k"] for c in only(events, "tool_call")] == [1, 2]
     assert only(events, "answer")
     # ui_state was prepended to the user message
@@ -283,17 +283,17 @@ def test_set_map_view_district_name_resolves_to_shape_id(ask_client, fake):
 # --- download and receipts ---------------------------------------------------------------------
 
 def test_download_only_for_receipts_the_conversation_holds(ask_client, fake):
-    fake.load([tool_use("download_query_result", {"receipt_id": "1b331724b4404ba2ed9e7cde71c403e8"}), stop("tool_use")],
+    fake.load([tool_use("download_query_result", {"receipt_id": "b9c896a498031ae40426be3cc1fff033"}), stop("tool_use")],
               [text("Run the query first."), stop()])
     events = ask(ask_client, "download it")
     assert only(events, "refusal")[0]["name"] == "download_query_result"
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
-              [tool_use("download_query_result", {"receipt_id": "1b331724b4404ba2ed9e7cde71c403e8"}), stop("tool_use")],
+              [tool_use("download_query_result", {"receipt_id": "b9c896a498031ae40426be3cc1fff033"}), stop("tool_use")],
               [text("Links below."), stop()])
     events = ask(ask_client, "total then download")
     results = only(events, "tool_result")
-    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/1b331724b4404ba2ed9e7cde71c403e8.csv",
-                                      "receipt_json": "/api/v1/emissions/download/1b331724b4404ba2ed9e7cde71c403e8.receipt.json"}
+    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/b9c896a498031ae40426be3cc1fff033.csv",
+                                      "receipt_json": "/api/v1/emissions/download/b9c896a498031ae40426be3cc1fff033.receipt.json"}
     assert ask_client.get(results[1]["download"]["csv"]).status_code == 200
 
 

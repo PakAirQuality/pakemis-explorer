@@ -32,6 +32,9 @@ export type Labels = {
   /** The economic-sector view's own ids ('industrial'); every other economic sector is a module. */
   economic_sectors: Record<string, string>;
   economic_sectors_short: Record<string, string>;
+  reporting_sectors: Record<string, string>;
+  reporting_sectors_short: Record<string, string>;
+  reporting_sector_modules: Record<string, string[]>;
   geographies: Record<string, string>;
   gwp: Record<string, GwpLabel>;
   lulucf: LulucfLabel;
@@ -73,6 +76,9 @@ export function releaseLabels(r: ReleaseInfo | undefined): Labels {
     sectors_short: l.sectors_short ?? {},
     economic_sectors: l.economic_sectors ?? {},
     economic_sectors_short: l.economic_sectors_short ?? {},
+    reporting_sectors: l.reporting_sectors ?? {},
+    reporting_sectors_short: l.reporting_sectors_short ?? {},
+    reporting_sector_modules: l.reporting_sector_modules ?? {},
     geographies: l.geographies ?? {},
     gwp: l.gwp ?? {},
     lulucf: l.lulucf ?? { short: "", compact: "", status: "", notation_key: "", tooltip: "" },

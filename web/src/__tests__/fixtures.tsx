@@ -69,6 +69,9 @@ export const RELEASE = {
     sectors_short: { industry: "Industrial fuel use" },
     economic_sectors: { industrial: "Industrial (covered direct sources)" },
     economic_sectors_short: { industrial: "Industrial" },
+    reporting_sectors: { industry: "Industrial fuel use incl. captive generation — covered sources", power: "Power (grid generation)" },
+    reporting_sectors_short: { industry: "Industrial fuel use", power: "Power" },
+    reporting_sector_modules: { industry: ["industry", "power"], power: ["power"] },
     geographies: { "ADM1:Punjab": "Punjab", "ADM1:Other": "ICT, AJK & Gilgit-Baltistan (combined)" },
   },
   release: {
