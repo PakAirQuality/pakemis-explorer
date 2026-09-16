@@ -1,0 +1,10 @@
+{
+  "harness": "offline DOM; browser fetch bridged to FastAPI TestClient; network/CSP not exercised",
+  "monte_carlo_with_sources": true,
+  "selected_gas": true,
+  "source_conflict_visible": true,
+  "library_dialog": true,
+  "desktop_horizontal_overflow": false,
+  "mobile_horizontal_overflow": false,
+  "javascript_errors": []
+}

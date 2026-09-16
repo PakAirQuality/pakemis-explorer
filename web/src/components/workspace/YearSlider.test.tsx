@@ -32,7 +32,7 @@ const WORDED = "spatial products exist for 2023–24 only";
 const setState = vi.fn<ExplorerContextValue["setState"]>();
 function ctx(state: ExplorerState): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
-  return { state, setState, release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: undefined, agent: { enabled: false, model: "", reason: "not mounted" }, isMobile: false };
+  return { state, setState, release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: undefined, agent: { enabled: false, model: "", reason: "not mounted", library: "", usable: false }, isMobile: false };
 }
 
 beforeEach(() => {

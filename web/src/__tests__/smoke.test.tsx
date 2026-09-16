@@ -68,7 +68,10 @@ describe("the workspace at /", () => {
     expect(await screen.findByTestId("card-overview-sentence")).toHaveTextContent("452.35");
     expect(screen.getByTestId("map-stub")).toBeTruthy();
     expect(screen.getByTestId("deck")).toBeTruthy();
-    expect(screen.getByTestId("filter-panel")).toBeTruthy();
+    // the filters are a card the map's own button opens now, not a standing panel: the assistant
+    // holds the right edge, so what this frame carries is the way IN to them
+    expect(screen.queryByTestId("filter-panel")).toBeNull();
+    expect(screen.getByTestId("filters-button")).toBeTruthy();
     expect(screen.getAllByTestId("nav-link").find((a) => a.textContent === "Explore")).toHaveAttribute("aria-current", "page");
     noRawIds();
   });

@@ -61,7 +61,7 @@ describe("the chrome carries the initiative's name, not the dataset's", () => {
     const { container } = render(<DisabledCard reason="not mounted" model="" functions={["query_emissions"]} rule="every figure is a placeholder" />);
     expect(screen.getByTestId("disabled-card")).toHaveTextContent(ASK_LABEL);
     expect(namesDataset(renderedText(container))).toBe(false);
-    expect(ASK_CONTRACT).toBe("The assistant interprets your question; the inventory engine supplies every number. It never calculates from documents or prose.");
+    expect(ASK_CONTRACT).toBe("Responses cite their sources and preserve the selected map context.");
     for (const s of [ASK_CONTRACT, ...ASK_SENTENCES]) expect(namesDataset(s), s.slice(0, 40)).toBe(false);
   });
   it("the Overview's and the Grapher's own copy", () => {

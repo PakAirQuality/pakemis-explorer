@@ -17,16 +17,14 @@
 import type { ReactNode } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
-import { shown, type Cell, type Envelope } from "@/lib/envelope";
+import { shown, type Cell } from "@/lib/envelope";
 import { districtName, geographyName, viewLabel } from "@/lib/labels";
-import { magnitudeOf } from "@/lib/uncertainty";
 import { rampByRank } from "@/lib/palette";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
 import type { Scope } from "../cards";
 import { DeckCard, Pending, Figure } from "./DeckCard";
 import { rankedCells } from "./data";
 
-type Derived = { unallocated_total_short?: string; placed_short?: string };
 
 export function RankingCard({ id, scope, deck, title, open, onToggle }: { id: string; scope: Scope; deck: Deck; title: string; open: boolean; onToggle: (open: boolean) => void }) {
   const { state, setState, labels, dims } = useExplorer();

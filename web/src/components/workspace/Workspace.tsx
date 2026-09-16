@@ -4,21 +4,26 @@
  * full-bleed map as the canvas (`ExplorerMap` in its workspace variant, `absolute inset-0`)
  * with everything else floating over it —
  *
- *   [nav capsule, left 20 top 20]                       [filter panel, right 20 top 20]
- *   [insight deck, 420 px, left 20, under the capsule]                  [⊕ ⊖ ⌖ ⛶ buttons]
+ *   [nav capsule, left 20 top 20]                    [the assistant, right 0, full height]
+ *   [insight deck, 420 px, left 20, under the capsule]     [⚙ ⊕ ⊖ ⌖ ⛶ buttons, clear of it]
  *   [legend capsule, bottom left of the map, right of the deck]
+ *
+ * The right column is the ASSISTANT, docked (components/ask/docked.ts) at 1280 px and above. The
+ * filter panel used to hold that edge; it is now a card the ⚙ button opens over the map, so the
+ * controls that live nowhere else - the sector, the map display block, the full reset - are one
+ * click away without standing between the reader and the country.
  *
  * The URL is the single source of truth for level, geo, cell, sector, gas, period, config, gwp,
  * view, layer and scale; a hovered sector stays in React state and never reaches the URL.
  * Whether a panel is open is chrome, not state: it lives in this component and not in the URL,
- * and so do the Map display choices (now inside the filter panel) — the shading opacity, the basemap and whether
- * the boundaries are drawn — which change how the map LOOKS and never what it answers.
+ * and so do the Map display choices (inside the filter card) — the shading opacity, the basemap
+ * and whether the boundaries are drawn — which change how the map LOOKS and never what it answers.
  *
  * The camera keeps Pakistan centred in the VISIBLE canvas rather than under a panel: the page
- * computes the chrome's insets from the panels' open / collapsed widths (deck 420 + 20 + 16,
- * filter 340 + 20 + 16, top 84, bottom 56), hands them to the map as `padding` — which the
- * initial framing, `fitAll` and every selection flyTo respect — and calls `map.easeTo({padding})`
- * whenever a panel toggles.
+ * computes the chrome's insets from the PERMANENT panels' widths (deck 420 + 20 + 16, assistant
+ * 440, top 84, bottom 56), hands them to the map as `padding` — which the initial framing,
+ * `fitAll` and every selection flyTo respect — and calls `map.easeTo({padding})` whenever one
+ * toggles. The filter card is deliberately not counted; see `chromePadding`.
  *
  * Under 1280 px the two panes cannot share the screen, so the workspace shows ONE at a time and
  * the nav capsule carries the switch between them (PaneSwitch, `pane` in the URL, the map by
@@ -33,6 +38,7 @@ import { Locate, Maximize2, Minimize2, Minus, Plus, SlidersHorizontal } from "lu
 import { useExplorer } from "@/components/ExplorerContext";
 import { geographyName } from "@/lib/labels";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
+import { ASK_PANEL_GAP, ASK_PANEL_WIDTH, WIDE_QUERY, subscribeOpenFilters, useAskDocked } from "@/components/ask/docked";
 import { NavCapsule } from "@/components/shell/NavCapsule";
 import { ExplorerMap, OPENING_MAX_ZOOM, type MapPadding } from "@/components/map/ExplorerMap";
 import { unionBbox, useBboxes } from "@/components/map/tiles";
@@ -42,7 +48,7 @@ import { DECK_INSET_PX, DECK_PX } from "@/components/overview/deck";
 import { HEADER } from "@/components/overview/copy";
 import { Deck, DeckRail } from "./Deck";
 import { PaneSwitch } from "./PaneSwitch";
-import { FILTER_GAP_PX, FILTER_INSET_PX, FILTER_WIDTH, FilterPanel, RAIL_WIDTH } from "./FilterPanel";
+import { FILTER_GAP_PX, FILTER_INSET_PX, FilterPanel, RAIL_WIDTH } from "./FilterPanel";
 import { LegendCapsule } from "./LegendCapsule";
 import { FILTERS, MAP_BUTTONS } from "./copy";
 import type { Pane } from "@/lib/urlState";
@@ -60,18 +66,24 @@ export const BOTTOM_CHROME_PX = 56;
 
 /**
  * The visible canvas's insets for the current chrome: the deck's column on the left (nothing
- * when it is closed or the sheet is over the map), the filter panel or its rail on the right,
- * the nav capsule above and the legend capsule below — plus FRAME_MARGIN_PX all round, so the
- * framed country stands off the panels rather than filling the gap between them.
+ * when it is closed or the sheet is over the map), the ASSISTANT's column on the right, the nav
+ * capsule above and the legend capsule below — plus FRAME_MARGIN_PX all round, so the framed
+ * country stands off the panels rather than filling the gap between them.
+ *
+ * THE FILTERS ARE NOT IN THIS SUM ANY MORE. They used to hold the right edge, and the camera
+ * re-centred each time they collapsed; now they are a card the map's button stack opens OVER the
+ * map for as long as it takes to change a filter, and panning the country sideways every time
+ * someone opens them would be a jolt rather than a courtesy. What is permanent gets padding;
+ * what is transient floats.
  */
-export function chromePadding({ deck, filters, wide }: { deck: boolean; filters: boolean; wide: boolean }): MapPadding {
+export function chromePadding({ deck, docked, wide }: { deck: boolean; docked: boolean; wide: boolean }): MapPadding {
   // narrow: one pane at a time, so there is no side chrome — the nav above and a small inset all round
   if (!wide) return { top: TOP_CHROME_PX + FRAME_MARGIN_PX, right: FRAME_MARGIN_PX + 20, bottom: FRAME_MARGIN_PX + 20, left: FRAME_MARGIN_PX + 20 };
   return {
     top: TOP_CHROME_PX + FRAME_MARGIN_PX,
     bottom: BOTTOM_CHROME_PX + FRAME_MARGIN_PX,
     left: (deck ? DECK_PX + DECK_INSET_PX + DECK_GAP_PX : DECK_INSET_PX) + FRAME_MARGIN_PX,
-    right: (filters ? FILTER_WIDTH : RAIL_WIDTH) + FILTER_INSET_PX + FILTER_GAP_PX + FRAME_MARGIN_PX,
+    right: (docked ? ASK_PANEL_WIDTH : RAIL_WIDTH + FILTER_INSET_PX + FILTER_GAP_PX) + FRAME_MARGIN_PX,
   };
 }
 
@@ -79,7 +91,10 @@ const MAP_BUTTON = "glass flex h-9 w-9 items-center justify-center rounded-xl te
 
 export function Workspace() {
   const { state, setState, labels, dims } = useExplorer();
-  const wide = useMediaQuery("(min-width: 1280px)");
+  const wide = useMediaQuery(WIDE_QUERY);
+  // the assistant is this page's right column at this width; the map's own chrome clears it
+  const docked = useAskDocked();
+  const rightInset = docked ? ASK_PANEL_WIDTH + ASK_PANEL_GAP : FILTER_INSET_PX;
   const [map, setMap] = useState<MBMap | null>(null);
   // "Reset map" appears only once there is something to reset: a user-driven move, or a picked place or level
   const [moved, setMoved] = useState(false);
@@ -92,8 +107,11 @@ export function Workspace() {
    */
   const pane: Pane = state.pane;
   const choosePane = useCallback((next: Pane) => setState({ pane: next }), [setState]);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  // closed by default now: the filters are a card the map's ⚙ button opens, not a standing panel
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // the assistant's "Change", beside the scope it is about to send, opens the card that changes it
+  useEffect(() => subscribeOpenFilters(() => (wide ? setFiltersOpen(true) : setSheetOpen(true))), [wide]);
   // three display settings the page owns: they change what the map looks like, never what it answers
   const [opacity, setOpacity] = useState(OPACITY_DEFAULT);
   const [basemapChoice, setBasemapChoice] = useState<BasemapChoice>(BASEMAP_DEFAULT);
@@ -109,7 +127,7 @@ export function Workspace() {
   const geo = state.geo && dims.adm1.some((r) => r.name === state.geo) ? state.geo : null;
   const place = geo ? geographyName(labels, geo) : HEADER.country;
 
-  const padding = useMemo(() => chromePadding({ deck: deckOpen, filters: filtersOpen, wide }), [deckOpen, filtersOpen, wide]);
+  const padding = useMemo(() => chromePadding({ deck: deckOpen, docked, wide }), [deckOpen, docked, wide]);
   // Pakistan stays centred in what is visible: the camera is re-padded whenever a panel toggles.
   // Only on a CHANGE: the map applies the same padding itself when it first frames the country
   // (and when it flies to a selection), and an easeTo on mount would interrupt that animation.
@@ -204,16 +222,24 @@ export function Workspace() {
       ) : null}
 
       {wide ? (
-        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} onResetView={resetCamera} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
+        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} onResetView={resetCamera} rail={!docked} rightInset={rightInset} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
       ) : (
         <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={place} mobile onResetView={resetCamera} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
       )}
 
       {showMap && <LegendCapsule />}
 
-      {/* clear of the Ask button, which the layout fixes at bottom-6 right-6 (56 px) */}
+      {/* Clear of whatever holds the right edge: the docked assistant's column where it is the
+          page's right column, otherwise the round Ask button the layout fixes at bottom-6 right-6
+          (56 px), which is why this stack starts at 96 px rather than at the same inset. */}
       {showMap && (
-        <div className="absolute bottom-[96px] right-5 z-20 flex flex-col gap-1.5" data-testid="map-buttons">
+        <div className="absolute bottom-[96px] z-20 flex flex-col gap-1.5" style={{ right: rightInset }} data-testid="map-buttons">
+          {/* The way into the filters at EVERY width since the assistant took the right column:
+              it opens the floating card over the map when both panes are on screen, and the
+              full-height sheet when only one is. */}
+          <button type="button" title={FILTERS.open} aria-label={FILTERS.open} onClick={() => (wide ? setFiltersOpen(true) : setSheetOpen(true))} className={MAP_BUTTON} data-testid="filters-button">
+            <SlidersHorizontal size={16} aria-hidden="true" />
+          </button>
           <button type="button" title={MAP_BUTTONS.zoomIn} aria-label={MAP_BUTTONS.zoomIn} onClick={() => map?.zoomIn()} className={MAP_BUTTON} data-testid="map-zoom-in">
             <Plus size={16} aria-hidden="true" />
           </button>
@@ -226,11 +252,6 @@ export function Workspace() {
           <button type="button" title={fullscreen ? MAP_BUTTONS.exitFullscreen : MAP_BUTTONS.fullscreen} aria-label={fullscreen ? MAP_BUTTONS.exitFullscreen : MAP_BUTTONS.fullscreen} onClick={toggleFullscreen} className={MAP_BUTTON} data-testid="map-fullscreen">
             {fullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
           </button>
-          {!wide && (
-            <button type="button" title={FILTERS.open} aria-label={FILTERS.open} onClick={() => setSheetOpen(true)} className={MAP_BUTTON} data-testid="filters-button">
-              <SlidersHorizontal size={16} aria-hidden="true" />
-            </button>
-          )}
         </div>
       )}
 

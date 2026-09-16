@@ -2,7 +2,7 @@
 /**
  * The navigation capsule every page carries (it replaced TopNav on 2026-08-30): one warm ivory
  * `rounded-full` pill (`--color-nav`, a soft saffron hairline) holding the PAQI logo (a link to
- * /, no wordmark) and the four sections — Explore · Data · Methods · Downloads — in charcoal,
+ * /, no wordmark) and the three sections — Explore · Methods · Downloads — in charcoal,
  * the current one in oxblood and underlined 2 px in the same. The assistant is not here: one entry only, the round button at the bottom left
  * (components/shell/AskFab.tsx), so the same action is not offered twice.
  *
@@ -20,7 +20,6 @@ import { BrandLogo } from "./BrandLogo";
 
 export const NAV_LINKS = [
   { href: "/", label: "Explore" },
-  { href: "/analyze", label: "Analyze" },
   { href: "/methods", label: "Methods" },
   { href: "/downloads", label: "Downloads" },
 ] as const;
@@ -81,7 +80,7 @@ export function NavCapsule({ floating = false, docked = false, children }: { flo
       <Link href="/" className="flex shrink-0 items-center" data-testid="brand" title="Pakistan Air Quality Initiative">
         <BrandLogo className="h-7 object-contain" />
       </Link>
-      <nav className={`flex items-center gap-5${docked ? " grow justify-evenly" : ""}`} aria-label="Sections">
+      <nav className="flex grow items-center justify-evenly gap-5" aria-label="Sections">
         {NAV_LINKS.map((l) => link(l.href, l.label))}
       </nav>
       {children}

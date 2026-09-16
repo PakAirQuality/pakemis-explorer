@@ -41,7 +41,17 @@ export type MapActionEvent = Partial<Record<MapActionKey, string>>;
 export type Citation = { k: number; cell: number; attr: string; receipt: string; text: string };
 /** The last tool result's compact context with the call it came from (k, request_type, receipt, name); null or absent on older streams. */
 export type AnswerScope = (Record<string, unknown> & { k?: number; request_type?: string | null; receipt?: string | null; name?: string }) | null;
-export type AnswerEvent = { text: string; receipts: string[]; citations: Citation[]; elapsed_s: number; scope?: AnswerScope };
+/**
+ * A source the explanation library cited: one of the release's own input documents, one of its
+ * machine-readable vocabularies, or a primary science reference. Shaped by Knowledge.cite() on the
+ * API side. It is NOT a `Citation` - that one points at a cell of a query result.
+ */
+export type LibrarySource = { source_id: string; title: string; kind: string; url?: string | null;
+                              how_to_obtain?: string; archival_state?: string; licence_status?: string };
+export type AnswerEvent = { text: string; receipts: string[]; citations: (Citation | LibrarySource)[];
+                            elapsed_s: number; scope?: AnswerScope;
+                            /** present when the prepared library answered, with no model call */
+                            source?: string; card_ids?: string[] };
 export type ErrorEvent = { code: string; message?: string };
 export type DoneEvent = { conversation_id: string; usage: Record<string, number>; cost_estimate_usd: number | null };
 

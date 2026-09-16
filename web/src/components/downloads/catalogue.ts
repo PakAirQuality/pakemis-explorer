@@ -1,0 +1,412 @@
+/**
+ * What the downloads are CALLED, for someone who is not studying emissions.
+ *
+ * The page used to offer `fact_annual`, `dim_category`, `dim_evidence_class` — the warehouse's own
+ * table names, presented as products. A reader who wants Pakistan's livestock numbers or its fuel
+ * sales should not have to learn a star schema to find them.
+ *
+ * ⚠ TITLES ARE OURS; FILENAMES ARE THE CATALOGUE'S. This module is an authored layer beside a
+ * generated one, which is exactly the arrangement that drifts: a name changes upstream, the page
+ * keeps pointing at it, and a reader gets a 404 nobody noticed. So `downloads.test.tsx` asserts that
+ * every `file` named here is present in `/products`. A rename fails the build instead of the reader.
+ *
+ * ⚠ ONE DOWNLOAD IS ONE TABLE. `files` holds the FORMATS of a single table and never two different
+ * tables. Since 2026-09-16 the page offers exactly ONE format per table — the CSV, or the NetCDF for
+ * a grid — so each array holds one name; Parquet still ships in the release and is still served by
+ * `/products`, it is simply not offered here. It held two for a while, and the result was a row
+ * whose CSV button handed you provinces while its Parquet button handed you districts: two datasets
+ * wearing the costume of two formats. Three other rows read "CSV · CSV · CSV" for the same reason.
+ * A test now requires every download's files to share one stem, because that defect is invisible
+ * from the screen — both buttons download something, and it looks right.
+ *
+ * Note the names below are NOT the `pakemis_*.csv` engine filenames. Those exist in the release and
+ * are unreachable over HTTP — `/products` serves the semantic layer. `fact_adm1_year` carries the
+ * same 7,973 rows as `pakemis_adm1_by_year.csv`, and `fact_air_panel` the same 900 as
+ * `pakemis_air_annual_fy2015_16_fy2023_24.csv`.
+ */
+import {
+  Beef, BookOpen, Boxes, BarChart3, CalendarDays, Factory, FlaskConical, Flame, Fuel, Gauge,
+  Globe, Grid3x3, Home, Layers, LayoutGrid, ListChecks, MapPin, Ruler, Scale, Sigma,
+  SlidersHorizontal, Table2, Trash2, Wheat, Wind, Zap, type LucideIcon,
+} from "lucide-react";
+
+export type CollectionId = "emissions" | "activity" | "air" | "methods" | "maps";
+
+export type Download = {
+  id: string;
+  title: string;
+  /** The row's glyph. Line art, no chip — the mockup's device for telling the rows apart at a glance. */
+  icon: LucideIcon;
+  /** What it is, and who wants it — not what table it came from. */
+  dek: string;
+  /** Coverage, in words a reader chose. Never a raw period id. */
+  coverage: string;
+  /** The formats of ONE table, primary first. Verified against /products by a test. */
+  files: string[];
+  /** Words a search should match beyond the title and dek. */
+  finds?: string[];
+  /** Designed, licence-cleared, not yet packaged. Six of the nine shipped in rc55; three have not. */
+  pending?: true;
+};
+
+export type Collection = {
+  id: CollectionId;
+  title: string;
+  dek: string;
+  downloads: Download[];
+  /** Set when the collection is designed but has nothing to serve yet. */
+  unpublished?: { why: string; sources: string };
+};
+
+export const COLLECTIONS: Collection[] = [
+  {
+    id: "emissions",
+    title: "Emissions estimates",
+    dek: "Ready-to-use tables for analysis and comparison.",
+    downloads: [
+      {
+        id: "annual",
+        title: "Annual emissions",
+        icon: BarChart3,
+        dek: "By sector, source category and greenhouse gas, with the evidence grade on every row.",
+        coverage: "Nine fiscal years",
+        files: ["fact_annual.csv"],
+        finds: ["national", "totals", "sector", "category", "CO2", "CH4", "N2O", "yearly"],
+      },
+      {
+        id: "provincial",
+        title: "Provincial emissions",
+        icon: MapPin,
+        dek: "Annual estimates for each province. Emissions are not measured provincially, so these are allocations — but the road-fuel split rides OCAC's own provincial sales, not a proxy.",
+        coverage: "Nine fiscal years · five provinces",
+        files: ["fact_adm1_year.csv"],
+        finds: ["province", "adm1", "Punjab", "Sindh", "Balochistan", "allocation"],
+      },
+      {
+        id: "district",
+        title: "District emissions",
+        icon: LayoutGrid,
+        dek: "Annual estimates by district, with the allocation status and boundary each rests on.",
+        coverage: "Nine fiscal years · districts",
+        files: ["fact_adm2_year.csv"],
+        finds: ["district", "adm2", "shape", "boundary", "local"],
+      },
+      {
+        id: "monthly",
+        title: "Monthly emissions",
+        icon: CalendarDays,
+        dek: "Every month of the record, saying for each whether the timing is observed, modelled or evenly spread.",
+        coverage: "108 months",
+        files: ["fact_monthly.csv"],
+        finds: ["month", "seasonal", "timing", "profile"],
+      },
+    ],
+  },
+  {
+    id: "activity",
+    title: "The activity behind the estimates",
+    dek: "The fuel, agriculture and household data the emissions are calculated from — usable on their own, without the emissions.",
+    // ⚠ SIX OF THE NINE SHIPPED IN rc55. Each is a normalised table drawn from the engine's
+    // hand-verified ingest tree under one declared vocabulary: every row says what the quantity is,
+    // where and when it applies, what kind of evidence it is, where it came from, what the project
+    // changed, and whether it may be added to its neighbours. The three still marked `pending` are
+    // licence-cleared and designed; what they lack is the packaging pass the other six have had.
+    unpublished: {
+      why: "Industrial fuel and production, the gas tables and the waste flows have not had the packaging pass the other six have. They are licence-cleared and the ingest tree holds them; they are not published here yet.",
+      sources: "HDIP · OGRA · NFDC · company reports · HIES · JMP",
+    },
+    downloads: [
+      {
+        id: "fuel",
+        title: "Petroleum sales by fuel and customer group",
+        icon: Fuel,
+        dek: "Petrol, diesel, furnace oil, kerosene and aviation fuel as OCAC publishes them, by customer class. Sales into a class, not fuel burned in it.",
+        coverage: "Nine fiscal years · OCAC",
+        files: ["fact_activity_fuel_sales_national.csv"],
+        finds: ["petrol", "diesel", "petroleum", "furnace", "kerosene", "OCAC", "MS", "HSD"],
+      },
+      {
+        id: "fuel-area",
+        title: "Petroleum sales by area",
+        icon: MapPin,
+        dek: "The same publication's monthly area pages, province by province. Fuel sold in a province is not fuel burned there — freight crosses boundaries.",
+        coverage: "Monthly · by province",
+        files: ["fact_activity_fuel_sales_area.csv"],
+        finds: ["provincial", "area", "province", "monthly", "OCAC", "diesel", "petrol"],
+      },
+      {
+        id: "livestock",
+        title: "Livestock populations",
+        icon: Beef,
+        dek: "Census counts by species, province and district, with the Economic Survey's forward estimate kept separate and never summed with them.",
+        coverage: "Census 2024 · plus a long series",
+        files: ["fact_activity_livestock.csv"],
+        finds: ["cattle", "buffalo", "goats", "sheep", "camels", "poultry", "herd", "census"],
+      },
+      {
+        id: "crops",
+        title: "Crop area & production",
+        icon: Wheat,
+        dek: "Area and production by crop, year and district. A district figure split from a pooled parent is marked an allocation, not an observation.",
+        coverage: "Nine fiscal years · districts",
+        files: ["fact_activity_crops.csv"],
+        finds: ["rice", "wheat", "maize", "cotton", "sugarcane", "hectares", "tonnes", "area"],
+      },
+      {
+        id: "fertiliser",
+        title: "Fertiliser offtake",
+        icon: FlaskConical,
+        dek: "Monthly product offtake and nutrient totals. Offtake is distribution, not application to fields, and tonnes of product are never tonnes of nitrogen.",
+        coverage: "Monthly · NFDC",
+        files: ["fact_activity_fertiliser.csv"],
+        finds: ["nitrogen", "urea", "DAP", "offtake", "NFDC", "phosphate", "potash"],
+      },
+      {
+        id: "power",
+        title: "Power plant fuel & generation",
+        icon: Zap,
+        dek: "Plant-level fuel quantity and net generation from the regulator's own tables, with the implied heat rate marked as derived.",
+        coverage: "Nine fiscal years · NEPRA",
+        files: ["fact_activity_power_plants.csv"],
+        finds: ["plant", "generation", "GWh", "electricity", "NEPRA", "heat rate", "fuel"],
+      },
+      {
+        id: "power-monthly",
+        title: "Monthly plant generation",
+        icon: CalendarDays,
+        dek: "Electricity generated, plant by plant, month by month. Generation only — the fuel behind it was never measured monthly.",
+        coverage: "Monthly · by plant",
+        files: ["fact_activity_power_monthly.csv"],
+        finds: ["monthly", "plant", "generation", "GWh", "electricity"],
+      },
+      {
+        id: "household",
+        title: "Household fuel use",
+        icon: Home,
+        dek: "Design-weighted survey aggregates by province and urban/rural, with quantities, expenditure and the sample behind each.",
+        coverage: "Two survey rounds · HIES",
+        files: ["fact_activity_household_fuel.csv"],
+        finds: ["firewood", "dung", "charcoal", "cooking", "LPG", "HIES", "household"],
+      },
+      { id: "industry", title: "Industrial fuel use and production", icon: Factory, dek: "Fuel use by industrial customer group, and clinker and fertiliser production.", coverage: "HDIP · NFDC · company reports", files: [], pending: true, finds: ["cement", "clinker", "coal", "steel", "ammonia"] },
+      { id: "gas", title: "Gas production, consumption and infrastructure", icon: Flame, dek: "Field production, sales, pipeline lengths and unaccounted-for gas — which is not itself a leakage measurement.", coverage: "OGRA", files: [], pending: true, finds: ["gas", "pipeline", "unaccounted", "field"] },
+      { id: "waste", title: "Waste services and waste flows", icon: Trash2, dek: "Reported disposal and sanitation shares, kept apart from modelled waste flows.", coverage: "HIES · JMP", files: [], pending: true, finds: ["waste", "sanitation", "disposal", "landfill"] },
+    ],
+  },
+  {
+    id: "air",
+    title: "Air pollutants",
+    dek: "Emissions from the sources this release covers. Emitted mass, not ambient concentrations.",
+    downloads: [
+      {
+        id: "air-annual",
+        title: "Annual estimates",
+        icon: Wind,
+        dek: "Seven pollutants by sector and year, each in its own mass unit and never converted to CO₂-equivalent.",
+        coverage: "Nine fiscal years",
+        files: ["fact_air_panel.csv"],
+        finds: ["NOx", "SO2", "PM2.5", "black carbon", "NH3", "NMVOC", "CO"],
+      },
+      {
+        id: "air-provincial",
+        title: "Provincial estimates",
+        icon: MapPin,
+        dek: "The same seven pollutants allocated to each province, for every year of the record.",
+        coverage: "Nine fiscal years · five provinces",
+        files: ["fact_air_adm1_year.csv"],
+        finds: ["province", "adm1", "air", "spatial"],
+      },
+      {
+        id: "air-district",
+        title: "District estimates",
+        icon: LayoutGrid,
+        dek: "The same allocation carried down to districts, with the status each district's share rests on.",
+        coverage: "Nine fiscal years · districts",
+        files: ["fact_air_adm2_year.csv"],
+        finds: ["district", "adm2", "air", "spatial"],
+      },
+      {
+        id: "air-coverage",
+        title: "Coverage & screening",
+        icon: ListChecks,
+        dek: "What is covered, what is not, and the screening scenarios — which are kept apart from the estimates.",
+        coverage: "Nine fiscal years",
+        files: ["fact_air_absence_screening.csv"],
+        finds: ["screening", "coverage", "absent", "uncontrolled"],
+      },
+    ],
+  },
+  {
+    id: "methods",
+    title: "Methods & uncertainty",
+    dek: "The choices behind each estimate, and how certain it is.",
+    downloads: [
+      {
+        id: "factors",
+        title: "Emission factors",
+        icon: Ruler,
+        dek: "Every factor the inventory applies, with its value, unit, applicability and the publication it comes from.",
+        coverage: "424 factors",
+        files: ["emission_factors.csv"],
+        finds: ["factor", "tier", "IPCC", "default", "emission factor"],
+      },
+      {
+        id: "parameters",
+        title: "Conversion parameters",
+        icon: SlidersHorizontal,
+        dek: "The calorific values, densities and conversion assumptions the calculations rest on, each marked default or country-specific.",
+        coverage: "28 parameters",
+        files: ["parameters.csv"],
+        finds: ["calorific", "density", "conversion", "assumption", "country-specific"],
+      },
+      {
+        id: "uncertainty-series",
+        title: "Uncertainty intervals",
+        icon: Gauge,
+        dek: "The interval around each year's total, and around the change from one year to the next.",
+        coverage: "Nine fiscal years",
+        files: ["fact_uncertainty_series.csv"],
+        finds: ["interval", "confidence", "Monte Carlo", "trend", "change"],
+      },
+      {
+        id: "uncertainty",
+        title: "Uncertainty by category",
+        icon: Sigma,
+        dek: "Where the uncertainty comes from: by source category and by the resolution the estimate was made at.",
+        coverage: "By category and resolution",
+        files: ["fact_uncertainty.csv"],
+        finds: ["variance", "attribution", "category", "resolution", "envelope"],
+      },
+      {
+        id: "configurations",
+        title: "Alternative assumptions",
+        icon: Scale,
+        dek: "The named alternatives whose effects are ranges rather than probabilities, and what each one changes.",
+        coverage: "Named configurations",
+        files: ["dim_configuration.csv"],
+        finds: ["scenario", "sensitivity", "configuration", "alternative", "boundary"],
+      },
+      {
+        id: "coverage",
+        title: "Coverage & missing estimates",
+        icon: ListChecks,
+        dek: "What is estimated, not estimated, counted elsewhere or out of scope — and, where something is missing, whether the data exists at all.",
+        coverage: "91 categories",
+        files: ["fact_completeness.csv"],
+        finds: ["missing", "gap", "not estimated", "notation", "NE", "completeness"],
+      },
+      {
+        id: "coverage-mass",
+        title: "Mass behind the gaps",
+        icon: Boxes,
+        dek: "How much is likely to sit in each gap, given as a bracket rather than a single figure.",
+        coverage: "36 gaps",
+        files: ["fact_completeness_mass.csv"],
+        finds: ["gap", "bracket", "unestimated", "magnitude"],
+      },
+      {
+        id: "sources",
+        title: "Source register",
+        icon: BookOpen,
+        dek: "Every publication the inventory reads, with its publisher, edition and how to obtain a copy.",
+        coverage: "196 documents",
+        files: ["pakemis_source_register.csv"],
+        finds: ["source", "citation", "provenance", "document", "register", "publication"],
+      },
+      {
+        id: "streams",
+        title: "Source streams",
+        icon: Layers,
+        dek: "Each series the inventory draws on, traced to the document and table the numbers were read from.",
+        coverage: "202 streams",
+        files: ["pakemis_source_streams.csv"],
+        finds: ["stream", "series", "lineage", "table", "provenance"],
+      },
+      {
+        id: "dictionary",
+        title: "Data dictionary",
+        icon: Table2,
+        dek: "What every stream is and which sector it feeds, in the vocabulary the tables themselves use.",
+        coverage: "202 streams",
+        files: ["dim_stream.csv"],
+        finds: ["dictionary", "columns", "definitions", "schema", "vocabulary"],
+      },
+    ],
+  },
+  {
+    id: "maps",
+    title: "Maps & grids",
+    dek: "Spatial data for GIS and modelling.",
+    downloads: [
+      {
+        id: "grid-annual",
+        title: "Annual emissions grid",
+        icon: Globe,
+        dek: "The three greenhouse gases on a 0.05° grid, one layer per year.",
+        coverage: "Nine fiscal years · NetCDF",
+        files: ["pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24.nc"],
+        finds: ["grid", "raster", "NetCDF", "0.05", "gridded"],
+      },
+      {
+        id: "grid-monthly",
+        title: "Monthly grid",
+        icon: CalendarDays,
+        dek: "The reference year month by month, on the same grid.",
+        coverage: "12 months · NetCDF",
+        files: ["pakemis_grid_0p05_monthly.nc"],
+        finds: ["monthly", "grid", "NetCDF", "seasonal"],
+      },
+      {
+        id: "grid-monthly-survey",
+        title: "Monthly grid, survey assumptions",
+        icon: CalendarDays,
+        dek: "The same twelve months rebuilt under the household-survey configuration, for comparison with the one above.",
+        coverage: "12 months · NetCDF",
+        files: ["pakemis_grid_0p05_monthly_survey.nc"],
+        finds: ["monthly", "grid", "survey", "configuration", "NetCDF"],
+      },
+      {
+        id: "grid-air",
+        title: "Air pollutant grid",
+        icon: Wind,
+        dek: "Seven pollutants on the same grid, for every year.",
+        coverage: "Nine fiscal years · NetCDF",
+        files: ["pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24.nc"],
+        finds: ["air", "grid", "pollutant", "NetCDF"],
+      },
+      {
+        id: "grid-edgar",
+        title: "EDGAR-aligned grid",
+        icon: Grid3x3,
+        dek: "The same emissions on EDGAR's 0.1° lattice, so the two can be compared cell for cell.",
+        coverage: "Nine fiscal years · NetCDF",
+        files: ["pakemis_grid_0p1_edgar_aligned.nc"],
+        finds: ["EDGAR", "comparison", "0.1", "grid"],
+      },
+    ],
+  },
+];
+
+/** Every file the page names, for the test that holds this module to the served catalogue. */
+export function catalogueFiles(): string[] {
+  return COLLECTIONS.flatMap((c) => c.downloads.flatMap((d) => d.files));
+}
+
+/**
+ * The table a download offers, as the filenames' shared stem.
+ *
+ * ⚠ THE ONE-TABLE RULE LIVES HERE. Every file of a download must reduce to the same stem; two
+ * stems means two datasets are sharing one row and its format buttons are lying about what they
+ * hand over. `downloads.test.tsx` walks the catalogue through this.
+ */
+export function tableStems(d: Download): string[] {
+  return [...new Set(d.files.map((f) => f.replace(/\.[^.]+$/, "")))];
+}
+
+/** Title, dek, coverage, the searchable words, and the column names the products list carries. */
+export function matches(d: Download, q: string, columns: string[] = []): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const hay = [d.title, d.dek, d.coverage, ...(d.finds ?? []), ...d.files, ...columns].join(" ").toLowerCase();
+  return needle.split(/\s+/).every((w) => hay.includes(w));
+}

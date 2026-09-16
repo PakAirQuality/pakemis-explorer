@@ -85,6 +85,38 @@ describe("ECharts option builders", () => {
     expect(o.series[0].data[0].itemStyle.color).toBe("rgb(255, 179, 19)");
     expect(o.series[0].data[1].itemStyle.color).toBe(columnColor(394.32, 372.39678, 452.34662));
   });
+
+  it("a muted column is dimmed, unlabelled, and moves the labels to the window's own ends", () => {
+    // Analyze's sector drill-down draws every fiscal year the release carries and MUTES the ones
+    // outside the two the reader is comparing. The numbers must then print at the ends of the
+    // WINDOW, not at the ends of the data - otherwise the chart answers a question nobody asked.
+    const points = [
+      { id: "FY2015-16", name: "2015–16", value: 41.76, label: "41.76", muted: true },
+      { id: "FY2019-20", name: "2019–20", value: 50.8, label: "50.80" },
+      { id: "FY2020-21", name: "2020–21", value: 61.97, label: "61.97" },
+      { id: "FY2022-23", name: "2022–23", value: 32.13, label: "32.13" },
+      { id: "FY2023-24", name: "2023–24", value: 28.13, label: "28.13", muted: true },
+    ];
+    const o = buildColumnOption(points, ["0", "20", "40", "60", "80"], T);
+    expect(o.series[0].data.map((d) => d.label.show)).toEqual([false, true, false, true, false]);
+    expect(o.series[0].data.map((d) => d.itemStyle.opacity)).toEqual([0.25, 1, 1, 1, 0.25]);
+    // the colour ramp still spans the WHOLE series, muted points included: dimming is opacity, so
+    // a muted column keeps its place on the scale and the in-window columns are not re-normalised
+    expect(o.series[0].data[2].itemStyle.color).toBe(columnColor(61.97, 28.13, 61.97));
+  });
+
+  it("with nothing muted the column labels are exactly where they always were", () => {
+    // the muting is additive: the un-windowed callers (the Overview's national series) must be
+    // byte-for-byte unaffected by the flag they never set
+    const points = [
+      { id: "a", name: "a", value: 1, label: "1" },
+      { id: "b", name: "b", value: 2, label: "2" },
+      { id: "c", name: "c", value: 3, label: "3" },
+    ];
+    const o = buildColumnOption(points, null, T);
+    expect(o.series[0].data.map((d) => d.label.show)).toEqual([true, false, true]);
+    expect(o.series[0].data.map((d) => d.itemStyle.opacity)).toEqual([1, 1, 1]);
+  });
 });
 
 describe("HTML figures", () => {

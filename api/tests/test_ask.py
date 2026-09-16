@@ -203,6 +203,58 @@ def test_correction_turn_can_succeed(ask_client, fake):
     assert not only(events, "error")
 
 
+def test_invented_placeholder_never_reaches_a_reader(ask_client, fake):
+    """THE ONE I WOULD KEEP ABOVE THE REST IN THIS FILE.
+
+    A real answer shipped with "{{result_2_cell_0.attrs.share_phrase}}" printed on screen. It was not
+    caught because MULTI's alternation did not match it, so it was not a *failed* placeholder - it was
+    not a placeholder at all, and every guard here only ever inspected the ones the renderer
+    recognised. The model had a good reason to write it (see render.SERVICE_ATTRS), which is why the
+    fix grants `.share` rather than only banning the guess.
+
+    One redraft is asked for; if the second draft still invents a field the phrase is struck and the
+    answer ships, because withholding a correct answer over one unwritable aside serves nobody.
+    """
+    fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
+              [text("The total is {{result_1_cell_0.short}} {{result_1_cell_0.unit}} {{result_1_cell_0.attrs.share_phrase}}."), stop()],
+              [text("The total is {{result_1_cell_0.short}} {{result_1_cell_0.unit}} {{result_1_cell_0.attrs.share_phrase}}."), stop()])
+    events = ask(ask_client, "national total?")
+    corrections = [d for n, d in events if n == "status" and d["phase"] == "correction"]
+    assert len(corrections) == 1                                  # asked to redraft exactly once
+    answer = only(events, "answer")
+    assert answer, "a correct answer must not be withheld over an unwritable aside"
+    body = answer[0]["text"]
+    assert "{{" not in body and "}}" not in body                  # the whole point
+    assert "share_phrase" not in body and "attrs" not in body
+    assert "469.64" in body                                       # the real figure survived, cited
+    # and the sentence still reads: no gap and no stranded stop where the phrase had been
+    assert " ." not in body and "  " not in body
+    assert not only(events, "error")
+
+
+def test_a_bare_decimal_is_still_withheld_after_the_drop_path_exists(ask_client, fake):
+    """The leniency above must not have leaked into the correctness guard.
+
+    An invented decimal is a wrong number, not an unwritable phrase, and it is still worth the whole
+    answer to refuse it.
+    """
+    fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
+              [text("Pakistan emitted 452.35 Mt."), stop()],
+              [text("Pakistan emitted about 452.3 Mt."), stop()])
+    events = ask(ask_client, "national total?")
+    assert only(events, "error")[0]["code"] == "bare_numbers"
+    assert not only(events, "answer")
+
+
+def test_a_share_is_writable_in_words_and_as_a_percentage(ask_client, fake):
+    """`.share` and `.pct` exist so the model can state a share WITHOUT typing a digit itself."""
+    fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"], "group_by": ["reporting_sector"]}), stop("tool_use")],
+              [text("Agriculture led at {{result_1_cell_0.short}} {{result_1_cell_0.unit}}."), stop()])
+    events = ask(ask_client, "which sector leads?")
+    answer = only(events, "answer")
+    assert answer and "{{" not in answer[0]["text"]
+
+
 def test_unknown_placeholder_is_placeholder_error(ask_client, fake):
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
               [text("See {{result_1_cell_7}}."), stop()],
@@ -252,8 +304,8 @@ def test_set_map_view_valid_emits_map_action(ask_client, fake):
     events = ask(ask_client, "Punjab agriculture, show it", ui_state={"level": "adm1", "period": "FY2023-24"})
     actions = only(events, "map_action")
     assert actions == [{"level": "adm1", "geo": "Punjab", "period": "FY2023-24", "sector": "agriculture"}]
-    # rc53 payload: receipts carry the release identity, so every pinned receipt moved at the jump
-    assert only(events, "tool_result")[0]["receipt"] == "fd6fcb33aa6c659af671e71ebb93f233"
+    # rc54 payload: receipts carry the release identity, so every pinned receipt moved at the jump
+    assert only(events, "tool_result")[0]["receipt"] == "d039ddea8cf69d09975897ac98ff01aa"
     assert [c["k"] for c in only(events, "tool_call")] == [1, 2]
     assert only(events, "answer")
     # ui_state was prepended to the user message
@@ -283,17 +335,17 @@ def test_set_map_view_district_name_resolves_to_shape_id(ask_client, fake):
 # --- download and receipts ---------------------------------------------------------------------
 
 def test_download_only_for_receipts_the_conversation_holds(ask_client, fake):
-    fake.load([tool_use("download_query_result", {"receipt_id": "b9c896a498031ae40426be3cc1fff033"}), stop("tool_use")],
+    fake.load([tool_use("download_query_result", {"receipt_id": "970be7c4ef90a3a6046d8b3e204d14b0"}), stop("tool_use")],
               [text("Run the query first."), stop()])
     events = ask(ask_client, "download it")
     assert only(events, "refusal")[0]["name"] == "download_query_result"
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
-              [tool_use("download_query_result", {"receipt_id": "b9c896a498031ae40426be3cc1fff033"}), stop("tool_use")],
+              [tool_use("download_query_result", {"receipt_id": "970be7c4ef90a3a6046d8b3e204d14b0"}), stop("tool_use")],
               [text("Links below."), stop()])
     events = ask(ask_client, "total then download")
     results = only(events, "tool_result")
-    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/b9c896a498031ae40426be3cc1fff033.csv",
-                                      "receipt_json": "/api/v1/emissions/download/b9c896a498031ae40426be3cc1fff033.receipt.json"}
+    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/970be7c4ef90a3a6046d8b3e204d14b0.csv",
+                                      "receipt_json": "/api/v1/emissions/download/970be7c4ef90a3a6046d8b3e204d14b0.receipt.json"}
     assert ask_client.get(results[1]["download"]["csv"]).status_code == 200
 
 
@@ -330,6 +382,44 @@ def test_tools_are_the_contract_functions_plus_set_map_view(ask_client):
                 assert prop["default"] in prop["enum"], (tool["name"], name)
         minimal = {n: {} for n, p in tool["input_schema"]["properties"].items() if p.get("type") == "object"}
         assert G.to_request(model.model_validate(minimal))
+
+
+def test_the_prompt_does_not_ask_for_an_automatic_map_move(ask_client):
+    """A factual question must not relocate the view the reader was looking at.
+
+    Rule 5 used to read "After answering about a place, a period, a sector or a gas, call
+    set_map_view once so the map follows the answer" - so asking which agriculture categories are
+    unestimated rearranged the map and reported it as six configuration chips. The tool stays for an
+    explicit "show me X on the map"; the instruction to use it unprompted does not.
+    """
+    system = ask_client.app.state.ask.system
+    assert "set_map_view" in system                                   # the tool is still offered
+    assert "After answering about a place" not in system
+    assert "so the map follows the answer" not in system
+    assert "only when the reader asked to" in system
+
+
+def test_the_prompt_forbids_claiming_an_observation_the_release_lacks(ask_client):
+    """An answer said the inventory "tracks how many animals of each type exist across Pakistan's
+    districts". For FY2023-24 that happens to hold - the 7th Agricultural Census enumerated them -
+    but it is false for the other eight years, which are a projection of that count, and every
+    district figure is a share of a province total rather than a district calculation. Dressing a
+    derived value as a direct measurement is a correctness failure, not a style one.
+    """
+    system = ask_client.app.state.ask.system
+    assert "NEVER CLAIM AN OBSERVATION THE RELEASE DOES NOT HAVE" in system
+    for needle in ("allocated from", "projected from", "get_evidence"):
+        assert needle in system
+    # a provincial figure is a national total spread by a proxy; saying the province "has data"
+    # implies it was measured there, and implies two provinces are differently evidenced when both
+    # are shares of one national number
+    assert 'NEVER SAY A PLACE "HAS DATA" WHEN ITS FIGURE IS AN ALLOCATION' in system
+    assert "never present one as better evidenced" in system
+    # "road transport" and "transport" are different totals
+    assert "NAME THE SCOPE THE METHOD ACTUALLY COVERS" in system
+    # an answer quoted "grain_unavailable" at a reader because rule 3 asked for the limitation_id
+    assert "NEVER WRITE THE ERROR CLASS OR THE LIMITATION ID" in system
+    assert "its error_class, its" not in system
 
 
 def test_system_prompt_names_no_version_and_carries_dims(ask_client):
@@ -372,7 +462,11 @@ def test_conversation_memory_and_client_history(ask_client, fake):
 
 def test_agent_status_and_release_flag(ask_client):
     status = ask_client.app.state.service.agent_status
-    assert status == {"enabled": True, "model": "fake-model", "provider": "injected", "reason": None}
+    # `library` is the explanation library's content digest: the runtime now installs with or
+    # without a model, because the prepared explanations cost no inference and a site with no
+    # provider key should still answer what emissions are.
+    assert {k: v for k, v in status.items() if k != "library"} == {"enabled": True, "model": "fake-model", "provider": "injected", "reason": None}
+    assert len(status["library"]) == 16
 
 
 def test_503_when_disabled(settings, monkeypatch):
@@ -403,7 +497,10 @@ def test_answer_scope_and_tool_result_additions(ask_client, fake):
     assert len(results) == 1
     tr = results[0]
     unc = tr["uncertainty"]
-    assert unc["source"] == "fact_uncertainty" and unc["resolution"] == "annual_national" and unc["rows"] and unc["interpretation"]
+    # the core supplies the block itself now. Until its resolution defect was fixed the string it
+    # selected on matched nothing, the envelope was always empty, and this sidecar read
+    # fact_uncertainty from the claim store instead - same rows, one hop further away.
+    assert unc["source"] == "envelope" and unc["resolution"] == "annual_national" and unc["rows"] and unc["interpretation"]
     assert all(r["resolution"] == "annual_national" for r in unc["rows"]) and len(unc["rows"]) == 23
     row = unc["rows"][0]
     assert {"category", "module", "resolution", "envelope_low_pct", "envelope_high_pct", "envelope_kind", "aggregation_rule"} <= set(row)
@@ -438,7 +535,14 @@ def test_answer_scope_is_the_last_result(ask_client, fake):
               [text("Enteric fermentation is {{result_1_cell_0.short}}."), stop()])
     events = ask(ask_client, "how uncertain is enteric fermentation?")
     results = only(events, "tool_result")
-    assert [r["category"] for r in results[0]["uncertainty"]["rows"]] == ["Enteric fermentation"] and results[0]["uncertainty"]["rows"][0]["parametric_low_pct"] == "-22.22"
+    # The core supplies the block now, and it selects the STRUCTURAL envelope columns rather than
+    # the whole row: the sidecar's own fallback did SELECT *, which is why this used to reach
+    # `parametric_low_pct`. The narrower set is the right one - the block's own interpretation says
+    # these are bounds and NOT a probability, and the parametric numbers are what the second tool
+    # call here, get_uncertainty, returns. Same category, same value, named for what it is.
+    unc = results[0]["uncertainty"]
+    assert [r["category"] for r in unc["rows"]] == ["Enteric fermentation"]
+    assert unc["rows"][0]["envelope_low_pct"] == "-22.22" and unc["source"] == "envelope"
     assert results[1]["uncertainty"] is None and results[1]["cells"][0]["n_rows"] == 1
 
 

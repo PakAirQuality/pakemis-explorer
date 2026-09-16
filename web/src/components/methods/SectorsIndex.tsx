@@ -15,6 +15,8 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { sectorMatches, METHODS } from "./Methods";
 import { sectorStory } from "./sectorText";
 import type { Cell } from "@/lib/envelope";
+import { MapMotif } from "@/components/shell/MapMotif";
+import { MotifCredit } from "@/components/shell/MotifCredit";
 
 type StreamCell = Cell & { module?: string };
 
@@ -32,7 +34,8 @@ export function SectorsIndex() {
   }, [all.data]);
   const visible = dims.sectors.filter((s) => sectorMatches(query, sectorLabel(labels, s), streamsByModule.get(s) ?? []));
   return (
-    <div className="min-h-dvh bg-surface" data-testid="sectors-index">
+    <div className="relative min-h-dvh" data-testid="sectors-index">
+      <MapMotif />
       <NavHeader />
       <main className="mx-auto max-w-[1200px] px-5 pb-12 pt-4">
         <PageHeader title="Sectors" dek="How each sector's emissions are estimated - choose one to see its sources, method and gaps." />
@@ -50,6 +53,7 @@ export function SectorsIndex() {
           ))}
           {!visible.length && <p className="col-span-full text-sm text-muted">No sector, category or source matches.</p>}
         </div>
+      <MotifCredit />
       </main>
     </div>
   );

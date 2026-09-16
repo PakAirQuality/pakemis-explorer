@@ -44,7 +44,10 @@ describe("stateFromRequest(requestFromState(s))", () => {
 describe("request bodies", () => {
   it("omit unset filters and carry the state's words", () => {
     expect(adm1Body(base)).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", geography_level: "adm1", spatial_view: "all", group_by: ["province"] });
-    expect(adm2Body({ ...base, level: "adm2", sector: "power", gas: "CH4", month: "202307" })).toMatchObject({ geography_level: "adm2", sectors: ["power"], gases: ["CH4"], months: ["202307"], group_by: ["shape_id"] });
+    // the sector filter rides on `reporting_sectors`, not `sectors` (rc54): state.sector is the
+    // REPORTING axis, and the two vocabularies share their ten ids, so sending one on the other's
+    // field answers with the computing module instead - silently, and wrongly for industry
+    expect(adm2Body({ ...base, level: "adm2", sector: "power", gas: "CH4", month: "202307" })).toMatchObject({ geography_level: "adm2", reporting_sectors: ["power"], gases: ["CH4"], months: ["202307"], group_by: ["shape_id"] });
     expect(gridCellBody({ ...base, level: "grid", gas: "CH4", cell: "24.925,67.075" })).toEqual({ lat: 24.925, lon: 67.075, gas: "CH4", month: "annual", configuration_id: "REF_2023_24" });
   });
   it("detail bodies scope to the geography and lineage takes one month for a province", () => {
@@ -53,7 +56,7 @@ describe("request bodies", () => {
     expect(d.kind).toBe("province");
     if (d.kind !== "province") return;
     expect(d.total).toMatchObject({ geography_level: "adm1", geography_ids: ["Punjab"] });
-    expect(d.byModule.group_by).toEqual(["module"]);
+    expect(d.byModule.group_by).toEqual(["reporting_sector"]);   // the axis, at district grain too, since rc54
     expect(d.byMonth.months).toEqual(months);
     expect(d.lineage).toEqual({ id: "Punjab", params: { month: "202307", configuration_id: "REF_2023_24" } });
     const e = detailBodies({ ...base, level: "adm2", geo: "60131773B12131197496886" }, months);

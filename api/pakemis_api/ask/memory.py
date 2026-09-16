@@ -20,6 +20,13 @@ class Conversation:
     created: float = field(default_factory=time.time)
     updated: float = field(default_factory=time.time)
     max_messages: int = 30
+    # the explanation the library last served, so a bare follow-up ("why do this?") continues the
+    # topic instead of restarting on an unrelated definition. Only the local path sets it; the
+    # model path leaves it alone, and a None here simply means there is no topic to continue.
+    last_card: str | None = None
+
+    def last_card_id(self):
+        return self.last_card
 
     def append(self, role, content, max_messages=None):
         max_messages = max_messages or self.max_messages

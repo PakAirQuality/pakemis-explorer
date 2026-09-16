@@ -295,7 +295,7 @@ def test_install_ask_reports_gemini(settings, monkeypatch):
     assert s.resolved_ask_provider == "gemini" and s.resolved_ask_model == "gemini-2.5-flash" and s.ask_enabled
     with TestClient(create_app(s)) as c:
         status = c.app.state.service.agent_status
-        assert status == {"enabled": True, "model": "gemini-2.5-flash", "provider": "gemini", "reason": None}
+        assert {k: v for k, v in status.items() if k != "library"} == {"enabled": True, "model": "gemini-2.5-flash", "provider": "gemini", "reason": None}
         assert c.get("/api/v1/emissions/release").json()["agent"] == status
         model = c.app.state.ask.model
         assert isinstance(model, GeminiModel) and model.max_output_tokens == c.app.state.ask.limits.max_output_tokens

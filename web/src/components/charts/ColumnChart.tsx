@@ -12,7 +12,13 @@ import { chartTheme } from "@/lib/theme";
 import { RAMP } from "@/lib/palette";
 import { axisFromTicks } from "./axis";
 
-export type ColumnPoint = { id: string; name: string; value: number; label: string; reference?: boolean };
+/**
+ * `reference` marks the release's reference period (accent fill, bold label). `muted` marks a
+ * point OUTSIDE the window the reader asked about - drawn, because the shape either side of a
+ * window is usually the point, but dimmed and unlabelled so it never competes with the window
+ * it surrounds.
+ */
+export type ColumnPoint = { id: string; name: string; value: number; label: string; reference?: boolean; muted?: boolean };
 
 const hex = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
 const pair = (a: string, b: string, t: number) => {
@@ -33,8 +39,13 @@ export function columnColor(value: number, min: number, max: number): string {
 
 export function buildColumnOption(points: ColumnPoint[], ticks: string[] | null | undefined, t: ReturnType<typeof chartTheme>) {
   const axis = axisFromTicks(ticks);
-  const last = points.length - 1;
-  const labelled = (i: number) => i === 0 || i === last || !!points[i].reference;
+  // the FIRST and LAST points that are not muted carry labels, so a windowed series prints the
+  // numbers at the ends of the WINDOW rather than at the ends of the data. With nothing muted
+  // this is the first and last point, exactly as before.
+  const live = points.map((p, i) => (p.muted ? -1 : i)).filter((i) => i >= 0);
+  const firstLive = live.length ? live[0] : 0;
+  const lastLive = live.length ? live[live.length - 1] : points.length - 1;
+  const labelled = (i: number) => !points[i].muted && (i === firstLive || i === lastLive || !!points[i].reference);
   const values = points.map((p) => p.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -52,8 +63,8 @@ export function buildColumnOption(points: ColumnPoint[], ticks: string[] | null 
         barCategoryGap: "26%",
         data: points.map((p, i) => ({
           value: p.value,
-          itemStyle: { color: p.reference ? t.accent : columnColor(p.value, min, max), borderRadius: [5, 5, 0, 0] },
-          emphasis: { itemStyle: { color: p.reference ? t.accentBright : columnColor(p.value, min, max), shadowBlur: 6, shadowColor: "rgba(0,0,0,0.18)" } },
+          itemStyle: { color: p.reference ? t.accent : columnColor(p.value, min, max), opacity: p.muted ? 0.25 : 1, borderRadius: [5, 5, 0, 0] },
+          emphasis: { itemStyle: { color: p.reference ? t.accentBright : columnColor(p.value, min, max), opacity: p.muted ? 0.4 : 1, shadowBlur: 6, shadowColor: "rgba(0,0,0,0.18)" } },
           label: { show: labelled(i), position: "top" as const, distance: 5, color: p.reference ? t.accent : t.muted, fontSize: 11, fontWeight: p.reference ? ("bold" as const) : ("normal" as const), fontFamily: t.font, formatter: () => p.label },
         })),
       },
@@ -61,7 +72,7 @@ export function buildColumnOption(points: ColumnPoint[], ticks: string[] | null 
   };
 }
 
-export function ColumnChart({ points, ticks, height = 200, testId = "column-chart" }: { points: ColumnPoint[]; ticks?: string[] | null; height?: number; testId?: string }) {
+export function ColumnChart({ points, ticks, height = 200, testId = "column-chart" }: { points: ColumnPoint[]; ticks?: string[] | null; height?: number | string; testId?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;

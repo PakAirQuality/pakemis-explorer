@@ -1,0 +1,2139 @@
+[
+ {
+  "id": "emissions",
+  "title": "What are emissions?",
+  "category": "Basics",
+  "questions": [
+   "what are emissions",
+   "what is an emission",
+   "explain emissions",
+   "what are emsisions"
+  ],
+  "summary": "Emissions are substances released from a source. Here we are mainly talking about gases and particles released into the air—for example, carbon dioxide from burning fuel, methane from livestock, or particles from smoke.",
+  "detail": "An emissions inventory estimates how much is released during a stated period. It is different from an air-quality monitor, which measures the concentration at a particular place. A number in tonnes per year is not a reading of the air you are breathing.",
+  "citations": [
+   {
+    "source_id": "epa_ghg"
+   },
+   {
+    "source_id": "nasa_climate"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "emissions",
+   "concentration"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "importance",
+  "title": "Why do emissions matter?",
+  "category": "Basics",
+  "questions": [
+   "why are emissions important",
+   "why do emissions matter",
+   "why should i care about emissions"
+  ],
+  "summary": "Different emissions matter for different reasons. Greenhouse gases change Earth’s heat balance. Air pollutants can damage air quality. The same activity can release both, but a climate total and an air-pollution total answer different questions.",
+  "detail": "Knowing the source, quantity and uncertainty helps identify where to investigate reductions and where better data are needed. An emissions ranking alone does not tell us which intervention saves the most lives or is cheapest; those questions need additional evidence.",
+  "citations": [
+   {
+    "source_id": "nasa_climate"
+   },
+   {
+    "source_id": "epa_ghg"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "importance"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "greenhouse",
+  "title": "What is a greenhouse gas?",
+  "category": "Basics",
+  "questions": [
+   "what is a greenhouse gas",
+   "what is the greenhouse effect",
+   "why does gas cause warming"
+  ],
+  "summary": "A greenhouse gas absorbs and emits infrared radiation, slowing the loss of heat from Earth to space. The natural greenhouse effect makes Earth warmer than it would otherwise be; adding more of these gases changes that balance.",
+  "detail": "Carbon dioxide, methane and nitrous oxide are examples. They differ in how strongly they affect radiation and how long their effects persist, so an equal mass of each is not an equal climate contribution.",
+  "citations": [
+   {
+    "source_id": "nasa_climate",
+    "pages": []
+   },
+   {
+    "source_id": "epa_ghg",
+    "pages": []
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "greenhouse",
+   "importance"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_co2",
+  "title": "Carbon dioxide · CO₂",
+  "category": "Gases",
+  "questions": [
+   "what is co2",
+   "what is carbon dioxide",
+   "why is carbon dioxide important",
+   "explain carbon dioxide"
+  ],
+  "summary": "Carbon dioxide is a greenhouse gas released by fuel combustion and some chemical processes. It is also part of the natural carbon cycle. Human activity adds carbon dioxide and changes how much natural systems can remove.",
+  "detail": "For PakEmis, fossil-fuel combustion and clinker calcination are separate sources. The fuel burned to heat a cement kiln is not the same emission as the carbon dioxide released by the reaction that makes clinker. Carbon monoxide, CO, is a different substance.",
+  "citations": [
+   {
+    "source_id": "epa_co2"
+   },
+   {
+    "source_id": "src:activity-ippu-company-clinker-series"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "CO2"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_ch4",
+  "title": "Methane · CH₄",
+  "category": "Gases",
+  "questions": [
+   "what is ch4",
+   "what is methane",
+   "why is methane important",
+   "explain methane"
+  ],
+  "summary": "Methane is a greenhouse gas. Human-related sources include livestock, decomposing organic waste and leaks in fossil-fuel systems. It has a shorter atmospheric lifetime than carbon dioxide and a stronger warming effect per unit mass over the usual comparison periods.",
+  "detail": "PakEmis treats methane from biological sources and fossil sources separately when converting to carbon-dioxide equivalent. The selected GWP metric and time horizon belong beside that comparison; “methane is X times stronger” is incomplete without them.",
+  "citations": [
+   {
+    "source_id": "epa_ch4"
+   },
+   {
+    "source_id": "rel:dim_gas"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "CH4"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_n2o",
+  "title": "Nitrous oxide · N₂O",
+  "category": "Gases",
+  "questions": [
+   "what is n2o",
+   "what is nitrous oxide",
+   "why is nitrous oxide important",
+   "explain nitrous oxide"
+  ],
+  "summary": "Nitrous oxide is a greenhouse gas associated with nitrogen cycling, including agricultural soils, manure and wastewater. Combustion and some industrial processes also release it.",
+  "detail": "In this inventory, soil nitrogen and the factors describing its conversion to nitrous oxide are important parts of the estimate. N₂O is not the same as nitrogen dioxide, NO₂, or the NOx group: their chemistry, effects and accounting are different.",
+  "citations": [
+   {
+    "source_id": "epa_n2o"
+   },
+   {
+    "source_id": "src:activity-fertilizer-2024"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "N2O"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_nh3",
+  "title": "Ammonia · NH₃",
+  "category": "Gases",
+  "questions": [
+   "what is nh3",
+   "what is ammonia",
+   "why is ammonia important",
+   "explain ammonia"
+  ],
+  "summary": "Ammonia is a nitrogen-containing gas. The agriculture note links its emissions to manure and fertiliser and explains that it can contribute to secondary fine-particle formation away from the original source.",
+  "detail": "PakEmis reports agricultural ammonia in its air-pollutant layer, not as an extra term in the greenhouse-gas CO₂e total. Ammonia emitted to the air and carbon dioxide emitted during ammonia manufacture are different inventory quantities.",
+  "citations": [
+   {
+    "source_id": "src:activity-fertilizer-2024"
+   },
+   {
+    "source_id": "src:activity-ippu-company-clinker-series"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "NH3"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_nox",
+  "title": "Nitrogen oxides · NOx",
+  "category": "Gases",
+  "questions": [
+   "what is nox",
+   "what is no2",
+   "what is nitrogen dioxide",
+   "why is nox important"
+  ],
+  "summary": "NOx is a group of nitrogen oxides, especially nitric oxide and nitrogen dioxide, associated with fuel combustion. These gases contribute to air-pollution chemistry, including ozone and particle formation.",
+  "detail": "The transport note reports NOx as NO₂-equivalent mass. That convention does not turn NOx into nitrous oxide, N₂O, which is separately counted as a greenhouse gas.",
+  "citations": [
+   {
+    "source_id": "epa_nox"
+   },
+   {
+    "source_id": "src:activity-transport-emep-tier1-road-air"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "NOx",
+   "NO2"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_so2",
+  "title": "Sulfur dioxide · SO₂",
+  "category": "Gases",
+  "questions": [
+   "what is so2",
+   "what is sulfur dioxide",
+   "what is sulphur dioxide",
+   "why is sulfur dioxide important"
+  ],
+  "summary": "Sulfur dioxide is a gas produced when sulfur-containing fuels or materials are processed or burned. It affects air quality and participates in particle formation.",
+  "detail": "The railway note makes fuel sulfur content an explicit scenario because no single measured national diesel-sulfur value is established there. A sulfur specification is not necessarily a measurement of the fuel actually burned.",
+  "citations": [
+   {
+    "source_id": "epa_so2"
+   },
+   {
+    "source_id": "src:activity-railways-diesel-sulfur-regime"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "SO2"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_co",
+  "title": "Carbon monoxide · CO",
+  "category": "Gases",
+  "questions": [
+   "what is co",
+   "what is carbon monoxide",
+   "is co the same as co2",
+   "why is carbon monoxide important"
+  ],
+  "summary": "Carbon monoxide is a gas released when carbon-containing fuel burns incompletely. It is a different molecule from carbon dioxide, CO₂. Carbon monoxide matters for air quality because breathing it can reduce oxygen delivery in the body.",
+  "detail": "An emissions inventory estimates the amount released; it cannot determine someone’s exposure or the safety of a room from an annual emissions value.",
+  "citations": [
+   {
+    "source_id": "epa_co"
+   },
+   {
+    "source_id": "src:activity-residential-hies-hies-fuel-quantities"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "CO"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_pm25",
+  "title": "Fine particles · PM₂.₅",
+  "category": "Gases",
+  "questions": [
+   "what is pm2.5",
+   "what is pm25",
+   "is pm2.5 a gas",
+   "why is pm2.5 important"
+  ],
+  "summary": "PM₂.₅ is not a gas. It is a size class of fine particles and droplets, generally 2.5 micrometres or smaller. Some particles are emitted directly; others form in the atmosphere from gases.",
+  "detail": "The primary-PM₂.₅ figures in PakEmis describe emitted particle mass. They are not ambient concentration, an AQI reading, or the complete secondary-particle burden. Black carbon can already be part of PM₂.₅, so adding the two would double count part of the mass.",
+  "citations": [
+   {
+    "source_id": "epa_pm"
+   },
+   {
+    "source_id": "rel:dim_pollutant"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "PM2.5"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_pm10",
+  "title": "Particles · PM₁₀",
+  "category": "Gases",
+  "questions": [
+   "what is pm10",
+   "what is particulate matter",
+   "difference between pm10 and pm2.5"
+  ],
+  "summary": "PM₁₀ is a particle-size class that includes particles generally 10 micrometres or smaller. PM₂.₅ is contained within PM₁₀, not a separate quantity to add to it.",
+  "detail": "PakEmis keeps named pollutant species and size fractions separate. A sum of PM₁₀, PM₂.₅ and black carbon would count overlapping material more than once.",
+  "citations": [
+   {
+    "source_id": "epa_pm"
+   },
+   {
+    "source_id": "rel:dim_pollutant"
+   }
+  ],
+  "caveats": [
+   "PM₂.₅ is contained within PM₁₀; adding both would double-count the fine fraction."
+  ],
+  "data_chain": [],
+  "topics": [
+   "PM10"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_bc",
+  "title": "Black carbon · BC",
+  "category": "Gases",
+  "questions": [
+   "what is black carbon",
+   "what is bc",
+   "why is black carbon important"
+  ],
+  "summary": "Black carbon is a light-absorbing component of soot produced by incomplete combustion. It is a particle component, not a greenhouse gas. It matters for climate and air quality; deposition on snow or ice can reduce reflectivity.",
+  "detail": "In PakEmis, black carbon is reported as a pollutant in its own mass units. Where it is included in a PM₂.₅ estimate, it is a component of that mass rather than an additional amount.",
+  "citations": [
+   {
+    "source_id": "ccac_bc"
+   },
+   {
+    "source_id": "rel:dim_pollutant"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "BC"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_nmvoc",
+  "title": "Non-methane volatile organic compounds",
+  "category": "Gases",
+  "questions": [
+   "what is nmvoc",
+   "what are vocs",
+   "what is voc",
+   "why are nmvocs important"
+  ],
+  "summary": "NMVOC means non-methane volatile organic compounds: a group of compounds, not one gas. Volatile organic compounds participate with nitrogen oxides in the chemistry that forms ground-level ozone.",
+  "detail": "The transport documentation separates exhaust, evaporation and other processes. The group name alone does not identify the chemical mixture, and a national NMVOC mass is not a toxicity or exposure estimate.",
+  "citations": [
+   {
+    "source_id": "epa_o3"
+   },
+   {
+    "source_id": "src:activity-transport-emep-tier1-road-air"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "NMVOC"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_ozone",
+  "title": "Ground-level ozone · O₃",
+  "category": "Gases",
+  "questions": [
+   "what is ozone",
+   "what is o3",
+   "why is ozone important"
+  ],
+  "summary": "Ground-level ozone is an air pollutant formed mainly through chemical reactions involving nitrogen oxides and volatile organic compounds in sunlight. It is not usually emitted directly in the same way as smoke from a stack.",
+  "detail": "An emissions inventory of ozone precursors is not an ozone-concentration map. Converting precursor emissions into concentrations needs atmospheric chemistry and transport modelling.",
+  "citations": [
+   {
+    "source_id": "epa_o3",
+    "pages": []
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "O3"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gas_fgas",
+  "title": "Fluorinated gases",
+  "category": "Gases",
+  "questions": [
+   "what are f gases",
+   "what are hfcs",
+   "what is sf6",
+   "what are fluorinated gases"
+  ],
+  "summary": "Fluorinated gases are a family of synthetic greenhouse gases used in applications such as refrigeration and industrial equipment. Their climate effects differ by substance; an undifferentiated tonne of “F-gas” is not enough for a valid CO₂e conversion.",
+  "detail": "The IPPU note distinguishes gas supplied to a country from gas released out of equipment. Its equipment-bank screening is outside the reference total. Supply, equipment charge and annual leakage must not be treated as interchangeable.",
+  "citations": [
+   {
+    "source_id": "epa_fgas"
+   },
+   {
+    "source_id": "rel:fact_completeness"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "HFCs",
+   "SF6",
+   "F-gases"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "co2e",
+  "title": "What does CO₂e mean?",
+  "category": "Basics",
+  "questions": [
+   "what is co2e",
+   "what is carbon dioxide equivalent",
+   "is co2e a gas",
+   "difference between co2 and co2e"
+  ],
+  "summary": "CO₂e means carbon-dioxide equivalent. It is a comparison unit, not a gas: each greenhouse gas’s mass is multiplied by a chosen global-warming-potential factor and the converted amounts are added.",
+  "detail": "The national note declares its AR5 GWP-100 convention and distinguishes fossil from biogenic methane. Changing the GWP metric changes the CO₂e total without changing the underlying gas masses. Air-pollutant masses are not added to this greenhouse-gas total.",
+  "citations": [
+   {
+    "source_id": "rel:dim_gwp"
+   },
+   {
+    "source_id": "epa_ghg"
+   }
+  ],
+  "caveats": [
+   "CO₂e is a comparison metric, not a gas or an air-quality reading."
+  ],
+  "data_chain": [],
+  "topics": [
+   "CO2e",
+   "metric"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "gwp",
+  "title": "What is global warming potential?",
+  "category": "Basics",
+  "questions": [
+   "what is gwp",
+   "what is ar5",
+   "what is ar6",
+   "why 100 years",
+   "gwp100"
+  ],
+  "summary": "Global warming potential, or GWP, compares the integrated climate effect of emitting a unit mass of a gas with the effect of emitting the same mass of carbon dioxide over a specified time horizon.",
+  "detail": "PakEmis stores AR5 and AR6 conversions alongside native gas masses rather than silently replacing one with the other. Comparisons must use the same metric, methane-origin treatment and time horizon.",
+  "citations": [
+   {
+    "source_id": "rel:dim_gwp"
+   },
+   {
+    "source_id": "epa_ghg"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "gwp",
+   "AR5",
+   "AR6"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "inventory",
+  "title": "What is PakEmis?",
+  "category": "Basics",
+  "questions": [
+   "what is pakemis",
+   "what is emission flow",
+   "what is an inventory",
+   "what is this website"
+  ],
+  "summary": "PakEmis is a reproducible public-data reconstruction of covered greenhouse-gas sources in Pakistan. Its canonical panel uses fiscal years from July to June and keeps land use, land-use change and forestry outside the reference national total.",
+  "detail": "Emission Flow is the interface you are building around that inventory. This assistant explains the supplied documentation; a live result must come from the connected, version-matched inventory products, not from the assistant’s recollection.",
+  "citations": [
+   {
+    "source_id": "rel:known_limitations"
+   },
+   {
+    "source_id": "rel:dim_period"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "inventory"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "why_inventory",
+  "title": "Why build an emissions inventory?",
+  "category": "Basics",
+  "questions": [
+   "why build this",
+   "why do an emissions inventory",
+   "why do this project",
+   "what is the purpose"
+  ],
+  "summary": "An inventory makes the accounting visible: what is estimated, which activities and factors drive it, where it is allocated, and what remains uncertain or unestimated.",
+  "detail": "PakEmis is organised so shared fuel and material flows are counted consistently across sectors. That helps track revisions and identify useful data improvements. Accounting consistency does not by itself prove that the activity data or emission factors are correct.",
+  "citations": [
+   {
+    "source_id": "rel:known_limitations"
+   },
+   {
+    "source_id": "epa_ghg"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "purpose"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "activity",
+  "title": "What are activity data?",
+  "category": "Methods",
+  "questions": [
+   "what is activity data",
+   "what data drive emissions",
+   "what is underlying activity"
+  ],
+  "summary": "Activity data describe how much of the emitting activity occurred: fuel consumed, animals counted, crop area, clinker produced, waste generated or aircraft movements. The appropriate activity depends on the process.",
+  "detail": "The number used to set a national total can be different from the information used to map it. For example, livestock counts can determine the total while a livestock-density surface distributes that total within an area.",
+  "citations": [
+   {
+    "source_id": "rel:method_registry"
+   },
+   {
+    "source_id": "src:activity-agriculture-es-fiscal-series"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "activity"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "factor",
+  "title": "What is an emission factor?",
+  "category": "Methods",
+  "questions": [
+   "what is an emission factor",
+   "what is ef",
+   "where do emission factors come from"
+  ],
+  "summary": "An emission factor describes emissions per unit of an activity—for example, a mass of gas per unit of fuel energy. PakEmis records the factor’s source and units alongside the activity it multiplies.",
+  "detail": "The correct factor depends on the gas, fuel and process. A factor for a power station is not automatically appropriate for a household stove or a locomotive, even when the fuel has the same name.",
+  "citations": [
+   {
+    "source_id": "rel:method_registry"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "factor"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "calculation",
+  "title": "How are emissions calculated?",
+  "category": "Methods",
+  "questions": [
+   "how do you calculate emissions",
+   "what is the formula",
+   "how are emissions estimated"
+  ],
+  "summary": "A common calculation is activity × emission factor, with unit conversions applied explicitly. For a fuel, that may mean converting litres to mass, mass to energy, and energy to each gas’s emissions.",
+  "detail": "Not every category is a one-line calculation. The waste-disposal model tracks waste still decaying from earlier years, and agriculture uses shared nitrogen and residue accounts. The assistant explains these methods; it does not replace them with its own arithmetic.",
+  "citations": [
+   {
+    "source_id": "rel:method_registry"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "Published activity",
+   "Recorded unit conversion",
+   "Process-appropriate factor or model",
+   "Native gas mass",
+   "Declared CO₂e metric"
+  ],
+  "topics": [
+   "calculation"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "sources",
+  "title": "What sources does PakEmis use?",
+  "category": "Sources",
+  "questions": [
+   "what sources do you have",
+   "what sources have you",
+   "where does your data come from",
+   "what data sources do you use",
+   "what sources you have"
+  ],
+  "summary": "The supplied notes describe Pakistani regulator and statistical records, household and agricultural surveys, producer filings, and published methods. Source roles differ: some set emissions totals, some distribute them, and some only evaluate the result.",
+  "detail": "Examples include PBS and NFDC for agricultural activity; NEPRA and OGRA for energy records; OCAC for petroleum customer classes; Pakistan Railways and PCAA for transport activity; and household, population and sanitation records for residential and waste estimates. IPCC and EMEP/EEA provide method and factor families. A source cited by a note is not necessarily a primary file included in this assistant package.",
+  "citations": [
+   {
+    "source_id": "src:activity-industry-coal-by-consumer"
+   },
+   {
+    "source_id": "src:activity-power-generation-by-fuel"
+   },
+   {
+    "source_id": "src:activity-waste-population-district"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "source_chain",
+  "title": "What data are behind this result?",
+  "category": "Sources",
+  "questions": [
+   "what was the underlying data used to drive this",
+   "what data are behind this",
+   "where did this number come from",
+   "trace this result",
+   "show the provenance"
+  ],
+  "summary": "A traceable result needs a chain from the published source to the output: source document and period, extracted activity, conversions, factors, calculation method, and any timing or spatial allocation.",
+  "detail": "The national note names a source register and a source-to-stream table for this purpose. To trace the exact bar or map cell, the live adapter must return its stream identifiers and row-level references. A list of organisations is not enough to prove a particular number.",
+  "citations": [
+   {
+    "source_id": "rel:method_registry"
+   },
+   {
+    "source_id": "rel:dim_evidence_class"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "Source document and edition",
+   "Table, cell or reported row",
+   "Activity and unit",
+   "Factor and method",
+   "Timing and placement, where used",
+   "Output and release digest"
+  ],
+  "topics": [
+   "provenance"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "source_custody",
+  "title": "Do you hold every original source?",
+  "category": "Sources",
+  "questions": [
+   "are all sources archived",
+   "do you have the raw data",
+   "can i download the original sources",
+   "source custody"
+  ],
+  "summary": "Not every reference in a technical note is an archived primary dataset. The documentation distinguishes retained source files, derived inputs and sources that were used but not retained.",
+  "detail": "This prototype includes the uploaded notes and their page references, not every government report or activity file they cite. The inventory’s source register should supply the actual URL, hash and custody status when the live connection is added.",
+  "citations": [
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "sources",
+   "custody"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "estimated",
+  "title": "Are these measured emissions?",
+  "category": "Methods",
+  "questions": [
+   "are these measured",
+   "are these estimates",
+   "is this real data",
+   "observed versus estimated"
+  ],
+  "summary": "The inventory estimates emissions. Some inputs are measured or administratively reported, while others are surveyed, modelled, transferred from another period or explicitly assumed. A measured fuel quantity does not make every derived emission or map cell a direct measurement.",
+  "detail": "The source, activity, factor, time profile and spatial allocation should each keep their own evidence status. A mass-conserving map can be internally consistent while still having uncertain placement.",
+  "citations": [
+   {
+    "source_id": "rel:dim_evidence_class"
+   },
+   {
+    "source_id": "rel:fact_completeness"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "evidence"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "tiers",
+  "title": "What do Tier 1, Tier 2 and Tier 3 mean?",
+  "category": "Methods",
+  "questions": [
+   "what is tier 1",
+   "what is tier 2",
+   "what is tier 3",
+   "ipcc tiers"
+  ],
+  "summary": "In the agriculture note, Tier 1 combines standard equations and default factors with activity data; Tier 2 adds country-specific parameters or more detailed activity characterisation; Tier 3 uses more detailed models or measurement systems.",
+  "detail": "A higher tier is not a blanket quality label for the whole dataset. The note assigns tier status by category, and a detailed spatial grid does not automatically upgrade the emissions calculation’s tier.",
+  "citations": [
+   {
+    "source_id": "rel:method_registry"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "tiers"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "uncertainty",
+  "title": "What is uncertainty?",
+  "category": "Uncertainty",
+  "questions": [
+   "what is uncertainty",
+   "what is uncertainity",
+   "why are estimates uncertain",
+   "what does the uncertainty mean"
+  ],
+  "summary": "Uncertainty describes what we do not know precisely about an estimate. Fuel quantities, animal counts, emission factors, missing sources and the way emissions are distributed across time or space can all contribute.",
+  "detail": "PakEmis separates parameter uncertainty from timing, placement, structural choices and completeness. A narrow probability interval can still sit beside an important unestimated source or unresolved model choice.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   },
+   {
+    "source_id": "rel:fact_uncertainty"
+   }
+  ],
+  "caveats": [
+   "A national annual interval must not be reused as the uncertainty of a district, month or trend."
+  ],
+  "data_chain": [],
+  "topics": [
+   "uncertainty"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "mc",
+  "title": "What are Monte Carlo estimates?",
+  "category": "Uncertainty",
+  "questions": [
+   "what is monte carlo",
+   "what are monte carlo estimates",
+   "explain monte-carlo",
+   "what is monte carlo simulation"
+  ],
+  "summary": "Monte Carlo estimation repeats the emissions calculation using many plausible combinations of uncertain inputs. Rather than treating every activity and factor as exact, it samples from their declared distributions and records the resulting totals.",
+  "detail": "The collection of totals shows how uncertainty propagates through the calculation. Shared inputs must move together where the model declares a dependency. These are simulated calculations, not repeated observations of Pakistan.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   },
+   {
+    "source_id": "rel:fact_uncertainty"
+   }
+  ],
+  "caveats": [
+   "Monte Carlo draws are simulated calculations, not additional observations. The interval is conditional on the modelled inputs and assumptions."
+  ],
+  "data_chain": [],
+  "topics": [
+   "mc"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "mc_why",
+  "title": "Why use Monte Carlo?",
+  "category": "Uncertainty",
+  "questions": [
+   "why use monte carlo",
+   "why do monte carlo",
+   "what is the benefit of monte carlo"
+  ],
+  "summary": "It helps propagate uncertain inputs through calculations that are not well summarised by one symmetric “plus or minus” value. It can preserve bounded inputs, skewed outcomes and dependencies between quantities.",
+  "detail": "The national note combines the waste and fugitives engines’ own draws with other components’ draws. Running more simulations reduces simulation noise; it does not improve missing source data or decide which structural scenario is true.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "mc"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "mc_example",
+  "title": "Monte Carlo, with an example",
+  "category": "Uncertainty",
+  "questions": [
+   "give a monte carlo example",
+   "explain monte carlo simply",
+   "monte carlo example"
+  ],
+  "summary": "Imagine estimating a boiler’s emissions. You are unsure about both its annual fuel use and the emission factor. One simulation uses a plausible fuel quantity and a plausible factor, multiplies them, and saves the result. Repeating that process produces a distribution of totals.",
+  "detail": "This is a teaching example, not a PakEmis measurement or a new inventory run. For the real system, the distributions, shared inputs and accounting constraints must come from the published uncertainty model.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "mc",
+   "example"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "interval",
+  "title": "What does a 95% interval mean?",
+  "category": "Uncertainty",
+  "questions": [
+   "what is a 95 percent interval",
+   "what is a confidence interval",
+   "what are percentiles",
+   "what does p2.5 mean",
+   "what is p97.5"
+  ],
+  "summary": "For a Monte Carlo result, the 2.5th to 97.5th percentiles enclose the central 95% of the simulated outcomes under the specified input distributions and model configuration.",
+  "detail": "That is conditional on the assumptions used to generate the simulations. It is not a guarantee that every uncertainty, missing source or alternative model has been included. Read the percentile endpoints, unit, configuration and reference point together.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   },
+   {
+    "source_id": "rel:fact_uncertainty"
+   }
+  ],
+  "caveats": [
+   "This does not establish that all missing sources or alternative model choices are covered."
+  ],
+  "data_chain": [],
+  "topics": [
+   "interval"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "mean_median",
+  "title": "Why do the reference, mean and median differ?",
+  "category": "Uncertainty",
+  "questions": [
+   "what is the mean",
+   "what is the median",
+   "why is the median different",
+   "deterministic versus monte carlo"
+  ],
+  "summary": "The deterministic reference is one calculation at the inventory’s selected inputs. The Monte Carlo mean is the average of simulated results; the median is the point with half the results on each side.",
+  "detail": "When the calculation is nonlinear or the distributions are skewed, those values need not coincide. A percentage measured relative to the median must not be attached to the deterministic reference as though the centres were interchangeable.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   },
+   {
+    "source_id": "rel:fact_uncertainty"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "mean",
+   "median"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "correlation",
+  "title": "Why do shared uncertainties matter?",
+  "category": "Uncertainty",
+  "questions": [
+   "what is correlation",
+   "what are correlated inputs",
+   "why share draws",
+   "what is a draw id"
+  ],
+  "summary": "When two estimates use the same uncertain input, they can move together. Drawing a separate independent value for that same input in each place can understate or misrepresent the uncertainty of their combined result.",
+  "detail": "The national model records parameter dependencies and uses a common draw identifier across linked products. Positive and negative dependencies have different effects, and the selected dependence structure remains an assumption that should be stated.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   },
+   {
+    "source_id": "rel:fact_uncertainty"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "correlation"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "structural",
+  "title": "How is a scenario different from an uncertainty interval?",
+  "category": "Uncertainty",
+  "questions": [
+   "what is a scenario",
+   "what is structural uncertainty",
+   "scenario versus uncertainty",
+   "why not average scenarios"
+  ],
+  "summary": "A scenario changes a declared reading of the evidence or model structure—for example, where an unresolved fuel flow belongs. A parametric interval varies uncertain inputs while holding that selected structure fixed.",
+  "detail": "PakEmis publishes named structural alternatives separately. Their spread is not automatically a probability distribution, and averaging them would require weights the evidence may not support.",
+  "citations": [
+   {
+    "source_id": "rel:dim_configuration"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "scenario"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "trend_uncertainty",
+  "title": "How uncertain is a change over time?",
+  "category": "Uncertainty",
+  "questions": [
+   "how uncertain is a trend",
+   "uncertainty of a change",
+   "do error bars prove a trend",
+   "can i subtract confidence intervals"
+  ],
+  "summary": "A change has its own uncertainty. It should be calculated by subtracting matched years inside each shared simulation, so common errors can cancel or persist according to the model.",
+  "detail": "Borrowing an annual national percentage for a year-to-year change is not valid. The national note describes a separate trend-uncertainty product and alternative temporal-correlation assumptions; the selected result must come from that product.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   },
+   {
+    "source_id": "rel:fact_uncertainty"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "trend",
+   "uncertainty"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "validation",
+  "title": "Does a narrow interval mean the result is correct?",
+  "category": "Uncertainty",
+  "questions": [
+   "is this validated",
+   "does uncertainty prove accuracy",
+   "does closure prove accuracy",
+   "how do you validate"
+  ],
+  "summary": "No. An uncertainty interval describes variation within an assumed model. Validation asks how the result compares with evidence that can reveal errors in that model or its inputs.",
+  "detail": "PakEmis separates checks of magnitude, timing and geography. Matching a national total does not validate a map, and finding a satellite hotspot near a facility does not validate its annual emission total. Exact sums test accounting, not independent accuracy.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "validation"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "mc_convergence",
+  "title": "Would more Monte Carlo runs make the data better?",
+  "category": "Uncertainty",
+  "questions": [
+   "why so many draws",
+   "does more monte carlo reduce uncertainty",
+   "what is convergence",
+   "how many simulations"
+  ],
+  "summary": "More draws can make the simulated percentiles more stable by reducing Monte Carlo sampling noise. They do not turn an uncertain activity datum into a measured one.",
+  "detail": "The national note reports a larger national run and a smaller common-ensemble prefix for different products. The draw count, seed and convergence diagnostics belong to each product; one count should not be repeated as though every sector and output uses it.",
+  "citations": [
+   {
+    "source_id": "ipcc_uncertainty"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "mc",
+   "convergence"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "patterns",
+  "title": "How should I read an emissions pattern?",
+  "category": "Patterns",
+  "questions": [
+   "what was the pattern",
+   "what is the pattern",
+   "explain the pattern",
+   "how do i read the chart",
+   "what does this pattern mean"
+  ],
+  "summary": "First identify the quantity: gas mass or CO₂e, sector boundary, geography, period and configuration. Then distinguish the size of the emissions from the way they have been allocated over months or places.",
+  "detail": "A pattern can reflect activity data, an allocation proxy or an assumption. A flat monthly line may mean that timing was not observed, not that real emissions were constant. Exact values for a selected chart must come from the chart’s version-matched data.",
+  "citations": [
+   {
+    "source_id": "rel:dim_period"
+   },
+   {
+    "source_id": "rel:fact_uncertainty"
+   }
+  ],
+  "caveats": [
+   "A visual pattern alone does not establish its physical cause."
+  ],
+  "data_chain": [],
+  "topics": [
+   "pattern"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "causality",
+  "title": "Does a falling bar tell us why emissions fell?",
+  "category": "Patterns",
+  "questions": [
+   "why did emissions fall",
+   "why did industry decline",
+   "why did it decrease",
+   "why did this increase",
+   "what caused the pattern"
+  ],
+  "summary": "A contribution-to-change table can identify which recorded streams increased or decreased. It does not, by itself, separate changes caused by output, efficiency, fuel switching, revised source data or reporting coverage.",
+  "detail": "The explanation should state what the published data actually show and keep proposed causes labelled as hypotheses unless a supporting decomposition or independent evidence is available. A preferred direction is not evidence for changing the inventory.",
+  "citations": [
+   {
+    "source_id": "rel:fact_uncertainty"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "causality",
+   "trend"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "monthly",
+  "title": "Where do the monthly estimates come from?",
+  "category": "Methods",
+  "questions": [
+   "are months measured",
+   "how do you get monthly emissions",
+   "what is te1",
+   "what is te2",
+   "what is te3",
+   "what is te4"
+  ],
+  "summary": "The release distinguishes observed monthly data (TE1), reconstruction from monthly administrative records (TE2), process-based profiles (TE3), and declared flat profiles (TE4). These are different evidence classes, not interchangeable observations.",
+  "detail": "For a fuel stream, monthly sales can describe timing; for a process, production or a process-specific profile may be used instead. The twelve allocated months must reconcile to that year’s total, but this identity does not prove the monthly shape is correct.",
+  "citations": [
+   {
+    "source_id": "rel:dim_period"
+   },
+   {
+    "source_id": "rel:dim_evidence_class"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "monthly"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "mapping",
+  "title": "How are emissions put on the map?",
+  "category": "Methods",
+  "questions": [
+   "how are emissions mapped",
+   "what is spatial allocation",
+   "what is a proxy",
+   "is every map cell measured",
+   "what is s1",
+   "what is s2",
+   "what is s3"
+  ],
+  "summary": "The inventory places emissions using source locations or process-related spatial information, then reconciles the allocation to its control total. The map may use facilities, tracks, livestock, crop area or another declared proxy.",
+  "detail": "The spatial evidence classes describe the basis of placement. A detailed grid is not a network of direct measurements, and an unallocated quantity must remain visible rather than being spread over arbitrary cells.",
+  "citations": [
+   {
+    "source_id": "rel:known_limitations"
+   },
+   {
+    "source_id": "rel:dim_evidence_class"
+   }
+  ],
+  "caveats": [
+   "Mapped detail is not the same as direct measurement or complete source coverage."
+  ],
+  "data_chain": [],
+  "topics": [
+   "mapping"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "spatial_views",
+  "title": "Physical, origin and accounting views",
+  "category": "Methods",
+  "questions": [
+   "what is physical view",
+   "what is origin view",
+   "what is accounting view",
+   "why different spatial views"
+  ],
+  "summary": "A physical view aims to place emissions where the emitting process occurs. An origin view can place a waste flow where it was generated. An accounting view can follow the location where fuel sales were recorded.",
+  "detail": "Those labels describe different meanings of location. For example, the place waste originates is not necessarily the disposal site that releases methane. The assistant must preserve the selected view and the product’s aggregation rules.",
+  "citations": [
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "mapping",
+   "boundary"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "not_estimated",
+  "title": "What do NE, IE, NO and NA mean?",
+  "category": "Methods",
+  "questions": [
+   "what does ne mean",
+   "what is not estimated",
+   "what does ie mean",
+   "what does no mean",
+   "what does na mean",
+   "is missing zero"
+  ],
+  "summary": "NE means not estimated; IE means included elsewhere; NO means not occurring; and NA means not applicable. These distinguish reasons why a numerical estimate is absent.",
+  "detail": "An unestimated source must not become zero when a chart or answer is generated. The same applies to gaps in time or geography: an unavailable district estimate does not establish that the district emitted nothing.",
+  "citations": [
+   {
+    "source_id": "rel:dim_notation_key"
+   },
+   {
+    "source_id": "rel:fact_completeness"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "coverage"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "boundaries",
+  "title": "Why can industry or power have two different totals?",
+  "category": "Methods",
+  "questions": [
+   "why are totals different",
+   "what is the reporting boundary",
+   "what is an ipcc category",
+   "module versus sector",
+   "why 22.58 and 28.13"
+  ],
+  "summary": "A software module describes where a calculation is performed. An IPCC category describes where the resulting emission is reported. They are not necessarily the same grouping.",
+  "detail": "The power note computes grid generation and industrial captive gas generation in one module, but reports them in different IPCC categories. Comparisons must keep the same reporting boundary rather than silently changing between module, IPCC and economic-sector views.",
+  "citations": [
+   {
+    "source_id": "rel:dim_configuration"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "boundary",
+   "industry",
+   "power"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "exposure",
+  "title": "Is an emissions map an air-quality map?",
+  "category": "Basics",
+  "questions": [
+   "is this aqi",
+   "is this air quality",
+   "does this show exposure",
+   "is my district safe",
+   "concentration versus emissions"
+  ],
+  "summary": "No. An emissions map describes estimated releases. Concentration depends on where the material goes, how it disperses and reacts, and the weather; exposure also depends on where people are and how long they are there.",
+  "detail": "The residential and national documentation explicitly separate emitted mass from exposure. The assistant cannot turn an annual mass into an AQI or a personal health-risk estimate.",
+  "citations": [
+   {
+    "source_id": "epa_pm"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "exposure"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "benchmarks",
+  "title": "Are external inventories the ground truth?",
+  "category": "Methods",
+  "questions": [
+   "why is edgar different",
+   "what is edgar",
+   "what is climate trace",
+   "what is faostat",
+   "are benchmarks independent"
+  ],
+  "summary": "External inventories are useful comparisons, not automatic ground truth. A fair comparison needs matching years, gases, scope and GWP conventions. Shared activity data can make two estimates less independent than their different publishers suggest.",
+  "detail": "The aviation note distinguishes a calibration input from an external comparison. The agriculture note similarly keeps benchmark totals separate from inputs used to construct its own inventory.",
+  "citations": [
+   {
+    "source_id": "src:activity-fugitives-benchmark-controls"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "benchmark"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "agriculture_data",
+  "title": "Data behind agriculture",
+  "category": "Sources",
+  "questions": [
+   "what data drive agriculture",
+   "agriculture sources",
+   "livestock data",
+   "fertilizer data",
+   "where does agricultural data come from"
+  ],
+  "summary": "The agriculture note uses the PBS agricultural census for livestock, Pakistani crop statistics for area and production, and NFDC records for fertiliser nitrogen. It distinguishes the fiscal inventory panel from a longer FAOSTAT-based calendar-year reconstruction.",
+  "detail": "Its mapping and evaluation sources serve different roles: livestock-density and crop-area layers support placement, while fire detections help allocate residue burning. Satellite fire locations do not independently set the national burned mass.",
+  "citations": [
+   {
+    "source_id": "src:pbs-census-livestock-by-district-2024"
+   },
+   {
+    "source_id": "src:activity-agriculture-es-fiscal-series"
+   },
+   {
+    "source_id": "src:activity-agriculture-crop-district-panel"
+   },
+   {
+    "source_id": "src:activity-fertilizer-2024"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "PBS livestock / crop statistics / NFDC nitrogen",
+   "Agricultural activity and nitrogen ledgers",
+   "IPCC and EMEP/EEA methods",
+   "Separate timing and spatial proxies"
+  ],
+  "topics": [
+   "agriculture",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "agriculture_method",
+  "title": "Why agriculture produces different gases",
+  "category": "Methods",
+  "questions": [
+   "how is agriculture calculated",
+   "why does agriculture emit methane",
+   "how do crops cause emissions",
+   "agriculture methodology"
+  ],
+  "summary": "The agriculture module separates enteric fermentation, manure management, rice cultivation, managed soils, residue burning and urea application. Different processes produce different gases, so one factor cannot represent all agriculture.",
+  "detail": "A shared nitrogen account follows nitrogen through manure and soils, while residue and dung-fuel transfers connect to residential combustion. Some management shares are declared judgements or unresolved provenance pointers, not national measurements.",
+  "citations": [
+   {
+    "source_id": "rel:method_registry"
+   },
+   {
+    "source_id": "src:pbs-census-livestock-by-district-2024"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "agriculture",
+   "method"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "power_data",
+  "title": "Data behind electricity generation",
+  "category": "Sources",
+  "questions": [
+   "power sources",
+   "what data drive electricity",
+   "nepra data",
+   "captive power data",
+   "electricity methodology"
+  ],
+  "summary": "The power note uses NEPRA’s national fuel-energy table as a control and its plant tables to describe the generating fleet. Industrial captive gas activity comes from OGRA and a captive-plant register.",
+  "detail": "It keeps grid generation separate from industrial self-generation and distinguishes fuel data used for magnitude from generation records used for structure and checks. The coal-energy conversion and K-Electric boundary remain declared structural questions in that note.",
+  "citations": [
+   {
+    "source_id": "src:activity-power-generation-by-fuel"
+   },
+   {
+    "source_id": "src:activity-power-plant-fuel-ledger"
+   },
+   {
+    "source_id": "src:activity-power-captive-gas"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "NEPRA fuel-energy controls / OGRA captive gas",
+   "Fuel-specific conversion and factors",
+   "Grid versus industrial captive categories",
+   "Plant and temporal allocation"
+  ],
+  "topics": [
+   "power",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "power_uncertainty",
+  "title": "Why electricity estimates have alternative cases",
+  "category": "Uncertainty",
+  "questions": [
+   "power uncertainty",
+   "why is power uncertain",
+   "coal calorific uncertainty",
+   "what is the power scenario"
+  ],
+  "summary": "The power note describes alternative readings of the grid fuel-energy control, including a plant-implied coal calorific conversion and K-Electric coverage. Those are structural choices, not random fluctuations around a settled total.",
+  "detail": "A parametric interval is conditional on the selected member of that family. The assistant should not silently select the lowest or highest reading or mix the alternatives into an unweighted probability interval.",
+  "citations": [
+   {
+    "source_id": "rel:dim_configuration"
+   },
+   {
+    "source_id": "src:activity-power-plant-fuel-ledger"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "power",
+   "uncertainty"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "transport_data",
+  "title": "Data behind road and off-road transport",
+  "category": "Sources",
+  "questions": [
+   "transport sources",
+   "road data",
+   "what data drive transport",
+   "ocac data",
+   "transport methodology"
+  ],
+  "summary": "The transport note anchors fuel quantities to OCAC petroleum customer classes and metered transport CNG. Vehicle counts, travel assumptions and fuel intensities distribute the fuel between classes rather than determining the total fuel supply.",
+  "detail": "Retail customer labels do not perfectly identify end uses. The note retains unresolved agricultural and captive diesel uses and distinguishes mixed off-road machinery from the road category.",
+  "citations": [
+   {
+    "source_id": "src:activity-transport-cng-gas"
+   },
+   {
+    "source_id": "src:activity-transport-emep-tier1-road-air"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "OCAC road petroleum / OGRA transport gas",
+   "Conserved fuel-claimant ledger",
+   "Vehicle-class allocation",
+   "Gas-specific factors and declared reporting boundary"
+  ],
+  "topics": [
+   "transport",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "waste_data",
+  "title": "Data behind waste emissions",
+  "category": "Sources",
+  "questions": [
+   "waste sources",
+   "what data drive waste",
+   "waste methodology",
+   "wastewater data"
+  ],
+  "summary": "The waste note uses a district population panel, waste-generation and collection assumptions, waste composition, and sanitation-pathway shares. These are model inputs, not nationally metered landfill tonnages or wastewater flows.",
+  "detail": "One waste quantity is divided among disposal, burning and unresolved fates. Disposal emissions depend on earlier deposits still decaying, while wastewater emissions depend on the organic and nitrogen loads and their treatment pathways.",
+  "citations": [
+   {
+    "source_id": "src:activity-waste-population-district"
+   },
+   {
+    "source_id": "src:activity-waste-hies-disposal-routes"
+   },
+   {
+    "source_id": "src:activity-waste-hydrowaste-pak"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "Population and sanitation records",
+   "Generation, collection and composition inputs",
+   "Shared waste-fate balance",
+   "Decay / burning / wastewater equations"
+  ],
+  "topics": [
+   "waste",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "waste_uncertainty",
+  "title": "Why waste uncertainty can be wide",
+  "category": "Uncertainty",
+  "questions": [
+   "waste uncertainty",
+   "why is waste uncertain",
+   "what is methane correction factor",
+   "what is mcf"
+  ],
+  "summary": "Waste estimates depend on uncertain waste quantities, disposal conditions and wastewater pathways. The methane correction factor describes how much organic material is treated as decomposing under methane-producing conditions.",
+  "detail": "The waste note publishes alternative sewer interpretations rather than claiming that comparison with another inventory settles the hydraulic condition. Its Monte Carlo reruns the parameterised accounts, preserving the waste-fate relationships.",
+  "citations": [
+   {
+    "source_id": "rel:fact_uncertainty"
+   },
+   {
+    "source_id": "src:activity-waste-hies-disposal-routes"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "waste",
+   "uncertainty"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "residential_data",
+  "title": "Data behind household fuel emissions",
+  "category": "Sources",
+  "questions": [
+   "residential sources",
+   "household data",
+   "hies data",
+   "what data drive residential",
+   "residential methodology"
+  ],
+  "summary": "The residential note combines regulatory gas and petroleum records, HIES household-survey quantities, a cross-sector biomass ledger and an expenditure-derived generator estimate.",
+  "detail": "These inputs do not have equal status. It explicitly transfers the nearest household-survey round to the reference period, keeps that date mismatch visible, and separates measured household demand from a ledger-derived biomass destination.",
+  "citations": [
+   {
+    "source_id": "src:activity-residential-hies-hies-fuel-quantities"
+   },
+   {
+    "source_id": "src:activity-residential-fuel-supply"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "OGRA / OCAC + HIES survey",
+   "Fuel quantities and declared vintage transfer",
+   "Dung and residue links to agriculture",
+   "Fuel and gas factors"
+  ],
+  "topics": [
+   "residential",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "dung",
+  "title": "Why are there L and S configurations?",
+  "category": "Uncertainty",
+  "questions": [
+   "what is configuration l",
+   "what is configuration s",
+   "why two dung estimates",
+   "why does residential change"
+  ],
+  "summary": "In the residential note, L assigns the biomass ledger’s diverted dung fuel to household combustion. S uses the household survey’s observed demand and keeps the destination of the remaining diverted material unresolved.",
+  "detail": "The ledger can conserve mass without establishing where it was used. These are different readings of an unresolved flow, not the lower and upper percentiles of a single statistical distribution.",
+  "citations": [
+   {
+    "source_id": "rel:dim_configuration"
+   },
+   {
+    "source_id": "src:activity-residential-hies-hies-fuel-quantities"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "residential",
+   "configuration"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "fugitives_data",
+  "title": "Data behind oil and gas leaks",
+  "category": "Sources",
+  "questions": [
+   "what are fugitives",
+   "fugitive sources",
+   "what data drive fugitives",
+   "oil and gas leaks data"
+  ],
+  "summary": "Fugitive emissions are releases across oil and gas systems, including leaks and other losses. The note uses production, refinery, pipeline, customer and gas-use controls to represent different supply-chain segments.",
+  "detail": "Flare observations and methane-plume detections are separate evaluation or memo layers. The note does not annualise every plume into a national total or add observed flaring on top of factors that already include it.",
+  "citations": [
+   {
+    "source_id": "src:activity-fugitives-anchor-activity-2023-24"
+   },
+   {
+    "source_id": "src:activity-fugitives-distribution-practice-evidence"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "Production and OGRA infrastructure controls",
+   "Segment-specific activity",
+   "IPCC practice-dependent factors",
+   "Separate gas-balance and satellite checks"
+  ],
+  "topics": [
+   "fugitives",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "fugitives_uncertainty",
+  "title": "Why leakage estimates depend on practice",
+  "category": "Uncertainty",
+  "questions": [
+   "fugitives uncertainty",
+   "why is leakage uncertain",
+   "what is unaccounted for gas",
+   "is ufg methane"
+  ],
+  "summary": "Leakage factors depend on equipment and practices that aggregate production figures do not reveal. The fugitives note identifies distribution-pipe material, leak detection and post-meter factors as important unresolved inputs.",
+  "detail": "Unaccounted-for gas is not the same as methane emitted: it can include theft, meter error and accounting effects as well as physical losses. Structural practice cases and conditional parametric intervals remain separate.",
+  "citations": [
+   {
+    "source_id": "rel:fact_uncertainty"
+   },
+   {
+    "source_id": "src:activity-fugitives-anchor-activity-2023-24"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "fugitives",
+   "uncertainty"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "ippu_data",
+  "title": "Data behind industrial processes",
+  "category": "Sources",
+  "questions": [
+   "ippu sources",
+   "cement sources",
+   "clinker data",
+   "what data drive cement",
+   "industrial process data"
+  ],
+  "summary": "The IPPU note reconciles cement and clinker statistics, clinker trade and company-reported clinker production. It keeps chemical process emissions separate from fuel burned for heat.",
+  "detail": "Other processes require their own activity definitions: ammonia needs carbon and recovery accounting; steel needs the production route; product-use gases need equipment and flow information. The uploaded set contains conflicting coverage statements, so current category status must be read from the generated completeness and product catalogues.",
+  "citations": [
+   {
+    "source_id": "src:activity-ippu-company-clinker-series"
+   },
+   {
+    "source_id": "src:activity-ippu-cement-producer-census-2023-24"
+   }
+  ],
+  "caveats": [
+   "Current ammonia, steel and lubricant activation is conflicted in the supplied prose. Consult the release catalogue."
+  ],
+  "data_chain": [
+   "PBS / SBP production and trade",
+   "Producer clinker filings",
+   "Process-specific material balance",
+   "Process factors and separate combustion boundary"
+  ],
+  "topics": [
+   "ippu",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "industry_data",
+  "title": "Data behind industrial combustion",
+  "category": "Sources",
+  "questions": [
+   "industry sources",
+   "what data drive industry",
+   "industry methodology",
+   "brick kiln coal data"
+  ],
+  "summary": "The national article describes industrial combustion from OGRA gas, OCAC industrial petroleum customer classes, and HDIP coal-by-consumer figures republished in the Statistical Supplement. Captive gas generation is computed in the power module but reported with industrial combustion.",
+  "detail": "These are fuel-stream accounts, not a complete factory census. A combined cement/other-industry coal label should not be presented as a clean, separately observed cement-only quantity. Coal-allocation and end-use questions remain part of the evidence record.",
+  "citations": [
+   {
+    "source_id": "src:activity-industry-coal-by-consumer"
+   },
+   {
+    "source_id": "src:activity-industry-brick-kiln-activity-evidence"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "OGRA gas / OCAC petroleum / HDIP coal",
+   "Reported consuming classes",
+   "Fuel energy and manufacturing factors",
+   "Reporting-category regrouping including captive gas"
+  ],
+  "topics": [
+   "industry",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "industry_mapping",
+  "title": "What does the industrial map establish?",
+  "category": "Methods",
+  "questions": [
+   "how much industry mapped",
+   "how much industry have you covered",
+   "are all factories mapped",
+   "industrial coverage"
+  ],
+  "summary": "The national supplement says industrial streams have been placed using kiln locations, the clinker register and built-up proxies. That is a mapping method, not proof of complete factory coverage or directly measured emissions at every location.",
+  "detail": "To state how much of the current industrial total has facility-based placement, use the release’s spatial profile and source-stream ledger. To state what fraction of all Pakistani industry is included, a separately defined completeness denominator is also required.",
+  "citations": [
+   {
+    "source_id": "rel:fact_completeness"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [
+   "A spatially allocated total does not establish the percentage of all Pakistani factories or industrial emissions covered."
+  ],
+  "data_chain": [],
+  "topics": [
+   "industry",
+   "coverage",
+   "mapping"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "railways_data",
+  "title": "Data behind railway emissions",
+  "category": "Sources",
+  "questions": [
+   "railway sources",
+   "railways data",
+   "what data drive rail",
+   "railway methodology"
+  ],
+  "summary": "The railway note starts with the operator’s annual fuel-consumption account, preserves units and converts fuel through density, net calorific value and railway-specific gas factors.",
+  "detail": "Locomotive traction is separated from the reported non-traction claimant. Track and yard geography constrain placement, while corridor weights remain declared assumptions rather than observed train traffic everywhere.",
+  "citations": [
+   {
+    "source_id": "src:activity-railways-fuel-consumption"
+   },
+   {
+    "source_id": "src:activity-railways-agp-evidence"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "Pakistan Railways fuel records",
+   "Density and net calorific conversion",
+   "Traction versus non-traction boundary",
+   "Rail factors and route-constrained allocation"
+  ],
+  "topics": [
+   "railways",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "aviation_data",
+  "title": "Data behind domestic aviation",
+  "category": "Sources",
+  "questions": [
+   "aviation sources",
+   "what data drive aviation",
+   "flight data",
+   "aviation methodology"
+  ],
+  "summary": "The aviation note uses PCAA movements and traffic controls, OCAC aviation fuel customer rows, and several flight and fuel models. It distinguishes who bought the fuel from whether a flight was domestic or international.",
+  "detail": "A domestic flight has both endpoints in Pakistan, regardless of airline nationality. A calibrated OECD partition is not independent validation, and reconstructed route–aircraft records must not be described as observed flights.",
+  "citations": [
+   {
+    "source_id": "src:activity-aviation-airline-controls-2023-24"
+   },
+   {
+    "source_id": "src:activity-aviation-airport-controls-2023-24"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [
+   "PCAA movements / OCAC fuel customers",
+   "Domestic–international boundary bridge",
+   "Named movement or route model",
+   "Separate calibration and evaluation"
+  ],
+  "topics": [
+   "aviation",
+   "sources"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "aviation_uncertainty",
+  "title": "Why aviation has more than one estimate",
+  "category": "Uncertainty",
+  "questions": [
+   "aviation uncertainty",
+   "why aviation estimates differ",
+   "what are m0 m1 m2"
+  ],
+  "summary": "The aviation note separates an aggregate-movement estimate, route-based estimates, a calibrated fuel bridge and a route–aircraft Monte Carlo. These methods have different activity support and evidence roles.",
+  "detail": "The route–aircraft interval must not be attached to the aggregate estimate carried by the national inventory. More detailed modelling is not automatically the selected reference, and the calibrated bridge cannot validate itself.",
+  "citations": [
+   {
+    "source_id": "rel:dim_configuration"
+   },
+   {
+    "source_id": "src:activity-aviation-airline-controls-2023-24"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "aviation",
+   "uncertainty"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "product_priority",
+  "title": "Which source wins when documents disagree?",
+  "category": "Sources",
+  "questions": [
+   "what if sources disagree",
+   "which document is authoritative",
+   "what is the product catalogue",
+   "why are documents inconsistent"
+  ],
+  "summary": "The uploaded notes explicitly give the generated release product catalogue priority when a sector report disagrees with the shipped products. Reports can lag the engine.",
+  "detail": "The assistant therefore needs two levels: a version-matched catalogue and semantic data for current values and coverage, and documents for explaining methods. Until that connection is available, disputed claims are marked as documentation conflicts rather than silently resolved.",
+  "citations": [
+   {
+    "source_id": "rel:known_limitations"
+   },
+   {
+    "source_id": "rel:fact_completeness"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "authority"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "conflict_ippu",
+  "title": "Industrial-process coverage needs a catalogue check",
+  "category": "Evidence checks",
+  "questions": [
+   "is ammonia included",
+   "is steel included",
+   "are lubricants included",
+   "is ippu only cement",
+   "ippu coverage conflict"
+  ],
+  "summary": "The uploaded national category table lists ammonia production, iron and steel, and lubricant use alongside cement. The IPPU technical note and some national prose still describe those non-cement categories as not estimated.",
+  "detail": "This is a documented conflict, not a reason to select either statement by retrieval score. The live release catalogue and category-level facts must resolve current coverage. The assistant can explain both passages but does not infer an activation status from the conflicting prose alone.",
+  "citations": [
+   {
+    "source_id": "rel:fact_completeness"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [
+   "Current coverage status is not resolved by the uploaded prose alone."
+  ],
+  "data_chain": [],
+  "topics": [
+   "conflict",
+   "ippu"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "conflict_uncertainty",
+  "title": "Uncertainty percentages need a source check",
+  "category": "Evidence checks",
+  "questions": [
+   "national uncertainty percentages conflict",
+   "why do percentages not match",
+   "what is the exact national uncertainty"
+  ],
+  "summary": "The national note reports percentile endpoints, a deterministic reference, a Monte Carlo median and percentage summaries. Some printed percentage summaries differ between the prose and the comparison table.",
+  "detail": "For a current answer, use the uncertainty table’s actual percentile endpoints and its declared centre. Do not attach a percentage from one passage to a different centre or silently repair the source inside a public explanation.",
+  "citations": [
+   {
+    "source_id": "rel:fact_uncertainty"
+   },
+   {
+    "source_id": "ipcc_uncertainty"
+   }
+  ],
+  "caveats": [
+   "The precise live uncertainty result requires the generated uncertainty product."
+  ],
+  "data_chain": [],
+  "topics": [
+   "conflict",
+   "uncertainty"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "conflict_transport_air",
+  "title": "Road-pollutant scope needs a catalogue check",
+  "category": "Evidence checks",
+  "questions": [
+   "does transport include brake wear",
+   "does transport include evaporation",
+   "are road air pollutants exhaust only",
+   "transport air coverage"
+  ],
+  "summary": "The supplied transport supplement contains evaporation and tyre, brake and road-wear factors. Some older-style passages in the transport note and national supplement still describe the air layer as an exhaust-only or uncited diagnostic.",
+  "detail": "The actual activated air-process rows and coverage matrix must determine the public answer. A factor being listed in a document is not, by itself, proof that it entered a particular result.",
+  "citations": [
+   {
+    "source_id": "rel:fact_completeness"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [
+   "Do not infer current air-layer process coverage from one prose passage."
+  ],
+  "data_chain": [],
+  "topics": [
+   "conflict",
+   "transport"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "document_pattern",
+  "title": "What pattern does the national report describe?",
+  "category": "Patterns",
+  "questions": [
+   "what pattern does the national report show",
+   "what does the report say is largest",
+   "main national pattern in the documents"
+  ],
+  "summary": "The national article’s reference-year composition figure places agriculture above the other computational modules. Its category table separates livestock, soils, rice and other processes, and distinguishes grid generation from industrial captive generation.",
+  "detail": "This describes the supplied rc54 report, not a live query for another year, gas or configuration. Climate and air-pollutant rankings can differ, and an emissions ranking is not an exposure ranking.",
+  "citations": [
+   {
+    "source_id": "rel:dim_period"
+   },
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [
+   "This describes the uploaded report, not the current selection or a freshly queried inventory."
+  ],
+  "data_chain": [],
+  "topics": [
+   "national",
+   "pattern"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "assistant",
+  "title": "What can this assistant do?",
+  "category": "Basics",
+  "questions": [
+   "what can you do",
+   "help",
+   "how does this assistant work",
+   "can you change the inventory"
+  ],
+  "summary": "I can explain emissions, gases, methods, sources and uncertainty using a prepared knowledge library and the uploaded technical notes. I can show the supporting document and page rather than asking you to trust an unsupported answer.",
+  "detail": "Exact chart questions are sent to a separate inventory adapter. In this starter, that live connection is not configured. I cannot change inventory values, run arbitrary code or browse the web from a public question. Optional AI only helps select existing explanation cards.",
+  "citations": [
+   {
+    "source_id": "rel:known_limitations"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "assistant"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ },
+ {
+  "id": "live_required",
+  "title": "This question needs the selected data",
+  "category": "Evidence checks",
+  "questions": [
+   "live result unavailable",
+   "compare current data",
+   "what is the value"
+  ],
+  "summary": "This question needs a version-matched inventory result for the selected sector, gas, geography, period and configuration. This documentation starter is not connected to that result yet.",
+  "detail": "I can explain the method and evidence requirements now, but I will not invent a value, a trend or an uncertainty interval from report fragments. The live adapter must return the authoritative result and its limitations.",
+  "citations": [
+   {
+    "source_id": "rel:dim_period"
+   },
+   {
+    "source_id": "rel:dim_configuration"
+   }
+  ],
+  "caveats": [],
+  "data_chain": [],
+  "topics": [
+   "live"
+  ],
+  "editorial_status": "draft_for_owner_review",
+  "content_version": "2026-09-14.1"
+ }
+]

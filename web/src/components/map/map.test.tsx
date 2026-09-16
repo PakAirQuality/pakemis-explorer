@@ -50,7 +50,7 @@ function route(url: string, body: Record<string, unknown> | undefined) {
   }
   if ((body?.periods as string[] | undefined)?.[0] === "FY2020-21" && body?.geography_level) return refusal("grain_unavailable", "GrainUnavailable", "spatial products exist for FY2023-24 only", "grid_not_tabular");
   const g = (body?.group_by ?? []) as string[];
-  if (g.includes("sector_id")) return envelope([{ display: "223.454", display_short: D.sectors[0], group: { sector_id: "agriculture" }, extra: { share_pct_short: D.shares[0] } }, { display: "63.371", display_short: D.sectors[1], group: { sector_id: "power" }, extra: { share_pct_short: D.shares[1] } }]);
+  if (g.includes("reporting_sector")) return envelope([{ display: "223.454", display_short: D.sectors[0], group: { reporting_sector: "agriculture" }, extra: { share_pct_short: D.shares[0] } }, { display: "63.371", display_short: D.sectors[1], group: { reporting_sector: "power" }, extra: { share_pct_short: D.shares[1] } }]);
   if (g.includes("module")) return envelope([{ display: "223.454", display_short: D.sectors[0], group: { module: "agriculture" }, extra: { share_pct_short: D.shares[0] } }, { display: "63.371", display_short: D.sectors[1], group: { module: "power" }, extra: { share_pct_short: D.shares[1] } }]);
   if (g.includes("spatial_view")) return envelope([{ display: "176.66", display_short: D.views[0], group: { spatial_view: "physical" } }, { display: "32.33", display_short: D.views[1], group: { spatial_view: "accounting" } }, { display: "19.73", display_short: D.views[2], group: { spatial_view: "origin" } }]);
   if (g.includes("province")) return envelope([{ display: D.punjabFull, display_short: D.punjab, group: { province: "Punjab" }, extra: { unallocated_short: U.punjab, share_pct_short: "50.6" } }, { display: "134.7255", display_short: D.sindh, group: { province: "Sindh" }, extra: { unallocated_short: U.sindh, share_pct_short: "29.8" } }], { unallocated: { level: "adm1", by_province: PROVINCE_ROWS, note: "mass retained at ADM1 and placed no finer" }, derived: { unallocated_total_short: U.total, placed_short: U.placed } });
@@ -95,7 +95,7 @@ describe("the /map stub", () => {
 const base: ExplorerState = { level: "adm2", period: "FY2023-24", month: null, sector: null, gas: null, pol: null, config: "REF_2023_24", gwp: "AR5", view: "all", geo: null, cell: null, tab: "summary", layer: "magnitude", scale: "relative", pane: "map", c: null, cam: null, raster: false, view3d: false };
 function ctx(state: ExplorerState): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
-  return { state, setState: vi.fn(), release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: undefined, agent: { enabled: false, model: "", reason: "not mounted" }, isMobile: false };
+  return { state, setState: vi.fn(), release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: undefined, agent: { enabled: false, model: "", reason: "not mounted", library: "", usable: false }, isMobile: false };
 }
 function LegendHost({ state, env, provinces }: { state: ExplorerState; env: Envelope; provinces: Envelope | null }) {
   const { dims, release } = useExplorer();

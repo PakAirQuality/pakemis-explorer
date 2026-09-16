@@ -1,0 +1,145 @@
+[
+ {
+  "id": "nasa_climate",
+  "title": "NASA · Causes of climate change",
+  "kind": "general_science",
+  "url": "https://science.nasa.gov/climate-change/causes/",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_ghg",
+  "title": "EPA · Overview of greenhouse gases",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/ghgemissions/overview-greenhouse-gases",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_co2",
+  "title": "EPA · Carbon dioxide emissions",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/ghgemissions/carbon-dioxide-emissions",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_ch4",
+  "title": "EPA · Methane emissions",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/ghgemissions/methane-emissions",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_n2o",
+  "title": "EPA · Nitrous oxide emissions",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/ghgemissions/nitrous-oxide-emissions",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_fgas",
+  "title": "EPA · Fluorinated gas emissions",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/ghgemissions/fluorinated-gas-emissions",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_pm",
+  "title": "EPA · Particulate matter basics",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/pm-pollution/particulate-matter-pm-basics",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_nox",
+  "title": "EPA · Nitrogen dioxide basics",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/no2-pollution/basic-information-about-no2",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_so2",
+  "title": "EPA · Sulfur dioxide basics",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/so2-pollution/sulfur-dioxide-basics",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_co",
+  "title": "EPA · Carbon monoxide basics",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/co-pollution/basic-information-about-carbon-monoxide-co-outdoor-air-pollution",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "epa_o3",
+  "title": "EPA · Ground-level ozone basics",
+  "kind": "general_science",
+  "url": "https://www.epa.gov/ground-level-ozone-pollution/ground-level-ozone-basics",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "ccac_bc",
+  "title": "Climate & Clean Air Coalition · Black carbon",
+  "kind": "general_science",
+  "url": "https://www.ccacoalition.org/short-lived-climate-pollutants/black-carbon",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ },
+ {
+  "id": "ipcc_uncertainty",
+  "title": "IPCC · 2006 Guidelines, Volume 1, Chapter 3: Uncertainties",
+  "kind": "general_science",
+  "url": "https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/1_Volume1/V1_3_Ch3_Uncertainties.pdf",
+  "accessed": "2026-09-14",
+  "file": null,
+  "pages": null,
+  "release_id": null,
+  "sha256": null
+ }
+]

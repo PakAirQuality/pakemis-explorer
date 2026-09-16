@@ -230,7 +230,7 @@ describe("ClaimPanel, the Evidence tab and ClaimLink", () => {
   });
 
   it("the Result details drawer's Evidence tab fetches the chosen cell of the envelope", async () => {
-    const env = envelope([{ display: "223.454", display_short: "223.45", group: { sector_id: "agriculture" } }, { display: "63.370", display_short: "63.37", group: { sector_id: "power" } }], { receipt: "060bde899b5bb984553b61722584952a" }) as unknown as Envelope;
+    const env = envelope([{ display: "223.454", display_short: "223.45", group: { reporting_sector: "agriculture" } }, { display: "63.370", display_short: "63.37", group: { reporting_sector: "power" } }], { receipt: "060bde899b5bb984553b61722584952a" }) as unknown as Envelope;
     render(
       <Providers>
         <EnvelopeDrawer env={env} tab="evidence" labels={labels} onClose={() => undefined} />
@@ -238,7 +238,7 @@ describe("ClaimPanel, the Evidence tab and ClaimLink", () => {
     );
     expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
     const picker = screen.getByTestId("evidence-cell");
-    expect(within(picker).getAllByRole("option").map((o) => o.textContent)).toEqual(["Agriculture · 223.45", "Power · 63.37"]);
+    expect(within(picker).getAllByRole("option").map((o) => o.textContent)).toEqual(["Agriculture · 223.45", "Power (grid generation) · 63.37"]);
     expect(await screen.findByTestId("claim-record")).toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining("/claim?receipt=060bde899b5bb984553b61722584952a&cell=0"));
     fireEvent.change(picker, { target: { value: "1" } });

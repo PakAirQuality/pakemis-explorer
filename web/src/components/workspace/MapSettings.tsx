@@ -23,7 +23,6 @@ import { configLabel, configTooltip, gwpLabel, gwpTooltip, monthLabel, periodLab
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { LayerSwitch } from "@/components/map/LayerSwitch";
 import { BASEMAP_CHOICES, type BasemapChoice } from "@/components/map/basemap";
-import { mapsPeriod } from "@/components/map/layerModes";
 import { SCALE_MODES, type ScaleMode } from "@/lib/urlState";
 import { SCALE_NOTES, SETTINGS } from "./copy";
 

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Embed example</title>
+<p>Example integration only. Start the assistant service first and replace this service origin and context with your site's actual values.</p>
+<script src="http://127.0.0.1:8000/static/widget.js" defer></script>
+<emission-flow-assistant id="assistant" api-base="http://127.0.0.1:8000"></emission-flow-assistant>
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  await customElements.whenDefined('emission-flow-assistant');
+  document.getElementById('assistant').context = {
+    release_id: '1.0.0rc54', view: 'map', boundary: 'ipcc', sector: 'agriculture',
+    category_id: null, metric: 'CH4', gwp: 'AR5', geography_id: 'PK',
+    start_period: 'FY2023-24', end_period: 'FY2023-24', month: null,
+    configuration: 'L', spatial_view: 'combined', stream_id: null, language: 'en'
+  };
+});
+</script>
+<!-- Serve this example through HTTP. Add the exact parent origin to EF_ALLOWED_ORIGINS.
+     Production should use the actual HTTPS service origin, never an API key in client code.
+     Depending on the host CSP, move the inline context script into a permitted external file. -->
+</html>

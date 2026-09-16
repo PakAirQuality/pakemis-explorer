@@ -4,7 +4,9 @@
  * controls that drive both the deck and the map, floating top-right over the map —
  * **Provinces | Districts** (writes `level`), **Sector**, **Gas / metric** and the **Year**
  * slider (YearSlider.tsx) — then the active view in one line and **Reset filters**. `«`
- * collapses it to a 48 px rail whose icons re-open it. Everything else that used to live here
+ * collapses it to a 48 px rail whose icons re-open it — EXCEPT where the caller passes
+ * `rail={false}`, which is the wide workspace since the assistant took the right column: there
+ * the closed panel is nothing at all and the map's own button stack carries the way back in. Everything else that used to live here
  * — the estimate, the warming potentials, the spatial view, the layer switch, the opacity and
  * the grid raster — moved into Map settings (MapSettings.tsx). Under 1280 px, where the workspace shows one pane at a
  * time, the panel is a full-height sheet opened from the Filters button of whichever pane is on
@@ -16,7 +18,7 @@
 import { ChevronsLeft, ChevronsRight, Factory, MapPin, RotateCcw, Wind, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Level } from "@/lib/urlState";
-import { districtName, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabel, districtOptions } from "@/lib/labels";
+import { districtOptions, gasLabel, gwpIsDefault, gwpLabel, periodShort, sectorLabel } from "@/lib/labels";
 import { POLLUTANTS, POLLUTANT_LABELS } from "@/lib/explore/query";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { SEGMENT_GROUP_CLASS, segmentClass } from "./PaneSwitch";
@@ -60,9 +62,15 @@ export type FilterPanelProps = {
   /** The map display controls (opacity, basemap, boundaries + the URL-keyed map choices),
    * folded in here when the floating "Map settings" pill came off the map. */
   display?: import("./MapSettings").MapSettingsProps;
+  /** Whether the CLOSED panel leaves a 48 px icon rail behind. False where something else already
+   * occupies that edge and another control re-opens the panel. */
+  rail?: boolean;
+  /** How far the open card sits from the viewport's right edge, in px, when something is docked
+   * there. Defaults to the panel's own inset. */
+  rightInset?: number;
 };
 
-export function FilterPanel({ open, onToggle, place, mobile = false, onResetView, display }: FilterPanelProps) {
+export function FilterPanel({ open, onToggle, place, mobile = false, onResetView, display, rail = true, rightInset }: FilterPanelProps) {
   const { state, setState, labels, dims, defaults } = useExplorer();
   const districts = districtOptions(dims);
   const reset = () => {
@@ -93,7 +101,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
         <div className="micro mb-1.5">{FILTERS.sector}</div>
         <select className={SELECT_CLASS} value={state.sector ?? ""} onChange={(e) => setState({ sector: e.target.value || null })} aria-label={FILTERS.sector} data-testid="sector-select">
           <option value="">{sectorLabel(labels, null)}</option>
-          {dims.sectors.map((s) => (
+          {dims.reporting_sectors.map((s) => (
             <option key={s} value={s}>{sectorLabel(labels, s)}</option>
           ))}
         </select>
@@ -171,6 +179,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
   }
 
   if (!open) {
+    if (!rail) return null;
     return (
       <aside className="absolute right-5 top-5 z-20 flex flex-col items-center gap-1 rounded-2xl bg-card p-1.5 shadow-lg" style={{ width: RAIL_WIDTH }} data-testid="filter-panel" data-open="0">
         <button type="button" aria-label={FILTERS.expand} title={FILTERS.expand} onClick={() => onToggle(true)} className="flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:bg-surface-3 hover:text-fg" data-testid="filters-expand">
@@ -190,7 +199,7 @@ export function FilterPanel({ open, onToggle, place, mobile = false, onResetView
   }
 
   return (
-    <aside className="card absolute right-5 top-5 z-20 max-h-[calc(100dvh-40px)] w-[340px] overflow-y-auto p-4 shadow-lg" data-testid="filter-panel" data-open="1">
+    <aside className="card absolute top-5 z-20 max-h-[calc(100dvh-40px)] w-[340px] overflow-y-auto p-4 shadow-lg" style={{ right: rightInset ?? FILTER_INSET_PX }} data-testid="filter-panel" data-open="1">
       <div className="mb-3 flex items-center justify-between">
         <div className="micro">{FILTERS.title}</div>
         <button type="button" aria-label={FILTERS.collapse} title={FILTERS.collapse} onClick={() => onToggle(false)} className="pill p-1 text-muted hover:bg-surface-3 hover:text-fg" data-testid="filters-collapse">

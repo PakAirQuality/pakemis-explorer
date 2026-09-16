@@ -1,7 +1,7 @@
 "use client";
 /** The controls: level, period, month, configuration, GWP, sector, gas, view, raster. Every list comes from the dims / labels / openapi contract; every select shows the release's label with the raw id as secondary text. */
 import { useExplorer } from "@/components/ExplorerContext";
-import { configLabel, configTooltip, gasLabel, gwpLabel, gwpTooltip, monthLabel, periodBasisNote, periodLabel, periodShort, sectorLabel, viewLabel } from "@/lib/labels";
+import { configLabel, configTooltip, gasLabel, gwpLabel, gwpTooltip, monthLabel, periodBasisNote, periodLabel, periodShort, reportingSectorLabel, viewLabel } from "@/lib/labels";
 import type { Level } from "@/lib/urlState";
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
@@ -59,7 +59,7 @@ export function ExplorePanel() {
       <Field label="Sector" hint={state.sector ?? "all"}>
         <select className={SEL} value={state.sector ?? ""} onChange={(e) => setState({ sector: e.target.value || null })}>
           <option value="">All sectors</option>
-          {dims.sectors.map((s) => <option key={s} value={s}>{sectorLabel(labels, s)}</option>)}
+          {dims.reporting_sectors.map((s) => <option key={s} value={s}>{reportingSectorLabel(labels, s)}</option>)}
         </select>
       </Field>
       <Field label="Gas" hint={state.gas ?? "all"}>

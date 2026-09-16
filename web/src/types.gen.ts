@@ -580,7 +580,7 @@ export interface components {
         };
         /**
          * QueryEmissions
-         * @description QueryEmissions(periods: tuple = (), basis: str = '', configuration_id: str = '', gwp_basis: str = '', gases: tuple = (), sectors: tuple = (), ipcc_codes: tuple = (), categories: tuple = (), streams: tuple = (), geography_level: str = '', geography_ids: tuple = (), months: tuple = (), spatial_view: str = '', group_by: tuple = (), order_by: str = '', limit: int = 0, defaults_applied: tuple = ())
+         * @description QueryEmissions(periods: tuple = (), basis: str = '', configuration_id: str = '', gwp_basis: str = '', gases: tuple = (), sectors: tuple = (), reporting_sectors: tuple = (), ipcc_codes: tuple = (), categories: tuple = (), streams: tuple = (), geography_level: str = '', geography_ids: tuple = (), months: tuple = (), spatial_view: str = '', group_by: tuple = (), order_by: str = '', limit: int = 0, defaults_applied: tuple = ())
          */
         QueryEmissions: {
             /**
@@ -632,6 +632,8 @@ export interface components {
             order_by: string;
             /** Periods */
             periods?: string[];
+            /** Reporting Sectors */
+            reporting_sectors?: string[];
             /** Sectors */
             sectors?: string[];
             /**

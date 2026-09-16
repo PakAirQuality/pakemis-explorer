@@ -9,6 +9,7 @@ import os
 from pakemis_query import errors as E
 from pakemis_query.engine import DECIMAL, REFERENCE_PERIOD
 from pakemis_query.envelope import envelope, value
+from pakemis_query.receipt import receipt_id
 from pakemis_query.models import (CompareRequest, EvidenceRequest, GridCellRequest, MethodRequest,
                                   QueryEmissions, SpatialLineageRequest, TimeseriesRequest,
                                   TransferRequest, UncertaintyRequest, CompletenessRequest,
@@ -54,8 +55,17 @@ def get_timeseries(engine, req):
         months = tuple(m["month"] for m in engine.release.dim("dim_month"))
         series = dataclasses.replace(series, months=months)
     out = engine.query_emissions(series)
+    # RE-MINT THE RECEIPT OVER THE REQUEST WE ACTUALLY STORE. query_emissions hashed it over the
+    # EXPANDED QueryEmissions above; overwriting `request` here without re-minting left an envelope
+    # whose stored request does not reproduce its stored receipt, so a replay of a timeseries
+    # download link failed `receipt_not_reproduced` while every other request type replayed. The
+    # citation carries the receipt too, and moved with it. compare_emissions never had this
+    # because it passes its own canonical request into envelope() - see the call below.
     out["request_type"] = "get_timeseries"
     out["request"] = canonical_json(req)
+    minted = receipt_id(out["request"], engine.release.release_id, out["result_sha256"])
+    out["citation"] = out["citation"].replace(out["receipt"], minted)
+    out["receipt"] = minted
     return out
 
 

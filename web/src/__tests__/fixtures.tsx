@@ -38,6 +38,7 @@ export const RELEASE = {
       ],
     },
     sectors: ["agriculture", "power", "residential"],
+    reporting_sectors: ["agriculture", "power", "residential"],
   },
   labels: {
     configurations: {
@@ -57,6 +58,10 @@ export const RELEASE = {
     views: { all: "all three views", physical: "physical: where it is emitted", origin: "origin: where the generating activity originates", accounting: "accounting: where the statistic is booked" },
     limitations: {
       lulucf_excluded: "LULUCF is excluded",
+      // CARRIED SO THE GUARD IS NOT VACUOUS. The release publishes this and the API serves it; no
+      // Explorer surface may render it (see SectorRoute). A fixture without it would let the guard
+      // pass by accident.
+      industry_reported_fuel_series: "REPORTED-FUEL: the industry series is under reconciliation",
       ar6_adm2_ne: "AR6 CO2e is not carried at ADM2",
       no_polygon_units: "the residual territories row carries mass at ADM1",
       calendar_basis_ne: "a calendar request is refused, never computed",
@@ -69,7 +74,7 @@ export const RELEASE = {
     sectors_short: { industry: "Industrial fuel use" },
     economic_sectors: { industrial: "Industrial (covered direct sources)" },
     economic_sectors_short: { industrial: "Industrial" },
-    reporting_sectors: { industry: "Industrial fuel use incl. captive generation — covered sources", power: "Power (grid generation)" },
+    reporting_sectors: { agriculture: "Agriculture", power: "Power (grid generation)", residential: "Residential", transport: "Transport", waste: "Waste", industry: "Industrial fuel use incl. captive generation — covered sources" },
     reporting_sectors_short: { industry: "Industrial fuel use", power: "Power" },
     reporting_sector_modules: { industry: ["industry", "power"], power: ["power"] },
     geographies: { "ADM1:Punjab": "Punjab", "ADM1:Other": "ICT, AJK & Gilgit-Baltistan (combined)" },
@@ -81,7 +86,7 @@ export const RELEASE = {
     gwp_bases: { reported: "AR5", secondary: "AR6", factors: { AR5: {}, AR6: {} } },
     licences: { code: "MIT", data_and_text: "CC-BY-4.0", odbl_carveouts: ["data/gis/rail/pak_rail_network.geojson"], odbl_note: "OpenStreetMap (c) contributors. A produced work needs attribution only; an extracted geometry or coordinate TABLE stays a database under ODbL.", undetermined: "UNEP MARS plume observations carry no licence declaration in the record." },
   },
-  agent: { enabled: false, model: "", reason: "not mounted" },
+  agent: { enabled: false, model: "", reason: "not mounted", library: "", usable: false },
   doi: { data: "", documentation: "", software: "" },
   identity_line: "PakEmis · public-data reconstruction of Pakistan's emissions, excluding land use and forestry · 2020–21 to 2023–24",
   citation: {
@@ -141,7 +146,7 @@ export function envelope(cells: MockCell[], overrides: Record<string, unknown> =
   };
 }
 
-export type MockBody = { group_by?: string[]; configuration_id?: string; periods?: string[]; geography_level?: string; geography_ids?: string[]; sectors?: string[]; gases?: string[]; months?: string[]; [k: string]: unknown };
+export type MockBody = { group_by?: string[]; configuration_id?: string; periods?: string[]; geography_level?: string; geography_ids?: string[]; sectors?: string[]; reporting_sectors?: string[]; gases?: string[]; months?: string[]; [k: string]: unknown };
 /** A typed refusal the mocked API answers with a 422 (`mockFetch` reads the marker). */
 export function refusal(error: string, error_class: string, message: string, limitation_id: string | null = null) {
   return { __status: 422, body: { error, error_class, message, limitation_id, detail: {} } };

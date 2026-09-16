@@ -363,23 +363,24 @@ function scopeOf(s: ExploreState): QueryEmissions {
     periods: [s.period],
     configuration_id: s.config,
     gwp_basis: s.gwp,
-    sectors: s.sector ? [s.sector] : [],
+    reporting_sectors: s.sector ? [s.sector] : [],
     gases: s.gas ? [s.gas] : [],
     categories: s.category ? [s.category] : [],
     ...(s.level === "national" ? {} : { geography_level: s.level, geography_ids: s.geos.length === 1 ? s.geos : [], spatial_view: s.view }),
   });
 }
 
-/** The key a sector breakdown groups by: `sector_id` nationally, `module` at province or district grain (the release carries `sector_id` at national grain only). */
-export function sectorKey(level: Grain): "sector_id" | "module" {
-  return level === "national" ? "sector_id" : "module";
+/** The key a sector breakdown groups by: the REPORTING sector, at every grain (rc54). */
+export function sectorKey(): "reporting_sector" {
+  // rc54: the district tables carry the reporting axis, so the sector key no longer
+  // depends on the level. It used to be sector_id nationally and the MODULE below that,
+  // which meant the same question answered differently one click deeper.
+  return "reporting_sector";
 }
 
 /** The composition key the two estimates are compared over: the sector's categories, a category's gases, else the sectors. */
-function compositionKey(s: ExploreState): string {
-  if (s.sector && !s.category && s.level === "national") return "category";
-  if (s.sector) return "gas";
-  return sectorKey(s.level);
+function compositionKey(): "reporting_sector" {
+  return "reporting_sector";
 }
 
 export const CATEGORY_GRAIN_REFUSAL: Refusal = {
@@ -401,7 +402,7 @@ export function buildQuery(s: ExploreState, ctx: ExploreContext): QueryPlan {
       return { kind: "timeseries", body: { query: compact(rest), step: "annual" }, groupBy: "period_id", chart: "line" };
     }
     case "sector": {
-      const key = sectorKey(s.level);
+      const key = sectorKey();
       return { kind: "emissions", body: compact({ ...scope, group_by: [key], order_by: "value desc" }), groupBy: key, chart: "bars" };
     }
     case "category":
@@ -416,7 +417,7 @@ export function buildQuery(s: ExploreState, ctx: ExploreContext): QueryPlan {
       return { kind: "emissions", body: compact({ ...rest, group_by: [key], order_by: "value desc" }), groupBy: key, chart: "bars", ...(s.geos.length > 1 ? { filterTo: { key, ids: s.geos } } : {}) };
     }
     case "estimate": {
-      const key = compositionKey(s);
+      const key = compositionKey();
       const side = (config: string) => compact({ ...scope, configuration_id: config, group_by: [key], order_by: "value desc" });
       return { kind: "compare", body: { left: side(ctx.reference), right: side(ctx.survey ?? ctx.reference), mode: "absolute" }, groupBy: key, chart: "grouped" };
     }
@@ -473,6 +474,9 @@ function buildAir(s: ExploreState): QueryPlan {
   const base: QueryAir = { pollutants: [s.pollutant!] };
   if (s.sector) base.sectors = [s.sector];
   if (s.range) return { kind: "air", body: { ...base, years: AIR_YEARS, group_by: ["year"] }, groupBy: "year", chart: "line" };
+  // THE AIR LANE STAYS MODULE-KEYED, and the contract says so: fact_air_* carries no
+  // reporting_sector. Grouping it on the reporting axis would 400, and pretending otherwise
+  // would put a module number under a reporting label.
   if (s.level === "national") return { kind: "air", body: { ...base, group_by: ["sector_id"], order_by: "value desc" }, groupBy: "sector_id", chart: "bars" };
   const key = s.level === "adm2" ? "shape_id" : "province";
   return {

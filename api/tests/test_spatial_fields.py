@@ -72,7 +72,16 @@ def test_adm1_province_rows_and_cells_carry_unallocated_short(client):
     assert env["derived"]["unallocated_by_province_short"]["Punjab"] == "0.04"
     for c in env["values"]:
         assert c[PROVINCE_UNALLOCATED_FIELD] == rows[c["group"]["province"]][PROVINCE_UNALLOCATED_FIELD]
-    assert not any(f in c for c in env["values"] for f in FIELDS)          # adm1 carries no spatial class
+    # DELIBERATELY INVERTED. This asserted "adm1 carries no spatial class", which was the whole
+    # defect: the province is the grain people ask about, and it was the one grain that could not say
+    # its figure was an allocation. A province cell grouped across every sector names no single
+    # module, so its class is absent and its basis says so - it borrows no class it cannot justify.
+    for c in env["values"]:
+        assert c[SPATIAL_CLASS_FIELD] in ("S1", "S2", "S3", "S4", "NA"), c["group"]
+        # a province cell summing every module carries the class of its DOMINANT one and says which,
+        # which is the same rule the district cells follow
+        assert c["spatial_class_basis"].startswith("%s of %s|" % (c[SPATIAL_CLASS_FIELD], c["dominant_module"]))
+        assert "the module whose rows sum to the largest" in c["spatial_class_basis"]
     national = client.post(PREFIX + "/query/emissions", json={"group_by": ["sector_id"]}).json()
     assert "spatial_fields" not in national and not any(f in c for c in national["values"] for f in FIELDS + [PROVINCE_UNALLOCATED_FIELD])
 
@@ -87,3 +96,51 @@ def test_downloads_and_declaration(client, adm2):
     assert derived[PROVINCE_UNALLOCATED_FIELD]["decimals"] == 2 and "4.84" in derived[PROVINCE_UNALLOCATED_FIELD]["sentence"]
     assert "never to a download" in derived[PROVINCE_UNALLOCATED_FIELD]["sentence"].lower() or "never to a download" in derived[PROVINCE_UNALLOCATED_FIELD]["sentence"]
     assert "Never added to a download" in derived[SPATIAL_CLASS_FIELD]["sentence"]
+
+
+@pytest.fixture(scope="module")
+def adm1_transport(client):
+    r = client.post(PREFIX + "/query/emissions", json={"geography_level": "adm1", "geography_ids": ["Punjab", "Sindh"],
+                                                       "sectors": ["transport"], "group_by": ["province"]})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_a_province_cell_says_it_is_an_allocation(adm1_transport):
+    """⚠ THE GRAIN PEOPLE ACTUALLY ASK ABOUT WAS THE ONE GRAIN WITH NO SIGNAL.
+
+    These fields were gated to adm2. So a reader shown "Punjab 27.49 Mt CO2e" for road transport had
+    no way to learn - and no interface any way to say - that the figure is a national fuel total
+    spread across provinces by a road-density proxy, not an observation of Punjab. Worse, Punjab and
+    Sindh read as two independently evidenced provincial datasets when they are two shares of one
+    number.
+
+    This is the test I would most want kept in this file: without it the gate can be narrowed back to
+    adm2 and nothing fails - the answers still render, they just quietly stop admitting what they are.
+    """
+    cells = adm1_transport["values"]
+    assert len(cells) == 2
+    for c in cells:
+        assert c[SPATIAL_CLASS_FIELD] == "S3", c["group"]
+        assert c["placement_class"] == "diffuse_by_nature"
+        assert c["allocation_surface"] == "road_density"
+        assert c["dominant_module"] == "transport"
+        assert c["spatial_class_basis"].startswith("S3 of transport|")
+    assert adm1_transport["spatial_fields"]["fields"] == FIELDS
+
+
+def test_the_decoration_changes_no_number_and_no_receipt(client, adm1_transport):
+    """The guarantee that makes decorating a province safe: the receipt and the result digest are
+    minted before this runs, so replaying the receipt must reproduce them exactly."""
+    replay = client.get(PREFIX + "/receipt/%s" % adm1_transport["receipt"]).json()
+    assert replay["receipt"] == adm1_transport["receipt"]
+    assert replay["result_sha256"] == adm1_transport["result_sha256"]
+    assert [v["display"] for v in replay["values"]] == [v["display"] for v in adm1_transport["values"]]
+
+
+def test_a_national_envelope_is_still_untouched(client):
+    r = client.post(PREFIX + "/query/emissions", json={"sectors": ["transport"]})
+    assert r.status_code == 200, r.text
+    env = r.json()
+    assert "spatial_fields" not in env
+    assert all(f not in env["values"][0] for f in FIELDS)

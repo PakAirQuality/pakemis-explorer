@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { createSseParser } from "./sse";
 import { loadConversation, saveConversation } from "./store";
+import { rememberConversation } from "./history";
 import { clientHistory } from "./timeline";
 import type { AskEvent, DoneEvent, MapActionEvent, Turn } from "./types";
 
@@ -66,7 +67,18 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const persist = useCallback((id: string | null, next: Turn[]) => {
-    if (id) saveConversation({ conversation_id: id, turns: next, updated: Date.now() });
+    if (!id) return;
+    saveConversation({ conversation_id: id, turns: next, updated: Date.now() });
+    // and the index, here rather than anywhere else: the list of conversations and the transcripts
+    // it lists are written in the same breath, so they cannot disagree about what exists
+    const asked = next.filter((t) => t.message.trim());
+    if (!asked.length) return;
+    rememberConversation({
+      id,
+      title: asked[0].message.trim(),
+      lastQuestion: asked[asked.length - 1].message.trim(),
+      ui_state: asked[0].ui_state,
+    });
   }, []);
 
   const send = useCallback(
@@ -109,11 +121,18 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
           return;
         }
         if (res.status === 503) {
-          const body = (await res.json().catch(() => ({}))) as { reason?: string; error?: string };
-          setDisabled({ reason: body.reason ?? body.error ?? "agent_disabled" });
-          setTurns((ts) => ts.filter((t) => t.id !== turn.id));
-          if (abortRef.current === ac) abortRef.current = null;
-          setStreaming(false);
+          // A 503 IS ONE QUESTION FAILING, NOT THE PANEL DYING. This used to delete the user's turn
+          // and set a sticky panel-wide disabled state: the question vanished from the transcript
+          // with no trace, every previously answered turn stopped rendering, and the only way out
+          // threw the conversation away. It matters more now that the server answers explanations
+          // without a model key and returns 503 only for a question that needs the query - so a
+          // visitor could ask three things happily and lose all of them on the fourth.
+          //
+          // The 429 path already did the right thing: keep the turn, show an error card, leave the
+          // composer usable. This follows it, and shows the server's own `message`, which was being
+          // discarded in favour of the bare reason code.
+          const body = (await res.json().catch(() => ({}))) as { reason?: string; error?: string; message?: string };
+          fail(body.error ?? "agent_disabled", body.message ?? body.reason ?? "the assistant is not available for this question");
           return;
         }
         if (!res.ok) {

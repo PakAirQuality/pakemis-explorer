@@ -1,66 +1,89 @@
 "use client";
 /**
- * Downloads, purpose-first, in the workspace's language (regenerated 2026-09-07 to the user's
- * mockup): a Files | API pill beside the nav capsule; the Files mode opens with a hero —
- * eyebrow, "Download the inventory", the two-line promise, the reporting window and licence as
- * chips, and the complete release's archive as the primary action — then "What do you want to
- * study?" with six purpose cards on the left and the YOUR DOWNLOAD rail on the right: the
- * chosen purpose's family as the API titles it, one row per file with a button per format that
- * exists (the sha256 as the link's ETag hint), the always-included note, a Download-N-files
- * action that clicks every file's first format, Preview columns and Copy citation, the
- * checksums, and the reference configuration in the release's own labels. The API mode holds
- * Query through the API, Reproduce a result (`?receipt=` forces this mode) and the citation /
- * identity table — the ONLY place the version string appears.
+ * Downloads, as five collections a reader can name.
+ *
+ * WHAT THIS REPLACED. The page was a purpose-picker whose rail listed `fact_annual`, `dim_category`,
+ * `dim_evidence_class` — the warehouse's own table names, offered as products. Someone who wanted
+ * Pakistan's fuel sales or its livestock counts had to learn a star schema to find them, and the
+ * most valuable material, the activity data behind the estimates, was not offered at all.
+ *
+ * Now: Emissions, Activity data, Air pollutants, Methods & uncertainty, Maps & grids. Each download
+ * has a title and a sentence saying who it is for; the file underneath comes from `catalogue.ts`,
+ * whose every name a test holds against the served catalogue.
+ *
+ * ⚠ THE AUDIT IN downloads.test.tsx IS THE TIGHTEST CONSTRAINT HERE. It walks every text node and
+ * requires each `\d+\.\d+` to be a string the server sent, and forbids `FY`, the version string,
+ * `REF_2023_24` and a bare `AR5`. Sizes therefore stay in the `title` attribute through
+ * `bytesWords()`, periods go through the release's labels, and the version lives in the citation
+ * table alone. "7.4 MB" on screen would fail the build, which is the point.
+ *
+ * The API mode is unchanged, and `?receipt=` still forces it: that URL is what every receipt in the
+ * app links to, including the assistant's answers.
  */
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Archive, BarChart3, CalendarDays, Check, Copy, Download, ExternalLink, FileJson, FileText, Info, Layers, LineChart, MapPin, ShieldCheck, Table2, Wind } from "lucide-react";
+import { Copy, Download, ExternalLink, FileJson, Search, Table2, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { absoluteApiBase, api } from "@/lib/api";
-import { configLabel, gwpLabel, periodRange, periodShort } from "@/lib/labels";
-import { bytesWords, familyProducts, narrowProducts, productUrl, useProducts, type Product, type ProductFamily } from "@/lib/products";
+import { gasLabel, geographyName, periodRange } from "@/lib/labels";
+import { bytesWords, productUrl, useProducts, type Product } from "@/lib/products";
 import { releaseCitation, releaseDoi, releaseFacts, type Citation } from "@/lib/release";
-import { useReferencePeriod } from "@/lib/queries";
+import { useEmissions } from "@/lib/queries";
 import { curlLine, scopeBody, stateFromEnvelopeRequest } from "@/lib/requests";
 import { hrefForState } from "@/lib/urlState";
 import { NavCapsule } from "@/components/shell/NavCapsule";
 import { SEGMENT_GROUP_CLASS, segmentClass } from "@/components/workspace/PaneSwitch";
 import { Widget, WIDGET_TITLE } from "@/components/ui/Widget";
 import { Frame } from "@/components/ui/Frame";
-import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
-import { DOWNLOADS, PURPOSES, purposeById, type Purpose } from "./copy";
+import { RefusalCard } from "@/components/ui/RefusalCard";
+import { DOWNLOADS } from "./copy";
+import { COLLECTIONS, matches, type Collection, type Download as Item } from "./catalogue";
+import { PreviewDrawer } from "./PreviewDrawer";
+import { MapMotif, MOTIF_CREDIT } from "@/components/shell/MapMotif";
 
 const TEXT_BUTTON = "inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline";
-const FORMAT_BUTTON = "pill inline-flex items-center gap-1 border border-line-strong px-2.5 py-1 text-xs font-semibold text-fg hover:bg-surface-3";
-const PRIMARY = "inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-bright";
-const OUTLINE = "inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-card px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface-3";
 const CHIP = "rounded-full border border-nav-line bg-nav px-3 py-1 text-xs font-medium text-fg shadow-sm";
-const FORMAT_NAME: Record<string, string> = { csv: "CSV", parquet: "Parquet", nc: "NetCDF", json: "JSON", zip: "ZIP" };
+/**
+ * The banner's own border and fill, read by the hero AND by every collection card.
+ *
+ * ⚠ TWO CONSTANTS, READ TWICE EACH, and a test holds them to it. The collection card is supposed to
+ * match the banner, and a copied class string is exactly the kind of agreement that quietly stops
+ * being true the next time one of them is restyled. They are split because the collection card wears
+ * them in different places: the border on the card itself, the fill on its heading band only.
+ */
+export const PALE_BORDER = "border border-nav-line";
+export const PALE_FILL = "bg-nav";
+export const PALE_CARD = `rounded-card ${PALE_BORDER} ${PALE_FILL}`;
+/**
+ * ⚠ ONE TEMPLATE FOR EVERY ROW, AND NO BREAKPOINT. The rows began as flex lines whose first column
+ * was `flex-1` and whose action cluster was `auto`, so the cluster's width tracked its own contents
+ * and COVERAGE landed at a different x on almost every row - I measured 413, 465, 486, 542, 559 and
+ * 635 down one page.
+ *
+ * The fix is NOT a grid: what aligns the columns is the two TRAILING blocks having fixed widths, so
+ * the text column absorbs every pixel of slack and the right-hand pair starts and ends at the same
+ * x on every row. A `lg:` grid template did that too, and then rendered stacked on one machine and
+ * four-across on another at the same window width - unexplained, and not worth depending on. Flex
+ * with fixed trailing widths needs no media query at all: a narrow window wraps, which is exactly
+ * what the breakpoint's fallback was doing by hand.
+ */
+export const ROW_GRID = "flex flex-wrap items-center gap-x-6 gap-y-2.5 px-5 py-3.5";
+/** Fixed, and that is the point - an `auto` here is what made the columns ragged. */
+export const ROW_COVERAGE = "w-44 shrink-0";
+export const ROW_ACTIONS = "flex w-56 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 md:justify-end";
 const MODES = ["files", "api"] as const;
-const PURPOSE_ICON: Record<string, React.ReactNode> = {
-  totals: <BarChart3 size={18} className="text-accent" aria-hidden="true" />,
-  monthly: <CalendarDays size={18} className="text-accent" aria-hidden="true" />,
-  allocations: <MapPin size={18} className="text-accent" aria-hidden="true" />,
-  gridded: <Layers size={18} className="text-accent" aria-hidden="true" />,
-  uncertainty: <LineChart size={18} className="text-accent" aria-hidden="true" />,
-  evidence: <FileText size={18} className="text-accent" aria-hidden="true" />,
-  air: <Wind size={18} className="text-accent" aria-hidden="true" />,
+const TABS = ["all", "emissions", "activity", "air", "methods", "maps"] as const;
+const TAB_LABEL: Record<string, string> = {
+  all: "All data", emissions: "Emissions", activity: "Activity data",
+  air: "Air pollutants", methods: "Methods & uncertainty", maps: "Maps & grids",
 };
 
-/** "CSV · Parquet · NetCDF": the formats a family offers, as the API lists them. */
-export function formatWords(formats: string[]): string {
-  return formats.map((f) => FORMAT_NAME[f] ?? f.toUpperCase()).join(" · ");
-}
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
+/** The format a filename is, in a reader's word. */
+export function formatWord(file: string): string {
+  const ext = file.split(".").pop() ?? "";
+  return ext === "nc" ? "NetCDF" : ext.toUpperCase();
 }
 
 export function Downloads() {
@@ -69,11 +92,12 @@ export function Downloads() {
   const citation = releaseCitation(release);
   const doi = releaseDoi(release);
   const facts = releaseFacts(release);
-  const reference = useReferencePeriod();
   const [modeParam, setModeParam] = useQueryState("mode", parseAsStringLiteral(MODES));
-  const [purposeParam, setPurposeParam] = useQueryState("purpose", parseAsString);
+  const [tab, setTab] = useQueryState("show", parseAsStringLiteral(TABS));
   const [receiptParam, setReceiptParam] = useQueryState("receipt", parseAsString);
   const [draft, setDraft] = useState("");
+  const [query, setQuery] = useState("");
+  const [preview, setPreview] = useState<{ title: string; file: string } | null>(null);
   // a shared result link (?receipt=) opens straight onto the replay, which lives in the API mode
   const mode = receiptParam ? "api" : modeParam ?? "files";
   const replay = useQuery({ queryKey: ["replay", receiptParam], queryFn: () => api.receipt(receiptParam!), enabled: !!receiptParam && receiptParam.length === 32, retry: false });
@@ -82,153 +106,158 @@ export function Downloads() {
     const patch = stateFromEnvelopeRequest(replay.data.request);
     return Object.keys(patch).length ? hrefForState({ ...state, ...patch }, defaults, "/") : null;
   }, [replay.data, state, defaults]);
-  const months = Object.values(dims.monthsByPeriod).reduce((n, m) => n + m.length, 0);
-  const range = periodRange(dims, labels);
-  const refShort = reference ? periodShort(labels, reference) : range;
-  const captions: Record<string, string> = {
-    totals: range,
-    monthly: months ? `${months} months` : "Every month",
-    allocations: refShort,
-    gridded: `${refShort} · Monthly`,
-    uncertainty: "",
-    evidence: "",
-    air: "Seven sectors · Agriculture mapped and 1990 to 2024",
-    complete: "Every file · One archive",
-  };
-  // the six purpose cards; the complete release is the hero's own action
-  const offered = PURPOSES.filter((p) => p.id !== "complete");
-  const purpose = purposeById(purposeParam) ?? offered[0];
-  const complete = products.data?.families.find((f) => f.id === "complete");
-  const family = products.data?.families.find((f) => f.id === purpose.family);
-  const railProducts = products.data ? narrowProducts(familyProducts(products.data, family ?? { id: purpose.family, title: purpose.fallback.title, description: purpose.fallback.description, tables: [], formats: [] }), purpose.only) : [];
-  // the technical drawers, out of the main reading path (the researchers section owns them)
-  const [guide, setGuide] = useState(false);
-  const [checksums, setChecksums] = useState(false);
-  const [cite, setCite] = useState(false);
-  const curl = curlLine(absoluteApiBase(), { method: "POST", path: "/query/emissions", body: JSON.stringify(scopeBody(state)) });
+  const curl = useMemo(() => curlLine(absoluteApiBase(), { method: "POST", path: "/query/emissions", body: JSON.stringify(scopeBody(state)) }), [state]);
 
-  const pickMode = (next: (typeof MODES)[number]) => {
+  // THE VIEW THE READER CAME FROM, as a file. Its receipt is minted by the same query the workspace
+  // runs, so the CSV is that view exactly rather than an approximation reassembled from the filters.
+  const view = useEmissions(scopeBody(state), mode === "files");
+
+  const byName = useMemo(() => {
+    const out = new Map<string, Product>();
+    for (const p of products.data?.products ?? []) for (const f of p.formats) out.set(f.filename, p);
+    return out;
+  }, [products.data]);
+
+  const shown: Collection[] = useMemo(() => {
+    const columnsOf = (item: Item) => item.files.flatMap((f) => byName.get(f)?.columns ?? []);
+    const picked = tab && tab !== "all" ? COLLECTIONS.filter((c) => c.id === tab) : COLLECTIONS;
+    if (!query.trim()) return picked;
+    return picked
+      .map((c) => ({ ...c, downloads: c.downloads.filter((d) => matches(d, query, columnsOf(d))) }))
+      .filter((c) => c.downloads.length > 0);
+  }, [tab, query, byName]);
+
+  const setMode = (next: (typeof MODES)[number]) => {
     if (next === "files") setReceiptParam(null);
     setModeParam(next === "files" ? null : next);
   };
 
+  const place = state.geo ? geographyName(labels, state.geo) : "Pakistan";
+
   return (
-    <div className="min-h-dvh bg-surface" data-testid="downloads-page">
-      <header className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-5" data-testid="top-nav">
+    <div className="relative min-h-screen" data-testid="downloads-page">
+      <MapMotif />
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 pb-3 pt-5">
         <NavCapsule />
-        <div className={SEGMENT_GROUP_CLASS} role="group" aria-label={DOWNLOADS.modes.label} data-testid="mode-switch">
-          <button type="button" onClick={() => pickMode("files")} aria-pressed={mode === "files"} className={`${segmentClass(mode === "files")} px-3`} data-testid="mode-files">
-            {DOWNLOADS.modes.files}
-          </button>
-          <button type="button" onClick={() => pickMode("api")} aria-pressed={mode === "api"} className={`${segmentClass(mode === "api")} px-3`} data-testid="mode-api">
-            {DOWNLOADS.modes.api}
-          </button>
+        {/* the actions wrap as a group rather than letting the segmented switch fall off the edge */}
+        <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          <a href={api.docsUrl()} className={TEXT_BUTTON} data-testid="api-docs"><ExternalLink size={12} /> {DOWNLOADS.docs}</a>
+          <a href={productUrl("complete.zip")} className={TEXT_BUTTON} data-testid="archive-download" title={products.data?.families.find((f) => f.id === "complete")?.archive?.note}>
+            <Download size={12} /> {DOWNLOADS.completeRelease}
+          </a>
+          {/* segmentClass carries no horizontal padding - PaneSwitch adds px-3 at the call site, and
+              without it the two labels sit on top of each other */}
+          <div className={`${SEGMENT_GROUP_CLASS} shrink-0`} role="group" aria-label={DOWNLOADS.modes.label} data-testid="mode-switch">
+            {MODES.map((m) => (
+              <button key={m} type="button" aria-pressed={mode === m} className={`${segmentClass(mode === m)} px-3`} onClick={() => setMode(m)} data-testid={m === "api" ? "open-api-mode" : "mode-files"}>
+                {m === "files" ? DOWNLOADS.modes.files : DOWNLOADS.modes.api}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
       {mode === "files" && (
-        <main className="mx-auto max-w-[1500px] px-5 pb-12 pt-4">
-          <section className="flex flex-wrap items-start justify-between gap-6" data-testid="downloads-hero">
-            <div className="max-w-[44em]">
-              <div className="micro">{DOWNLOADS.eyebrow}</div>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-fg md:text-4xl">{DOWNLOADS.hero}</h1>
-              {DOWNLOADS.dekLines.map((l) => (
-                <p key={l} className="mt-1 text-md text-muted first-of-type:mt-3">{l}</p>
-              ))}
-              <div className="mt-4 flex flex-wrap gap-2" data-testid="hero-chips">
-                {range && <span className={CHIP}>{range}</span>}
-                {facts.licences.data_and_text && <span className={CHIP}>{facts.licences.data_and_text}</span>}
+        <main className="px-5 pb-16">
+          <section className={`${PALE_CARD} px-6 py-6`} data-testid="downloads-hero">
+            <div className="flex flex-wrap items-start justify-between gap-6">
+              <div className="min-w-0">
+                <p className="micro">Public data</p>
+                <h1 className="mt-1 text-3xl font-semibold tracking-tight text-fg">{DOWNLOADS.hero}</h1>
+                <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted">Emissions estimates and the activity data behind them.</p>
+                <div className="mt-3 flex flex-wrap gap-2" data-testid="hero-chips">
+                  <span className={CHIP}>{periodRange(dims, labels)}</span>
+                  {facts.licences.data_and_text && <span className={CHIP}>{facts.licences.data_and_text}</span>}
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              {complete?.archive && (
-                <a href={complete.archive.url} className={PRIMARY} title={complete.archive.note ?? ""} data-testid="archive-download">
-                  <Archive size={15} aria-hidden="true" /> {DOWNLOADS.completeRelease}
-                </a>
-              )}
-              <a href={api.docsUrl()} className={OUTLINE} data-testid="api-docs">
-                <ExternalLink size={15} aria-hidden="true" /> {DOWNLOADS.docs}
-              </a>
-              <Link href="/data" className={OUTLINE} data-testid="browse-tables">
-                <Table2 size={15} aria-hidden="true" /> {DOWNLOADS.browseTables}
-              </Link>
+              <div className="rounded-card border border-line bg-card px-4 py-3" data-testid="view-download">
+                <p className="micro">From Explore</p>
+                <p className="mt-1 text-sm font-medium text-fg">{place} · {gasLabel(labels, state.gas)}</p>
+                {view.data?.receipt ? (
+                  <a href={api.downloadCsvUrl(view.data.receipt)} className={`${TEXT_BUTTON} mt-1.5`} data-testid="download-this-view">
+                    <Download size={12} /> Download this view
+                  </a>
+                ) : (
+                  <p className="mt-1.5 text-xs text-muted">Preparing this view&hellip;</p>
+                )}
+              </div>
             </div>
           </section>
 
-          <div className="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-            <section data-testid="purposes">
-              <h2 className="text-xl font-semibold text-fg" data-testid="purpose-question">{DOWNLOADS.question}</h2>
-              <p className="mt-1 text-sm text-muted">{DOWNLOADS.chooseSub}</p>
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {offered.map((p) => {
-                  const on = purpose.id === p.id;
-                  return (
-                    <button key={p.id} type="button" onClick={() => setPurposeParam(p.id === offered[0].id ? null : p.id)} aria-pressed={on} className={`relative flex flex-col rounded-xl border p-4 text-left transition-colors ${on ? "border-brand-gold bg-nav shadow-card" : "border-line bg-card hover:bg-surface-3"}`} data-testid="purpose-card" data-purpose={p.id}>
-                      {on && (
-                        <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-on-accent" aria-hidden="true">
-                          <Check size={12} />
-                        </span>
-                      )}
-                      {PURPOSE_ICON[p.id]}
-                      <span className="mt-2 text-sm font-semibold text-fg">{p.title}</span>
-                      <span className="mt-1 text-xs text-muted">{p.description}</span>
-                      {captions[p.id] && <span className="mt-2 text-micro normal-case tracking-normal text-muted" data-testid="purpose-caption">{captions[p.id]}</span>}
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="mt-6 flex items-center gap-2 rounded-card border border-line bg-card px-4 py-3" data-testid="search">
+            <Search size={16} className="shrink-0 text-muted" aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search fuel sales, livestock, districts…"
+              aria-label="Search the downloads"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
+              data-testid="search-input"
+            />
+            {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear the search" className="shrink-0 text-muted hover:text-fg"><X size={14} /></button>}
+          </div>
 
-              <div className="mt-8 border-t border-line pt-5" data-testid="researchers">
-                <div className="micro">{DOWNLOADS.researchers}</div>
-                <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
-                  <button type="button" className={TEXT_BUTTON} onClick={() => setGuide((v) => !v)} aria-expanded={guide} data-testid="preview-columns">
-                    <Table2 size={12} aria-hidden="true" /> {guide ? DOWNLOADS.hidePreview : DOWNLOADS.preview}
-                  </button>
-                  <button type="button" className={TEXT_BUTTON} onClick={() => setChecksums((c) => !c)} aria-expanded={checksums} data-testid="checksums-toggle">
-                    <ShieldCheck size={12} aria-hidden="true" /> {checksums ? DOWNLOADS.hideChecksums : DOWNLOADS.checksums}
-                  </button>
-                  <button type="button" className={TEXT_BUTTON} onClick={() => setCite((c) => !c)} aria-expanded={cite} data-testid="cite-toggle">
-                    <Copy size={12} aria-hidden="true" /> {DOWNLOADS.copyCitation}
-                  </button>
-                  <button type="button" className={TEXT_BUTTON} onClick={() => pickMode("api")} data-testid="open-api-mode">
-                    <ExternalLink size={12} aria-hidden="true" /> {DOWNLOADS.modes.api}
-                  </button>
+          {/* the tabs live in the FIRST header card, and stand alone when nothing matches - without
+              that second home a search for "zzzz" would take the tabs off the page with the
+              collections and leave no way back */}
+          {shown.length === 0 && (
+            <div className={`mt-4 ${PALE_CARD} px-6 py-5`} data-testid="collection-header">
+              <Tabs tab={tab} setTab={setTab} />
+              <p className="mt-4 text-sm text-muted" data-testid="no-matches">Nothing matches that. Try a fuel, a place or a column name.</p>
+            </div>
+          )}
+
+          {shown.map((c, i) => (
+            <section key={c.id} className={i === 0 ? "mt-4" : "mt-8"} data-testid="collection" data-collection={c.id}>
+              {/* ONE CARD, NOT TWO. The heading band sits directly on its table with the saffron rule
+                  as the join; `overflow-hidden` is what lets the band and the table square off against
+                  that rule while the card's own corners stay round. */}
+              <div className={`overflow-hidden rounded-card ${PALE_BORDER} bg-card shadow-card`} data-testid="collection-card">
+                <div className={`${PALE_FILL} px-6 py-5`} data-testid="collection-header">
+                  {i === 0 && <Tabs tab={tab} setTab={setTab} />}
+                  <h2 className={`${i === 0 ? "mt-4 " : ""}text-xl font-semibold tracking-tight text-fg`}>{c.title}</h2>
+                  <p className="mt-0.5 text-sm text-muted">{c.dek}</p>
+
+                  {/* plain text, not a box: a warm note inside a warm card is muddy, and the card
+                      already carries the advisory tone. The colour keeps it reading as a caveat. */}
+                  {c.unpublished && (
+                    <div className="mt-3" data-testid="unpublished">
+                      <p className="max-w-[90ch] text-sm leading-relaxed text-note-text">{c.unpublished.why}</p>
+                      <p className="mt-1.5 text-xs text-note-text">Sources: {c.unpublished.sources}</p>
+                    </div>
+                  )}
                 </div>
-                {checksums && railProducts.length > 0 && (
-                  <div className="mt-3 overflow-x-auto" data-testid="checksums">
-                    <p className="mb-2 text-xs text-muted">The sha256 of every file of this topic, as the contract, the manifest and the verification declare them; a download answers with the same digest as its ETag.{products.data?.note ? ` ${products.data.note}` : ""}</p>
-                    <table className="w-full text-xs">
-                      <tbody>
-                        {railProducts.flatMap((pr) => pr.formats).map((f) => (
-                          <tr key={f.filename} className="border-t border-line">
-                            <td className="py-1 pr-3 text-muted">{f.filename}</td>
-                            <td className="mono break-all py-1" data-testid="digest">{f.sha256}</td>
-                            <td className="py-1 pl-3 text-muted">{f.identity ?? ""}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+
+                {/* the saffron rule is the JOIN, and every collection has one - it used to be skipped
+                    for activity, which had no white panel to cap; it has one now */}
+                <div className="h-[3px] bg-brand-gold" aria-hidden="true" data-testid="collection-rule" />
+                {/* ⚠ PENDING IS PER DOWNLOAD NOW, not per collection. Six of the nine activity
+                    collections shipped in rc55 and three did not, so one section holds both: the
+                    published tables as rows, and beneath them the ones still being packaged. */}
+                <div>
+                  {c.downloads.filter((d) => !d.pending).map((d) => (
+                    <ItemRow key={d.id} item={d} product={byName.get(d.files[0])} pending={false} onPreview={setPreview} />
+                  ))}
+                </div>
+                {c.downloads.some((d) => d.pending) && (
+                  <div className="grid grid-cols-1 gap-x-8 gap-y-5 border-t border-line px-6 py-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {c.downloads.filter((d) => d.pending).map((d) => (
+                      <ItemRow key={d.id} item={d} product={undefined} pending onPreview={setPreview} />
+                    ))}
                   </div>
                 )}
-                {cite && <CitationTable citation={citation} version={release.version} doi={doi.data} />}
               </div>
             </section>
+          ))}
 
-            <DownloadRail
-              purpose={purpose}
-              family={family}
-              products={railProducts}
-              guide={guide}
-              loading={products.isLoading}
-              error={products.error}
-              configuration={`${configLabel(labels, defaults.configuration_id)} · ${gwpLabel(labels, defaults.gwp_basis)}`}
-            />
-          </div>
+          <p className="mt-10 border-t border-line pt-4 text-xs text-muted" data-testid="downloads-footer">
+            Source references and column definitions accompany every collection. {MOTIF_CREDIT}
+          </p>
         </main>
       )}
 
       {mode === "api" && (
-        <main className="mx-auto max-w-[1500px] px-5 pb-12 pt-4">
+        <main className="px-5 pb-12 pt-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Widget title={DOWNLOADS.api.title} testId="api-card" share={false} sentence={DOWNLOADS.api.lead}>
               <pre className="mono overflow-x-auto whitespace-pre-wrap break-all rounded-md bg-surface-3 p-2 text-xs text-muted" data-testid="curl-line">{curl}</pre>
@@ -261,96 +290,99 @@ export function Downloads() {
           <CitationTable citation={citation} version={release.version} doi={doi.data} />
         </main>
       )}
+
+      {preview && <PreviewDrawer title={preview.title} file={preview.file} onClose={() => setPreview(null)} />}
     </div>
   );
 }
 
-/** The YOUR DOWNLOAD rail: the chosen topic's files and nothing technical - the column guide opens per row (or all at once from the researchers section's Data guide). */
-function DownloadRail({ purpose, family, products, guide, loading, error, configuration }: { purpose: Purpose; family?: ProductFamily; products: Product[]; guide: boolean; loading: boolean; error: unknown; configuration: string }) {
-  const [schema, setSchema] = useState<string | null>(null);
-  const downloadAll = () => {
-    for (const p of products) {
-      const f = p.formats[0];
-      if (!f) continue;
-      const a = document.createElement("a");
-      a.href = f.url;
-      a.download = f.filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }
-  };
+/**
+ * The collection tabs, inside the first header card.
+ *
+ * No horizontal padding on the buttons: in a `px-6` card the old `px-3` pushed "All data" three
+ * units right of the heading directly beneath it. Without it the first tab and the `<h2>` share a
+ * left edge, and the active underline hugs its own text the way the nav capsule's does.
+ */
+function Tabs({ tab, setTab }: { tab: string | null; setTab: (v: (typeof TABS)[number] | null) => void }) {
   return (
-    <aside className="overflow-hidden rounded-2xl border border-nav-line border-t-[3px] border-t-brand-gold bg-card p-5 shadow-card lg:sticky lg:top-6" data-testid="purpose-panel" data-purpose={purpose.id} data-family={purpose.family}>
-      <div className="micro text-accent">{DOWNLOADS.yourDownload}</div>
-      <h3 className="mt-1 text-lg font-semibold text-fg" data-testid="family-title">{family?.title ?? purpose.fallback.title}</h3>
-      <p className="mt-1 text-sm text-muted">{family?.description ?? purpose.fallback.description}</p>
-      {family && family.formats.length > 0 && <p className="mt-1 text-xs text-muted" data-testid="family-formats">{formatWords(family.formats.filter((f) => f !== "zip"))}</p>}
-
-      {products.length > 0 ? (
-        <ul className="mt-4 divide-y divide-line rounded-lg border border-line" data-testid="product-list">
-          {products.map((p) => {
-            const open = guide || schema === p.name;
-            return (
-              <li key={p.name} className="p-3" data-testid="product-row" data-product={p.name} data-kind={p.kind}>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="mono min-w-0 break-all text-sm text-fg">{p.name}</span>
-                  {typeof p.rows === "number" && <span className="text-xs text-muted">{p.rows.toLocaleString("en-GB")} rows</span>}
-                  <span className="flex-1" />
-                  {p.formats.map((f) => (
-                    <a key={f.filename} href={f.url} className={FORMAT_BUTTON} data-testid="format-button" data-format={f.ext} data-sha256={f.sha256} title={`${f.filename} · ETag / sha256 ${f.sha256} · ${bytesWords(f.bytes)}`}>
-                      <Download size={12} aria-hidden="true" /> {FORMAT_NAME[f.ext] ?? f.ext.toUpperCase()}
-                    </a>
-                  ))}
-                  <button type="button" className={TEXT_BUTTON} onClick={() => setSchema(schema === p.name ? null : p.name)} aria-expanded={open} data-testid="schema-toggle">
-                    <Table2 size={12} aria-hidden="true" /> {open ? DOWNLOADS.hideSchema : DOWNLOADS.schema}
-                  </button>
-                </div>
-                {open && (
-                  <div className="mt-2 space-y-1 rounded-md bg-surface-3/60 p-3 text-xs" data-testid="schema-panel">
-                    {p.columns?.length ? <p className="text-muted"><span className="text-fg">Columns:</span> <span className="mono">{p.columns.join(", ")}</span></p> : null}
-                    {p.primary_key?.length ? <p className="text-muted"><span className="text-fg">Primary key:</span> <span className="mono">{p.primary_key.join(", ")}</span></p> : null}
-                    {typeof p.rows === "number" && <p className="text-muted"><span className="text-fg">Rows:</span> {p.rows.toLocaleString("en-GB")}</p>}
-                    {p.closure && <p className="text-muted"><span className="text-fg">Closure:</span> {p.closure}</p>}
-                    {p.aggregation_rule && <p className="text-muted"><span className="text-fg">Aggregation:</span> {p.aggregation_rule}</p>}
-                    {p.source_path && <p className="text-muted"><span className="text-fg">Registry source:</span> <span className="mono">{p.source_path}</span></p>}
-                    {p.formats.map((f) => (
-                      <p key={f.filename} className="text-muted"><span className="text-fg">{f.filename}</span> <span className="mono break-all">sha256 {f.sha256}</span> · {bytesWords(f.bytes)}{f.identity ? ` · identity: ${f.identity}` : ""}</p>
-                    ))}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      ) : error ? (
-        <div className="mt-4"><RefusalCard error={error} compact /></div>
-      ) : loading ? (
-        <div className="mt-4"><Loading what="the product catalogue" /></div>
-      ) : (
-        <p className="mt-4 text-xs text-muted">The catalogue lists no file for this purpose.</p>
-      )}
-
-      <p className="note mt-3 flex items-center gap-1.5 text-xs" data-testid="always-included">
-        <Info size={13} className="shrink-0" aria-hidden="true" /> {DOWNLOADS.always}
-      </p>
-
-      {products.length > 0 && (
-        <button type="button" onClick={downloadAll} className={`${PRIMARY} mt-3 w-full`} data-testid="download-all">
-          <Download size={15} aria-hidden="true" /> {DOWNLOADS.downloadAll(products.length)}
-        </button>
-      )}
-
-      <div className="mt-4 border-t border-line pt-3" data-testid="reference-configuration">
-        <div className="micro">{DOWNLOADS.refConfig}</div>
-        <p className="mt-1 text-sm font-semibold text-fg">{configuration}</p>
-        <p className="mt-0.5 text-xs text-muted">{DOWNLOADS.refNote}</p>
-      </div>
-    </aside>
+    <div className="flex flex-wrap gap-x-6 gap-y-1 border-b border-nav-line" role="tablist" aria-label="Collections">
+      {TABS.map((id) => {
+        const on = (tab ?? "all") === id;
+        return (
+          <button key={id} type="button" role="tab" aria-selected={on} onClick={() => setTab(id === "all" ? null : id)}
+                  className={`-mb-px border-b-2 pb-2.5 text-sm transition-colors ${on ? "border-accent font-semibold text-accent" : "border-transparent text-muted hover:text-fg"}`}
+                  data-testid="collection-tab" data-collection={id}>
+            {TAB_LABEL[id]}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-/** Cite and identify this release: the identity rows and the copyable APA / BibTeX — the version's one home. */
+/** One download: what it is, what it covers, and the two things a reader does with it. */
+function ItemRow({ item, product, pending, onPreview }: { item: Item; product?: Product; pending: boolean; onPreview: (p: { title: string; file: string }) => void }) {
+  const Icon = item.icon;
+  if (pending) {
+    // designed, not yet published: the card says what it will hold and the section above says why
+    return (
+      <div data-testid="download-card" data-id={item.id}>
+        <div className="flex items-start gap-2.5">
+          <Icon size={17} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" data-testid="download-icon" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-fg">{item.title}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">{item.dek}</p>
+          </div>
+        </div>
+        <p className="mt-2 text-micro normal-case tracking-normal text-muted">{item.coverage}</p>
+      </div>
+    );
+  }
+  // ONE TABLE, ONE FORMAT: the CSV, or the NetCDF for a grid. Parquet was offered here as a quiet
+  // second link until 2026-09-16; it still ships in the release and is still served by /products,
+  // it is simply not offered on the page, and a test holds the catalogue to naming one file.
+  const [primary] = item.files;
+  const csv = item.files.find((f) => f.endsWith(".csv"));
+  return (
+    <div className={`${ROW_GRID} border-b border-line last:border-b-0`} data-testid="download-row" data-id={item.id}>
+      <Icon size={17} className="w-5 shrink-0 text-accent" aria-hidden="true" data-testid="download-icon" />
+      {/* ⚠ THE MEASURE GOES ON THE SENTENCE, NOT ON THE COLUMN. A max-width here stops `flex-1` from
+          growing, so the whole row bunches to the left and leaves a void where the window continues -
+          which is the same complaint as the centred cap, wearing a different hat. The column grows to
+          fill; only the prose keeps a readable line length. */}
+      <div className="min-w-[20rem] flex-1">
+        <p className="text-sm font-semibold text-fg">{item.title}</p>
+        <p className="mt-0.5 max-w-[80ch] text-xs leading-relaxed text-muted">{item.dek}</p>
+      </div>
+      <div className={ROW_COVERAGE}>
+        <p className="micro">Coverage</p>
+        <p className="mt-0.5 text-xs text-fg">{item.coverage}</p>
+        {typeof product?.rows === "number" && <p className="text-xs text-muted" data-testid="row-count">{product.rows.toLocaleString("en")} rows</p>}
+      </div>
+      <div className={ROW_ACTIONS}>
+        {csv && (
+          <button type="button" onClick={() => onPreview({ title: item.title, file: csv })} className="pill inline-flex items-center gap-1 border border-line-strong px-3 py-1.5 text-xs font-semibold text-fg hover:bg-surface-3" data-testid="preview">
+            <Table2 size={12} /> Preview
+          </button>
+        )}
+        <a href={productUrl(primary)} className="pill inline-flex items-center gap-1 bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent hover:bg-accent-bright"
+           data-testid="format-button" data-file={primary} title={bytesWords(product?.formats.find((x) => x.filename === primary)?.bytes ?? 0)}>
+          <Download size={12} /> {formatWord(primary)}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function CitationTable({ citation, version, doi }: { citation: Citation | null; version: string; doi: string }) {
   const [copied, setCopied] = useState<"apa" | "bibtex" | null>(null);
   const copy = async (kind: "apa" | "bibtex") => {

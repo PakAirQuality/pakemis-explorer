@@ -17,6 +17,8 @@ import { useCompleteness, useEmissions, useEvidence, useMethod } from "@/lib/que
 import { scopeBody } from "@/lib/requests";
 import { NavHeader } from "@/components/shell/NavCapsule";
 import { CurrentView } from "@/components/shell/CurrentView";
+import { MapMotif } from "@/components/shell/MapMotif";
+import { MotifCredit } from "@/components/shell/MotifCredit";
 import { Widget, ICON_BUTTON, WIDGET_TITLE } from "@/components/ui/Widget";
 import { EnvelopeTable } from "@/components/ui/EnvelopeTable";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
@@ -50,8 +52,10 @@ export function SectorRoute({ sector }: { sector: string }) {
   const sectorBody = useMemo(() => scopeBody({ ...state, sector }), [state, sector]);
   const result = useEmissions(sectorBody, !!sector);
   const completeness = useCompleteness({ notation_keys: ["NE"] });
-  const shareQ = useEmissions(useMemo(() => ({ periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp, group_by: ["sector_id"], order_by: "value desc" }), [state.period, state.config, state.gwp]), true);
-  const shareCell = (shareQ.data?.values ?? []).find((c) => c.group?.sector_id === sector) ?? null;
+  const shareQ = useEmissions(useMemo(() => ({ periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp, group_by: ["reporting_sector"], order_by: "value desc" }), [state.period, state.config, state.gwp]), true);
+  // the partition above is grouped by `reporting_sector`, so that is the key its cells carry;
+  // matching on `sector_id` found nothing and the page showed no national share at all
+  const shareCell = (shareQ.data?.values ?? []).find((c) => (c.group?.reporting_sector ?? c.group?.sector_id) === sector) ?? null;
   const drawer = useEnvelopeDrawer(labels);
 
   const streams = (evidence.data?.values ?? []) as StreamCell[];
@@ -69,7 +73,8 @@ export function SectorRoute({ sector }: { sector: string }) {
   const number = ipccSectorNumber(codes);
 
   return (
-    <div className="min-h-dvh bg-surface" data-testid="sector-route">
+    <div className="relative min-h-dvh" data-testid="sector-route">
+      <MapMotif />
       <NavHeader />
       <CurrentView compact />
       <SectorPage
@@ -214,12 +219,18 @@ export function SectorRoute({ sector }: { sector: string }) {
                 <div className="mt-2"><Loading what="the completeness ledger" /></div>
               )}
               {labels.limitations.config_S_residential_only && sector === "residential" && <p className="mt-2 text-xs text-muted">{labels.limitations.config_S_residential_only}</p>}
-              {labels.limitations.industry_reported_fuel_series && sector === "industry" && <p className="mt-2 text-xs text-muted" data-testid="industry-reported-fuel-note">{labels.limitations.industry_reported_fuel_series}</p>}
+              {/* industry_reported_fuel_series is deliberately NOT rendered (2026-09-13). The release
+                  still publishes it and the API still serves it; no Explorer surface shows it. Seven
+                  sentences of source criticism used to sit between a reader and the number they came
+                  for. The string arrives with the release payload, so it would return on its own if
+                  nothing watched - the guard lived in analyze.test.tsx until that page was removed on
+                  2026-09-16 and now lives in methods.test.tsx, against this page. */}
             </div>
           </div>
         </Widget>
       </SectorPage>
       {drawer.node}
+      <MotifCredit />
     </div>
   );
 }

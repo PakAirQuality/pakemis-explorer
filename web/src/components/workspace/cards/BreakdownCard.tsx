@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
 import { shown, type Cell } from "@/lib/envelope";
-import { cellUnit, configLabel, gasLabel, gwpLabel, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, configLabel, gasLabel, gwpLabel, gwpTooltip, periodShort, reportingSectorLabel, sectorLabel } from "@/lib/labels";
 import { rampByRank } from "@/lib/palette";
 import { hrefForState } from "@/lib/urlState";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
@@ -61,7 +61,8 @@ export function BreakdownCard({ id, scope, deck, title, open, onToggle, onSector
     return { id: gid, name: nameOf(labels, key, gid), value: x.value as number, label: x.share_pct_short ? `${shown(x)} · ${x.share_pct_short} %` : shown(x), color: rampByRank(i, cells.length), dim: !!selected && selected !== gid };
   });
   const caption = [configLabel(labels, state.config), `${gwpLabel(labels, state.gwp)} warming potentials`].filter(Boolean).join(" · ");
-  const sectorBars = key === "sector_id" || key === "module";
+  // a sector bar is clickable and writes state.sector, which is a REPORTING sector id
+  const sectorBars = key === "reporting_sector";
   return (
     <DeckCard id={id} title={title} env={env} open={open} onToggle={onToggle} sentence={sentence} caption={<span title={gwpTooltip(labels, state.gwp)}>{caption}</span>}>
       {env ? (
@@ -82,6 +83,9 @@ export function BreakdownCard({ id, scope, deck, title, open, onToggle, onSector
 function nameOf(labels: Parameters<typeof sectorLabel>[0], key: string, value: string): string {
   if (key === "category") return value;
   if (key === "gas") return gasLabel(labels, value);
+  // rc54: a sector bar is a REPORTING sector, and its label says what the bar contains
+  // ("Industrial fuel use incl. captive generation"), not what computed it
+  if (key === "reporting_sector") return reportingSectorLabel(labels, value);
   return sectorLabel(labels, value);
 }
 

@@ -41,19 +41,38 @@ export function placeName(labels: Labels, dims: Dims, s: Pick<ExplorerState, "ge
 }
 
 /**
- * "Punjab · agriculture · 2023–24 · reference estimate": the place, the sector (lower-cased
- * in running text), the gas, the period, the month, the configuration, and the GWP basis only
- * when it is not the release's default.
+ * The scope as its parts: the place, the sector (lower-cased in running text), the gas, the
+ * period, the month, the configuration, and the GWP basis only when it is not the release's
+ * default. Each carries an `id` so the panel can render them as pills and still say the same
+ * words as the line — ONE source, because a chip row and a scope line that can disagree will.
+ *
+ * Every part is a release LABEL. Nothing here prints a number.
  */
+/**
+ * `primary` marks the parts a reader CHOSE - the place, the sector, the gas, the period, the month.
+ * The configuration and the GWP basis qualify the answer rather than select it, and they are
+ * always on: a panel that put "reference estimate" beside "Pakistan" as though the two were the
+ * same kind of choice would wrap its scope row onto a second line to say something the reader
+ * never touched. They stay in the scope LINE, which is the full statement of what is being asked.
+ */
+export type ScopePart = { id: string; label: string; primary: boolean };
+
+export function scopeChips(labels: Labels, dims: Dims, s: ExplorerState, defaults?: Pick<StateDefaults, "gwp_basis">): ScopePart[] {
+  const parts: ScopePart[] = [{ id: "place", label: placeName(labels, dims, s), primary: true }];
+  if (s.sector) parts.push({ id: "sector", label: lowerInitial(sectorLabel(labels, s.sector)), primary: true });
+  parts.push({ id: "gas", label: gasLabel(labels, s.gas), primary: true });
+  parts.push({ id: "period", label: periodShort(labels, s.period), primary: true });
+  if (s.month) parts.push({ id: "month", label: monthLabel(labels, s.month), primary: true });
+  parts.push({ id: "config", label: configWords(labels, s.config), primary: false });
+  if (!gwpIsDefault(labels, s.gwp, defaults?.gwp_basis)) parts.push({ id: "gwp", label: gwpLabel(labels, s.gwp), primary: false });
+  return parts;
+}
+
+/** "Punjab · agriculture · 2023–24 · reference estimate": scopeChips, joined. */
 export function scopeLine(labels: Labels, dims: Dims, s: ExplorerState, defaults?: Pick<StateDefaults, "gwp_basis">): string {
-  const parts: string[] = [placeName(labels, dims, s)];
-  if (s.sector) parts.push(lowerInitial(sectorLabel(labels, s.sector)));
-  if (s.gas) parts.push(gasLabel(labels, s.gas));
-  parts.push(periodShort(labels, s.period));
-  if (s.month) parts.push(monthLabel(labels, s.month));
-  parts.push(configWords(labels, s.config));
-  if (!gwpIsDefault(labels, s.gwp, defaults?.gwp_basis)) parts.push(gwpLabel(labels, s.gwp));
-  return parts.join(" · ");
+  // the gas part is unconditional in the chips (a pill reading "All gases (CO₂e)" is informative);
+  // in running prose an unset gas is better left unsaid, which is what this line always did
+  return scopeChips(labels, dims, s, defaults).filter((p) => p.id !== "gas" || s.gas).map((p) => p.label).join(" · ");
 }
 
 /** The province after `place` in the release's ADM1 list (cyclic, polygons only): Punjab → Sindh. */

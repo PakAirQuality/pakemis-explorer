@@ -3,14 +3,18 @@
 import { Suspense } from "react";
 import { NavHeader } from "@/components/shell/NavCapsule";
 import { Methodology } from "@/components/methods/Methodology";
+import { MapMotif } from "@/components/shell/MapMotif";
+import { MotifCredit } from "@/components/shell/MotifCredit";
 
 export default function MethodologyPage() {
   return (
     <Suspense fallback={null}>
-      <div className="min-h-dvh bg-surface" data-testid="methodology-page">
+      <div className="relative min-h-dvh" data-testid="methodology-page">
+      <MapMotif />
         <NavHeader />
         <main className="mx-auto max-w-[1500px] px-4 pb-12 pt-4 md:px-6">
           <Methodology />
+        <MotifCredit />
         </main>
       </div>
     </Suspense>

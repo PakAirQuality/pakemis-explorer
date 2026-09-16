@@ -44,11 +44,13 @@ describe("static-export link scheme", () => {
       .filter((f) => /["'`]\/(map|explore|about)(["'`?#/])/.test(readFileSync(f, "utf8")));
     expect(hits).toEqual([]);
     for (const rel of ["app/map/page.tsx", "app/explore/page.tsx", "app/about/page.tsx"]) expect(readFileSync(path.join(SRC, rel), "utf8")).toContain("<Redirect");
-    // /data stays a real page (the Grapher, reachable from Downloads); the nav's fourth
-    // section is Analyze since 2026-09-09
+    // /data stays a real page (the Grapher, reachable from Downloads)
     expect(readFileSync(path.join(SRC, "app/data/page.tsx"), "utf8")).toContain("<Explore");
-    expect(readFileSync(path.join(SRC, "app/analyze/page.tsx"), "utf8")).toContain("<Analyze");
-    expect(readFileSync(path.join(SRC, "components/shell/NavCapsule.tsx"), "utf8")).toContain('href: "/analyze"');
+    // ANALYZE JOINED THEM on 2026-09-16: the Evidence Assistant answers what the page was built
+    // for, so the route is a stub like /map and /explore and nothing links to it any more.
+    expect(readFileSync(path.join(SRC, "app/analyze/page.tsx"), "utf8")).toContain("<Redirect");
+    expect(readFileSync(path.join(SRC, "components/shell/NavCapsule.tsx"), "utf8")).not.toContain('href: "/analyze"');
+    expect(existsSync(path.join(SRC, "components/analyze"))).toBe(false);
   });
   it("a receipt's URL is /downloads?receipt=<hash>", () => {
     const id = "0123456789abcdef0123456789abcdef";

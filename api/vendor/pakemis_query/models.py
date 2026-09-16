@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 GEOGRAPHY_LEVELS = ("national", "adm1", "adm2")
 VIEWS = ("all", "physical", "origin", "accounting")
 GROUPS = ("sector_id", "ipcc_code", "category", "gas", "component_id", "period_id", "month",
-          "province", "shape_id", "module", "spatial_view", "configuration_id")
+          "province", "shape_id", "module", "spatial_view", "configuration_id",
+          "reporting_sector")
 
 
 def canonical_json(request):
@@ -28,7 +29,9 @@ class QueryEmissions:
     configuration_id: str = ""          # REF_2023_24 | S_2023_24
     gwp_basis: str = ""                 # AR5 | AR6
     gases: tuple = ()                   # subset of CO2 CH4 N2O; empty -> all
-    sectors: tuple = ()                 # sector_id filter
+    sectors: tuple = ()                 # sector_id filter (the module that computed the stream)
+    reporting_sectors: tuple = ()       # reporting_sector filter (where IPCC 2006 files it;
+                                        # module vocabulary; captive generation -> industry)
     ipcc_codes: tuple = ()              # exact code or prefix ("1.A")
     categories: tuple = ()
     streams: tuple = ()                 # component_id / source_stream_id filter

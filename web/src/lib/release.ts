@@ -58,6 +58,8 @@ export function releaseDims(r: ReleaseInfo | undefined) {
     fiscalPeriods: periodRows.filter((p) => p.basis === "fiscal").map((p) => p.period_id),
     monthsByPeriod: (monthDim.by_period as Record<string, string[]> | undefined) ?? {},
     sectors: (dims.sectors as unknown as string[] | undefined) ?? [],
+    reporting_sectors: (dims.reporting_sectors as unknown as string[] | undefined)
+      ?? (dims.sectors as unknown as string[] | undefined) ?? [],
     gases: (dims.dim_gas?.values as string[] | undefined) ?? [],
     configurations: ((dims.dim_configuration?.queryable as { configuration_id: string }[] | undefined) ?? []).map((c) => c.configuration_id),
   };
@@ -134,7 +136,16 @@ export function releaseDoi(r: ReleaseInfo | undefined): { data: string; document
   return { data: str(d.data), documentation: str(d.documentation), software: str(d.software) };
 }
 
-export function releaseAgent(r: ReleaseInfo | undefined): { enabled: boolean; model: string; reason: string } {
-  const a = (r as unknown as { agent?: { enabled?: boolean; model?: string; reason?: string } } | undefined)?.agent;
-  return { enabled: !!a?.enabled, model: a?.model ?? "", reason: a?.reason ?? "not mounted" };
+/**
+ * `enabled` means THE MODEL is configured, and it keeps meaning exactly that - nothing here starts
+ * reporting inference that is not available. `library` is the explanation library's content digest,
+ * present whenever the prepared explanations loaded. `usable` is the one the panel asks about:
+ * either half is enough to answer something, and a site with no provider key should still be able
+ * to say what emissions are rather than showing a dead panel.
+ */
+export function releaseAgent(r: ReleaseInfo | undefined): { enabled: boolean; model: string; reason: string; library: string; usable: boolean } {
+  const a = (r as unknown as { agent?: { enabled?: boolean; model?: string; reason?: string; library?: string } } | undefined)?.agent;
+  const library = a?.library ?? "";
+  return { enabled: !!a?.enabled, model: a?.model ?? "", reason: a?.reason ?? "not mounted",
+           library, usable: !!a?.enabled || !!library };
 }

@@ -37,7 +37,7 @@ import { HeaderBlock } from "@/components/overview/HeaderBlock";
 import { DeckControls } from "@/components/overview/DeckControls";
 import { HEADER, licenceLine } from "@/components/overview/copy";
 import { DECK_CARD } from "@/components/overview/deck";
-import { cardsFor, scopeOf, type CardId } from "./cards";
+import { cardsFor, scopeOf } from "./cards";
 import { AirCards, AIR_OPEN_IDS } from "./cards/AirCards";
 import { renderCard, wantsFor } from "./cards/render";
 import { DECK_COLLAPSE, DECK_EXPAND, DECK_TITLE, FILTERS } from "./copy";

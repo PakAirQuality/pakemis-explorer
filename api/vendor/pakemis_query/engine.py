@@ -16,6 +16,28 @@ from pakemis_query.models import (GEOGRAPHY_LEVELS, VIEWS, QueryAir, QueryEmissi
 
 DECIMAL = "DECIMAL(38,18)"
 REFERENCE_PERIOD = "FY2023-24"
+# THE REPORTING-SECTOR AXIS (2026-09-12): a real column on every emissions fact, declared per
+# stream in data/stream_reporting_sector.csv - the sector IPCC 2006 files a stream under, in the
+# module vocabulary, beside sector_id (the module that computed it). The one row that differs is
+# captive gas self-generation (1.A.2, computed by the power module, reported under industry).
+# `group_by: ["reporting_sector"]` and the `reporting_sectors` filter are answerable at EVERY
+# grain since rc54: the cube keys its district accumulator on (module, reporting_sector), so a
+# module's district mass is partitioned by where the Guidelines report it rather than summed
+# away. Until rc54 the district tables were module-resolved and the request was REFUSED there
+# rather than answered with the module - a right-shaped answer to the wrong question.
+REPORTING_SECTOR_KEY = "reporting_sector"
+# The ECONOMIC-SECTOR regrouping (2026-09-11), a derived group key at national grain: the same
+# atoms, grouped by what the activity IS rather than by the module that computed it.
+# 'industrial' = the industry and ippu REPORTING sectors - 1.A.2 manufacturing combustion
+# including the captive generation the power module computes (through the reporting axis, not a
+# code match) plus every 2.x process category; every other sector keeps its module. Railways'
+# unresolved '1.A.2/1.A.4.c' reports under railways and is not industry. Additive by
+# construction - both views sum to the same national total - and the industrial aggregate is
+# the release's own "covered direct industrial sources" boundary
+# (outputs/pakemis_industry_boundary_ledger.csv), nothing screened or absent inside it.
+ECONOMIC_SECTOR_KEY = "economic_sector"
+ECONOMIC_SECTOR_SQL = ("CASE WHEN reporting_sector IN ('industry', 'ippu') "
+                       "THEN 'industrial' ELSE reporting_sector END")
 
 
 class Engine:
@@ -111,6 +133,10 @@ class Engine:
             where.append(self._in("gas", q.gases))
         if q.sectors:
             where.append(self._in("sector_id" if q.geography_level == "national" else "module", q.sectors))
+        if q.reporting_sectors:
+            # every grain: the national facts, the ADM1 stream tables and the district tables
+            # all carry the column since rc54
+            where.append(self._in(REPORTING_SECTOR_KEY, q.reporting_sectors))
         if q.ipcc_codes and q.geography_level == "national":
             where.append("(" + " OR ".join("ipcc_code = '%s' OR ipcc_code LIKE '%s.%%'" % (c, c) for c in q.ipcc_codes) + ")")
         if q.categories and q.geography_level == "national":
@@ -153,7 +179,10 @@ class Engine:
             groups = list(q.group_by)
             where += self._filters(q)
         group_sql = ", ".join(groups) if groups else "'all'"
-        group_cols = ", ".join(groups) + ", " if groups else ""
+        # a derived key is SELECTed as its expression under the key's own alias and GROUPed by
+        # that alias; a real column passes through unchanged
+        select_cols = [ECONOMIC_SECTOR_SQL + " AS " + ECONOMIC_SECTOR_KEY if g == ECONOMIC_SECTOR_KEY else g for g in groups]
+        group_cols = ", ".join(select_cols) + ", " if groups else ""
         formula = ""
         if q.configuration_id == "S_2023_24" and q.basis == "fiscal":
             # S = REF - residential(REF) + residential(S): the residential atoms of the
@@ -469,13 +498,61 @@ class Engine:
         return {"tables": products, "release_manifest": r.contract["release"]["release_manifest"],
                 "derived_from": r.tables[tables[0]]["derived_from"][:6]}
 
+    # fact_uncertainty is keyed on (category, module, resolution) and NOTHING ELSE. It carries the
+    # reference period and the reference configuration only, and it has no gas column. Every axis a
+    # caller can filter on that this table does not carry is therefore a REFUSAL: returning the
+    # category envelope for a request about one gas, one other year, one other configuration or one
+    # stream would answer a question the release has not answered, in a block that looks the same
+    # as a real one. Each refusal names the axis that is missing, because an empty block with no
+    # reason reads as a lookup miss - which is exactly how the resolution defect below survived.
+    RESOLUTIONS = {("national", False): "annual_national", ("national", True): "monthly_national",
+                   ("adm2", False): "annual_adm2", ("adm2", True): "monthly_adm2"}
+
     def _uncertainty_for(self, q):
+        def none(reason):
+            return {"rows": [], "resolution": None, "interpretation": reason}
+
+        # THE RESOLUTION DEFECT. This selected `resolution = 'annual'` for a national request and
+        # the bare geography level otherwise, producing 'annual', 'adm1' or 'adm2'. The vocabulary
+        # is annual_national / monthly_national / annual_adm2 / monthly_adm2, so NONE of the three
+        # ever matched and every envelope this engine has ever produced carried an empty block.
+        # Nothing failed, because nothing asserted that a row ever came back.
+        resolution = self.RESOLUTIONS.get((q.geography_level, bool(q.months)))
+        if q.geography_level == "adm1":
+            return none("the release publishes no provincial uncertainty: fact_uncertainty carries "
+                        "annual_adm2 and monthly_adm2, and no adm1 resolution at any grain")
+        if resolution is None:
+            return none("no uncertainty resolution exists for geography level %r" % q.geography_level)
+        if q.gases:
+            return none("the release publishes no per-gas uncertainty: fact_uncertainty has no gas "
+                        "column, and the category envelope covers every gas in that category")
+        if q.configuration_id and q.configuration_id != self.release.defaults.get("configuration_id"):
+            return none("uncertainty is published for the reference configuration only; %s carries "
+                        "no interval, and the reference's may not stand in for it" % q.configuration_id)
+        reference = self.release.defaults.get("period_id")
+        if reference and set(q.periods or ()) - {reference}:
+            return none("per-category uncertainty is published for %s only; for another period the "
+                        "release carries an interval on the national covered total alone, in "
+                        "fact_uncertainty_series" % reference)
+        if q.streams:
+            return none("the finest grain the release publishes an interval at is the category; "
+                        "there is no per-stream uncertainty")
+
+        # narrow to what was asked for. A category-scoped request that came back with all 23
+        # categories would make the reader find their own row, and the Explorer's sidecar used to
+        # do this filtering for itself precisely because this block was empty - so leaving it out
+        # here would have made the fixed block LESS useful than the workaround it replaced.
+        where = ["resolution = '%s'" % resolution]
+        if q.categories:
+            where.append(self._in("category", q.categories))
+        if q.sectors:
+            where.append(self._in("module", q.sectors))
         rows = self._fetch("SELECT category, module, resolution, envelope_low_pct, envelope_high_pct, envelope_kind, aggregation_rule "
-                           "FROM fact_uncertainty WHERE resolution = '%s'%s"
-                           % ("annual" if q.geography_level == "national" else q.geography_level,
-                              (" AND " + self._in("module", q.sectors)) if q.sectors else ""))
-        return {"rows": rows[:40], "interpretation": "per-category envelopes (structural, no probability); "
-                "they are NEVER combined in quadrature across categories - see aggregation_rule"}
+                           "FROM fact_uncertainty WHERE " + " AND ".join(where))
+        return {"rows": rows[:40], "resolution": resolution,
+                "interpretation": "per-category envelopes (structural, no probability) at resolution "
+                "%s; they are NEVER combined in quadrature across categories - see aggregation_rule"
+                % resolution}
 
     def _completeness_for(self, q):
         where = []
@@ -494,6 +571,8 @@ class Engine:
             where.append(self._in("province", q.geography_ids))
         if q.sectors:
             where.append(self._in("module", q.sectors))
+        if q.reporting_sectors:
+            where.append(self._in(REPORTING_SECTOR_KEY, q.reporting_sectors))
         rows = self._fetch("SELECT province, SUM(CAST(co2e_Mt_AR5 AS %s)) AS exact, COUNT(*) AS n FROM fact_unallocated WHERE %s GROUP BY province"
                            % (DECIMAL, " AND ".join(where)))
         return {"level": "adm1", "by_province": [{"province": r["province"], "exact": str(r["exact"]), "n_rows": r["n"]} for r in rows],
@@ -501,6 +580,12 @@ class Engine:
 
     def _limitations_for(self, q):
         hit = ["lulucf_excluded"]
+        if ECONOMIC_SECTOR_KEY in q.group_by:
+            hit.append("economic_sector_view")
+        if REPORTING_SECTOR_KEY in q.group_by or q.reporting_sectors or ECONOMIC_SECTOR_KEY in q.group_by:
+            # the economic view is an expression over the reporting axis, so it inherits
+            # the axis's limitation beside its own
+            hit.append("reporting_sector_view")
         if q.geography_level == "adm2":
             hit += ["ar6_adm2_ne", "no_polygon_units"]
         if q.configuration_id == "S_2023_24":

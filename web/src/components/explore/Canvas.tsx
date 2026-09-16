@@ -11,7 +11,7 @@
 import type { Level } from "@/lib/urlState";
 import type { Cell, Envelope } from "@/lib/envelope";
 import { shown } from "@/lib/envelope";
-import { cellUnit, groupValueLabel, monthTiny, periodShort, type Dims as GeoDims } from "@/lib/labels";
+import { cellUnit, groupValueLabel, isSectorKey, monthTiny, periodShort, type Dims as GeoDims } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import { gasColor, rampByRank } from "@/lib/palette";
 import { magnitudeOf } from "@/lib/uncertainty";
@@ -86,7 +86,7 @@ function select(cell: Cell, key: string, dispatch: (a: Action) => void) {
   const g = cell.group ?? sidesOf(cell)?.left.group ?? {};
   const id = g[key];
   if (!id) return;
-  if (key === "sector_id" || key === "module") dispatch({ control: "sector", value: id });
+  if (isSectorKey(key)) dispatch({ control: "sector", value: id });
   else if (key === "category") dispatch({ control: "category", value: id });
   else if (key === "gas") dispatch({ control: "gas", value: id });
   else if (key === "province") dispatch({ control: "geography", value: "province", id });

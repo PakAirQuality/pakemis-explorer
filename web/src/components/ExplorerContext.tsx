@@ -17,7 +17,7 @@ export type ExplorerContextValue = {
   dims: Dims;
   defaults: StateDefaults;
   contract: ContractOptions | undefined;
-  agent: { enabled: boolean; model: string; reason: string };
+  agent: { enabled: boolean; model: string; reason: string; library: string; usable: boolean };
   isMobile: boolean;
 };
 

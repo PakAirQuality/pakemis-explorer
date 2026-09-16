@@ -25,6 +25,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
+from pakemis_api.ask.local import Library, LocalTurn
 from pakemis_api.ask.limits import DailyBudget, Limits, PerIpBucket
 from pakemis_api.ask.loop import AnthropicModel, Turn
 from pakemis_api.ask.memory import Memory
@@ -56,9 +57,23 @@ class AskRuntime:
         self.memory = Memory()
         self.budget = DailyBudget(self.limits.daily_tokens)
         self.per_ip = PerIpBucket(self.limits.per_ip_per_hour)
+        try:
+            self.library = Library(dims=self.dims)
+        except Exception:                                  # a broken library must not take Ask down
+            log.exception("the explanation library failed to load; answering from the model only")
+            self.library = None
 
     def turn(self, body: AskBody):
         conv = self.memory.get_or_create(body.conversation_id, body.client_history)
+        # LOCAL FIRST. A prepared explanation costs no model call and no budget, and most of what
+        # a visitor asks is an explanation rather than a number. The library declines the moment
+        # a question is about the SELECTED RESULT, and the loop below takes it - that path holds
+        # the typed query functions and mints the receipt, so a number never comes from here.
+        # The per-IP limit above still applies: it is abuse protection, not budget.
+        if self.library is not None:
+            answer = self.library.answer(body.message, body.ui_state, conv.last_card_id())
+            if answer:
+                return LocalTurn(conv, body.message, answer)
         return Turn(self.service, self.model, self.tools, self.system, self.dims, conv, body.message, body.ui_state, self.limits, self.budget)
 
 
@@ -90,11 +105,17 @@ def install_ask(app, service, settings, model_client=None):
         else:
             reason = getattr(settings, "ask_disabled_reason", None) or "no provider key is set in the API's environment"
             provider = getattr(settings, "resolved_ask_provider", None)
-    app.state.ask = AskRuntime(service, model) if model is not None else None
+    # THE RUNTIME INSTALLS WITHOUT A MODEL. The prepared explanations are the reason: they cost no
+    # inference, and a site with no provider key should still be able to say what emissions are,
+    # what methane does and what drives a sector's estimate. Only a question the library declines -
+    # one about the selected data - needs the loop, and that is the one that answers 503.
+    runtime = AskRuntime(service, model)
+    app.state.ask = runtime if (model is not None or runtime.library is not None) else None
     service.agent_status = {"enabled": model is not None,
                             "model": getattr(model, "model_id", None) if model is not None else None,
                             "provider": provider,
-                            "reason": reason}
+                            "reason": reason,
+                            "library": runtime.library.digest[:16] if runtime.library is not None else None}
     if model is not None:
         log.info("Ask PakEmis enabled on %s (%s) with %d tools", service.agent_status["model"], provider, len(app.state.ask.tools))
     else:
@@ -112,12 +133,16 @@ def _client_ip(request: Request):
 @router.post("/ask", tags=["ask"])
 def ask(body: AskBody, request: Request):
     runtime = getattr(request.app.state, "ask", None)
+    status = getattr(request.app.state.service, "agent_status", {}) or {}
     if runtime is None:
-        status = getattr(request.app.state.service, "agent_status", {}) or {}
         return JSONResponse(status_code=503, content={"error": "agent_disabled", "reason": status.get("reason") or "no model client"})
     if not runtime.per_ip.allow(_client_ip(request)):
         return JSONResponse(status_code=429, content={"error": "rate_limited", "message": "too many questions from this address; try again in an hour"})
     turn = runtime.turn(body)
+    # the library answered nothing and there is no model to ask: this question needed the data
+    if runtime.model is None and not isinstance(turn, LocalTurn):
+        return JSONResponse(status_code=503, content={"error": "agent_disabled", "reason": status.get("reason") or "no model client",
+                                                      "message": "This question needs the inventory query, which needs the assistant's model. Explanations of the concepts and methods still work."})
 
     def events():
         try:

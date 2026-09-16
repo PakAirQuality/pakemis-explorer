@@ -14,7 +14,7 @@ import { openAsk, resetAskBus } from "@/lib/askBus";
 import { releaseDims, releaseLabels } from "@/lib/release";
 import { resolveState, type ExplorerState } from "@/lib/urlState";
 import type { ReleaseInfo } from "@/lib/envelope";
-import { RELEASE } from "@/__tests__/fixtures";
+import { RELEASE, stubViewport, stubWideViewport } from "@/__tests__/fixtures";
 import { AskDrawer } from "./AskDrawer";
 import { comparisonProvince, scopeLine, suggestedQuestions } from "./suggestions";
 
@@ -29,7 +29,7 @@ const labels = releaseLabels(release);
 const dims = releaseDims(release);
 
 function ctx(state: ExplorerState, setState = vi.fn(), isMobile = false): ExplorerContextValue {
-  return { state, setState, release, labels, dims, defaults: DEFAULTS, contract: undefined, agent: { enabled: true, model: "gemini-test", reason: "" }, isMobile };
+  return { state, setState, release, labels, dims, defaults: DEFAULTS, contract: undefined, agent: { enabled: true, model: "gemini-test", reason: "", library: "lib", usable: true }, isMobile };
 }
 
 function sse(events: [string, unknown][]): Response {
@@ -46,6 +46,18 @@ const DONE: [string, unknown][] = [
   ["answer", { text: "Yes.", receipts: [], citations: [], elapsed_s: 0.5, scope: null }],
   ["done", { conversation_id: "c0ffee00deadbeef", usage: { input_tokens: 1, output_tokens: 1 }, cost_estimate_usd: null }],
 ];
+
+/**
+ * The /ask POSTs a spy saw, and nothing else. The panel's empty state also asks the release for
+ * the national total — the figure it puts in one suggested question — so counting every call would
+ * count that too, and these tests are about how many times the QUESTION was sent.
+ */
+function askCalls(spy: { mock: { calls: unknown[][] } }): RequestInit[] {
+  return spy.mock.calls.filter((c) => String(c[0]).includes("/ask")).map((c) => c[1] as RequestInit);
+}
+function askBody(spy: { mock: { calls: unknown[][] } }, i = 0): { message: string; ui_state: Record<string, unknown> } {
+  return JSON.parse(String(askCalls(spy)[i].body));
+}
 
 function mount(value: ExplorerContextValue) {
   return render(
@@ -91,9 +103,18 @@ describe("AskDrawer", () => {
     fireEvent.click(screen.getByTestId("ask-fab"));
     expect(drawer.getAttribute("data-open")).toBe("1");
     expect(screen.getByTestId("ask-dock").getAttribute("data-variant")).toBe("drawer");
-    expect(screen.getByTestId("ask-contract")).toHaveTextContent("The assistant interprets your question; the inventory engine supplies every number. It never calculates from documents or prose.");
-    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Scope: Punjab · agriculture · 2023–24 · reference estimate");
-    expect(screen.getAllByTestId("suggestion").map((b) => b.textContent)).toEqual(["Why is Punjab's estimate high?", "How much comes from livestock?", "Which parts are proxy-allocated?", "Compare Punjab with Sindh", "Download the rows used here."]);
+    // the contract is printed under the questions now rather than folded behind an info button:
+    // a promise a reader has to go looking for is not much of a promise
+    expect(screen.getByTestId("ask-contract")).toHaveTextContent("Responses cite their sources and preserve the selected map context.");
+    // and the scope is the composer's own chip row, always on screen beside the box it applies to
+    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Using this view:");
+    // the pills are the reader's OWN choices; the configuration qualifies every answer and is
+    // always on, so it stays in the scope line rather than sitting beside "Punjab" as though a
+    // reader had picked it
+    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent))
+      .toEqual(["Punjab", "agriculture", "All gases", "2023–24"]);
+    // four questions, not five: the panel asks rather than lists
+    expect(screen.getAllByTestId("suggestion").map((b) => b.textContent)).toEqual(["Why is Punjab's estimate high?", "How much comes from livestock?", "Which parts are proxy-allocated?", "Compare Punjab with Sindh"]);
     expect(document.body.textContent).not.toContain("FY");
     fireEvent.keyDown(window, { key: "Escape" });
     expect(drawer.getAttribute("data-open")).toBe("0");
@@ -106,7 +127,7 @@ describe("AskDrawer", () => {
   it("the scope line and the suggestions change with the state", () => {
     const { rerender } = mount(ctx(punjabAg));
     fireEvent.click(screen.getByTestId("ask-fab"));
-    expect(screen.getAllByTestId("suggestion")).toHaveLength(5);
+    expect(screen.getAllByTestId("suggestion")).toHaveLength(4);
     rerender(
       <Providers>
         <ExplorerContext.Provider value={ctx(national)}>
@@ -115,7 +136,8 @@ describe("AskDrawer", () => {
         </ExplorerContext.Provider>
       </Providers>,
     );
-    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Scope: Pakistan · 2023–24 · reference estimate");
+    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent)).toEqual(["Pakistan", "All gases", "2023–24"]);
+    // with no envelope in hand the certainty question keeps its number-free wording
     expect(screen.getAllByTestId("suggestion").map((b) => b.textContent)).toEqual(["What is Pakistan's largest source?", "How certain is this estimate?", "Which categories are not estimated?", "How have emissions changed since 2020–21?"]);
   });
 
@@ -129,8 +151,8 @@ describe("AskDrawer", () => {
     });
     expect(screen.getByTestId("ask-drawer").getAttribute("data-open")).toBe("1");
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const body = JSON.parse(String((fetchSpy.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(askCalls(fetchSpy)).toHaveLength(1);
+    const body = askBody(fetchSpy);
     expect(body.message).toBe("Compare Punjab with Sindh");
     expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all", sector: "agriculture", geo: "Sindh" });
     expect(setState).toHaveBeenCalledWith({ geo: "Sindh" });
@@ -139,12 +161,12 @@ describe("AskDrawer", () => {
     await act(async () => {
       openAsk({ question: "How certain is this?" });
     });
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
-    expect(JSON.parse(String((fetchSpy.mock.calls[1] as unknown as [string, RequestInit])[1].body)).message).toBe("How certain is this?");
+    await waitFor(() => expect(askCalls(fetchSpy)).toHaveLength(2));
+    expect(askBody(fetchSpy, 1).message).toBe("How certain is this?");
     await act(async () => {
       openAsk();
     });
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(askCalls(fetchSpy)).toHaveLength(2);
   });
 
   it("a suggestion click sends that question with the drawer's scope", async () => {
@@ -155,8 +177,8 @@ describe("AskDrawer", () => {
     await act(async () => {
       fireEvent.click(screen.getAllByTestId("suggestion")[1]);
     });
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
-    const body = JSON.parse(String((fetchSpy.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    await waitFor(() => expect(askCalls(fetchSpy)).toHaveLength(1));
+    const body = askBody(fetchSpy);
     expect(body.message).toBe("How much comes from livestock?");
     expect(body.ui_state.geo).toBe("Punjab");
     expect(body.ui_state.sector).toBe("agriculture");
@@ -173,5 +195,64 @@ describe("AskDrawer", () => {
     const drawer = screen.getByTestId("ask-drawer");
     expect(drawer.className).toContain("inset-0");
     expect(drawer.getAttribute("style") ?? "").not.toContain("440");
+  });
+});
+
+/**
+ * On the workspace the panel is the page's right column rather than a slide-over: no button to
+ * press, no X to press back, and the map's chrome laid out around it. These pin the three things
+ * that make that true and the one thing that keeps the rest of the app working - the SAME element,
+ * so the round button still learns from `data-open` that it has nothing to do.
+ */
+describe("docked on the workspace", () => {
+  it("is open with no way to dismiss it, and the round button takes itself away", async () => {
+    stubWideViewport();
+    pathname.value = "/";
+    mount(ctx(national));
+    const drawer = screen.getByTestId("ask-drawer");
+    expect(drawer).toHaveAttribute("data-docked", "1");
+    expect(drawer).toHaveAttribute("data-open", "1");
+    expect(drawer).toHaveAttribute("aria-hidden", "false");
+    expect(drawer.className).toContain("translate-x-0");
+    expect(drawer.className).not.toContain("transition-transform");   // it never slid, so it must not animate in
+    expect(screen.getByTestId("ask-dock")).toHaveAttribute("data-variant", "dock");
+    expect(screen.queryByTestId("ask-close")).toBeNull();
+    // the button hides itself off the drawer's own attribute; it needed no knowledge of any of this
+    await waitFor(() => expect(screen.queryByTestId("ask-fab")).toBeNull());
+    // and Escape, which closes a drawer, has nothing to close here
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByTestId("ask-drawer")).toHaveAttribute("data-open", "1");
+  });
+
+  it("is still a drawer on every other route at the same width, and on a narrow workspace", () => {
+    stubWideViewport();
+    pathname.value = "/methods";
+    const { unmount } = mount(ctx(national));
+    expect(screen.getByTestId("ask-drawer")).toHaveAttribute("data-open", "0");
+    expect(screen.getByTestId("ask-fab")).toBeInTheDocument();
+    unmount();
+    // below the workspace's own two-pane threshold nothing docks: a third permanent column cannot
+    // share a screen that already shows one pane at a time
+    stubViewport(1100);
+    pathname.value = "/";
+    mount(ctx(national));
+    expect(screen.getByTestId("ask-drawer")).toHaveAttribute("data-docked", "0");
+    expect(screen.getByTestId("ask-drawer")).toHaveAttribute("data-open", "0");
+    expect(screen.getByTestId("ask-fab")).toBeInTheDocument();
+  });
+
+  it("a seed still reaches it, so an Ask-about-this link keeps working where it is the page", async () => {
+    stubWideViewport();
+    pathname.value = "/";
+    const fetchSpy = vi.fn(async () => sse(DONE));
+    vi.stubGlobal("fetch", fetchSpy);
+    const setState = vi.fn();
+    mount(ctx(national, setState));
+    await act(async () => {
+      openAsk({ question: "How much comes from livestock?", scope: { geo: "Punjab", sector: "agriculture" } });
+    });
+    await waitFor(() => expect(askCalls(fetchSpy)).toHaveLength(1));
+    expect(askBody(fetchSpy).message).toBe("How much comes from livestock?");
+    expect(setState).toHaveBeenCalledWith({ geo: "Punjab", sector: "agriculture" });
   });
 });

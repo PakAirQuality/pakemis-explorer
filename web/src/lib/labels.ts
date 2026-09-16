@@ -219,6 +219,12 @@ export function economicSectorShortLabel(labels: Labels, id: string | null | und
   if (!id) return "All sectors";
   return labels.economic_sectors_short[id] ?? labels.economic_sectors[id] ?? sectorShortLabel(labels, id);
 }
+/** Is this group key a SECTOR axis? Three names have meant "sector" in this product: sector_id
+ *  and module (the computing module) and reporting_sector (where IPCC 2006 files it, the axis every
+ *  surface groups by since rc54). A surface that tests only the first two silently prints raw ids. */
+export function isSectorKey(key: string | null | undefined): boolean {
+  return key === "reporting_sector" || key === "sector_id" || key === "module";
+}
 /** A reporting-sector id: where IPCC 2006 files the stream, beside the module that computed it. */
 export function reportingSectorLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "All sectors";
@@ -228,24 +234,10 @@ export function reportingSectorShortLabel(labels: Labels, id: string | null | un
   if (!id) return "All sectors";
   return labels.reporting_sectors_short?.[id] ?? labels.reporting_sectors?.[id] ?? sectorShortLabel(labels, id);
 }
-/** The modules that compute a reporting sector, when they are not just the sector itself. A reader
- *  of "industrial fuel use" is owed the fact that part of it is computed in the power module. */
-export function computedInModules(labels: Labels, id: string | null | undefined): string[] {
-  const mods = (id && labels.reporting_sector_modules?.[id]) || [];
-  return mods.length > 1 || (mods.length === 1 && mods[0] !== id) ? mods : [];
-}
-/** The two groupings of the same atoms: by where IPCC 2006 REPORTS them (the default, and the one
- *  whose bars carry IPCC category names), or by what the activity is economically. Before rc53 the
- *  first grouping was the computing MODULE, which put captive self-generation - 1.A.2 autoproducer
- *  generation - in the power bar while the industry bar was labelled with that same code. */
-export type SectorView = "ipcc" | "economic";
-export const SECTOR_VIEW_GROUP_KEY: Record<SectorView, string> = { ipcc: "reporting_sector", economic: "economic_sector" };
-export function viewSectorLabel(labels: Labels, view: SectorView, id: string | null | undefined): string {
-  return view === "economic" ? economicSectorLabel(labels, id) : reportingSectorLabel(labels, id);
-}
-export function viewSectorShortLabel(labels: Labels, view: SectorView, id: string | null | undefined): string {
-  return view === "economic" ? economicSectorShortLabel(labels, id) : reportingSectorShortLabel(labels, id);
-}
+/* computedInModules, SectorView, SECTOR_VIEW_GROUP_KEY, viewSectorLabel and viewSectorShortLabel
+   were removed with the Analyze page on 2026-09-16 - it was their only caller. The economic
+   grouping itself is untouched: the release still publishes it, the API still serves the
+   `economic_sector` group_by, and economicSectorLabel below still words it. */
 export function gasLabel(labels: Labels, id: string | null | undefined): string {
   if (!id) return "All gases";
   return labels.gases[id] ?? labels.gases[id.toUpperCase()] ?? id;
@@ -311,6 +303,9 @@ export function groupValueLabel(labels: Labels, dims: Dims, key: string, value: 
   switch (key) {
     case "shape_id":
       return districtName(dims, value);
+    case "reporting_sector":
+      // the axis every surface groups by since rc54; its label says what the bar CONTAINS
+      return labels.reporting_sectors[value] ?? labels.sectors[value] ?? value;
     case "module":
     case "sector_id":
       return labels.sectors[value] ?? value;

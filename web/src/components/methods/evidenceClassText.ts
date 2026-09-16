@@ -82,3 +82,47 @@ function joinWords(words: string[]): string {
   return words.slice(0, -1).join(", ") + " and " + words[words.length - 1];
 }
 
+
+/**
+ * The allocation surfaces, in words.
+ *
+ * THE RELEASE HAS NO TABLE FOR THESE. There is no `dim_allocation_surface`, nothing in
+ * /release.labels, and the only existing treatment is `String(value).replace(/_/g, " ")` in the
+ * claim record — which prints "builtup" and "flare points+uniform fallback". These are the 21
+ * distinct values in fact_evidence; the compounds are `primary+fallback`, so they split on "+".
+ */
+const SURFACE_WORDS: Record<string, string> = {
+  road_density: "road density",
+  builtup: "built-up area",
+  population: "population",
+  cropland: "cropland",
+  glw_livestock: "livestock density",
+  manure_applied: "manure application",
+  spam_rice: "rice area",
+  firms_fire: "detected fires",
+  uniform: "an even spread",
+  none: "",
+  flare_points: "flare locations",
+  grid_station_points: "grid station locations",
+  rail_yard_points: "rail yard locations",
+  rail_network_line_density: "rail network density",
+  ippu_register_points: "industrial plant locations",
+  brick_kiln_points: "brick kiln locations",
+  captive_register_points: "captive plant locations",
+  airport_points: "airport locations",
+  lng_terminal_points: "LNG terminal locations",
+  wwtp_points: "treatment plant locations",
+  waste_site_points: "waste site locations",
+  uniform_fallback: "an even spread where none is known",
+  builtup_fallback: "built-up area where none is known",
+  population_fallback: "population where none is known",
+};
+
+/** "road density", "flare locations, then an even spread where none is known"; "" when unknown. */
+export function allocationSurfaceWords(surface: string | null | undefined): string {
+  const raw = (surface ?? "").trim();
+  if (!raw) return "";
+  const parts = raw.split("+").map((p) => SURFACE_WORDS[p] ?? "").filter(Boolean);
+  if (parts.length === 0) return "";
+  return parts.length === 1 ? parts[0] : `${parts[0]}, then ${parts.slice(1).join(", ")}`;
+}

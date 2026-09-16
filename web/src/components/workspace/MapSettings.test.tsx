@@ -26,7 +26,7 @@ const base: ExplorerState = { level: "adm1", period: "FY2023-24", month: null, s
 
 function ctx(state: ExplorerState, setState: ExplorerContextValue["setState"]): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
-  return { state, setState, release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: { gwp: ["AR5", "AR6"], geographyLevel: [], spatialView: [], basis: [], configuration: [], routes: [], gridGas: "CO2", gridAnnual: "annual" }, agent: { enabled: false, model: "", reason: "not mounted" }, isMobile: false };
+  return { state, setState, release, labels: releaseLabels(release), dims: releaseDims(release), defaults: { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" }, contract: { gwp: ["AR5", "AR6"], geographyLevel: [], spatialView: [], basis: [], configuration: [], routes: [], gridGas: "CO2", gridAnnual: "annual" }, agent: { enabled: false, model: "", reason: "not mounted", library: "", usable: false }, isMobile: false };
 }
 
 type Handlers = { onOpacity: (pct: number) => void; onBasemap: (c: BasemapChoice) => void; onBoundaries: (on: boolean) => void; setState: ExplorerContextValue["setState"] };

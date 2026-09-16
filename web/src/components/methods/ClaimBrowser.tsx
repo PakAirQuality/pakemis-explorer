@@ -15,7 +15,7 @@ import { FileSearch, Link2 } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { QueryEmissions } from "@/lib/api";
 import { claimHref, claimParam, parseClaimParam } from "@/lib/claim";
-import { districtName, gasLabel, geographyName, periodShort, sectorLabel } from "@/lib/labels";
+import { districtName, gasLabel, geographyName, periodShort, reportingSectorLabel } from "@/lib/labels";
 import { useEmissions } from "@/lib/queries";
 import { Field, Select, type SelectOption } from "@/components/ui/ControlsCard";
 import { Loading, RefusalCard } from "@/components/ui/RefusalCard";
@@ -36,7 +36,11 @@ export type BrowserScope = { sector: string; category: string; gas: string; plac
 /** The one request of the scope: national grain, or the place's level with its id; a category is sent as asked. */
 export function browserBody(scope: BrowserScope, config: string, gwp: string): QueryEmissions {
   const body: QueryEmissions = { periods: [scope.period], configuration_id: config, gwp_basis: gwp };
-  if (scope.sector) body.sectors = [scope.sector];
+  // the picker offers `dims.reporting_sectors` under their reporting labels, and the sibling
+  // category query already filters on that axis; this line still sent the id on `sectors`, so
+  // the record opened for the COMPUTING MODULE under a reporting sector's name - for industry,
+  // the module without the captive self-generation the axis exists to include
+  if (scope.sector) body.reporting_sectors = [scope.sector];
   if (scope.category) body.categories = [scope.category];
   if (scope.gas) body.gases = [scope.gas];
   if (scope.place.startsWith("adm1:")) {
@@ -55,7 +59,7 @@ export function ClaimBrowser() {
   const [scope, setScope] = useState<BrowserScope>({ sector: state.sector ?? "", category: "", gas: state.gas ?? "", place: PAKISTAN, period: state.period });
   const [asked, setAsked] = useState<QueryEmissions | null>(null);
 
-  const categoriesBody = useMemo<QueryEmissions | null>(() => (scope.sector ? { periods: [scope.period], configuration_id: state.config, gwp_basis: state.gwp, sectors: [scope.sector], group_by: ["category"] } : null), [scope.sector, scope.period, state.config, state.gwp]);
+  const categoriesBody = useMemo<QueryEmissions | null>(() => (scope.sector ? { periods: [scope.period], configuration_id: state.config, gwp_basis: state.gwp, reporting_sectors: [scope.sector], group_by: ["category"] } : null), [scope.sector, scope.period, state.config, state.gwp]);
   const categories = useEmissions(categoriesBody, !!categoriesBody);
   const categoryOptions: SelectOption[] = [{ value: "", label: scope.sector ? "All categories" : "Choose a sector first" }, ...((categories.data?.values ?? []).map((c) => c.group?.category).filter((c): c is string => !!c).map((c) => ({ value: c, label: c })))];
 
@@ -67,7 +71,7 @@ export function ClaimBrowser() {
 
   const selector = parseClaimParam(param);
   const set = (patch: Partial<BrowserScope>) => setScope((s) => ({ ...s, ...patch, ...(patch.sector !== undefined && patch.sector !== s.sector ? { category: "" } : {}) }));
-  const sectorOptions: SelectOption[] = [{ value: "", label: "All sectors" }, ...dims.sectors.map((s) => ({ value: s, label: sectorLabel(labels, s) }))];
+  const sectorOptions: SelectOption[] = [{ value: "", label: "All sectors" }, ...dims.reporting_sectors.map((s) => ({ value: s, label: reportingSectorLabel(labels, s) }))];
   const gasOptions: SelectOption[] = [{ value: "", label: "All gases" }, ...dims.gases.map((g) => ({ value: g, label: gasLabel(labels, g) }))];
   const shapes = new Map<string, string>();
   for (const r of dims.adm2) if (r.shape_id && !shapes.has(r.shape_id)) shapes.set(r.shape_id, districtName(dims, r.shape_id));

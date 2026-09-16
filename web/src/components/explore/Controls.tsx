@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronsLeft, ChevronsRight, Factory, MapPin, RotateCcw, Wind } from "lucide-react";
 import { Select, type SelectOption } from "@/components/ui/ControlsCard";
-import { configLabel, gasLabel, gwpIsDefault, gwpLabel, gwpTooltip, periodShort, sectorLabel, viewLabel, type Dims as GeoDims } from "@/lib/labels";
+import { configLabel, gasLabel, gwpIsDefault, gwpLabel, gwpTooltip, periodShort, reportingSectorLabel, sectorLabel, type Dims as GeoDims, viewLabel } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import { placeWords, unavailableReason, POLLUTANTS, POLLUTANT_LABELS, type Action, type ExploreContext, type ExploreState } from "@/lib/explore/query";
 import { EXPLORE } from "./copy";
@@ -127,7 +127,7 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
   };
 
   // --- Sector and category
-  const sectorOptions: SelectOption[] = [{ value: "", label: W.allSectors }, ...Object.keys(labels.sectors).map((s) => ({ value: s, label: sectorLabel(labels, s) }))];
+  const sectorOptions: SelectOption[] = [{ value: "", label: W.allSectors }, ...Object.keys(labels.reporting_sectors).map((s) => ({ value: s, label: reportingSectorLabel(labels, s) }))];
   const categoryOptions: SelectOption[] = [{ value: "", label: `${W.wholeSector} ${sectorLabel(labels, state.sector).toLowerCase()}` }, ...categories.map((c) => ({ value: c, label: c }))];
 
   // --- Gas / metric (the air beta rides in the same select, prefixed pol:)

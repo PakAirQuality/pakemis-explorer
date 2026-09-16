@@ -20,7 +20,7 @@ from pydantic import ValidationError
 from pakemis_api import models_gen as G
 from pakemis_api.ask import prompt as PROMPT
 from pakemis_api.ask.limits import Limits, cost_estimate_usd, usage_total
-from pakemis_api.ask.render import BareNumberError, render_multi
+from pakemis_api.ask.render import BareNumberError, UnknownPlaceholderError, render_multi
 from pakemis_api.ask.tools import DOWNLOAD_TOOL, FUNCTION_MODEL, MAP_TOOL, ToolInputError, validate_map_view
 from pakemis_api.settings import API_PREFIX
 from pakemis_query import errors as E
@@ -106,6 +106,20 @@ class AnthropicModel:
 
 
 # --- the turn ---------------------------------------------------------------------------------
+def _modules_of_reporting_sector(claims, reporting_sector):
+    """Which modules compute a reporting sector, from the release's own stream dimension.
+
+    The two vocabularies share their ten ids, so a reporting id is usually also a module name and
+    a naive join looks right. It is right by coincidence, and only for the sectors whose atoms all
+    come from one module - captive self-generation is exactly the case where it is not."""
+    try:
+        rows = claims._fetch("SELECT DISTINCT module FROM dim_stream WHERE reporting_sector = '%s'"
+                             % reporting_sector.replace("'", "''"))
+    except Exception:
+        return [reporting_sector]
+    return [r["module"] for r in rows] or [reporting_sector]
+
+
 
 def _compact_context(context):
     keep = ("basis", "periods", "configuration_id", "gwp_basis", "geography_level", "geography_ids", "spatial_view", "defaults_applied")
@@ -164,7 +178,19 @@ def compact_uncertainty(env, claims=None):
     any other envelope (a get_uncertainty result carries its uncertainty in the cells)."""
     block = env.get("uncertainty")
     if isinstance(block, dict) and block.get("rows"):
-        return {"rows": _rows_as_strings(block["rows"]), "interpretation": block.get("interpretation", ""), "source": "envelope"}
+        # the core supplies these directly again: before its resolution defect was fixed the
+        # string it selected on matched nothing, so this branch never fired and the fallback
+        # below did all the work
+        return {"rows": _rows_as_strings(block["rows"]), "interpretation": block.get("interpretation", ""),
+                "resolution": block.get("resolution"), "source": "envelope"}
+    if isinstance(block, dict) and block.get("interpretation") and "resolution" in block:
+        # AN EXPLICIT REFUSAL FROM THE CORE, AND IT IS NOT A CACHE MISS. The core now returns an
+        # empty block with a reason for a grain the release does not publish - a province, one
+        # gas, another configuration, another period, one stream. Falling through to the query
+        # below would answer those from fact_uncertainty anyway, which is the refusal being
+        # bypassed by the very fallback that was written when the block was always empty.
+        return {"rows": [], "interpretation": block["interpretation"], "resolution": None,
+                "source": "refused"}
     if env.get("request_type") != "query_emissions" or claims is None:
         return None
     try:
@@ -176,8 +202,19 @@ def compact_uncertainty(env, claims=None):
     where = []
     if req.get("categories"):
         where.append("category IN (%s)" % ", ".join("'%s'" % c.replace("'", "''") for c in req["categories"]))
-    elif req.get("sectors"):
-        where.append("module IN (%s)" % ", ".join("'%s'" % m.replace("'", "''") for m in req["sectors"]))
+    elif req.get("sectors") or req.get("reporting_sectors"):
+        # fact_uncertainty is MODULE-keyed. A `sectors` filter names modules directly; a
+        # `reporting_sectors` filter names where IPCC 2006 reports a stream, so it is resolved
+        # through the release's own map of which modules compute each reporting sector. Before
+        # rc54 this branch read `sectors` only, so a reporting-axis request silently got NO
+        # uncertainty block at all - the sidecar was absent rather than wrong, which is harder
+        # to notice.
+        modules = list(req.get("sectors") or [])
+        for rep in req.get("reporting_sectors") or []:
+            modules.extend(_modules_of_reporting_sector(claims, rep))
+        if modules:
+            where.append("module IN (%s)"
+                         % ", ".join("'%s'" % m.replace("'", "''") for m in sorted(set(modules))))
     level = req.get("geography_level") or "national"
     resolution = RESOLUTIONS.get((level, bool(req.get("months"))))
     if resolution:
@@ -398,8 +435,19 @@ class Turn:
                     yield "status", {"phase": "correction", "reason": str(exc)}
                     messages.append({"role": "user", "content": PROMPT.correction_message(str(exc))})
                     continue
-                yield "error", {"code": code, "message": str(exc)}
-                break
+                if isinstance(exc, UnknownPlaceholderError):
+                    # SECOND FAILURE, AND ONLY FOR THIS CLASS: drop the phrase and ship. Brace syntax
+                    # on a reader's screen is unacceptable, but so is withholding a correct answer
+                    # over one unwritable aside - every figure in it is real and cited. A
+                    # BareNumberError never reaches here: an invented decimal is a correctness
+                    # failure and stays withheld.
+                    log.warning("answer shipped with an unknown placeholder dropped: %s", exc)
+                    rendered, citations = render_multi(text, self.results,
+                                                       allowlist=(self.dims.version, self.dims.release_id),
+                                                       drop_unknown=True)
+                else:
+                    yield "error", {"code": code, "message": str(exc)}
+                    break
             self.conv.append("user", user_text)
             self.conv.append("assistant", rendered)
             yield "answer", {"text": rendered, "receipts": list(dict.fromkeys(self.receipts)), "citations": citations,

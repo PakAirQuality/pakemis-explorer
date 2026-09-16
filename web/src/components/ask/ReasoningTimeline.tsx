@@ -1,22 +1,26 @@
 "use client";
 /**
- * One turn: the user's message, then — while the server is still working — the cards in
- * arrival order (ThinkingCard, ToolCard with its result or RefusalCard, the "moved the map"
- * chip, the correction notice); once the answer arrives those cards fold under "How this was
- * answered" (collapsed by default; a cite click opens it and scrolls to the card) and the
- * AnswerCard is the turn's body. An error card and the UsageLine close the turn.
+ * One turn, as a chat message: the user's bubble, then the answer.
+ *
+ * WHAT LEFT, AND WHY. This used to render the model's summarised reasoning verbatim (ThinkingCard),
+ * every tool call as its own card, a meta row reading "How this was answered · 0 queries · 12.204 s",
+ * and a mono line of token counts and a cost estimate. Three of those four are the operator's
+ * business, not the reader's, and the fourth - the model's private working - was the most prominent
+ * thing on screen after a one-sentence answer. The evidence that DID belong to the reader was two
+ * clicks inside that fold; it is now one click behind the provenance line under the answer.
+ *
+ * The map action and the correction notice survive, because both describe something that happened
+ * to the reader's own view. The tool cards do not, so a <cite> now opens the evidence rather than
+ * scrolling to a card that is no longer rendered.
  */
-import { useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { ChevronDown, ChevronRight, MapPin } from "lucide-react";
-import { useExplorer } from "@/components/ExplorerContext";
-import { inputChips } from "@/lib/labels";
-import { applyPatch, hrefForState, type ExplorerState } from "@/lib/urlState";
+import { useMemo, useState } from "react";
+import { applyPatch, type ExplorerState } from "@/lib/urlState";
 import { AnswerCard } from "./AnswerCard";
-import { ThinkingCard } from "./ThinkingCard";
-import { ToolCard, type Highlight } from "./ToolCard";
-import { UsageLine } from "./UsageLine";
+import { WorkingLine } from "./Provenance";
+import type { Highlight } from "./ToolCard";
+import { refusalWords } from "@/lib/envelope";
 import { timelineOf } from "./timeline";
+import type { MapMove } from "./mapMove";
 import type { MapActionEvent, TimelineItem, Turn } from "./types";
 
 export const ERROR_TITLES: Record<string, string> = {
@@ -37,7 +41,9 @@ export function errorTitle(code: string): string {
   return ERROR_TITLES[code] ?? code.replace(/_/g, " ");
 }
 
-const PHASE_TEXT: Record<string, string> = { model: "thinking…", tool: "querying…", correction: "rewriting the draft with placeholders…", tool_limit: "tool-call limit reached" };
+/* The phases the stream reports - model, tool, correction, tool_limit - used to be worded and
+   shown one at a time. The panel says ONE thing while it works now (Provenance.WORKING_TEXT); a
+   reader waiting for an answer is not helped by knowing which of the model's turns is in flight. */
 
 /** The URL state a map_action event names (its string fields are URL keys), applied over the current state. */
 export function stateOfAction(state: ExplorerState, action: MapActionEvent): ExplorerState {
@@ -46,95 +52,76 @@ export function stateOfAction(state: ExplorerState, action: MapActionEvent): Exp
   return applyPatch(state, patch);
 }
 
-/** "moved the map" links to the workspace with the action's state, so the chip opens the map from the assistant's page too. */
-function MapActionChip({ action }: { action: MapActionEvent }) {
-  const { labels, dims, state, defaults } = useExplorer();
-  const chips = inputChips(labels, dims, action);
-  const href = hrefForState(stateOfAction(state, action), defaults, "/");
-  return (
-    <div className="flex flex-wrap items-center gap-1 text-xs text-muted" data-testid="map-action">
-      <MapPin size={12} className="text-accent" />
-      <Link href={href} className="text-accent hover:underline" data-testid="map-action-link">moved the map</Link>
-      {chips.map((c) => (
-        <span key={c.key} className="pill border border-line bg-surface px-2 py-px" title={`${c.key} = ${c.raw}`}>
-          <span className="text-muted">{c.label}</span> {c.value}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** The reasoning cards (everything but the answer and the errors), in arrival order. */
-function ReasoningCards({ items, highlight, live }: { items: TimelineItem[]; highlight: Highlight; live: boolean }) {
+/**
+ * The two notices that survived: a query was REFUSED, and the server rejected a draft. Neither is
+ * the model's working - each is a limit on what the reader was given - so neither is behind the
+ * details fold.
+ *
+ * The refusal in particular: a query the release cannot answer ("AR6 CO2e is not carried at ADM2")
+ * is the reason the answer is narrower than the question, and hiding it one click away would be
+ * the panel quietly narrowing a claim.
+ *
+ * THE "MOVED THE MAP" CHIP IS GONE. It printed six internal chips and a raw URL under an answer
+ * nobody had asked to be relocated by. The move is announced beside the answer's own actions now,
+ * with a way back - see AnswerCard and mapMove.ts.
+ */
+function TurnNotices({ items }: { items: TimelineItem[] }) {
   return (
     <>
       {items.map((item, i) => {
-        const isLast = i === items.length - 1;
-        switch (item.kind) {
-          case "thinking":
-            return <ThinkingCard key={i} text={item.text} live={live && isLast} />;
-          case "tool":
-            return <ToolCard key={`k${item.k}`} item={item} highlight={highlight} pending={live} />;
-          case "map_action":
-            return <MapActionChip key={i} action={item.action} />;
-          case "correction":
-            return (
-              <div key={i} className="rounded-card border border-warn/30 bg-refusal px-3 py-1.5 text-xs text-warn" data-testid="correction">
-                Draft rejected by the server ({item.reason}); the agent is rewriting it with placeholders only.
-              </div>
-            );
-          default:
-            return null;
-        }
+        if (item.kind === "tool" && item.refusal)
+          // ONE SENTENCE, NO IDS. The shared RefusalCard leads with the error class and prints the
+          // limitation id twice - "Refused: GrainUnavailable grain_unavailable limitation
+          // grain_unavailable" - above an answer that then explains the same thing in prose. What a
+          // reader needs is the release's own message; the class and the id are for a log.
+          return (
+            <div key={`r${item.k}`} className="rounded-card border border-note-border bg-note-bg px-3 py-2 text-xs leading-snug text-note-text" data-testid="turn-refusal">
+              {refusalWords(item.refusal)}
+            </div>
+          );
+        if (item.kind === "correction")
+          return (
+            <div key={i} className="rounded-card border border-warn/30 bg-refusal px-3 py-1.5 text-xs text-warn" data-testid="correction">
+              Draft rejected by the server ({item.reason}); the agent is rewriting it with placeholders only.
+            </div>
+          );
+        return null;
       })}
     </>
   );
 }
 
-export function ReasoningTimeline({ turn, onFollowUp }: { turn: Turn; onFollowUp?: (question: string) => void }) {
+export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAgentMove }: {
+  turn: Turn;
+  onFollowUp?: (question: string) => void;
+  /** A map move the AGENT made this turn, so the answer can say so and offer it back. */
+  agentMove?: MapMove | null;
+  onUndoAgentMove?: () => void;
+}) {
   const tl = useMemo(() => timelineOf(turn.events), [turn.events]);
   const [hover, setHover] = useState<Highlight>(null);
   const [pinned, setPinned] = useState<Highlight>(null);
-  const [showReasoning, setShowReasoning] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const highlight = hover ?? pinned;
-  const onCite = {
-    hover: setHover,
-    click: (h: Highlight) => {
-      setPinned(h);
-      setShowReasoning(true);
-      const scroll = () => ref.current?.querySelector(`[data-tool-k="${h?.k}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (typeof requestAnimationFrame === "function") requestAnimationFrame(scroll);
-      else scroll();
-    },
-  };
+  // a cite has nothing to scroll to now - the tool cards are not rendered - so clicking one simply
+  // pins it; AnswerCard's own evidence fold is where the call behind it lives
+  const onCite = { hover: setHover, click: setPinned };
+  void highlight;
   const live = turn.status === "streaming";
-  const reasoning = tl.items.filter((i) => i.kind !== "answer" && i.kind !== "error");
+  // A CORRECTION THAT WAS RECOVERED IS NOT THE READER'S BUSINESS. The server rejects a draft that
+  // typed a bare number or ended without text, asks for one rewrite, and usually gets a good answer -
+  // and a red "Draft rejected by the server" box then sat above that good answer like a warning.
+  // That is internal quality control, the same class of thing as the token counts. It still shows
+  // when the turn produced NO answer, because then it is the explanation for what went wrong.
+  const notices = tl.items.filter((i) =>
+    (i.kind === "correction" && !tl.answer) || (i.kind === "tool" && !!i.refusal));
   const errors = tl.items.filter((i): i is Extract<TimelineItem, { kind: "error" }> => i.kind === "error");
-  const folded = !!tl.answer && !live && reasoning.length > 0;
-  const toolCount = reasoning.filter((i) => i.kind === "tool" && i.name !== "set_map_view").length;
   return (
-    <div ref={ref} className="flex flex-col gap-2" data-testid="turn" data-status={turn.status}>
-      <div className="self-end rounded-card bg-accent-fill px-3 py-2 text-sm text-on-accent" data-testid="user-message">
+    <div className="flex flex-col gap-2.5" data-testid="turn" data-status={turn.status}>
+      <div className="max-w-[85%] self-end rounded-card bg-accent-fill px-3 py-2 text-sm text-on-accent" data-testid="user-message">
         {turn.message}
       </div>
-      {folded ? (
-        <div data-testid="how-answered">
-          <button type="button" onClick={() => setShowReasoning((o) => !o)} aria-expanded={showReasoning} className="flex items-center gap-1 text-xs text-muted hover:text-fg" data-testid="how-answered-toggle">
-            {showReasoning ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            How this was answered
-            <span className="mono text-micro normal-case tracking-normal">· {String(toolCount)} {toolCount === 1 ? "query" : "queries"}</span>
-          </button>
-          {showReasoning && (
-            <div className="mt-2 flex flex-col gap-2" data-testid="reasoning-cards">
-              <ReasoningCards items={reasoning} highlight={highlight} live={false} />
-            </div>
-          )}
-        </div>
-      ) : (
-        <ReasoningCards items={reasoning} highlight={highlight} live={live} />
-      )}
-      {tl.answer && <AnswerCard answer={tl.answer} items={tl.items} onCite={onCite} onFollowUp={(q) => onFollowUp?.(q)} />}
+      <TurnNotices items={notices} />
+      {tl.answer && <AnswerCard answer={tl.answer} items={tl.items} onCite={onCite} onFollowUp={(q) => onFollowUp?.(q)} agentMove={agentMove} onUndoAgentMove={onUndoAgentMove} />}
       {errors.map((item, i) => (
         <div key={i} className="rounded-card border border-warn/30 bg-refusal px-3 py-2 text-sm text-warn" data-testid="error-card" data-code={item.code}>
           <div className="font-semibold">{errorTitle(item.code)}</div>
@@ -142,12 +129,7 @@ export function ReasoningTimeline({ turn, onFollowUp }: { turn: Turn; onFollowUp
           <div className="mono mt-0.5 text-micro normal-case tracking-normal text-muted">{item.code}</div>
         </div>
       ))}
-      {live && (
-        <div className="text-xs text-muted" role="status" data-testid="live-status">
-          {tl.status ? PHASE_TEXT[tl.status.phase] ?? tl.status.phase : "sending…"}
-        </div>
-      )}
-      <UsageLine done={tl.done} answer={tl.answer} />
+      {live && !tl.answer && <WorkingLine />}
     </div>
   );
 }

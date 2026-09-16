@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AboutRedirect from "@/app/about/page";
 import MapRedirect from "@/app/map/page";
 import ExploreRedirect from "@/app/explore/page";
+import AnalyzeRedirect from "@/app/analyze/page";
 
 const replace = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace }) }));
@@ -28,6 +29,16 @@ describe("redirect stubs", () => {
     window.history.replaceState({}, "", "/map/?level=adm2&geo=Punjab&sector=power");
     render(<MapRedirect />);
     expect(replace).toHaveBeenCalledWith("/?level=adm2&geo=Punjab&sector=power");
+    expect(screen.getByTestId("redirect")).toHaveAttribute("data-to", "/");
+    expect(screen.getByRole("link")).toHaveTextContent("Explore");
+    window.history.replaceState({}, "", "/");
+  });
+  it("/analyze goes to the workspace, where the assistant now does that work", () => {
+    // the page was removed on 2026-09-16 and sat in the nav for a week, so the URL may be
+    // bookmarked; a static export has no server redirects, which is why this is a page stub
+    window.history.replaceState({}, "", "/analyze/?gas=CH4");
+    render(<AnalyzeRedirect />);
+    expect(replace).toHaveBeenCalledWith("/?gas=CH4");
     expect(screen.getByTestId("redirect")).toHaveAttribute("data-to", "/");
     expect(screen.getByRole("link")).toHaveTextContent("Explore");
     window.history.replaceState({}, "", "/");

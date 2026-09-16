@@ -1,0 +1,230 @@
+{
+  "$defs": {
+    "ViewContext": {
+      "additionalProperties": false,
+      "properties": {
+        "release_id": {
+          "default": "1.0.0rc54",
+          "maxLength": 48,
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "title": "Release Id",
+          "type": "string"
+        },
+        "view": {
+          "default": "learn",
+          "enum": [
+            "learn",
+            "overview",
+            "explore",
+            "map",
+            "analyze",
+            "methods"
+          ],
+          "title": "View",
+          "type": "string"
+        },
+        "boundary": {
+          "default": "ipcc",
+          "enum": [
+            "ipcc",
+            "module",
+            "economic"
+          ],
+          "title": "Boundary",
+          "type": "string"
+        },
+        "sector": {
+          "default": "all",
+          "enum": [
+            "all",
+            "agriculture",
+            "power",
+            "transport",
+            "waste",
+            "residential",
+            "fugitives",
+            "ippu",
+            "industry",
+            "railways",
+            "aviation"
+          ],
+          "title": "Sector",
+          "type": "string"
+        },
+        "category_id": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9._:/-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category Id"
+        },
+        "metric": {
+          "default": "CO2e",
+          "enum": [
+            "CO2e",
+            "CO2",
+            "CH4",
+            "N2O",
+            "NH3",
+            "NOx",
+            "NO2",
+            "SO2",
+            "CO",
+            "PM2.5",
+            "PM10",
+            "BC",
+            "NMVOC",
+            "O3",
+            "HFCs",
+            "SF6"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "gwp": {
+          "default": "AR5",
+          "enum": [
+            "AR5",
+            "AR6"
+          ],
+          "title": "Gwp",
+          "type": "string"
+        },
+        "geography_id": {
+          "default": "PK",
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:/-]+$",
+          "title": "Geography Id",
+          "type": "string"
+        },
+        "start_period": {
+          "default": "FY2023-24",
+          "title": "Start Period",
+          "type": "string"
+        },
+        "end_period": {
+          "default": "FY2023-24",
+          "title": "End Period",
+          "type": "string"
+        },
+        "month": {
+          "anyOf": [
+            {
+              "maximum": 12,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Month"
+        },
+        "configuration": {
+          "default": "L",
+          "maxLength": 120,
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "title": "Configuration",
+          "type": "string"
+        },
+        "spatial_view": {
+          "default": "combined",
+          "enum": [
+            "physical",
+            "origin",
+            "accounting",
+            "combined"
+          ],
+          "title": "Spatial View",
+          "type": "string"
+        },
+        "stream_id": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "pattern": "^[A-Za-z0-9._:/-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stream Id"
+        },
+        "language": {
+          "const": "en",
+          "default": "en",
+          "title": "Language",
+          "type": "string"
+        }
+      },
+      "title": "ViewContext",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "question": {
+      "default": "",
+      "maxLength": 1500,
+      "title": "Question",
+      "type": "string"
+    },
+    "card_id": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "pattern": "^[a-z0-9_]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Card Id"
+    },
+    "depth": {
+      "default": "simple",
+      "enum": [
+        "simple",
+        "detail"
+      ],
+      "title": "Depth",
+      "type": "string"
+    },
+    "context": {
+      "$ref": "#/$defs/ViewContext"
+    },
+    "last_card_id": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "pattern": "^[a-z0-9_]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Card Id"
+    },
+    "allow_external_model": {
+      "default": false,
+      "title": "Allow External Model",
+      "type": "boolean"
+    }
+  },
+  "title": "AskRequest",
+  "type": "object"
+}

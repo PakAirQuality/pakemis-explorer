@@ -1,0 +1,17 @@
+{
+  "release_id": "1.0.0rc54",
+  "view": "map",
+  "boundary": "ipcc",
+  "sector": "agriculture",
+  "category_id": null,
+  "metric": "CH4",
+  "gwp": "AR5",
+  "geography_id": "PK",
+  "start_period": "FY2023-24",
+  "end_period": "FY2023-24",
+  "month": null,
+  "configuration": "L",
+  "spatial_view": "combined",
+  "stream_id": null,
+  "language": "en"
+}

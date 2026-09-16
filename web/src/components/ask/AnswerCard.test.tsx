@@ -128,13 +128,13 @@ const base: ExplorerState = resolveState({ sector: "agriculture" }, DEFAULTS);
 const release = RELEASE as unknown as ReleaseInfo;
 const labels = releaseLabels(release);
 const dims = releaseDims(release);
-function ctx(setState = vi.fn()): ExplorerContextValue {
-  return { state: base, setState, release, labels, dims, defaults: DEFAULTS, contract: undefined, agent: { enabled: true, model: "gemini-test", reason: "" }, isMobile: false };
+function ctx(setState = vi.fn(), state: ExplorerState = base): ExplorerContextValue {
+  return { state, setState, release, labels, dims, defaults: DEFAULTS, contract: undefined, agent: { enabled: true, model: "gemini-test", reason: "", library: "lib", usable: true }, isMobile: false };
 }
-function mount() {
+function mount(setState = vi.fn(), state: ExplorerState = base) {
   return render(
     <Providers>
-      <ExplorerContext.Provider value={ctx()}>
+      <ExplorerContext.Provider value={ctx(setState, state)}>
         <AskDock />
       </ExplorerContext.Provider>
     </Providers>,
@@ -154,7 +154,12 @@ function decimalsOnScreen(): string[] {
   for (let n = walker.nextNode(); n; n = walker.nextNode()) out.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
   return out;
 }
-const ALLOWED = ["151.658", "151.66", "20.123", "20.12", "9.876", "9.88", "67.9", "9.0", "4.4", "3.5", "0.002", "22.22", "29.95", "0.0"];
+// The guard is that every DECIMAL on screen is a string the server sent, so the chrome can never
+// print a figure it made up. "1.0" is not a figure: it is the leading part of the release identity
+// the footer prints (release_id, e.g. "PakEmis 1.0.0rc42"), which is itself a server string. It is
+// allowed by name rather than by loosening the rule, so a real invented number still fails.
+const RELEASE_IDENTITY_DECIMALS = ["1.0"];
+const ALLOWED = ["151.658", "151.66", "20.123", "20.12", "9.876", "9.88", "67.9", "9.0", "4.4", "3.5", "0.002", "22.22", "29.95", "0.0", ...RELEASE_IDENTITY_DECIMALS];
 
 beforeEach(() => window.localStorage.clear());
 
@@ -174,34 +179,82 @@ describe("answerParts", () => {
   });
 });
 
+/** The eight parts live behind the provenance line's "View evidence" now. */
+function openEvidence(): HTMLElement {
+  fireEvent.click(screen.getByTestId("provenance-action"));
+  return screen.getByTestId("evidence-detail");
+}
+
 describe("AnswerCard", () => {
-  it("renders all eight parts from the stream's additions and the replayed envelope", async () => {
+  it("is prose and ONE attachment, with the eight parts behind View evidence", async () => {
+    // DELIBERATELY RESHAPED. This asserted eight sections stacked under every answer, inside a
+    // bordered card, with the tool cards folded under "How this was answered". The answer is a chat
+    // message now: text, at most one attachment, and a provenance line. Nothing was deleted - every
+    // part below is still asserted, one click further in.
     vi.stubGlobal("fetch", fetchFor(FULL));
     mount();
     await askQuestion("How much comes from livestock?");
     const card = screen.getByTestId("answer-card");
     expect(card.getAttribute("data-principal-k")).toBe("1");
-    // (1) the direct answer with its cite
+
+    // (1) the direct answer with its cite, unboxed
     const answer = within(card).getByTestId("answer-part-answer");
     expect(within(answer).getAllByTestId("cite").map((c) => c.textContent)).toEqual(["151.658", UNIT]);
-    // (2) the applied scope from answer.scope and the call's filters, through the labels
-    const scope = within(card).getByTestId("answer-part-scope");
-    const rows = within(scope).getAllByTestId("scope-row").map((r) => r.textContent);
-    expect(rows).toEqual(["Period 2023–24", "Geography Pakistan (national)", "Estimate Reference estimate", "Warming potentials IPCC 2013 (AR5)", "Basis July–June years", "Sectors Agriculture", "Group by Category", "Filled by default basis, configuration id, gwp basis"]);
-    // (3) the bars: names through the labels, display_short at the end with the replay's share, the replay's ticks
-    const result = within(card).getByTestId("answer-part-result");
-    expect(within(result).getByTestId("result-caption")).toHaveTextContent("Query emissions · Agriculture · by category · 3 cells");
-    await waitFor(() => expect(within(result).getByTestId("answer-bars").getAttribute("data-ticks")).toBe("0|50|100|150|200"));
-    expect(within(result).getAllByTestId("bar").map((b) => b.textContent)).toEqual(["Enteric fermentation 151.66 · 67.9 %", "Manure management 20.12 · 9.0 %", "Rice cultivation 9.88 · 4.4 %"]);
-    fireEvent.click(within(result).getByTestId("result-toggle"));
-    const trs = within(result).getAllByTestId("answer-row");
+
+    // (2) THE ONE ATTACHMENT: a grouped result is a chart, titled and unitised from the result
+    const att = within(card).getByTestId("answer-attachment");
+    expect(att.getAttribute("data-kind")).toBe("chart");
+    expect(att).toHaveTextContent("National greenhouse-gas emissions");
+    await waitFor(() => expect(within(att).getByTestId("answer-bars").getAttribute("data-ticks")).toBe("0|50|100|150|200"));
+    expect(within(att).getAllByTestId("bar").map((b) => b.textContent)).toEqual(["Enteric fermentation 151.66 · 67.9 %", "Manure management 20.12 · 9.0 %", "Rice cultivation 9.88 · 4.4 %"]);
+    fireEvent.click(within(att).getByTestId("result-toggle"));
+    const trs = within(att).getAllByTestId("answer-row");
     expect(trs).toHaveLength(3);
     expect(trs[0]).toHaveTextContent("Enteric fermentation");
     expect(trs[0]).toHaveTextContent("151.66 Mt CO₂e");
     expect(trs[0]).toHaveTextContent("6");
     expect(trs[0].textContent).not.toContain("151.658");
-    // (4) the uncertainty rows the result carried
-    const unc = within(card).getByTestId("answer-part-uncertainty");
+
+    // THE TAIL IS ALWAYS THE SAME THREE THINGS, chart or no chart: the answer, the scope it is
+    // measured under, then the way in to the sources. The line used to sit in the chart's footer,
+    // which put it somewhere different depending on what the question happened to return.
+    const tail = Array.from(card.children).map((el) => el.getAttribute("data-testid"));
+    // this fixture's agent DID call set_map_view, so the move is announced where the six-chip
+    // "moved the map" block used to be
+    expect(tail).toEqual(["answer-part-answer", "answer-attachment", "scope-note", "provenance", "map-moved"]);
+    // the scope is stated ONCE, by us, in the release's own words - not by the model, and not twice
+    const note = within(card).getByTestId("scope-note");
+    expect(note).toHaveTextContent("national");
+    expect(note).toHaveTextContent("IPCC 2013 (AR5)");
+    expect(note.textContent).not.toContain("FY");
+    expect(within(card).getAllByTestId("scope-note")).toHaveLength(1);
+    const prov = within(card).getByTestId("provenance");
+    expect(within(prov).getByTestId("provenance-action")).toHaveTextContent("View details");
+    // the move is stated in the reader's own words, with the way back
+    expect(screen.getByTestId("map-moved")).toHaveTextContent("Map updated to");
+    expect(screen.getByTestId("map-undo")).toBeInTheDocument();
+    expect(screen.queryByTestId("show-on-map")).toBeNull();   // it already moved; do not offer it twice
+    expect(prov.textContent).not.toContain("Published release");
+    expect(screen.queryByTestId("evidence-detail")).toBeNull();
+    fireEvent.click(within(prov).getByTestId("provenance-action"));
+    const fold = screen.getByTestId("evidence-detail");
+
+    // (3) the applied scope, in the release's own words
+    const rows = within(within(fold).getByTestId("detail-scope")).getAllByTestId("scope-row").map((r) => r.textContent);
+    expect(rows).toEqual(["Period 2023–24", "Geography Pakistan (national)", "Estimate Reference estimate", "Warming potentials IPCC 2013 (AR5)", "Basis July–June years", "Sectors Agriculture", "Group by Category", "Filled by default basis, configuration id, gwp basis"]);
+    // (4) THE DETAILS ARE READABLE. The tool's own name, its cell count, the per-cell row counts,
+    // the raw result table and the bare receipt string are all gone - a reader who opens this to
+    // understand an answer must not meet a database row.
+    const detailText = fold.textContent ?? "";
+    expect(within(fold).queryByTestId("result-caption")).toBeNull();
+    expect(within(fold).queryByTestId("answer-rows")).toBeNull();
+    expect(within(fold).queryByTestId("rows-line")).toBeNull();
+    expect(within(fold).queryByTestId("receipt-id")).toBeNull();
+    expect(detailText).not.toContain("Query emissions");
+    expect(detailText).not.toContain("3 cells");
+    expect(detailText).not.toContain(RECEIPT);
+    // (5) the uncertainty rows the result carried
+    const unc = within(fold).getByTestId("detail-uncertainty");
     const uncRow = within(unc).getByTestId("uncertainty-row");
     expect(uncRow).toHaveTextContent("Enteric fermentation");
     expect(uncRow).toHaveTextContent("annual · national");
@@ -211,36 +264,21 @@ describe("AnswerCard", () => {
     expect(uncRow.getAttribute("title")).toContain("timing status: not-applicable");
     expect(uncRow.textContent).not.toContain("151.65"); // the estimate stays in the tooltip, not beside the answer's own figures
     expect(unc).toHaveTextContent("per-category envelopes (structural, no probability)");
-    // (5) the limitation humanised
-    expect(within(within(card).getByTestId("answer-part-evidence")).getByTestId("limitation-chip")).toHaveTextContent("LULUCF is excluded");
-    // (6) the rows per cell
-    const rowsPart = within(card).getByTestId("answer-part-rows");
-    expect(within(rowsPart).getByTestId("rows-line")).toHaveTextContent("Enteric fermentation 6 rows");
-    expect(within(rowsPart).getByTestId("rows-line")).toHaveTextContent("Rice cultivation 1 row");
-    expect(within(rowsPart).getByTestId("open-rows")).toBeTruthy();
-    // (7) the receipt, expandable
-    const receipt = within(card).getByTestId("answer-part-receipt");
-    expect(within(receipt).queryByTestId("receipt-body")).toBeNull();
-    fireEvent.click(within(receipt).getByTestId("receipt-toggle"));
-    expect(within(receipt).getByTestId("receipt-id")).toHaveTextContent(RECEIPT);
-    expect(within(receipt).getByText("Agriculture")).toBeTruthy();
-    expect(within(receipt).getByText("IPCC 2013 (AR5)")).toBeTruthy(); // the basis worded, never the bare id
-    expect(within(receipt).getByTestId("receipt-body").textContent).not.toMatch(/(^|[^(])AR5(?![)\w])/);
-    fireEvent.click(within(receipt).getByTestId("open-calculation"));
-    expect(await screen.findByTestId("drawer-calculation")).toBeTruthy();
-    expect(screen.getByTestId("result-id")).toHaveTextContent(RECEIPT);
-    fireEvent.keyDown(window, { key: "Escape" });
-    // (8) permalink to /explore from the call's input, the CSV, the reproduce link
-    const links = within(card).getByTestId("answer-part-links");
+    // (6) the limitation, in words, with no chip of ids
+    expect(within(fold).getByTestId("detail-evidence")).toHaveTextContent("LULUCF is excluded");
+    // (7) permalink to /data from the call's input, and the reproduce link
+    const links = within(fold).getByTestId("answer-part-links");
     expect(within(links).getByTestId("explore-permalink")).toHaveAttribute("href", "/data?sector=agriculture");
-    expect(within(links).getByTestId("download-csv").getAttribute("href")).toContain(`/download/${RECEIPT}.csv`);
+    // NO CSV: the turn ran no export. One used to appear under every answer, exporting the query -
+    // for this question, a 33-cell ledger across sectors the reader never asked about.
+    expect(within(links).queryByTestId("download-csv")).toBeNull();
+    // reproduction is a LINK, not a hash printed into the panel
     expect(within(links).getByTestId("reproduce-link")).toHaveAttribute("href", `/downloads?receipt=${RECEIPT}`);
-    // the reasoning is folded and opens on demand
+    // the model's working never appears, and neither does the meta row it sat under
     expect(screen.queryByTestId("tool-card")).toBeNull();
-    fireEvent.click(screen.getByTestId("how-answered-toggle"));
-    expect(screen.getByTestId("how-answered")).toHaveTextContent("1 query");
-    expect(screen.getAllByTestId("tool-card")).toHaveLength(2); // the query and the set_map_view call; only the query counts
-    expect(screen.getByTestId("map-action")).toBeTruthy();
+    expect(screen.queryByTestId("thinking-card")).toBeNull();
+    expect(screen.queryByTestId("how-answered")).toBeNull();
+    expect(screen.queryByTestId("map-action")).toBeNull();   // the six-chip block is gone
     // every decimal on screen is a fixture display; no period id anywhere in the chrome (the model's prose is the server's)
     for (const t of decimalsOnScreen()) expect(ALLOWED).toContain(t);
     expect(screen.getByTestId("ask-dock").textContent).not.toContain("FY");
@@ -251,13 +289,15 @@ describe("AnswerCard", () => {
     vi.stubGlobal("fetch", fetchSpy);
     mount();
     await askQuestion("How much comes from livestock?");
-    const card = screen.getByTestId("answer-card");
-    expect(within(card).getAllByTestId("scope-row").map((r) => r.textContent)[0]).toBe("Period 2023–24");
-    const unc = within(card).getByTestId("answer-part-uncertainty");
-    expect(within(unc).getByTestId("uncertainty-missing")).toHaveTextContent("Uncertainty not requested");
-    await waitFor(() => expect(within(within(card).getByTestId("answer-part-rows")).getByTestId("rows-line")).toHaveTextContent("Enteric fermentation 6 rows"));
+    const fold = openEvidence();
+    expect(within(fold).getAllByTestId("scope-row").map((r) => r.textContent)[0]).toBe("Period 2023–24");
+    // NOTHING IS SAID ABOUT UNCERTAINTY WHEN THERE IS NONE. "Uncertainty not requested" told a
+    // reader nothing about the answer and everything about the query we happened to run.
+    expect(within(fold).queryByTestId("detail-uncertainty")).toBeNull();
+    expect(fold.textContent).not.toContain("not requested");
+    // and the follow-up that asks for it is a chip under the answer, not a line in the details
     await act(async () => {
-      fireEvent.click(within(unc).getByTestId("uncertainty-follow-up"));
+      fireEvent.click(screen.getByTestId("follow-up"));
     });
     await waitFor(() => expect(fetchSpy.mock.calls.filter((c) => String(c[0]).endsWith("/ask"))).toHaveLength(2));
     const second = fetchSpy.mock.calls.filter((c) => String(c[0]).endsWith("/ask"))[1] as unknown as [string, RequestInit];
@@ -270,9 +310,14 @@ describe("AnswerCard", () => {
     mount();
     await askQuestion("How much comes from livestock?");
     const card = screen.getByTestId("answer-card");
-    expect(within(card).getByTestId("rows-unknown")).toHaveTextContent("not carried by this stream");
+    // the chart is the attachment, on the surface; the row counts are in the fold
     expect(within(card).getByTestId("answer-bars").getAttribute("data-ticks")).toBe("");
     expect(within(card).getAllByTestId("bar")[0]).toHaveTextContent("Enteric fermentation 151.66");
+    // the row counts are gone from the details entirely - they were a property of the stream, not
+    // an answer to anything a reader asked
+    const fold = openEvidence();
+    expect(within(fold).queryByTestId("rows-unknown")).toBeNull();
+    expect(fold.textContent).not.toContain("rows");
   });
 
   it("an uncertainty tool result of the turn fills the uncertainty part with its cells and the replay's interval", async () => {
@@ -298,14 +343,15 @@ describe("AnswerCard", () => {
     await askQuestion("How certain is the total?");
     const card = screen.getByTestId("answer-card");
     expect(card.getAttribute("data-principal-k")).toBe("1");
-    expect(within(card).getByTestId("result-figure")).toHaveTextContent("452.35 Mt CO₂e");
-    const unc = within(card).getByTestId("answer-part-uncertainty");
+    // A LONE FIGURE GETS NO ATTACHMENT. The principal result is one cell, and the number is already
+    // in the sentence as a cite - rendering it again at 30 px under the prose was the figure twice.
+    expect(within(card).queryByTestId("answer-attachment")).toBeNull();
+    expect(within(card).getAllByTestId("cite").map((c) => c.textContent)).toEqual(["452.34662", "456.914"]);
+    const unc = within(openEvidence()).getByTestId("detail-uncertainty");
     expect(within(unc).getByTestId("uncertainty-cells")).toHaveTextContent("factors shared across modules");
     expect(within(unc).getByTestId("uncertainty-cells")).toHaveTextContent("456.91");
     await waitFor(() => expect(within(unc).getByTestId("uncertainty-cells")).toHaveTextContent("407.28–533.73"));
-    expect(within(card).getByTestId("rows-line")).toHaveTextContent("1189 rows");
-    expect(screen.getByTestId("how-answered")).toHaveTextContent("2 queries");
-    for (const t of decimalsOnScreen()) expect(["452.34662", "452.35", "456.914", "456.91", "407.28", "533.73", "2.1"]).toContain(t);
+    for (const t of decimalsOnScreen()) expect(["452.34662", "452.35", "456.914", "456.91", "407.28", "533.73", "2.1", ...RELEASE_IDENTITY_DECIMALS]).toContain(t);
   });
 
   it("a bounded district cell is a table with its interval badge, and a series is columns with the reference year marked", async () => {
@@ -321,19 +367,59 @@ describe("AnswerCard", () => {
     mount();
     await askQuestion("Lahore's power?");
     const card = screen.getByTestId("answer-card");
-    const result = within(card).getByTestId("answer-part-result");
-    expect(within(result).queryByTestId("answer-bars")).toBeNull();
-    const row = within(result).getByTestId("answer-row");
-    expect(row).toHaveTextContent("Lahore");
-    expect(row).toHaveTextContent("[1.20, 1.29]");
-    expect(row).toHaveTextContent("interval");
-    expect(within(card).getAllByTestId("scope-row").map((r) => r.textContent)).toContain("Geography every district");
-    expect(within(card).getByTestId("exactness-badge")).toHaveTextContent("bounded");
-    expect(within(card).getByTestId("limitation-chip")).toHaveTextContent("their CO2e is a bounded interval, never a midpoint");
-    expect(within(card).getByTestId("explore-permalink")).toHaveAttribute("href", "/data?level=adm2&sector=power");
+    // a bounded interval is not something a bar can honestly draw, and it is already cited in the
+    // prose - so nothing is attached, and the row lives in the details
+    expect(within(card).queryByTestId("answer-attachment")).toBeNull();
+    const fold = openEvidence();
+    expect(within(fold).getAllByTestId("scope-row").map((r) => r.textContent)).toContain("Geography every district");
+    // the qualifications read as words, not as chips of ids
+    const quals = within(fold).getByTestId("detail-evidence");
+    expect(quals).toHaveTextContent("bounded");
+    expect(quals).toHaveTextContent("their CO2e is a bounded interval, never a midpoint");
+    expect(within(fold).getByTestId("explore-permalink")).toHaveAttribute("href", "/data?level=adm2&sector=power");
     // the same turn's series as the principal: columns with the reference year
     const tl = timelineOf(events.map(([name, data]) => ({ name, data })));
     expect(chartKind(principalTool(tl.items, { k: 2 })!.result!.cells)).toBe("columns");
+  });
+
+  it("OFFERS THE MAP, IT DOES NOT TAKE IT", async () => {
+    // THE ASSERTION I WOULD MOST WANT KEPT IN THIS FILE. Asked which agriculture categories are not
+    // estimated, the panel used to move the reader's map and then report it as six internal chips
+    // (Config / Gwp / Level / Period / Sector / "View all three views") beside a raw URL. A factual
+    // question has no business rearranging the view someone is reading.
+    const events: [string, unknown][] = [
+      ["tool_call", { id: "t1", input: { periods: ["FY2023-24"], sectors: ["agriculture"] }, k: 1, name: "get_completeness" }],
+      ["tool_result", { cells: [{ display: "NE", i: 0, unit: null, group: { category: "soc" } }], context: CONTEXT, id: "t1", k: 1,
+                        limitations_hit: [], n_values: 1, name: "get_completeness", receipt: RECEIPT, request_type: "get_completeness", uncertainty: null }],
+      ["answer", { citations: [], elapsed_s: 1.1, receipts: [RECEIPT], scope: null, text: "Three categories are not estimated." }],
+      ["done", { conversation_id: CID, cost_estimate_usd: null, usage: {} }],
+    ];
+    vi.stubGlobal("fetch", fetchFor(events, null));
+    const setState = vi.fn();
+    // a map with NO sector applied, so undoing the move has to unset one
+    mount(setState, resolveState({}, DEFAULTS));
+    await askQuestion("Which parts of agriculture are not estimated?");
+
+    // nothing moved, and nothing was reported as having moved
+    expect(screen.queryByTestId("map-moved")).toBeNull();
+    expect(screen.queryByTestId("map-action")).toBeNull();
+    for (const call of setState.mock.calls) {
+      for (const k of ["geo", "level", "sector", "gas", "period"]) expect(call[0]).not.toHaveProperty(k);
+    }
+    // the move is on offer, and taking it is a click
+    const show = screen.getByTestId("show-on-map");
+    fireEvent.click(show);
+    expect(setState).toHaveBeenCalledWith(expect.objectContaining({ sector: "agriculture" }));
+    expect(screen.getByTestId("map-moved")).toHaveTextContent("Map updated to");
+
+    // UNDO NAMES EVERY KEY IT TOUCHED, and an unset one goes back as null. Returning only the keys
+    // that had values could never unset anything, so the sector would stay applied and the button
+    // would look broken - the same trap as restoring a saved scope.
+    fireEvent.click(screen.getByTestId("map-undo"));
+    const undo = setState.mock.calls.map((c) => c[0]).at(-1) as Record<string, unknown>;
+    expect(undo).toHaveProperty("sector");
+    expect(undo.sector).toBeNull();
+    expect(screen.queryByTestId("map-moved")).toBeNull();
   });
 
   it("an answer without any tool result is the text alone", async () => {
@@ -345,7 +431,8 @@ describe("AnswerCard", () => {
     mount();
     await askQuestion("hello");
     const card = screen.getByTestId("answer-card");
-    expect(within(card).getByTestId("answer-no-query")).toBeTruthy();
+    // nothing under the text: the "no engine query stands behind this reply" footnote is gone
+    expect(within(card).queryByTestId("answer-no-query")).toBeNull();
     expect(within(card).queryByTestId("answer-part-scope")).toBeNull();
     expect(screen.queryByTestId("how-answered")).toBeNull();
   });

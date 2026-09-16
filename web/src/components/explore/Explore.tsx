@@ -16,9 +16,8 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { markStage } from "@/components/shell/bootstrap";
 import { api } from "@/lib/api";
 import { shown, type Cell, type Envelope } from "@/lib/envelope";
-import { cellUnit, configLabel, configWords, envelopeUnitLine, groupValueLabel, gwpTooltip, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, configLabel, configWords, envelopeUnitLine, groupValueLabel, gwpTooltip, isSectorKey, periodShort, reportingSectorLabel, sectorLabel } from "@/lib/labels";
 import { useAir, useCompare, useCompleteness, useEmissions, useTimeseries } from "@/lib/queries";
-import { hrefForState } from "@/lib/urlState";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { canvasTitle, placeWords, possessive, showingWords, POLLUTANT_LABELS, type ExploreState, type QueryPlan } from "@/lib/explore/query";
 import { useExploreState } from "@/lib/explore/useExploreState";
@@ -48,7 +47,7 @@ export function topCell(env: Envelope | null | undefined): Cell | null {
 }
 
 export function Explore() {
-  const { state: shared, labels, dims, defaults, contract } = useExplorer();
+  const { labels, dims, defaults, contract } = useExplorer();
   const { state, plan, ctx, dispatch } = useExploreState();
   const [copied, setCopied] = useState(false);
   const [readingOpen, setReadingOpen] = useState(false);
@@ -65,7 +64,7 @@ export function Explore() {
   }, [raw, plan.kind, active.isError]);
   const env = useMemo(() => visibleEnvelope(raw, plan), [raw, plan]);
   // the sector's categories for the Category control: the same body as the category breakdown, so one request serves both
-  const categoriesBody = useMemo(() => (state.sector && state.level === "national" ? { periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp, sectors: [state.sector], group_by: ["category"], order_by: "value desc" } : null), [state.sector, state.level, state.period, state.config, state.gwp]);
+  const categoriesBody = useMemo(() => (state.sector && state.level === "national" ? { periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp, reporting_sectors: [state.sector], group_by: ["category"], order_by: "value desc" } : null), [state.sector, state.level, state.period, state.config, state.gwp]);
   const categoriesQ = useEmissions(categoriesBody, !!categoriesBody);
   const categories = useMemo(() => (categoriesQ.data?.values ?? []).map((c) => c.group?.category ?? "").filter(Boolean), [categoriesQ.data]);
   const completeness = useCompleteness({ notation_keys: ["NE"] }, readingOpen);
@@ -216,7 +215,7 @@ function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | nu
     const right = labels.configurations[String(plan.body.right?.configuration_id ?? "")]?.label ?? "the right estimate";
     return (
       <>
-        {right} differs most from the {left.toLowerCase()} in <b>{key === "sector_id" || key === "module" ? sectorLabel(labels, name) : key === "gas" ? labels.gases[name] ?? name : name}</b>: <B>{shown(largest)} {cellUnit(largest)}</B> (<B>{shown(sides.left)}</B> → <B>{shown(sides.right)}</B>).
+        {right} differs most from the {left.toLowerCase()} in <b>{isSectorKey(key) ? reportingSectorLabel(labels, name) : key === "gas" ? labels.gases[name] ?? name : name}</b>: <B>{shown(largest)} {cellUnit(largest)}</B> (<B>{shown(sides.left)}</B> → <B>{shown(sides.right)}</B>).
       </>
     );
   }
@@ -240,7 +239,7 @@ function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | nu
   if (!top) return null;
   const key = plan.groupBy;
   const id = top.group?.[key] ?? "";
-  const name = key === "sector_id" || key === "module" ? sectorLabel(labels, id) : key === "gas" ? labels.gases[id] ?? id : key === "month" ? labels.months[id] ?? id : id;
+  const name = isSectorKey(key) ? reportingSectorLabel(labels, id) : key === "gas" ? labels.gases[id] ?? id : key === "month" ? labels.months[id] ?? id : id;
   if (!top.share_pct_short) {
     return (
       <>

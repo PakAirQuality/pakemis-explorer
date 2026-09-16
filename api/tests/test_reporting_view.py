@@ -1,9 +1,10 @@
 """The reporting-sector axis over the API: where IPCC 2006 files a stream, beside the module.
 
-The bar a reader sees on Analyze is drawn on this axis now, so the API must serve it, must keep it
-additive with the module grouping, and must REFUSE it at district grain rather than answer with the
-module - answering there would return the industry module alone and silently drop the captive
-generation the axis exists to include.
+Every sector bar in the product is drawn on this axis now, so the API must serve it at every grain,
+keep it additive with the module grouping, and return the SAME number for the same question however
+deep the reader has drilled. rc53 refused it at district grain, which was honest while the district
+mass really was module-resolved and wrong to leave standing, because it left the product saying
+"industry" twice with two different meanings.
 """
 from decimal import Decimal
 
@@ -57,12 +58,35 @@ def test_the_economic_aggregate_is_the_two_reporting_sectors(client):
             == Decimal(reps["industry"]["exact"]) + Decimal(reps["ippu"]["exact"]))
 
 
-def test_the_district_grain_refuses_the_axis_rather_than_answering_with_the_module(client):
-    for body in ({"group_by": ["reporting_sector"]}, {"reporting_sectors": ["industry"]}):
-        r = client.post(PREFIX + "/query/emissions",
-                        json={"periods": ["FY2023-24"], "geography_level": "adm2", **body})
-        assert r.status_code == 422, r.text
-        assert "module-resolved" in r.text
+def test_every_grain_returns_the_same_sector_numbers(client):
+    """The consistency this axis exists for, and which rc53 did not deliver: the same category,
+    the same filters, the same coverage - the same answer, on every page. rc53 REFUSED the axis at
+    district grain because the district tables were module-resolved; rc54 removed that ground
+    instead of the refusal, so there is nothing left to route around."""
+    national, _ = cells(client, "reporting_sector")
+    for level in ("adm1", "adm2"):
+        env = client.post(PREFIX + "/query/emissions",
+                          json={"periods": ["FY2023-24"], "geography_level": level,
+                                "group_by": ["reporting_sector"]}).json()
+        by = {c["group"]["reporting_sector"]: Decimal(c["exact"]) for c in env["values"]}
+        for sector in ("industry", "power"):
+            # the district products print at the spatial layer's own precision, so the grains
+            # agree to it rather than bit-for-bit (every spatial closure test does the same)
+            assert abs(by[sector] / Decimal(national[sector]["exact"]) - 1) < Decimal("1e-7")
+
+
+def test_the_district_partition_moves_the_measured_captive_vector(client):
+    """Not a proportional share of the power module's districts: captive generation's own point
+    allocation over its geocoded plants. The release already quantifies that a surface-based
+    substitute would sit more than five percentage points away from it."""
+    env = client.post(PREFIX + "/query/emissions",
+                      json={"periods": ["FY2023-24"], "geography_level": "adm2",
+                            "group_by": ["module", "reporting_sector"]}).json()
+    by = {(c["group"]["module"], c["group"]["reporting_sector"]): Decimal(c["exact"])
+          for c in env["values"]}
+    assert ("power", "industry") in by
+    assert by[("power", "industry")] > 0
+    assert by[("power", "power")] > by[("power", "industry")]
 
 
 def test_the_labels_name_the_boundary_and_where_it_is_computed(client):

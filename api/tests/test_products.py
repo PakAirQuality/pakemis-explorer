@@ -47,15 +47,22 @@ def test_listing_shape(listing, contract):
     tables = {n for n, p in products.items() if p["kind"] == "table"}
     assert tables == set(contract["dimensions"]) | set(contract["facts"])
     # 29 at the air beta: dim_pollutant + the four air facts joined the contract.
-    assert len(tables) == 33
+    # 41: the 33 of rc54 plus the eight fact_activity_* tables rc55 publishes
+    assert len(tables) == 41
+    # EVERY CUBE THE MANIFEST HASHES IS SERVABLE. The nine-year GHG annual grid and the EDGAR-parity
+    # lattice shipped in the release and were hashed, but were never named in the catalogue - so the
+    # one cube a modeller most wants returned 404. This asserts the set is complete rather than a
+    # list someone remembered to extend.
     assert {n for n, p in products.items() if p["kind"] == "cube"} == {"pakemis_grid_0p05_monthly", "pakemis_grid_0p05_monthly_survey",
+                                                                     "pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24",
+                                                                     "pakemis_grid_0p1_edgar_aligned",
                                                                      "pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24",
                                                                      "pakemis_air_grid_0p05_annual_survey_fy2015_16_fy2023_24"}
     assert {n for n, p in products.items() if p["kind"] == "metadata"} == {"semantic_release", "release_manifest"}
     assert {n for n, p in products.items() if p["kind"] == "registry"} == set(REGISTRIES)
-    # 38 + 21 since rc49: the panel, the two by-year air spatial tables and the two
-    # air annual cubes joined the set
-    assert listing["count"] == 39 + 21 == len(listing["products"])
+    # 49 + 21: 41 tables (rc55 added the eight fact_activity_*), six cubes, two metadata files,
+    # rework; before that the annual GHG grid 404'd
+    assert listing["count"] == 49 + 21 == len(listing["products"])
     for p in listing["products"]:
         for f in p["formats"]:
             assert set(f) == {"ext", "filename", "bytes", "sha256", "identity", "url"}
@@ -105,7 +112,8 @@ def test_families(listing):
     assert all(t.startswith("dim_") for t in fam["annual"]["tables"] if t not in ("fact_annual", "fact_annual_calendar"))
     assert fam["monthly"]["tables"] == ["fact_monthly"]
     assert fam["spatial"]["tables"] == ["fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence",
-                                        "pakemis_grid_0p05_monthly", "pakemis_grid_0p05_monthly_survey"]
+                                        "pakemis_grid_0p05_monthly", "pakemis_grid_0p05_monthly_survey",
+                                        "pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24", "pakemis_grid_0p1_edgar_aligned"]
     assert fam["spatial"]["formats"] == ["csv", "parquet", "nc"]
     assert fam["uncertainty"]["tables"] == ["fact_uncertainty", "fact_uncertainty_series", "fact_completeness",
                                             "fact_completeness_mass", "fact_transfer", "dim_configuration"]
@@ -193,7 +201,7 @@ def test_evidence_and_complete_families(listing):
     assert evidence["tables"][:5] == ["fact_evidence", "dim_evidence_class", "dim_stream", "fact_completeness", "fact_completeness_mass"]
     assert set(evidence["tables"][5:]) == set(REGISTRIES) and evidence["formats"] == ["csv", "parquet"]
     complete = fam["complete"]
-    assert complete["tables"] == [p["name"] for p in listing["products"]] and len(complete["tables"]) == 60
+    assert complete["tables"] == [p["name"] for p in listing["products"]] and len(complete["tables"]) == 70
     assert complete["formats"] == ["csv", "parquet", "nc", "json", "zip"]
     assert complete["archive"]["filename"] == "complete.zip" and complete["archive"]["url"].endswith(PREFIX + "/products/complete.zip")
     assert complete["archive"]["members"] == len({f["filename"] for p in listing["products"] for f in p["formats"]}) + 2

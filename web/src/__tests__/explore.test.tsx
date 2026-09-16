@@ -57,11 +57,12 @@ const U = { unit_short: "Mt CO₂e", unit_words: "million tonnes CO₂e" };
 const AXIS_250 = { ticks_short: ["0", "50", "100", "150", "200", "250"], min_short: "0.30", max_short: "223.45", unit_short: "Mt CO₂e" };
 const AXIS_500 = { ticks_short: ["0", "100", "200", "300", "400", "500"], min_short: "372.40", max_short: "452.35", unit_short: "Mt CO₂e" };
 const SECTORS = [
-  { display: "223.454", display_short: "223.45", ...U, group: { sector_id: "agriculture" }, extra: { share_pct_short: "49.4", share_phrase: "nearly half", rank: 1 } },
-  { display: "63.370", display_short: "63.37", ...U, group: { sector_id: "power" }, extra: { share_pct_short: "14.0", share_phrase: "about a tenth", rank: 2 } },
-  { display: "29.467", display_short: "29.47", ...U, group: { sector_id: "residential" }, extra: { share_pct_short: "6.5", share_phrase: "a small share", rank: 3 } },
+  { display: "223.454", display_short: "223.45", ...U, group: { reporting_sector: "agriculture" }, extra: { share_pct_short: "49.4", share_phrase: "nearly half", rank: 1 } },
+  { display: "63.370", display_short: "63.37", ...U, group: { reporting_sector: "power" }, extra: { share_pct_short: "14.0", share_phrase: "about a tenth", rank: 2 } },
+  { display: "29.467", display_short: "29.47", ...U, group: { reporting_sector: "residential" }, extra: { share_pct_short: "6.5", share_phrase: "a small share", rank: 3 } },
 ];
-const MODULES = SECTORS.map((c) => ({ ...c, group: { module: c.group.sector_id } }));
+// rc54: a place breakdown asks the same key as a national one, so the fixture is the same cells
+const MODULES = SECTORS.map((c) => ({ ...c, group: { reporting_sector: c.group.reporting_sector } }));
 const CATEGORIES = [
   { display: "151.662", display_short: "151.66", ...U, group: { category: "Enteric fermentation" }, extra: { share_pct_short: "67.9", share_phrase: "most", rank: 1 } },
   { display: "28.531", display_short: "28.53", ...U, group: { category: "Managed soils" }, extra: { share_pct_short: "12.8", share_phrase: "about a tenth", rank: 2 } },
@@ -89,9 +90,9 @@ const SERIES = [
 const CHANGE = { from_period: "FY2020-21", to_period: "FY2023-24", from_short: "372.40", to_short: "452.35", change_short: "+79.95", change_pct_short: "+21.5", direction: "rose", unit_short: "Mt CO₂e", note: "compares the first and last period only" };
 const side = (display: string, display_short: string, group: Record<string, string>) => ({ exact: `${display}000`, value: Number(display), display, unit: "Mt CO2e AR5", result_row_ids: ["r"], formula: "SUM", group, display_short, ...U });
 const COMPARE = [
-  { display: "0.000", display_short: "0.00", ...U, value: 0, extra: { left: side("223.454", "223.45", { sector_id: "agriculture" }), right: side("223.454", "223.45", { sector_id: "agriculture" }) } },
-  { display: "0.000", display_short: "0.00", ...U, value: 0, extra: { left: side("63.370", "63.37", { sector_id: "power" }), right: side("63.370", "63.37", { sector_id: "power" }) } },
-  { display: "12.459", display_short: "12.46", ...U, value: 12.459, extra: { left: side("29.467", "29.47", { sector_id: "residential" }), right: side("41.926", "41.93", { sector_id: "residential" }) } },
+  { display: "0.000", display_short: "0.00", ...U, value: 0, extra: { left: side("223.454", "223.45", { reporting_sector: "agriculture" }), right: side("223.454", "223.45", { reporting_sector: "agriculture" }) } },
+  { display: "0.000", display_short: "0.00", ...U, value: 0, extra: { left: side("63.370", "63.37", { reporting_sector: "power" }), right: side("63.370", "63.37", { reporting_sector: "power" }) } },
+  { display: "12.459", display_short: "12.46", ...U, value: 12.459, extra: { left: side("29.467", "29.47", { reporting_sector: "residential" }), right: side("41.926", "41.93", { reporting_sector: "residential" }) } },
 ];
 const AXIS_DIFF = { ticks_short: ["-20", "-10", "0", "10", "20"], min_short: "-13.58", max_short: "12.46", unit_short: "Mt CO₂e" };
 const PARTITION = { of: "the sum of these cells", n: 3, share_field: "share_pct_short", rule: "100 x exact / the sum of exact" };
@@ -120,7 +121,7 @@ beforeEach(() => {
         return envelope([{ display: "631.915", display_short: "631.92", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "residential" }, extra: { share_pct_short: "75.7" } }, { display: "63.851", display_short: "63.85", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "waste" }, extra: { share_pct_short: "7.6" } }], { request_type: "query_air", axis: AXIS_250 });
       }
       const key = body?.group_by?.[0];
-      if (key === "sector_id") return envelope(SECTORS, { partition: PARTITION, axis: AXIS_250 });
+      if (key === "reporting_sector") return envelope(SECTORS, { partition: PARTITION, axis: AXIS_250 });
       if (key === "module") return envelope(MODULES, { partition: PARTITION, axis: AXIS_250 });
       if (key === "category") return envelope(CATEGORIES, { partition: PARTITION, axis: AXIS_250 });
       if (key === "gas") return envelope(GASES, { partition: PARTITION, axis: AXIS_250 });
@@ -169,7 +170,7 @@ describe("lib/explore/query: one state, one contract call", () => {
   it("the default is the sector breakdown at national grain, ordered by value", () => {
     const s = start();
     expect(s.by).toBe("sector");
-    expect(buildQuery(s, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, group_by: ["sector_id"], order_by: "value desc" }, groupBy: "sector_id", chart: "bars" });
+    expect(buildQuery(s, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, group_by: ["reporting_sector"], order_by: "value desc" }, groupBy: "reporting_sector", chart: "bars" });
   });
   it("nine-year change: Period = All years is get_timeseries (annual, no period filter), drawn as a line", () => {
     const s = transition(start(), { control: "period", value: "range" }, CTX);
@@ -180,32 +181,32 @@ describe("lib/explore/query: one state, one contract call", () => {
     const t = transition(s, { control: "sector", value: "agriculture" }, CTX);
     expect(t.by).toBe("category");
     const back = transition(t, { control: "period", value: "range" }, CTX);
-    expect(buildQuery(back, CTX)).toMatchObject({ kind: "timeseries", body: { query: { sectors: ["agriculture"] } } });
+    expect(buildQuery(back, CTX)).toMatchObject({ kind: "timeseries", body: { query: { reporting_sectors: ["agriculture"] } } });
   });
   it("what makes up agriculture: Sector = agriculture groups the sector's categories; a category then groups by gas", () => {
     const s = transition(start(), { control: "sector", value: "agriculture" }, CTX);
-    expect(buildQuery(s, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, sectors: ["agriculture"], group_by: ["category"], order_by: "value desc" }, groupBy: "category", chart: "bars" });
+    expect(buildQuery(s, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, reporting_sectors: ["agriculture"], group_by: ["category"], order_by: "value desc" }, groupBy: "category", chart: "bars" });
     const c = transition(s, { control: "category", value: "Enteric fermentation" }, CTX);
-    expect(buildQuery(c, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, sectors: ["agriculture"], categories: ["Enteric fermentation"], group_by: ["gas"], order_by: "value desc" }, groupBy: "gas", chart: "stacked" });
+    expect(buildQuery(c, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, reporting_sectors: ["agriculture"], categories: ["Enteric fermentation"], group_by: ["gas"], order_by: "value desc" }, groupBy: "gas", chart: "stacked" });
     expect(toUrl(c)).toMatchObject({ shared: { sector: "agriculture" }, local: { cat: "Enteric fermentation", by: "gas" } });
   });
   it("which gases dominate: Gas = By gas groups by gas as a stacked bar; one gas is a filter and the breakdown falls back", () => {
     const s = transition(start(), { control: "gas", value: "by" }, CTX);
     expect(buildQuery(s, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, group_by: ["gas"], order_by: "value desc" }, groupBy: "gas", chart: "stacked" });
     const one = transition(s, { control: "gas", value: "CH4" }, CTX);
-    expect(buildQuery(one, CTX)).toMatchObject({ body: { gases: ["CH4"], group_by: ["sector_id"] }, chart: "bars" });
+    expect(buildQuery(one, CTX)).toMatchObject({ body: { gases: ["CH4"], group_by: ["reporting_sector"] }, chart: "bars" });
   });
   it("compare Punjab and Sindh: two provinces ask the ADM1-by-province envelope and keep the two (a filter, not arithmetic)", () => {
     const p = transition(start(), { control: "geography", value: "province", id: "Punjab" }, CTX);
-    // one province: its sectors, by module (sector_id is national-grain only)
-    expect(buildQuery(p, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, geography_level: "adm1", geography_ids: ["Punjab"], spatial_view: "all", group_by: ["module"], order_by: "value desc" }, groupBy: "module", chart: "bars" });
+    // one province: its sectors, on the reporting axis (the district tables carry it since rc54)
+    expect(buildQuery(p, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, geography_level: "adm1", geography_ids: ["Punjab"], spatial_view: "all", group_by: ["reporting_sector"], order_by: "value desc" }, groupBy: "reporting_sector", chart: "bars" });
     const two = transition(p, { control: "geography", value: "second", id: "Sindh" }, CTX);
     expect(two.geos).toEqual(["Punjab", "Sindh"]);
     expect(buildQuery(two, CTX)).toEqual({ kind: "emissions", body: { ...SCOPE, geography_level: "adm1", spatial_view: "all", group_by: ["province"], order_by: "value desc" }, groupBy: "province", chart: "bars", filterTo: { key: "province", ids: ["Punjab", "Sindh"] } });
     expect(toUrl(two)).toMatchObject({ shared: { level: "adm1", geo: null }, local: { geos: "Punjab,Sindh", by: "place" } });
     // two places stay side by side under every other control: a sector filters both, it never re-groups
     const twoAg = transition(two, { control: "sector", value: "agriculture" }, CTX);
-    expect(buildQuery(twoAg, CTX)).toMatchObject({ body: { sectors: ["agriculture"], group_by: ["province"] }, filterTo: { ids: ["Punjab", "Sindh"] } });
+    expect(buildQuery(twoAg, CTX)).toMatchObject({ body: { reporting_sectors: ["agriculture"], group_by: ["province"] }, filterTo: { ids: ["Punjab", "Sindh"] } });
     expect(resolveExplore(resolveState({}, DEFAULTS), { ...LOCAL, geos: "Punjab,Sindh", by: "sector" }, CTX).by).toBe("place");
     // the URL round-trips to the same query
     const url = toUrl(two);
@@ -214,7 +215,7 @@ describe("lib/explore/query: one state, one contract call", () => {
     // every province, and every district
     expect(buildQuery(transition(start(), { control: "geography", value: "provinces" }, CTX), CTX)).toMatchObject({ body: { geography_level: "adm1", group_by: ["province"] }, chart: "bars" });
     // every province with a sector stays side by side (the sector filters), and a bare geos=all URL reads as the place breakdown
-    expect(buildQuery(transition(transition(start(), { control: "geography", value: "provinces" }, CTX), { control: "sector", value: "agriculture" }, CTX), CTX)).toMatchObject({ body: { sectors: ["agriculture"], group_by: ["province"] } });
+    expect(buildQuery(transition(transition(start(), { control: "geography", value: "provinces" }, CTX), { control: "sector", value: "agriculture" }, CTX), CTX)).toMatchObject({ body: { reporting_sectors: ["agriculture"], group_by: ["province"] } });
     expect(resolveExplore(resolveState({}, DEFAULTS), { ...LOCAL, geos: "all" }, CTX).by).toBe("place");
     expect(buildQuery(transition(start(), { control: "geography", value: "districts" }, CTX), CTX)).toMatchObject({ body: { geography_level: "adm2", group_by: ["shape_id"] } });
   });
@@ -222,8 +223,8 @@ describe("lib/explore/query: one state, one contract call", () => {
     const s = transition(start(), { control: "estimate", value: "compare" }, CTX);
     expect(buildQuery(s, CTX)).toEqual({
       kind: "compare",
-      body: { left: { ...SCOPE, configuration_id: "REF_2023_24", group_by: ["sector_id"], order_by: "value desc" }, right: { ...SCOPE, configuration_id: "S_2023_24", group_by: ["sector_id"], order_by: "value desc" }, mode: "absolute" },
-      groupBy: "sector_id",
+      body: { left: { ...SCOPE, configuration_id: "REF_2023_24", group_by: ["reporting_sector"], order_by: "value desc" }, right: { ...SCOPE, configuration_id: "S_2023_24", group_by: ["reporting_sector"], order_by: "value desc" }, mode: "absolute" },
+      groupBy: "reporting_sector",
       chart: "grouped",
     });
     // the survey estimate covers the reference year only: another year cannot compare
@@ -256,8 +257,8 @@ describe("/data (the Grapher)", () => {
     expect(screen.getByTestId("frame-unit")).toHaveTextContent("Million tonnes CO₂e");
     const bars = screen.getByTestId("bars-with-axis");
     expect(bars).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
-    expect(within(bars).getAllByTestId("bar-item").map((b) => b.textContent)).toEqual(["Agriculture 223.45 · 49.4 %", "Power 63.37 · 14.0 %", "Residential 29.47 · 6.5 %"]);
-    expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", group_by: ["sector_id"], order_by: "value desc" });
+    expect(within(bars).getAllByTestId("bar-item").map((b) => b.textContent)).toEqual(["Agriculture 223.45 · 49.4 %", "Power (grid generation) 63.37 · 14.0 %", "Residential 29.47 · 6.5 %"]);
+    expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", group_by: ["reporting_sector"], order_by: "value desc" });
     // the two actions, and only two (Explain and Evidence left the canvas on 2026-09-07)
     const actions = screen.getByTestId("actions");
     expect(Array.from(actions.children).map((c) => c.getAttribute("data-testid"))).toEqual(["action-download", "action-share"]);
@@ -307,14 +308,14 @@ describe("/data (the Grapher)", () => {
     await screen.findByTestId("canvas-sentence");
     fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "agriculture" } });
     await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("Enteric fermentation accounts for 67.9 % (most) of Pakistan's 2023–24 reference estimate in agriculture."));
-    expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", sectors: ["agriculture"], group_by: ["category"], order_by: "value desc" });
+    expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", reporting_sectors: ["agriculture"], group_by: ["category"], order_by: "value desc" });
     expect(screen.getByTestId("showing-line-text")).toHaveTextContent("Pakistan's 2023–24 reference emissions, agriculture, grouped by IPCC category, using IPCC 2013 warming factors.");
     expect(screen.getByTestId("canvas-title")).toHaveTextContent("Emissions by IPCC category");
     const cat = screen.getByTestId("category-select");
     expect(Array.from(cat.querySelectorAll("option")).map((o) => o.textContent)).toEqual(["All of agriculture", "Enteric fermentation", "Managed soils"]);
     // the category filter then groups the gases
     fireEvent.change(cat, { target: { value: "Enteric fermentation" } });
-    await waitFor(() => expect(lastCall("/query/emissions")).toMatchObject({ sectors: ["agriculture"], categories: ["Enteric fermentation"], group_by: ["gas"] }));
+    await waitFor(() => expect(lastCall("/query/emissions")).toMatchObject({ reporting_sectors: ["agriculture"], categories: ["Enteric fermentation"], group_by: ["gas"] }));
     expect(await screen.findByTestId("stacked-bar")).toBeInTheDocument();
   });
   it("which gases dominate: Gas = By gas draws the stacked bar with the server's shares", async () => {
@@ -339,7 +340,7 @@ describe("/data (the Grapher)", () => {
     mount("", ({ queryString }) => updates.push(queryString));
     await screen.findByTestId("canvas-sentence");
     fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "province:Punjab" } });
-    await waitFor(() => expect(lastCall("/query/emissions")).toMatchObject({ geography_level: "adm1", geography_ids: ["Punjab"], group_by: ["module"] }));
+    await waitFor(() => expect(lastCall("/query/emissions")).toMatchObject({ geography_level: "adm1", geography_ids: ["Punjab"], group_by: ["reporting_sector"] }));
     expect(await screen.findByTestId("canvas-title")).toHaveTextContent("Allocated emissions by sector");
     expect(screen.getByTestId("showing-line-text")).toHaveTextContent("Punjab's 2023–24 allocated reference emissions, all sectors, grouped by sector");
     fireEvent.change(screen.getByTestId("second-select"), { target: { value: "Sindh" } });
@@ -357,8 +358,8 @@ describe("/data (the Grapher)", () => {
     fireEvent.change(screen.getByTestId("config-select"), { target: { value: "compare" } });
     const grouped = await screen.findByTestId("grouped-bars");
     expect(lastCall("/query/compare")).toEqual({
-      left: { periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", group_by: ["sector_id"], order_by: "value desc" },
-      right: { periods: ["FY2023-24"], configuration_id: "S_2023_24", gwp_basis: "AR5", group_by: ["sector_id"], order_by: "value desc" },
+      left: { periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", group_by: ["reporting_sector"], order_by: "value desc" },
+      right: { periods: ["FY2023-24"], configuration_id: "S_2023_24", gwp_basis: "AR5", group_by: ["reporting_sector"], order_by: "value desc" },
       mode: "absolute",
     });
     expect(within(grouped).getAllByTestId("grouped-difference").map((d) => d.textContent)).toEqual(["0.00", "0.00", "12.46"]);
@@ -465,7 +466,7 @@ describe("/data (the Grapher)", () => {
       expect(text).not.toContain("REF_2023_24");
       expect(text).not.toContain("S_2023_24");
       expect(text).not.toContain("Mt CO2e");
-      expect(text).not.toContain("sector_id");
+      expect(text).not.toContain("reporting_sector");
       expect(avoidPhrasesIn(text)).toEqual([]);
       for (const el of Array.from(document.body.querySelectorAll("[title]"))) {
         expect(el.getAttribute("title") ?? "").not.toContain("FY");

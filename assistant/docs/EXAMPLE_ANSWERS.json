@@ -1,0 +1,1283 @@
+{
+  "scope": "Local demonstration, not live-model or inventory validation",
+  "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+  "questions": 14,
+  "model_calls": 0,
+  "answers": [
+    {
+      "question": "What are emsisions?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "curated",
+        "blocks": [
+          {
+            "card_id": "emissions",
+            "title": "What are emissions?",
+            "category": "Basics",
+            "paragraphs": [
+              "Emissions are substances released from a source. Here we are mainly talking about gases and particles released into the air—for example, carbon dioxide from burning fuel, methane from livestock, or particles from smoke."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "general science and project documentation",
+            "citation_numbers": [
+              1,
+              2,
+              3
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "epa_ghg",
+            "title": "EPA · Overview of greenhouse gases",
+            "pages": [],
+            "url": "https://www.epa.gov/ghgemissions/overview-greenhouse-gases",
+            "kind": "general_science",
+            "release_id": null,
+            "sha256": null
+          },
+          {
+            "number": 2,
+            "source_id": "epa_pm",
+            "title": "EPA · Particulate matter basics",
+            "pages": [],
+            "url": "https://www.epa.gov/pm-pollution/particulate-matter-pm-basics",
+            "kind": "general_science",
+            "release_id": null,
+            "sha256": null
+          },
+          {
+            "number": 3,
+            "source_id": "residential",
+            "title": "TN05 · Residential fuels",
+            "pages": [
+              3
+            ],
+            "url": "/api/source/residential/file#page=3",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "2fa6ce2bfb6c98f56fd063b86352a2eda3627b5cd1cce648a197019f2fd0bf2e"
+          }
+        ],
+        "limitations": [],
+        "notices": [],
+        "suggestions": [
+          {
+            "card_id": "importance",
+            "title": "Why do emissions matter?"
+          },
+          {
+            "card_id": "gas_ch4",
+            "title": "Methane · CH₄"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "emissions"
+      }
+    },
+    {
+      "question": "Why are they important?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "curated",
+        "blocks": [
+          {
+            "card_id": "importance",
+            "title": "Why do emissions matter?",
+            "category": "Basics",
+            "paragraphs": [
+              "Different emissions matter for different reasons. Greenhouse gases change Earth’s heat balance. Air pollutants can damage air quality. The same activity can release both, but a climate total and an air-pollution total answer different questions."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "general science and project documentation",
+            "citation_numbers": [
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "nasa_climate",
+            "title": "NASA · Causes of climate change",
+            "pages": [],
+            "url": "https://science.nasa.gov/climate-change/causes/",
+            "kind": "general_science",
+            "release_id": null,
+            "sha256": null
+          },
+          {
+            "number": 2,
+            "source_id": "epa_pm",
+            "title": "EPA · Particulate matter basics",
+            "pages": [],
+            "url": "https://www.epa.gov/pm-pollution/particulate-matter-pm-basics",
+            "kind": "general_science",
+            "release_id": null,
+            "sha256": null
+          },
+          {
+            "number": 3,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              3
+            ],
+            "url": "/api/source/national/file#page=3",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          },
+          {
+            "number": 4,
+            "source_id": "residential",
+            "title": "TN05 · Residential fuels",
+            "pages": [
+              1
+            ],
+            "url": "/api/source/residential/file#page=1",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "2fa6ce2bfb6c98f56fd063b86352a2eda3627b5cd1cce648a197019f2fd0bf2e"
+          }
+        ],
+        "limitations": [],
+        "notices": [],
+        "suggestions": [
+          {
+            "card_id": "greenhouse",
+            "title": "What is a greenhouse gas?"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "importance"
+      }
+    },
+    {
+      "question": "What is this gas?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CH4",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "curated",
+        "blocks": [
+          {
+            "card_id": "gas_ch4",
+            "title": "Methane · CH₄",
+            "category": "Gases",
+            "paragraphs": [
+              "Methane is a greenhouse gas. Human-related sources include livestock, decomposing organic waste and leaks in fossil-fuel systems. It has a shorter atmospheric lifetime than carbon dioxide and a stronger warming effect per unit mass over the usual comparison periods."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "general science and project documentation",
+            "citation_numbers": [
+              1,
+              2
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "epa_ch4",
+            "title": "EPA · Methane emissions",
+            "pages": [],
+            "url": "https://www.epa.gov/ghgemissions/methane-emissions",
+            "kind": "general_science",
+            "release_id": null,
+            "sha256": null
+          },
+          {
+            "number": 2,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              6
+            ],
+            "url": "/api/source/national/file#page=6",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          }
+        ],
+        "limitations": [],
+        "notices": [],
+        "suggestions": [
+          {
+            "card_id": "emissions",
+            "title": "What are emissions?"
+          },
+          {
+            "card_id": "importance",
+            "title": "Why do emissions matter?"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "gas_ch4"
+      }
+    },
+    {
+      "question": "What sources do you have for agriculture?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "curated",
+        "blocks": [
+          {
+            "card_id": "agriculture_data",
+            "title": "Data behind agriculture",
+            "category": "Sources",
+            "paragraphs": [
+              "The agriculture note uses the PBS agricultural census for livestock, Pakistani crop statistics for area and production, and NFDC records for fertiliser nitrogen. It distinguishes the fiscal inventory panel from a longer FAOSTAT-based calendar-year reconstruction."
+            ],
+            "more_available": true,
+            "data_chain": [
+              "PBS livestock / crop statistics / NFDC nitrogen",
+              "Agricultural activity and nitrogen ledgers",
+              "IPCC and EMEP/EEA methods",
+              "Separate timing and spatial proxies"
+            ],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "agriculture",
+            "title": "TN01 · Agriculture",
+            "pages": [
+              3,
+              5,
+              6
+            ],
+            "url": "/api/source/agriculture/file#page=3",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e4d034c36514f8eac0d9ae5e226564417945fb5f5055fdd2a29d6daaae7f1d01"
+          }
+        ],
+        "limitations": [],
+        "notices": [],
+        "suggestions": [
+          {
+            "card_id": "sources",
+            "title": "What sources does PakEmis use?"
+          },
+          {
+            "card_id": "source_custody",
+            "title": "Do you hold every original source?"
+          },
+          {
+            "card_id": "agriculture_method",
+            "title": "Why agriculture produces different gases"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "agriculture_data"
+      }
+    },
+    {
+      "question": "What are Monte Carlo estimates?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "curated",
+        "blocks": [
+          {
+            "card_id": "mc",
+            "title": "What are Monte Carlo estimates?",
+            "category": "Uncertainty",
+            "paragraphs": [
+              "Monte Carlo estimation repeats the emissions calculation using many plausible combinations of uncertain inputs. Rather than treating every activity and factor as exact, it samples from their declared distributions and records the resulting totals."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1,
+              2
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              34,
+              37
+            ],
+            "url": "/api/source/national/file#page=34",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          },
+          {
+            "number": 2,
+            "source_id": "agriculture_supplement",
+            "title": "Agriculture supplementary methods",
+            "pages": [
+              5
+            ],
+            "url": "/api/source/agriculture_supplement/file#page=5",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "ee5aeaef5c33f1f015694589511efc9ae5db6232044c2f60fabe7b41407ce177"
+          }
+        ],
+        "limitations": [
+          "Monte Carlo draws are simulated calculations, not additional observations. The interval is conditional on the modelled inputs and assumptions."
+        ],
+        "notices": [],
+        "suggestions": [
+          {
+            "card_id": "mc_why",
+            "title": "Why use Monte Carlo?"
+          },
+          {
+            "card_id": "mc_example",
+            "title": "Monte Carlo, with an example"
+          },
+          {
+            "card_id": "mc_convergence",
+            "title": "Would more Monte Carlo runs make the data better?"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "mc"
+      }
+    },
+    {
+      "question": "Why do this?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "curated",
+        "blocks": [
+          {
+            "card_id": "mc_why",
+            "title": "Why use Monte Carlo?",
+            "category": "Uncertainty",
+            "paragraphs": [
+              "It helps propagate uncertain inputs through calculations that are not well summarised by one symmetric “plus or minus” value. It can preserve bounded inputs, skewed outcomes and dependencies between quantities."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1,
+              2
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              34,
+              35
+            ],
+            "url": "/api/source/national/file#page=34",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          },
+          {
+            "number": 2,
+            "source_id": "fugitives",
+            "title": "TN06 · Oil and gas fugitives",
+            "pages": [
+              5
+            ],
+            "url": "/api/source/fugitives/file#page=5",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "f97a02e4b237dd23f9a0230b85f61f88234e40d2b149607824b4d44f5d5cc134"
+          }
+        ],
+        "limitations": [],
+        "notices": [],
+        "suggestions": [
+          {
+            "card_id": "mc",
+            "title": "What are Monte Carlo estimates?"
+          },
+          {
+            "card_id": "mc_example",
+            "title": "Monte Carlo, with an example"
+          },
+          {
+            "card_id": "mc_convergence",
+            "title": "Would more Monte Carlo runs make the data better?"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "mc_why"
+      }
+    },
+    {
+      "question": "Give a Monte Carlo example",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "curated",
+        "blocks": [
+          {
+            "card_id": "mc_example",
+            "title": "Monte Carlo, with an example",
+            "category": "Uncertainty",
+            "paragraphs": [
+              "Imagine estimating a boiler’s emissions. You are unsure about both its annual fuel use and the emission factor. One simulation uses a plausible fuel quantity and a plausible factor, multiplies them, and saves the result. Repeating that process produces a distribution of totals."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              34,
+              37
+            ],
+            "url": "/api/source/national/file#page=34",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          }
+        ],
+        "limitations": [],
+        "notices": [],
+        "suggestions": [
+          {
+            "card_id": "mc",
+            "title": "What are Monte Carlo estimates?"
+          },
+          {
+            "card_id": "mc_why",
+            "title": "Why use Monte Carlo?"
+          },
+          {
+            "card_id": "mc_convergence",
+            "title": "Would more Monte Carlo runs make the data better?"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "mc_example"
+      }
+    },
+    {
+      "question": "What was the underlying data used to drive this?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "needs_engine",
+        "blocks": [
+          {
+            "card_id": "source_chain",
+            "title": "What data are behind this result?",
+            "category": "Sources",
+            "paragraphs": [
+              "A traceable result needs a chain from the published source to the output: source document and period, extracted activity, conversions, factors, calculation method, and any timing or spatial allocation."
+            ],
+            "more_available": true,
+            "data_chain": [
+              "Source document and edition",
+              "Table, cell or reported row",
+              "Activity and unit",
+              "Factor and method",
+              "Timing and placement, where used",
+              "Output and release digest"
+            ],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              12,
+              13
+            ],
+            "url": "/api/source/national/file#page=12",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          }
+        ],
+        "limitations": [],
+        "notices": [
+          "Exact selected-view results are not connected for this query. The explanation below is about the method, not a live value."
+        ],
+        "suggestions": [
+          {
+            "card_id": "emissions",
+            "title": "What are emissions?"
+          },
+          {
+            "card_id": "importance",
+            "title": "Why do emissions matter?"
+          },
+          {
+            "card_id": "gas_ch4",
+            "title": "Methane · CH₄"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "source_chain"
+      }
+    },
+    {
+      "question": "What was the pattern?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "analyze",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "needs_engine",
+        "blocks": [
+          {
+            "card_id": "patterns",
+            "title": "How should I read an emissions pattern?",
+            "category": "Patterns",
+            "paragraphs": [
+              "First identify the quantity: gas mass or CO₂e, sector boundary, geography, period and configuration. Then distinguish the size of the emissions from the way they have been allocated over months or places."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1,
+              2
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              6,
+              29
+            ],
+            "url": "/api/source/national/file#page=6",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          },
+          {
+            "number": 2,
+            "source_id": "national_supplement",
+            "title": "National supplement",
+            "pages": [
+              7,
+              8
+            ],
+            "url": "/api/source/national_supplement/file#page=7",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "2bd592d228dfb8a010ae38a3c298c4279d0eddf324e6a4784e88e2bb27f45a2e"
+          }
+        ],
+        "limitations": [
+          "A visual pattern alone does not establish its physical cause."
+        ],
+        "notices": [
+          "Exact selected-view results are not connected for this query. The explanation below is about the method, not a live value."
+        ],
+        "suggestions": [
+          {
+            "card_id": "document_pattern",
+            "title": "What pattern does the national report describe?"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "patterns"
+      }
+    },
+    {
+      "question": "What is the uncertainty on this map?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "map",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "LAHORE",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "needs_engine",
+        "blocks": [
+          {
+            "card_id": "uncertainty",
+            "title": "What is uncertainty?",
+            "category": "Uncertainty",
+            "paragraphs": [
+              "Uncertainty describes what we do not know precisely about an estimate. Fuel quantities, animal counts, emission factors, missing sources and the way emissions are distributed across time or space can all contribute."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              34,
+              35,
+              44
+            ],
+            "url": "/api/source/national/file#page=34",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          }
+        ],
+        "limitations": [
+          "A national annual interval must not be reused as the uncertainty of a district, month or trend."
+        ],
+        "notices": [
+          "Exact selected-view results are not connected for this query. The explanation below is about the method, not a live value."
+        ],
+        "suggestions": [
+          {
+            "card_id": "trend_uncertainty",
+            "title": "How uncertain is a change over time?"
+          },
+          {
+            "card_id": "power_uncertainty",
+            "title": "Why electricity estimates have alternative cases"
+          },
+          {
+            "card_id": "waste_uncertainty",
+            "title": "Why waste uncertainty can be wide"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "uncertainty"
+      }
+    },
+    {
+      "question": "Is ammonia included?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "documentation_conflict",
+        "blocks": [
+          {
+            "card_id": "conflict_ippu",
+            "title": "Industrial-process coverage needs a catalogue check",
+            "category": "Evidence checks",
+            "paragraphs": [
+              "The uploaded national category table lists ammonia production, iron and steel, and lubricant use alongside cement. The IPPU technical note and some national prose still describe those non-cement categories as not estimated."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1,
+              2
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              10,
+              11,
+              12,
+              16
+            ],
+            "url": "/api/source/national/file#page=10",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          },
+          {
+            "number": 2,
+            "source_id": "ippu",
+            "title": "TN07 · Industrial processes and product use",
+            "pages": [
+              1,
+              5
+            ],
+            "url": "/api/source/ippu/file#page=1",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "1b47c7977b7f033676355c6d47f3e4e67b6749fd5b08a60d202a90bcb516c7a5"
+          }
+        ],
+        "limitations": [
+          "Current coverage status is not resolved by the uploaded prose alone."
+        ],
+        "notices": [
+          "This asks about a particular process category. Select its category before requesting the current coverage or value; the documentation explanation remains available."
+        ],
+        "suggestions": [
+          {
+            "card_id": "ippu_data",
+            "title": "Data behind industrial processes"
+          },
+          {
+            "card_id": "conflict_uncertainty",
+            "title": "Uncertainty percentages need a source check"
+          },
+          {
+            "card_id": "conflict_transport_air",
+            "title": "Road-pollutant scope needs a catalogue check"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "conflict_ippu"
+      }
+    },
+    {
+      "question": "Are road air pollutants exhaust only?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "documentation_conflict",
+        "blocks": [
+          {
+            "card_id": "conflict_transport_air",
+            "title": "Road-pollutant scope needs a catalogue check",
+            "category": "Evidence checks",
+            "paragraphs": [
+              "The supplied transport supplement contains evaporation and tyre, brake and road-wear factors. Some older-style passages in the transport note and national supplement still describe the air layer as an exhaust-only or uncited diagnostic."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1,
+              2,
+              3
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "transport",
+            "title": "TN03 · Road and off-road transport",
+            "pages": [
+              2,
+              4
+            ],
+            "url": "/api/source/transport/file#page=2",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "01138fe4e350454fc4f1c34dd48c9440845c17102bfb8bf804a7aac3e7e9fa76"
+          },
+          {
+            "number": 2,
+            "source_id": "transport_supplement",
+            "title": "Transport supplementary methods",
+            "pages": [
+              6,
+              7
+            ],
+            "url": "/api/source/transport_supplement/file#page=6",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "50f9912887fdd7f213a8e1769e328cedcd3e3a046a99901a888cfd70742e619a"
+          },
+          {
+            "number": 3,
+            "source_id": "national_supplement",
+            "title": "National supplement",
+            "pages": [
+              2,
+              4
+            ],
+            "url": "/api/source/national_supplement/file#page=2",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "2bd592d228dfb8a010ae38a3c298c4279d0eddf324e6a4784e88e2bb27f45a2e"
+          }
+        ],
+        "limitations": [
+          "Do not infer current air-layer process coverage from one prose passage."
+        ],
+        "notices": [
+          "The named sector differs from, or goes beyond, the selected sector. Select the intended sector before requesting its numerical result or coverage."
+        ],
+        "suggestions": [
+          {
+            "card_id": "transport_data",
+            "title": "Data behind road and off-road transport"
+          },
+          {
+            "card_id": "conflict_ippu",
+            "title": "Industrial-process coverage needs a catalogue check"
+          },
+          {
+            "card_id": "conflict_uncertainty",
+            "title": "Uncertainty percentages need a source check"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "conflict_transport_air"
+      }
+    },
+    {
+      "question": "What are the total emissions here?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "needs_engine",
+        "blocks": [
+          {
+            "card_id": "live_required",
+            "title": "This question needs the selected data",
+            "category": "Evidence checks",
+            "paragraphs": [
+              "This question needs a version-matched inventory result for the selected sector, gas, geography, period and configuration. This documentation starter is not connected to that result yet."
+            ],
+            "more_available": true,
+            "data_chain": [],
+            "source_basis": "project documentation",
+            "citation_numbers": [
+              1,
+              2
+            ]
+          }
+        ],
+        "citations": [
+          {
+            "number": 1,
+            "source_id": "national",
+            "title": "National data-description article",
+            "pages": [
+              6,
+              16
+            ],
+            "url": "/api/source/national/file#page=6",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "e18243a311ac0af3780f6e26475ca71a6cef99a67c32edcc783013b6d4de5477"
+          },
+          {
+            "number": 2,
+            "source_id": "national_supplement",
+            "title": "National supplement",
+            "pages": [
+              1
+            ],
+            "url": "/api/source/national_supplement/file#page=1",
+            "kind": "project_document",
+            "release_id": "1.0.0rc54",
+            "sha256": "2bd592d228dfb8a010ae38a3c298c4279d0eddf324e6a4784e88e2bb27f45a2e"
+          }
+        ],
+        "limitations": [],
+        "notices": [
+          "Exact selected-view results are not connected for this query. The explanation below is about the method, not a live value."
+        ],
+        "suggestions": [
+          {
+            "card_id": "emissions",
+            "title": "What are emissions?"
+          },
+          {
+            "card_id": "importance",
+            "title": "Why do emissions matter?"
+          },
+          {
+            "card_id": "gas_ch4",
+            "title": "Methane · CH₄"
+          }
+        ],
+        "document_matches": [],
+        "last_card_id": "live_required"
+      }
+    },
+    {
+      "question": "What does the archive say about reinjection at a particular field?",
+      "response": {
+        "release_id": "1.0.0rc54",
+        "knowledge_digest": "e916651935428c1a39a75ff46841f980b2419f104c2d924e36367a1b88c4af9c",
+        "context": {
+          "release_id": "1.0.0rc54",
+          "view": "learn",
+          "boundary": "ipcc",
+          "sector": "all",
+          "category_id": null,
+          "metric": "CO2e",
+          "gwp": "AR5",
+          "geography_id": "PK",
+          "start_period": "FY2023-24",
+          "end_period": "FY2023-24",
+          "month": null,
+          "configuration": "L",
+          "spatial_view": "combined",
+          "stream_id": null,
+          "language": "en"
+        },
+        "editorial_status": "draft_for_owner_review",
+        "engine_connected": false,
+        "live_result": false,
+        "model_calls": 0,
+        "cache_hit": false,
+        "mode": "suggestions",
+        "blocks": [],
+        "citations": [],
+        "limitations": [],
+        "notices": [
+          "I do not have a sufficiently specific prepared answer. These are related explanations, not a claimed answer to your question."
+        ],
+        "suggestions": [
+          {
+            "card_id": "document_pattern",
+            "title": "What pattern does the national report describe?"
+          }
+        ],
+        "document_matches": [
+          {
+            "excerpt": " leaks at a combustion-derived factor while sitting outside every combustion module. The public gas-flow account does not resolve reinjection, own use, processing shrinkage or operator venting and flaring. Active and abandoned wells, exploration, workovers, 10",
+            "citation": {
+              "source_id": "fugitives",
+              "title": "TN06 · Oil and gas fugitives",
+              "pages": [
+                10
+              ],
+              "url": "/api/source/fugitives/file#page=10",
+              "kind": "project_document",
+              "release_id": "1.0.0rc54",
+              "sha256": "f97a02e4b237dd23f9a0230b85f61f88234e40d2b149607824b4d44f5d5cc134"
+            },
+            "warning": "Search excerpt, not a verified answer. Tables and equations may extract imperfectly; open the original page."
+          },
+          {
+            "excerpt": " retained only as the structural scenario dung_basis_legacy_vs. The property this buys is not accuracy but the impossibility of a particular error. If agriculture’s manure-management 16",
+            "citation": {
+              "source_id": "residential",
+              "title": "TN05 · Residential fuels",
+              "pages": [
+                16
+              ],
+              "url": "/api/source/residential/file#page=16",
+              "kind": "project_document",
+              "release_id": "1.0.0rc54",
+              "sha256": "2fa6ce2bfb6c98f56fd063b86352a2eda3627b5cd1cce648a197019f2fd0bf2e"
+            },
+            "warning": "Search excerpt, not a verified answer. Tables and equations may extract imperfectly; open the original page."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -13,6 +13,8 @@ import "@testing-library/jest-dom/vitest";
  * (decimals are server strings, no FY, no raw id, no avoid-list phrase).
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
@@ -74,13 +76,14 @@ beforeEach(() => {
       if (body?.group_by?.[0] === "category") return envelope([{ display: "151.658", display_short: "151.66", group: { category: "Enteric fermentation" } }, { display: "16.550", display_short: "16.55", group: { category: "Rice cultivation" } }]);
       if (body?.categories && body?.geography_level) return refusal("grain_unavailable", "GrainUnavailable", "category filters are national-grain only in this release: the core applies them at national grain only");
       if (body?.categories) return envelope([{ display: "151.658", display_short: "151.66", unit_short: "Mt CO₂e" }], { receipt: "060bde899b5bb984553b61722584952a" });
-      if (body?.group_by?.[0] === "sector_id")
+      if (body?.group_by?.[0] === "reporting_sector")
         return envelope([
-          { display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e", group: { sector_id: "agriculture" }, extra: { share_pct_short: "49.4" } },
-          { display: "63.370", display_short: "63.37", unit_short: "Mt CO₂e", group: { sector_id: "power" }, extra: { share_pct_short: "14.0" } },
+          { display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e", group: { reporting_sector: "agriculture" }, extra: { share_pct_short: "49.4" } },
+          { display: "63.370", display_short: "63.37", unit_short: "Mt CO₂e", group: { reporting_sector: "power" }, extra: { share_pct_short: "14.0" } },
         ]);
-      if (body?.sectors?.[0] === "agriculture") return envelope([{ display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e" }]);
-      if (body?.sectors?.[0] === "power") return envelope([{ display: "63.370", display_short: "63.37", unit_short: "Mt CO₂e" }]);
+      // the page names a sector on the REPORTING axis, so its scope body filters there (rc54)
+      if (body?.reporting_sectors?.[0] === "agriculture") return envelope([{ display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e" }]);
+      if (body?.reporting_sectors?.[0] === "power") return envelope([{ display: "63.370", display_short: "63.37", unit_short: "Mt CO₂e" }]);
       return envelope([{ display: "452.34662", display_short: "452.35", unit_short: "Mt CO₂e" }]);
     }),
   );
@@ -167,6 +170,24 @@ describe("/methods/sectors/[sector]", () => {
     fireEvent.click(within(card).getByTestId("inspect-sources"));
     expect(await screen.findByTestId("drawer-sources")).toBeInTheDocument();
   });
+  it("NEVER RENDERS THE INDUSTRY REPORTED-FUEL CAVEAT, though the release keeps sending it", () => {
+    // RE-HOMED from analyze.test.tsx when that page was removed on 2026-09-16. The caveat used to
+    // reach a reader three ways at once and put seven sentences of source criticism between them and
+    // the number they came for; it was withdrawn from every surface on 2026-09-13. The string still
+    // arrives with the release payload, so without a guard it returns on its own.
+    //
+    // This reads the SOURCE rather than the DOM on purpose. The fixture has no industry sector - and
+    // adding one would move three unrelated counts in this file - so a rendered assertion would pass
+    // whether or not the caveat was wired up, which is exactly how the first version of this guard
+    // sat green while the defect was planted. Comments are stripped so the note explaining the
+    // absence does not satisfy the test that enforces it.
+    expect(RELEASE.labels.limitations.industry_reported_fuel_series).toBeTruthy();   // it IS in the payload
+    const src = readFileSync(path.join(__dirname, "../components/methods/SectorRoute.tsx"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    expect(src).not.toContain("industry_reported_fuel_series");
+  });
+
   it("the page is data-driven: power renders its own words and numbers", async () => {
     mountAt(<SectorRoute sector="power" />, "/methods/sectors/power");
     const page = await screen.findByTestId("sector-page");
@@ -229,7 +250,7 @@ describe("/methods/evidence", () => {
     fireEvent.change(within(browser).getByTestId("browser-sector-select"), { target: { value: "agriculture" } });
     await waitFor(() => expect(within(within(browser).getByTestId("browser-category-select")).getAllByRole("option").map((o) => o.textContent)).toEqual(["All categories", "Enteric fermentation", "Rice cultivation"]));
     const categoryCall = fetchSpy.mock.calls.find(([, b]) => b?.group_by?.[0] === "category");
-    expect(categoryCall?.[1]).toMatchObject({ sectors: ["agriculture"], periods: ["FY2023-24"], group_by: ["category"] });
+    expect(categoryCall?.[1]).toMatchObject({ reporting_sectors: ["agriculture"], periods: ["FY2023-24"], group_by: ["category"] });
     fireEvent.change(within(browser).getByTestId("browser-category-select"), { target: { value: "Enteric fermentation" } });
     fireEvent.change(within(browser).getByTestId("browser-gas-select"), { target: { value: "CH4" } });
     expect(within(within(browser).getByTestId("browser-place-select")).getAllByRole("option").map((o) => o.textContent).slice(0, 3)).toEqual(["Pakistan", "Balochistan", "Khyber Pakhtunkhwa"]);
@@ -237,7 +258,7 @@ describe("/methods/evidence", () => {
     fireEvent.click(within(browser).getByTestId("browser-open"));
     await waitFor(() => expect(fetchSpy.mock.calls.some(([, b]) => b?.categories?.[0] === "Enteric fermentation")).toBe(true));
     const call = fetchSpy.mock.calls.find(([, b]) => b?.categories?.[0] === "Enteric fermentation");
-    expect(call?.[1]).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", sectors: ["agriculture"], categories: ["Enteric fermentation"], gases: ["CH4"] });
+    expect(call?.[1]).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", reporting_sectors: ["agriculture"], categories: ["Enteric fermentation"], gases: ["CH4"] });
     const record = await screen.findByTestId("browser-record");
     await waitFor(() => expect(within(record).getByTestId("claim-breadcrumb")).toHaveAttribute("data-text", "Agriculture → Enteric fermentation → CH₄ → Pakistan → 2023–24"));
     expect(fetchSpy.mock.calls.some(([u]) => String(u).endsWith("/claim?receipt=060bde899b5bb984553b61722584952a&cell=0"))).toBe(true);

@@ -39,7 +39,14 @@ MEDIA_TYPES = {
 }
 CACHE_CONTROL = "public, max-age=31536000, immutable"
 
-GHG_CUBES = ("pakemis_grid_0p05_monthly.nc", "pakemis_grid_0p05_monthly_survey.nc")
+# ⚠ THE ANNUAL CUBE WAS SHIPPING AND UNREACHABLE. All six cubes are hashed in the release manifest,
+# but only the four below were catalogued - so `/products/pakemis_grid_0p05_annual_ref_...nc` 404'd on
+# the nine-year GHG grid, which is the one a modeller most wants, and on the EDGAR-parity lattice that
+# exists to be compared against. Nothing is generated here: the files ship and the manifest already
+# carries their digests; they were simply never named.
+GHG_CUBES = ("pakemis_grid_0p05_monthly.nc", "pakemis_grid_0p05_monthly_survey.nc",
+             "pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24.nc",
+             "pakemis_grid_0p1_edgar_aligned.nc")
 # the rc49 air family: nine annual periods, seven species, one file per configuration
 AIR_CUBES = ("pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24.nc",
              "pakemis_air_grid_0p05_annual_survey_fy2015_16_fy2023_24.nc")

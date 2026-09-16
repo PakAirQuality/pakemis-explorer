@@ -13,7 +13,7 @@
 import { useMemo, useState } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { shown } from "@/lib/envelope";
-import { cellUnit, periodShort, sectorLabel } from "@/lib/labels";
+import { cellUnit, periodShort, reportingSectorLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { useEmissions } from "@/lib/queries";
 import type { ExploreState } from "@/lib/explore/query";
@@ -32,11 +32,15 @@ export function OverviewCard({ state }: { state: ExploreState }) {
   const [open, setOpen] = useState(true);
   const scope = useMemo(() => ({ periods: [state.period], configuration_id: state.config, gwp_basis: state.gwp }), [state.period, state.config, state.gwp]);
   const total = useEmissions(scope, open);
-  const breakdown = useEmissions(useMemo(() => ({ ...scope, group_by: ["sector_id"], order_by: "value desc" }), [scope]), open);
+  const breakdown = useEmissions(useMemo(() => ({ ...scope, group_by: ["reporting_sector"], order_by: "value desc" }), [scope]), open);
 
   const cell = total.data?.values.find((c) => typeof c.value === "number") ?? null;
   const top = breakdown.data?.values.find((c) => typeof c.value === "number") ?? null;
-  const topName = top ? sectorLabel(labels, top.group?.sector_id) : "";
+  // READ THE KEY THIS CARD ASKED FOR. The breakdown above groups by `reporting_sector`; this
+  // line read `sector_id`, so the group value was undefined and the card's opening sentence and
+  // chip both lost the sector's name - "49.4 % from all sectors" where the bar says agriculture.
+  // `sector_id` stays as the fallback for a cached module-keyed envelope.
+  const topName = top ? reportingSectorLabel(labels, top.group?.reporting_sector ?? top.group?.sector_id) : "";
   const period = periodShort(labels, state.period);
 
   const sentence = cell ? (

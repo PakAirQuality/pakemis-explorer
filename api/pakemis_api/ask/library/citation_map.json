@@ -1,0 +1,285 @@
+{
+ "_note": "Re-citation of the explanation library away from the project's own PDFs (2026-09-14). Each card's evidence is now either a PRIMARY science authority, an actual INPUT DOCUMENT from the release's source register, or the release's own MACHINE-READABLE declaration. Authored by hand, one card at a time; reviewable as data rather than buried in code. A card absent from this map keeps the citations it already has, which is correct only for the pure general-science cards.",
+ "_sector_inputs": "the ten 'Data behind X' cards cite the documents that actually drive the sector",
+ "agriculture_data": [
+  "src:pbs-census-livestock-by-district-2024",
+  "src:activity-agriculture-es-fiscal-series",
+  "src:activity-agriculture-crop-district-panel",
+  "src:activity-fertilizer-2024"
+ ],
+ "power_data": [
+  "src:activity-power-generation-by-fuel",
+  "src:activity-power-plant-fuel-ledger",
+  "src:activity-power-captive-gas"
+ ],
+ "transport_data": [
+  "src:activity-transport-cng-gas",
+  "src:activity-transport-emep-tier1-road-air"
+ ],
+ "waste_data": [
+  "src:activity-waste-population-district",
+  "src:activity-waste-hies-disposal-routes",
+  "src:activity-waste-hydrowaste-pak"
+ ],
+ "residential_data": [
+  "src:activity-residential-hies-hies-fuel-quantities",
+  "src:activity-residential-fuel-supply"
+ ],
+ "fugitives_data": [
+  "src:activity-fugitives-anchor-activity-2023-24",
+  "src:activity-fugitives-distribution-practice-evidence"
+ ],
+ "ippu_data": [
+  "src:activity-ippu-company-clinker-series",
+  "src:activity-ippu-cement-producer-census-2023-24"
+ ],
+ "industry_data": [
+  "src:activity-industry-coal-by-consumer",
+  "src:activity-industry-brick-kiln-activity-evidence"
+ ],
+ "railways_data": [
+  "src:activity-railways-fuel-consumption",
+  "src:activity-railways-agp-evidence"
+ ],
+ "aviation_data": [
+  "src:activity-aviation-airline-controls-2023-24",
+  "src:activity-aviation-airport-controls-2023-24"
+ ],
+ "_method": "method, tier and calculation claims cite the registry that names the IPCC volume, chapter and equation per atom - not a paragraph of ours restating it",
+ "calculation": [
+  "rel:method_registry"
+ ],
+ "tiers": [
+  "rel:method_registry"
+ ],
+ "activity": [
+  "rel:method_registry",
+  "src:activity-agriculture-es-fiscal-series"
+ ],
+ "factor": [
+  "rel:method_registry"
+ ],
+ "agriculture_method": [
+  "rel:method_registry",
+  "src:pbs-census-livestock-by-district-2024"
+ ],
+ "gwp": [
+  "rel:dim_gwp",
+  "epa_ghg"
+ ],
+ "co2e": [
+  "rel:dim_gwp",
+  "epa_ghg"
+ ],
+ "_uncertainty": "IPCC Volume 1 Chapter 3 is the authority for the method; the release's own tables are the authority for what THIS release did",
+ "uncertainty": [
+  "ipcc_uncertainty",
+  "rel:fact_uncertainty"
+ ],
+ "mc": [
+  "ipcc_uncertainty",
+  "rel:fact_uncertainty"
+ ],
+ "mc_why": [
+  "ipcc_uncertainty"
+ ],
+ "mc_example": [
+  "ipcc_uncertainty"
+ ],
+ "mc_convergence": [
+  "ipcc_uncertainty"
+ ],
+ "interval": [
+  "ipcc_uncertainty",
+  "rel:fact_uncertainty"
+ ],
+ "mean_median": [
+  "ipcc_uncertainty",
+  "rel:fact_uncertainty"
+ ],
+ "correlation": [
+  "ipcc_uncertainty",
+  "rel:fact_uncertainty"
+ ],
+ "trend_uncertainty": [
+  "ipcc_uncertainty",
+  "rel:fact_uncertainty"
+ ],
+ "validation": [
+  "ipcc_uncertainty"
+ ],
+ "structural": [
+  "rel:dim_configuration",
+  "rel:known_limitations"
+ ],
+ "dung": [
+  "rel:dim_configuration",
+  "src:activity-residential-hies-hies-fuel-quantities"
+ ],
+ "power_uncertainty": [
+  "rel:dim_configuration",
+  "src:activity-power-plant-fuel-ledger"
+ ],
+ "waste_uncertainty": [
+  "rel:fact_uncertainty",
+  "src:activity-waste-hies-disposal-routes"
+ ],
+ "fugitives_uncertainty": [
+  "rel:fact_uncertainty",
+  "src:activity-fugitives-anchor-activity-2023-24"
+ ],
+ "aviation_uncertainty": [
+  "rel:dim_configuration",
+  "src:activity-aviation-airline-controls-2023-24"
+ ],
+ "_coverage": "what is and is not estimated comes from the generated completeness record and the contract's declared limitations, never from a sector note",
+ "not_estimated": [
+  "rel:dim_notation_key",
+  "rel:fact_completeness"
+ ],
+ "estimated": [
+  "rel:dim_evidence_class",
+  "rel:fact_completeness"
+ ],
+ "conflict_ippu": [
+  "rel:fact_completeness",
+  "rel:known_limitations"
+ ],
+ "conflict_transport_air": [
+  "rel:fact_completeness",
+  "rel:known_limitations"
+ ],
+ "conflict_uncertainty": [
+  "rel:fact_uncertainty",
+  "ipcc_uncertainty"
+ ],
+ "industry_mapping": [
+  "rel:fact_completeness",
+  "rel:known_limitations"
+ ],
+ "product_priority": [
+  "rel:known_limitations",
+  "rel:fact_completeness"
+ ],
+ "_release": "claims about what this release is, how it is put together and what it declares",
+ "inventory": [
+  "rel:known_limitations",
+  "rel:dim_period"
+ ],
+ "why_inventory": [
+  "rel:known_limitations",
+  "epa_ghg"
+ ],
+ "sources": [
+  "src:activity-industry-coal-by-consumer",
+  "src:activity-power-generation-by-fuel",
+  "src:activity-waste-population-district"
+ ],
+ "source_chain": [
+  "rel:method_registry",
+  "rel:dim_evidence_class"
+ ],
+ "source_custody": [
+  "rel:known_limitations"
+ ],
+ "boundaries": [
+  "rel:dim_configuration",
+  "rel:known_limitations"
+ ],
+ "spatial_views": [
+  "rel:known_limitations"
+ ],
+ "mapping": [
+  "rel:known_limitations",
+  "rel:dim_evidence_class"
+ ],
+ "monthly": [
+  "rel:dim_period",
+  "rel:dim_evidence_class"
+ ],
+ "patterns": [
+  "rel:dim_period",
+  "rel:fact_uncertainty"
+ ],
+ "causality": [
+  "rel:fact_uncertainty",
+  "rel:known_limitations"
+ ],
+ "benchmarks": [
+  "src:activity-fugitives-benchmark-controls",
+  "rel:known_limitations"
+ ],
+ "document_pattern": [
+  "rel:dim_period",
+  "rel:known_limitations"
+ ],
+ "live_required": [
+  "rel:dim_period",
+  "rel:dim_configuration"
+ ],
+ "_concept": "general-science cards keep their primary authorities; these two also made a PakEmis claim that needed its own target",
+ "emissions": [
+  "epa_ghg",
+  "nasa_climate"
+ ],
+ "importance": [
+  "nasa_climate",
+  "epa_ghg"
+ ],
+ "exposure": [
+  "epa_pm",
+  "rel:known_limitations"
+ ],
+ "assistant": [
+  "rel:known_limitations"
+ ],
+ "_gas": "each gas card keeps its primary science authority and replaces the paper citation with the PakEmis-specific target - the release vocabulary that declares the gas, or the input document where that gas actually comes from",
+ "gas_co2": [
+  "epa_co2",
+  "src:activity-ippu-company-clinker-series"
+ ],
+ "gas_ch4": [
+  "epa_ch4",
+  "rel:dim_gas"
+ ],
+ "gas_n2o": [
+  "epa_n2o",
+  "src:activity-fertilizer-2024"
+ ],
+ "gas_nh3": [
+  "src:activity-fertilizer-2024",
+  "src:activity-ippu-company-clinker-series"
+ ],
+ "gas_nox": [
+  "epa_nox",
+  "src:activity-transport-emep-tier1-road-air"
+ ],
+ "gas_so2": [
+  "epa_so2",
+  "src:activity-railways-diesel-sulfur-regime"
+ ],
+ "gas_co": [
+  "epa_co",
+  "src:activity-residential-hies-hies-fuel-quantities"
+ ],
+ "gas_pm25": [
+  "epa_pm",
+  "rel:dim_pollutant"
+ ],
+ "gas_pm10": [
+  "epa_pm",
+  "rel:dim_pollutant"
+ ],
+ "gas_bc": [
+  "ccac_bc",
+  "rel:dim_pollutant"
+ ],
+ "gas_nmvoc": [
+  "epa_o3",
+  "src:activity-transport-emep-tier1-road-air"
+ ],
+ "gas_fgas": [
+  "epa_fgas",
+  "rel:fact_completeness"
+ ]
+}

@@ -16,13 +16,14 @@ import "@testing-library/jest-dom/vitest";
  *    no raw id (bare AR5, "(NE)", "LULUCF", a version), no avoid-list phrase — and the naming
  *    rule: the chrome never names the dataset.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import Page from "@/app/page";
 import { RELEASE, envelope, mockFetch, refusal, stubNarrowViewport, stubWideViewport } from "./fixtures";
+import { openFilters as askForFilters, resetAskChrome } from "@/components/ask/docked";
 import { avoidPhrasesIn, namesDataset } from "./vocabulary";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
@@ -52,13 +53,13 @@ vi.mock("@/components/charts/ColumnChart", () => ({
 const U = { unit_short: "Mt CO₂e", unit_words: "million tonnes CO₂e" };
 const AXIS_250 = { ticks_short: ["0", "50", "100", "150", "200", "250"], min_short: "0.30", max_short: "223.45", unit_short: "Mt CO₂e" };
 const SECTORS = [
-  { display: "223.454", display_short: "223.45", ...U, group: { sector_id: "agriculture" }, extra: { share_pct_short: "49.4", share_phrase: "nearly half", rank: 1 } },
-  { display: "63.370", display_short: "63.37", ...U, group: { sector_id: "power" }, extra: { share_pct_short: "14.0", share_phrase: "about a tenth", rank: 2 } },
-  { display: "41.926", display_short: "41.93", ...U, group: { sector_id: "transport" }, extra: { share_pct_short: "9.3", share_phrase: "a small share", rank: 3 } },
+  { display: "223.454", display_short: "223.45", ...U, group: { reporting_sector: "agriculture" }, extra: { share_pct_short: "49.4", share_phrase: "nearly half", rank: 1 } },
+  { display: "63.370", display_short: "63.37", ...U, group: { reporting_sector: "power" }, extra: { share_pct_short: "14.0", share_phrase: "about a tenth", rank: 2 } },
+  { display: "41.926", display_short: "41.93", ...U, group: { reporting_sector: "transport" }, extra: { share_pct_short: "9.3", share_phrase: "a small share", rank: 3 } },
 ];
 const PUNJAB_SECTORS = [
-  { display: "123.301", display_short: "123.30", ...U, group: { module: "agriculture" }, extra: { share_pct_short: "53.9", share_phrase: "nearly half", rank: 1 } },
-  { display: "27.488", display_short: "27.49", ...U, group: { module: "transport" }, extra: { share_pct_short: "12.0", share_phrase: "about a tenth", rank: 2 } },
+  { display: "123.301", display_short: "123.30", ...U, group: { reporting_sector: "agriculture" }, extra: { share_pct_short: "53.9", share_phrase: "nearly half", rank: 1 } },
+  { display: "27.488", display_short: "27.49", ...U, group: { reporting_sector: "transport" }, extra: { share_pct_short: "12.0", share_phrase: "about a tenth", rank: 2 } },
 ];
 const GASES = [
   { display: "248.748", display_short: "248.75", ...U, group: { gas: "CH4" }, extra: { share_pct_short: "55.0", share_phrase: "over half", rank: 1 } },
@@ -84,6 +85,7 @@ const fetchSpy = vi.fn();
 beforeEach(() => {
   fetchSpy.mockReset();
   stubWideViewport();
+  resetAskChrome();
   vi.stubGlobal(
     "fetch",
     mockFetch((url, body) => {
@@ -101,6 +103,8 @@ beforeEach(() => {
         if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air" });
         if (k === "period_id") return envelope([{ display: "2100.004", display_short: "2100.00", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2020-21" } }, { display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃", group: { period_id: "FY2023-24" } }], { request_type: "query_air", axis: AXIS_250, change: { from_period: "FY2020-21", to_period: "FY2023-24", from_short: "2100.00", to_short: "2784.71", change_short: "+684.71", change_pct_short: "+32.6", direction: "rose", unit_short: "kt NH₃" } });
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
+        // THE AIR LANE IS MODULE-KEYED and stays that way: fact_air_* carries no reporting_sector,
+        // so grouping it on the reporting axis would 400. The rc54 rename must not reach here.
         if (k === "sector_id") return envelope([{ display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { sector_id: "agriculture" }, extra: { share_pct_short: "96.0" } }], { request_type: "query_air", axis: AXIS_250 });
         return envelope([{ display: "2784.709", display_short: "2784.71", unit: "kt NH3", unit_short: "kt NH₃" }], {
           request_type: "query_air",
@@ -111,8 +115,15 @@ beforeEach(() => {
           ],
         });
       }
-      if (body?.group_by?.includes("sector_id")) return envelope(SECTORS, { axis: AXIS_250, partition: { n: 3 } });
-      if (body?.group_by?.includes("module")) return envelope(PUNJAB_SECTORS, { axis: { ticks_short: ["0", "25", "50", "75", "100", "125"], unit_short: "Mt CO₂e" }, partition: { n: 2 } });
+      // SINCE rc54 A PROVINCE ASKS THE SAME KEY AS THE NATION (the district tables carry the
+      // reporting axis), so the two envelopes are told apart by their GEOGRAPHY, not by their
+      // group key. Keying the province arm on "module" left it unreachable, and the province
+      // deck silently answered with the national cells.
+      if (body?.group_by?.includes("reporting_sector")) {
+        return body?.geography_ids?.length
+          ? envelope(PUNJAB_SECTORS, { axis: { ticks_short: ["0", "25", "50", "75", "100", "125"], unit_short: "Mt CO₂e" }, partition: { n: 2 } })
+          : envelope(SECTORS, { axis: AXIS_250, partition: { n: 3 } });
+      }
       if (body?.group_by?.includes("gas")) return envelope(GASES, { axis: AXIS_250, partition: { n: 2 } });
       if (body?.group_by?.includes("province")) return envelope(PROVINCES, { axis: AXIS_250, partition: { n: 2 }, derived: DERIVED_PK });
       if (body?.geography_ids?.includes("Punjab")) return envelope(PUNJAB, { derived: DERIVED_PB });
@@ -155,8 +166,17 @@ async function urlWith(updates: Parameters<OnUrlUpdateFunction>[0][], part: stri
   return updates[updates.length - 1].queryString;
 }
 
+/**
+ * The filters are a card the map's ⚙ opens now, not a standing panel, so a test that reaches for
+ * a filter control opens it first. The controls themselves are unchanged; only the way in is.
+ */
+function openFilters() {
+  fireEvent.click(screen.getByTestId("filters-button"));
+  return screen.getByTestId("filter-panel");
+}
+
 describe("the workspace frame", () => {
-  it("one full-bleed map behind everything, with the nav capsule, the deck, the filter panel, the legend capsule, and the map buttons over it", async () => {
+  it("one full-bleed map behind everything, with the nav capsule, the deck, the assistant's column, the legend capsule, and the map buttons over it", async () => {
     mount();
     await loaded();
     const page = screen.getByTestId("workspace");
@@ -169,7 +189,7 @@ describe("the workspace frame", () => {
     // the nav capsule floats at the deck's own left inset, so the two left edges are one line
     const nav = screen.getByTestId("nav-capsule");
     expect(nav.className).toContain("absolute left-5 top-5");
-    expect(screen.getAllByTestId("nav-link").map((a) => a.textContent)).toEqual(["Explore", "Analyze", "Methods", "Downloads"]);
+    expect(screen.getAllByTestId("nav-link").map((a) => a.textContent)).toEqual(["Explore", "Methods", "Downloads"]);
     // the deck: 420 px, inset 20, under the capsule, its own scroll, letting pointer events through
     const deck = screen.getByTestId("deck");
     // 420 px exactly, so the nav capsule above it shares both edges
@@ -182,9 +202,15 @@ describe("the workspace frame", () => {
     for (const id of ["card-overview", "card-sectors", "card-places", "footer"]) expect(screen.getByTestId(id).className, id).toContain("pointer-events-auto");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("EMISSIONS TRENDS");
     expect(screen.getByTestId("place-title")).toHaveTextContent("National overview");
-    // the filter panel: 340 px, top-right
+    // THE RIGHT EDGE IS THE ASSISTANT'S NOW, so nothing of the filters stands there: no card and
+    // no 48 px rail either. The panel is a card the map's own ⚙ opens, and when it does it sits
+    // clear of the docked column rather than under it.
+    expect(screen.queryByTestId("filter-panel")).toBeNull();
+    fireEvent.click(screen.getByTestId("filters-button"));
     const filters = screen.getByTestId("filter-panel");
-    for (const c of ["absolute", "right-5", "top-5", "z-20", "w-[340px]", "card", "p-4"]) expect(filters.className, c).toContain(c);
+    for (const c of ["absolute", "top-5", "z-20", "w-[340px]", "card", "p-4"]) expect(filters.className, c).toContain(c);
+    expect(filters.style.right).toBe(`${440 + 20}px`);   // the assistant's width and its gap
+    expect(filters.className).not.toContain("right-5");
     // the legend capsule: bottom-left of the map, right of the deck, one line and no break numbers
     const legend = screen.getByTestId("legend-capsule");
     const slot = screen.getByTestId("legend-capsule-slot"); // the capsule plus the panel its ⓘ opens above it
@@ -197,9 +223,13 @@ describe("the workspace frame", () => {
     expect(screen.queryByTestId("legend")).toBeNull(); // never two legends at once
     expect(screen.queryByTestId("layer-legend")).toBeNull();
     expect(screen.queryByTestId("opacity-pill")).toBeNull();
-    // the map's own buttons, bottom-right; the Map settings pill came off the map
+    // the map's own buttons, bottom-right and likewise clear of the assistant; the filters open
+    // from the head of this stack, and the Map settings pill came off the map long ago
     const buttons = screen.getByTestId("map-buttons");
-    expect(buttons.className).toContain("right-5");
+    expect(buttons.style.right).toBe(`${440 + 20}px`);
+    expect(buttons.className).not.toContain("right-5");
+    expect(Array.from(buttons.children).map((el) => el.getAttribute("data-testid")))
+      .toEqual(["filters-button", "map-zoom-in", "map-zoom-out", "map-locate", "map-fullscreen"]);
     for (const id of ["map-zoom-in", "map-zoom-out", "map-locate", "map-fullscreen"]) expect(within(buttons).getByTestId(id).className, id).toContain("glass");
     expect(screen.queryByTestId("map-settings-button")).toBeNull();
     // the display controls live inside the filter panel's Map display disclosure now
@@ -212,17 +242,39 @@ describe("the workspace frame", () => {
     expect(logos).toHaveLength(1);
     expect(nav).toContainElement(logos[0]);
   });
-  it("the map's padding is the chrome's own widths, and collapsing a panel re-computes it", async () => {
+  it("the assistant's column: the map is laid out around it, and its Change opens the filters", async () => {
+    // The one signal the panel and the map have to agree on (components/ask/docked.ts). It is not
+    // in the URL - it is chrome, like every other panel here - so this is the seam where a
+    // regression would be silent: "Change" beside the scope would open nothing.
+    mount();
+    await loaded();
+    const M = 12;
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-pad-right", String(440 + M));
+    expect(screen.getByTestId("map-buttons").style.right).toBe(`${440 + 20}px`);
+
+    expect(screen.queryByTestId("filter-panel")).toBeNull();
+    act(() => askForFilters());
+    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "1");
+  });
+
+  it("the map's padding is the PERMANENT chrome's widths; the deck re-computes it and the filter card does not", async () => {
     mount();
     await loaded();
     const stub = () => screen.getByTestId("map-stub");
     // the chrome's own widths plus FRAME_MARGIN_PX all round, so the country stands off the panels
     const M = 12;
     expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16 + M));
-    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16 + M));
+    expect(stub()).toHaveAttribute("data-pad-right", String(440 + M)); // the assistant, flush to the edge
+    // THE FILTER CARD IS TRANSIENT AND MUST NOT MOVE THE COUNTRY. It used to hold this edge, and
+    // the camera panned every time it collapsed; opening it for the few seconds it takes to change
+    // a sector should not slide the map out from under the reader.
+    fireEvent.click(screen.getByTestId("filters-button"));
+    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "1");
+    expect(stub()).toHaveAttribute("data-pad-right", String(440 + M));
     fireEvent.click(screen.getByTestId("filters-collapse"));
-    expect(screen.getByTestId("filter-panel")).toHaveAttribute("data-open", "0");
-    expect(stub()).toHaveAttribute("data-pad-right", String(48 + 20 + 16 + M));
+    expect(screen.queryByTestId("filter-panel")).toBeNull();
+    expect(stub()).toHaveAttribute("data-pad-right", String(440 + M));
+    // the deck is permanent, so it still does
     fireEvent.click(screen.getByTestId("deck-collapse"));
     expect(screen.queryByTestId("deck")).toBeNull();
     expect(screen.getByTestId("deck-rail")).toBeInTheDocument();
@@ -230,14 +282,13 @@ describe("the workspace frame", () => {
     fireEvent.click(screen.getByTestId("deck-rail"));
     expect(await screen.findByTestId("deck")).toBeInTheDocument();
     expect(stub()).toHaveAttribute("data-pad-left", String(420 + 20 + 16 + M));
-    fireEvent.click(screen.getByTestId("filters-expand"));
-    expect(stub()).toHaveAttribute("data-pad-right", String(340 + 20 + 16 + M));
   });
   it("the filter panel's Map display disclosure carries the map's display choices: the layer, the scale, the opacity, the raster, the basemap, the boundaries, the month, the estimate, the warming potentials and the spatial view", async () => {
     mount();
     await loaded();
-    // no floating pill on the map any more; the disclosure lives in the filter panel
+    // no floating pill on the map any more; the disclosure lives in the filter card
     expect(screen.queryByTestId("map-settings-button")).toBeNull();
+    openFilters();
     const panel = screen.getByTestId("map-settings-panel");
     for (const id of ["layer-switch", "scale-select", "opacity-range", "raster-toggle", "basemap-select", "boundaries-toggle", "month-select", "config-select", "gwp-select", "view-select"]) expect(within(panel).getByTestId(id), id).toBeInTheDocument();
     expect((within(panel).getByTestId("config-select") as HTMLSelectElement).options[0].textContent).toBe("Reference estimate");
@@ -254,6 +305,7 @@ describe("the workspace's state", () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
     mount("", (e) => updates.push(e));
     await loaded();
+    openFilters();
     fireEvent.click(screen.getByTestId("level-adm2"));
     expect(await urlWith(updates, "level=adm2")).toContain("level=adm2");
     fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "power" } });
@@ -272,6 +324,7 @@ describe("the workspace's state", () => {
     mount("?sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
     await screen.findByTestId("card-snapshot-sentence");
     expect(screen.queryByTestId("scope-chips")).toBeNull();
+    openFilters();
     expect(screen.getByTestId("sector-select")).toHaveValue("power");
     expect(screen.getByTestId("gas-select")).toHaveValue("CH4");
     await waitFor(() => expect(screen.getByTestId("year-value")).toHaveTextContent("2020–21"));
@@ -344,6 +397,7 @@ describe("the workspace's state", () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
     mount("?level=adm2&sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
     await screen.findByTestId("card-snapshot-sentence");
+    openFilters();
     fireEvent.click(screen.getByTestId("reset-filters"));
     await waitFor(() => expect(updates[updates.length - 1].queryString).toBe(""));
     expect(screen.getByTestId("sector-select")).toHaveValue("");
@@ -382,7 +436,7 @@ describe("the deck's cards", () => {
     expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("In 2023–24, Pakistan emitted an estimated 452.35 Mt CO₂e. Agriculture contributed 223.45 Mt, accounting for 49.4 % of the total.");
     expect(screen.queryByTestId("overview-chip")).toBeNull();   // the share rides in the sentence, not a chip
     expect(screen.queryByTestId("snapshot-meta")).toBeNull();   // the meta line was removed on 2026-08-31
-    expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source of emissions, contributing 223.45 Mt CO₂e (49.4 %). Power followed at 63.37 Mt (14.0 %), with transport at 41.93 Mt (9.3 %).");
+    expect(screen.getByTestId("card-sectors-sentence")).toHaveTextContent("In 2023–24, agriculture was the largest source of emissions, contributing 223.45 Mt CO₂e (49.4 %). Power (grid generation) followed at 63.37 Mt (14.0 %), with transport at 41.93 Mt (9.3 %).");
     expect(screen.getByTestId("overview-change")).toHaveTextContent("By 2023–24, emissions had risen to 452.35 Mt CO₂e, up 21.5 % from 372.40 Mt in 2020–21.");
     expect(screen.getByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share.");
     expect(screen.getByTestId("sectors-bars")).toHaveAttribute("data-ticks", AXIS_250.ticks_short.join("|"));
@@ -483,6 +537,7 @@ describe("the workspace's audits", () => {
     stubWideViewport();
     mount("?pol=NH3");
     await screen.findByTestId("deck");
+    openFilters();
     expect(screen.getByTestId("gas-select")).toHaveValue("pol:NH3");
     expect(await screen.findByTestId("air-display")).toHaveTextContent("2784.71");
     expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");

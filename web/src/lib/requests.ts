@@ -23,12 +23,21 @@ function compact<T extends Record<string, unknown>>(body: T): T {
 }
 
 /** The filters shared by every query of the scope (no geography). */
+/** THE SECTOR FIELD IS THE REPORTING AXIS (rc54), at every grain.
+ *
+ *  `state.sector` is a REPORTING sector - where IPCC 2006 files a source - and it must be sent on
+ *  `reporting_sectors`, never on `sectors`. The two vocabularies are the same ten ids, so sending
+ *  one on the other's field does not error: it silently answers with the computing module, which
+ *  for "industry" means the industry module ALONE, without the captive self-generation that is
+ *  1.A.2 and that the axis exists to include. Until rc54 the district tables could not answer the
+ *  axis at all and this file sent the module everywhere; the cube now partitions district mass by
+ *  the pair, so every grain answers it and there is nothing to route around. */
 export function scopeBody(s: Pick<ExplorerState, "period" | "config" | "gwp" | "sector" | "gas" | "month">): QueryEmissions {
   return compact({
     periods: [s.period],
     configuration_id: s.config,
     gwp_basis: s.gwp,
-    sectors: s.sector ? [s.sector] : [],
+    reporting_sectors: s.sector ? [s.sector] : [],
     gases: s.gas ? [s.gas] : [],
     months: s.month ? [s.month] : [],
   });
@@ -102,7 +111,7 @@ export function detailBodies(s: ExplorerState, months: string[]): DetailBodies {
     kind,
     id: s.geo,
     total: base,
-    byModule: compact({ ...base, group_by: ["module"] }),
+    byModule: compact({ ...base, group_by: ["reporting_sector"] }),
     byGas: compact({ ...base, group_by: ["gas"] }),
     byMonth: compact({ ...base, months, group_by: ["month"] }),
     lineage: {
@@ -118,12 +127,12 @@ export function detailBodies(s: ExplorerState, months: string[]): DetailBodies {
 }
 
 export function compareBody(s: ExplorerState, left: Partial<QueryEmissions>, right: Partial<QueryEmissions>, mode: "absolute" | "relative" = "absolute"): CompareRequest {
-  const base = compact({ gwp_basis: s.gwp, sectors: s.sector ? [s.sector] : [], gases: s.gas ? [s.gas] : [] });
+  const base = compact({ gwp_basis: s.gwp, reporting_sectors: s.sector ? [s.sector] : [], gases: s.gas ? [s.gas] : [] });
   return { left: compact({ ...base, ...left }), right: compact({ ...base, ...right }), mode };
 }
 
 export function seriesBody(s: Pick<ExplorerState, "config" | "gwp" | "sector" | "gas">, step: "annual" | "monthly" = "annual"): TimeseriesRequest {
-  return { query: compact({ configuration_id: s.config, gwp_basis: s.gwp, sectors: s.sector ? [s.sector] : [], gases: s.gas ? [s.gas] : [] }), step };
+  return { query: compact({ configuration_id: s.config, gwp_basis: s.gwp, reporting_sectors: s.sector ? [s.sector] : [], gases: s.gas ? [s.gas] : [] }), step };
 }
 
 /** One sector's annual series under the configuration and GWP basis given, every gas (the intro's example). */
@@ -131,7 +140,7 @@ export function sectorSeriesBody(s: Pick<ExplorerState, "config" | "gwp">, secto
   return seriesBody({ config: s.config, gwp: s.gwp, sector, gas: null });
 }
 
-/** The transport series: `get_timeseries`, `sectors: ["transport"]`, annual, under the configuration and GWP basis given. */
+/** The transport series: `get_timeseries`, `reporting_sectors: ["transport"]`, annual, under the configuration and GWP basis given. */
 export function transportSeriesBody(s: Pick<ExplorerState, "config" | "gwp">): TimeseriesRequest {
   return sectorSeriesBody(s, "transport");
 }
@@ -154,7 +163,7 @@ export type DrawerBodies = {
   selection: Selection;
   total: QueryEmissions;
   bySector: QueryEmissions;
-  sectorKey: "sector_id" | "module";
+  sectorKey: "reporting_sector";
   byView: QueryEmissions | null;
   series: TimeseriesRequest;
   lineage: LineageRequest | null;
@@ -165,8 +174,8 @@ export type DrawerBodies = {
 
 /**
  * The selected geography's requests, a pure function of the URL state: the total, the one-key
- * sector breakdown (`sector_id` at national grain, `module` at ADM grain — the release carries
- * `sector_id` nationally only), the spatial-view breakdown at ADM grain, the annual series
+ * sector breakdown (`reporting_sector` at every grain since rc54 - the district tables carry the
+ * axis now), the spatial-view breakdown at ADM grain, the annual series
  * (refused by the release off the national scope, shown by name), the lineage at ADM grain and
  * the province envelope whose `derived` carries the placed / unallocated strings.
  */
@@ -180,9 +189,9 @@ export function drawerBodies(s: ExplorerState, months: string[]): DrawerBodies {
         selection,
         total: d.total,
         bySector: d.byModule,
-        sectorKey: "module",
+        sectorKey: "reporting_sector",
         byView: { ...d.total, group_by: ["spatial_view"] },
-        series: { query: { configuration_id: s.config, gwp_basis: s.gwp, ...(s.sector ? { sectors: [s.sector] } : {}), ...(s.gas ? { gases: [s.gas] } : {}), geography_level: selection.kind === "province" ? "adm1" : "adm2", geography_ids: [selection.id], spatial_view: s.view }, step: "annual" },
+        series: { query: { configuration_id: s.config, gwp_basis: s.gwp, ...(s.sector ? { reporting_sectors: [s.sector] } : {}), ...(s.gas ? { gases: [s.gas] } : {}), geography_level: selection.kind === "province" ? "adm1" : "adm2", geography_ids: [selection.id], spatial_view: s.view }, step: "annual" },
         lineage: d.lineage,
         provinces,
         cell: null,
@@ -193,8 +202,8 @@ export function drawerBodies(s: ExplorerState, months: string[]): DrawerBodies {
   return {
     selection,
     total: national,
-    bySector: { ...national, group_by: ["sector_id"], order_by: "value desc" },
-    sectorKey: "sector_id",
+    bySector: { ...national, group_by: ["reporting_sector"], order_by: "value desc" },
+    sectorKey: "reporting_sector",
     byView: null,
     series: seriesBody(s),
     lineage: null,
@@ -213,9 +222,9 @@ export function drawerBodies(s: ExplorerState, months: string[]): DrawerBodies {
 export type DeckDefaults = { months: string[]; peers: string[] };
 
 /** The partition whose cells carry the snapshot's `share_pct_short` and `rank`, and the id to find in it. */
-export type RankedIn = { body: QueryEmissions; key: "sector_id" | "gas" | "province" | "shape_id"; id: string };
+export type RankedIn = { body: QueryEmissions; key: "reporting_sector" | "gas" | "province" | "shape_id"; id: string };
 /** The composition breakdown: one group key, chosen by the scope, never silently swapped for another. */
-export type DeckBreakdown = { body: QueryEmissions; key: "sector_id" | "module" | "category" };
+export type DeckBreakdown = { body: QueryEmissions; key: "reporting_sector" | "category" };
 
 export type DeckBodies = {
   selection: Selection;
@@ -257,7 +266,8 @@ export function deckBodies(s: ExplorerState, defaults: DeckDefaults): DeckBodies
   const selection = d.selection;
   const placed = selection.kind === "province" || selection.kind === "district";
   const geography = placed ? { geography_level: selection.kind === "province" ? "adm1" : "adm2", geography_ids: [selection.id], spatial_view: s.view } : {};
-  const key: DeckBreakdown["key"] = s.sector ? "category" : placed ? "module" : "sector_id";
+  // one axis at every grain now: a sector card is the reporting sector, a drilled card its categories
+  const key: DeckBreakdown["key"] = s.sector ? "category" : "reporting_sector";
   const provinces = compact({ ...adm1Body(s), order_by: "value desc" });
   const peers =
     selection.kind === "district" && defaults.peers.length
@@ -271,7 +281,7 @@ export function deckBodies(s: ExplorerState, defaults: DeckDefaults): DeckBodies
           ? { body: peers, key: "shape_id", id: selection.id }
           : null
         : s.sector
-          ? { body: compact({ ...scopeBody({ ...s, sector: null }), group_by: ["sector_id"], order_by: "value desc" }), key: "sector_id", id: s.sector }
+          ? { body: compact({ ...scopeBody({ ...s, sector: null }), group_by: ["reporting_sector"], order_by: "value desc" }), key: "reporting_sector", id: s.sector }
           : s.gas
             ? { body: compact({ ...scopeBody({ ...s, gas: null }), group_by: ["gas"], order_by: "value desc" }), key: "gas", id: s.gas }
             : null;
@@ -295,11 +305,11 @@ export function contextBodies(s: ExplorerState, survey: { reference: string; sur
   const national = scopeBody(s);
   return {
     national,
-    bySector: compact({ ...national, group_by: ["sector_id"], order_by: "value desc" }),
+    bySector: compact({ ...national, group_by: ["reporting_sector"], order_by: "value desc" }),
     byGas: compact({ ...national, group_by: ["gas"] }),
     series: seriesBody(s),
     compareSL: survey
-      ? compareBody(s, { periods: [s.period], configuration_id: survey.reference, group_by: ["sector_id"] }, { periods: [s.period], configuration_id: survey.survey, group_by: ["sector_id"] })
+      ? compareBody(s, { periods: [s.period], configuration_id: survey.reference, group_by: ["reporting_sector"] }, { periods: [s.period], configuration_id: survey.survey, group_by: ["reporting_sector"] })
       : null,
   };
 }
@@ -348,7 +358,13 @@ export function stateFromRequest(req: NamedRequest): Partial<ExplorerState> {
     if (gwp) out.gwp = gwp;
     const view = str(b.spatial_view);
     if (view) out.view = view;
-    out.sector = first(b.sectors);
+    // READ BACK THE FIELD THIS FILE WRITES. Every builder above moved the sector filter onto
+    // `reporting_sectors` at rc54 and this line was left reading `sectors`, so the round trip
+    // dropped it: a request the app had just built read back as "no sector", silently widening
+    // a power view to every sector - on a receipt replay, on an agent's map_action, anywhere
+    // state is recovered from a request. `sectors` stays as the fallback, because an older
+    // envelope and a caller that really did ask for the computing module both carry it there.
+    out.sector = first(b.reporting_sectors) ?? first(b.sectors);
     out.gas = first(b.gases);
     out.month = first(b.months);
     const geo = first(b.geography_ids);

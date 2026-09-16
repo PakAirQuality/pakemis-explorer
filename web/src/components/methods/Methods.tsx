@@ -13,6 +13,8 @@ import { parseAsString, useQueryState } from "nuqs";
 import { NavCapsule } from "@/components/shell/NavCapsule";
 import type { Cell } from "@/lib/envelope";
 import { Story } from "./Story";
+import { MapMotif } from "@/components/shell/MapMotif";
+import { MotifCredit } from "@/components/shell/MotifCredit";
 
 export const METHODS = {
   title: "Methods & evidence",
@@ -52,11 +54,13 @@ export function Methods() {
   }, [router, modeParam, claimParam, sectorParam]);
 
   return (
-    <div className="min-h-dvh bg-surface" data-testid="methods-page">
+    <div className="relative min-h-dvh" data-testid="methods-page">
+      <MapMotif />
       <header className="flex shrink-0 items-center px-5 pb-3 pt-5" data-testid="top-nav">
         <NavCapsule />
       </header>
       <Story onBrowse={() => router.push("/methods/sectors/")} />
+      <MotifCredit />
     </div>
   );
 }

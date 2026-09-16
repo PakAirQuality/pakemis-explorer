@@ -458,6 +458,11 @@ class Service:
             {k: r[k] for k in ("geography_id", "name", "shape_id", "shape_name", "parent_id", "has_polygon", "status", "unit_kind")}
             for r in self.release.dim("dim_geography") if r["level"] == "adm2"]
         dims["sectors"] = sorted(self.release.dim_values("dim_stream", "module"))
+        # THE AXIS A SECTOR SELECTOR SHOULD OFFER (rc54). The two vocabularies are the same ten
+        # ids, so a client that enumerated the module list and sent the choice on the reporting
+        # field would look right and be right by coincidence. Publishing both means a surface can
+        # say which axis it is on, and a future divergent id cannot pass unnoticed.
+        dims["reporting_sectors"] = sorted(self.release.dim_values("dim_stream", "reporting_sector"))
         by_period = {}
         for r in self.release.dim("dim_month"):
             by_period.setdefault(r["period_id"], []).append(r["month"])

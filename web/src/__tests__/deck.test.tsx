@@ -66,8 +66,8 @@ const NATIONAL = [{ display: "452.34662", display_short: "452.35", ...U }];
 const POWER = [{ display: "63.370", display_short: "63.37", ...U }];
 const METHANE = [{ display: "248.748", display_short: "248.75", ...U }];
 const SECTORS = [
-  { display: "223.454", display_short: "223.45", ...U, group: { sector_id: "agriculture" }, extra: { share_pct_short: "49.4", share_phrase: "nearly half", rank: 1 } },
-  { display: "63.370", display_short: "63.37", ...U, group: { sector_id: "power" }, extra: { share_pct_short: "14.0", share_phrase: "about a tenth", rank: 2 } },
+  { display: "223.454", display_short: "223.45", ...U, group: { reporting_sector: "agriculture" }, extra: { share_pct_short: "49.4", share_phrase: "nearly half", rank: 1 } },
+  { display: "63.370", display_short: "63.37", ...U, group: { reporting_sector: "power" }, extra: { share_pct_short: "14.0", share_phrase: "about a tenth", rank: 2 } },
 ];
 const CATEGORIES = [
   { display: "151.658", display_short: "151.66", ...U, group: { category: "Enteric fermentation" }, extra: { share_pct_short: "67.9", share_phrase: "most", rank: 1 } },
@@ -85,8 +85,8 @@ const DERIVED_PK = { unallocated_total_short: "9.01", placed_short: "443.34" };
 const DERIVED_PB = { unallocated_total_short: "4.84", placed_short: "223.88", unallocated_by_province_short: { Punjab: "4.84" } };
 const PUNJAB = [{ display: "228.7168", display_short: "228.72", ...U, group: { province: "Punjab" }, extra: { unallocated_short: "4.84" } }];
 const PUNJAB_MODULES = [
-  { display: "123.301", display_short: "123.30", ...U, group: { module: "agriculture" }, extra: { share_pct_short: "53.9", rank: 1 } },
-  { display: "17.990", display_short: "17.99", ...U, group: { module: "power" }, extra: { share_pct_short: "7.9", rank: 2 } },
+  { display: "123.301", display_short: "123.30", ...U, group: { reporting_sector: "agriculture" }, extra: { share_pct_short: "53.9", rank: 1 } },
+  { display: "17.990", display_short: "17.99", ...U, group: { reporting_sector: "power" }, extra: { share_pct_short: "7.9", rank: 2 } },
 ];
 const DISTRICT = [
   {
@@ -108,8 +108,8 @@ const DISTRICT = [
   },
 ];
 const DISTRICT_MODULES = [
-  { display: "2.850", display_short: "2.85", ...U, group: { module: "agriculture" } },
-  { display: "0.950", display_short: "0.95", ...U, group: { module: "transport" } },
+  { display: "2.850", display_short: "2.85", ...U, group: { reporting_sector: "agriculture" } },
+  { display: "0.950", display_short: "0.95", ...U, group: { reporting_sector: "transport" } },
 ];
 const DISTRICTS = [{ display: "[14.2983, 14.3156]", display_short: "[14.30, 14.32]", ...U, group: { shape_id: SHAPE } }];
 const LINEAGE = [
@@ -149,15 +149,20 @@ beforeEach(() => {
       const group = (b.group_by ?? []) as string[];
       if (off && level) return SPATIAL_REFUSAL;
       if (group.includes("category")) return level ? CATEGORY_REFUSAL : envelope(CATEGORIES, { axis: AXIS, partition: { n: 2 } });
-      if (group.includes("sector_id")) return envelope(SECTORS, { axis: AXIS, partition: { n: 2 } });
+      // rc54: national and place breakdowns ask the SAME key (the reporting sector), so the
+      // scope is what tells them apart - it is the geography, not the group key, that differs
+      if (group.includes("reporting_sector")) {
+        if (level === "adm2") return envelope(DISTRICT_MODULES, { axis: AXIS });
+        if (level === "adm1") return envelope(PUNJAB_MODULES, { axis: AXIS, partition: { n: 2 } });
+        return envelope(SECTORS, { axis: AXIS, partition: { n: 2 } });
+      }
       if (group.includes("gas")) return envelope(GASES, { axis: AXIS, partition: { n: 2 } });
-      if (group.includes("module")) return level === "adm2" ? envelope(DISTRICT_MODULES, { axis: AXIS }) : envelope(PUNJAB_MODULES, { axis: AXIS, partition: { n: 2 } });
       if (group.includes("province")) return envelope(PROVINCES, { axis: AXIS, partition: { n: 2 }, derived: DERIVED_PK });
       if (group.includes("shape_id")) return envelope(DISTRICTS, { axis: AXIS });
       const ids = (b.geography_ids ?? []) as string[];
       if (ids.includes(SHAPE)) return envelope(DISTRICT, { axis: AXIS });
       if (ids.includes("Punjab")) return envelope(PUNJAB, { derived: DERIVED_PB });
-      if ((b.sectors as string[] | undefined)?.length) return envelope(POWER);
+      if ((b.reporting_sectors as string[] | undefined)?.length) return envelope(POWER);
       if ((b.gases as string[] | undefined)?.length) return envelope(METHANE);
       return envelope(NATIONAL);
     }),
@@ -327,6 +332,7 @@ describe("the deck re-writes itself from the shared selection", () => {
     const asked = posts.filter((p) => p.url.includes("/query/emissions") && ((p.body?.group_by as string[] | undefined) ?? []).includes("category"));
     expect(asked.length).toBeGreaterThan(0);
     expect(asked[asked.length - 1].body?.geography_level).toBe("adm1");
+    // rc54: "module" is no longer a grouping any surface sends - one axis, at every grain
     expect(posts.some((p) => ((p.body?.group_by as string[] | undefined) ?? []).includes("module"))).toBe(false);
   });
 });

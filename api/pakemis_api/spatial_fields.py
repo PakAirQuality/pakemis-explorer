@@ -1,6 +1,6 @@
-"""The map's per-cell evidence fields on an ADM2 query_emissions envelope.
+"""The map's per-cell evidence fields on an ADM1 or ADM2 query_emissions envelope.
 
-Every cell of an envelope at adm2 grain gains, beside the core's `exactness`:
+Every cell of an envelope at province or district grain gains, beside the core's `exactness`:
 
     allocation_status   the distinct allocation_status values of the rows the cell sums
                         (fact_adm2_month), joined by ';' in alphabetical order
@@ -63,15 +63,27 @@ class SpatialFields:
         return found[0] if found else None
 
     def decorate(self, env):
-        """Adds the fields to every cell of an adm2 query_emissions envelope; leaves any other
-        envelope alone."""
+        """Adds the fields to every cell of an adm1 or adm2 query_emissions envelope; leaves any
+        other envelope alone.
+
+        ⚠ ADM1 WAS EXCLUDED, AND THAT WAS THE GAP THAT MATTERED. A district cell carried its
+        spatial class, placement class and allocation surface; a PROVINCE cell carried nothing. So a
+        reader shown "Punjab 27.49 Mt CO2e" had no way to learn - and no interface had any way to
+        say - that the figure is a national fuel total allocated downward by a road-density proxy,
+        not an observation of Punjab. Every consumer that wanted to mark a number as modelled was
+        blind at exactly the grain people ask about most.
+
+        This adds no number and changes no receipt: the receipt and result_sha256 are minted before
+        it runs.
+        """
         if env.get("request_type") != "query_emissions":
             return env
         try:
             req = json.loads(env.get("request") or "")
         except (TypeError, ValueError):
             return env
-        if not isinstance(req, dict) or req.get("geography_level") != "adm2":
+        level = req.get("geography_level") if isinstance(req, dict) else None
+        if level not in ("adm1", "adm2"):
             return env
         cells = env.get("values") or []
         if not cells:
@@ -79,7 +91,7 @@ class SpatialFields:
         sectors = list(req.get("sectors") or ())
         gases = list(req.get("gases") or ())
         pairs = [(i, rid) for i, c in enumerate(cells) for rid in (c.get("result_row_ids") or ()) if rid]
-        by_cell = self._rows_by_cell(pairs)
+        by_cell = self._rows_by_cell(pairs, level)
         for i, cell in enumerate(cells):
             group = cell.get("group") or {}
             rows = by_cell.get(i, [])
@@ -113,9 +125,22 @@ class SpatialFields:
                                  "fields": [SPATIAL_CLASS_FIELD] + SPATIAL_COMPANIONS}
         return env
 
-    def _rows_by_cell(self, pairs):
+    # the fact table a grain's result_row_ids live in. `allocation_status` is an ADM2 allocation-ledger
+    # column and has no ADM1 counterpart, so the province query selects a literal empty string for it
+    # rather than pretending the concept exists there.
+    # Only the tables the claim store registers (claim.FACT_TABLES) may be named here. `fact_adm1_year`
+    # is NOT among them, so an annual province result finds no rows and falls back to the request's
+    # one sector for its module - which is the common shape of the question that needs this most
+    # ("how much transport in Punjab"). A cell that names no single module carries no class, and says
+    # so, rather than borrowing one.
+    _ROW_SOURCE = {
+        "adm2": "SELECT result_row_id, module, allocation_status, co2e_Mt_AR5 FROM fact_adm2_month",
+        "adm1": "SELECT result_row_id, module, '' AS allocation_status, co2e_Mt_AR5 FROM fact_adm1_month",
+    }
+
+    def _rows_by_cell(self, pairs, level="adm2"):
         """{cell index: [{module, allocation_status, co2e_Mt_AR5}]} in one query over the cells' rows."""
-        if not pairs:
+        if not pairs or level not in self._ROW_SOURCE:
             return {}
         table = pa.table({"cell": pa.array([p[0] for p in pairs], pa.int32()), "result_row_id": pa.array([p[1] for p in pairs], pa.string())})
         with self.store._lock:
@@ -123,7 +148,7 @@ class SpatialFields:
             con.register("cell_rows", table)
             try:
                 cur = con.execute("SELECT c.cell, f.module, f.allocation_status, f.co2e_Mt_AR5 FROM cell_rows c "
-                                  "JOIN fact_adm2_month f ON f.result_row_id = c.result_row_id")
+                                  "JOIN (%s) f ON f.result_row_id = c.result_row_id" % self._ROW_SOURCE[level])
                 fetched = cur.fetchall()
             finally:
                 con.unregister("cell_rows")

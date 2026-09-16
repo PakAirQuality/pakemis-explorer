@@ -6,7 +6,7 @@ export PAKEMIS_QUERY_PATH ?= $(EMISSIONS)/src
 
 BUCKET    ?= pakemis-releases
 
-.PHONY: fetch verify api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy
+.PHONY: fetch verify library api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy
 
 fetch:              ## copy a semantic release out of the emissions checkout at $(REF)
 	python3 data/fetch_release.py --from-git $(EMISSIONS) --ref $(REF)
@@ -29,6 +29,10 @@ tiles:              ## ADM1/ADM2/grid PMTiles (geometry + ids only) + bboxes.jso
 
 raster:             ## visual-only grid rasters (2 configurations x 3 gases x 13 frames) + bboxes.json; numpy + Pillow, no tippecanoe
 	python3 tiles/build_tiles.py --raster
+
+library:            ## rebuild the assistant's cards + source register from the pinned payload, then copy them into the API package the server imports
+	python3 assistant/scripts/build_sources.py
+	python3 scripts/vendor_library.py
 
 vendor:             ## copy pakemis_query out of $(EMISSIONS) at $(REF) into api/vendor for the image (VENDOR.json: commit + digests)
 	python3 scripts/vendor_query_core.py --emissions $(EMISSIONS) --ref $(REF)

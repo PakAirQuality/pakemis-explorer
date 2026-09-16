@@ -1,11 +1,21 @@
 "use client";
 /**
- * The question box: a textarea (Enter sends, Shift+Enter breaks a line) and `@` mentions
- * inserted when a map feature is clicked while the dock is open (mentions.ts). The suggested
- * questions live in the dock's empty state (suggestions.ts); ui_state is sent by the dock.
+ * The question box: a white card carrying a textarea (Enter sends, Shift+Enter breaks a line), a
+ * round send button, and a `footer` slot the dock fills with the scope the question will be sent
+ * with. `@` mentions are inserted when a map feature is clicked while the panel is open
+ * (mentions.ts). The suggested questions live in the dock's empty state (suggestions.ts);
+ * ui_state is sent by the dock.
+ *
+ * ONE LOOK, TWO PLACES. On the empty state the dock sets this card under the invitation; once a
+ * turn exists it sets the same card at the foot beneath the transcript. Only the placeholder
+ * changes - it asks for a follow-up once there is something to follow - so a reader who has typed
+ * once knows where to type again.
+ *
+ * There is no attachment control. The API takes a question and the URL scope and nothing else, and
+ * a paperclip that opens nothing teaches a reader that the panel is broken.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SendHorizontal, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { districtName } from "@/lib/labels";
 import { subscribeMapPick, type MapPick } from "./mentions";
@@ -16,7 +26,7 @@ export function pickName(pick: MapPick, dims: { adm2: { shape_id: string; shape_
   return pick.id;
 }
 
-export function Composer({ onSend, onStop, streaming, disabled }: { onSend: (text: string) => void; onStop: () => void; streaming: boolean; disabled: boolean }) {
+export function Composer({ onSend, onStop, streaming, disabled, footer, placeholder }: { onSend: (text: string) => void; onStop: () => void; streaming: boolean; disabled: boolean; footer?: React.ReactNode; placeholder?: string }) {
   const { dims } = useExplorer();
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -48,36 +58,37 @@ export function Composer({ onSend, onStop, streaming, disabled }: { onSend: (tex
     setText("");
   };
   return (
-    <div className="border-t border-line bg-card px-3 pb-3 pt-2" data-testid="composer">
-      <div className="flex items-end gap-2">
-        <textarea
-          ref={ref}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          rows={2}
-          placeholder={disabled ? "The assistant is not enabled" : "Ask about a place, a sector, a year or a method…"}
-          disabled={disabled}
-          aria-label="Question"
-          className="min-h-[2.5rem] flex-1 resize-none rounded-card border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
-          data-testid="question"
-        />
+    <div className="rounded-[14px] border border-line bg-card shadow-pill" data-testid="composer">
+      <textarea
+        ref={ref}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        rows={2}
+        placeholder={disabled ? "The assistant is not enabled" : (placeholder ?? "What would you like to understand?")}
+        disabled={disabled}
+        aria-label="Question"
+        title="Enter sends · Shift+Enter breaks a line"
+        className="min-h-[3.25rem] w-full resize-none rounded-[14px] bg-transparent px-4 pt-4 text-base outline-none placeholder:text-muted disabled:opacity-60"
+        data-testid="question"
+      />
+      <div className="flex items-center justify-end px-3.5 pb-3.5">
         {streaming ? (
-          <button type="button" onClick={onStop} className="pill flex h-9 w-9 items-center justify-center bg-warn text-card" aria-label="Stop" title="Stop">
-            <Square size={14} />
+          <button type="button" onClick={onStop} className="pill flex h-10 w-10 items-center justify-center bg-warn text-card shadow-card" aria-label="Stop" title="Stop">
+            <Square size={15} />
           </button>
         ) : (
-          <button type="button" onClick={submit} disabled={disabled || !text.trim()} className="pill flex h-9 w-9 items-center justify-center bg-accent-fill text-on-accent disabled:opacity-40" aria-label="Send" title="Send (Enter)">
-            <SendHorizontal size={16} />
+          <button type="button" onClick={submit} disabled={disabled || !text.trim()} className="pill flex h-10 w-10 items-center justify-center bg-accent-fill text-on-accent shadow-card transition-opacity disabled:opacity-40" aria-label="Send" title="Send (Enter) · Shift+Enter breaks a line">
+            <ArrowUp size={19} />
           </button>
         )}
       </div>
-      <div className="mt-1 text-micro normal-case tracking-normal text-muted">Enter sends · Shift+Enter breaks a line · the current scope is sent with every question</div>
+      {footer}
     </div>
   );
 }

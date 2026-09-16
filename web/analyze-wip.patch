@@ -1,0 +1,370 @@
+diff --git a/web/src/__tests__/analyze.test.tsx b/web/src/__tests__/analyze.test.tsx
+index f2109f6..dad9dac 100644
+--- a/web/src/__tests__/analyze.test.tsx
++++ b/web/src/__tests__/analyze.test.tsx
+@@ -41,10 +41,18 @@ beforeEach(() => {
+       if (url.endsWith("/openapi.json")) return { paths: {}, components: { schemas: {} } };
+       if (url.includes("/tiles/")) return { adm1: {}, adm2: {} };
+       if (url.includes("/timeseries")) {
+-        return envelope([
+-          { display: "394.090", display_short: "394.09", value: 394.09, group: { period_id: "FY2020-21" } },
+-          { display: "465.920", display_short: "465.92", value: 465.92, group: { period_id: "FY2023-24" } },
+-        ], { request_type: "get_timeseries", axis: { ticks_short: ["0", "200", "400", "600"], unit_short: "Mt CO₂e" } });
++        // NINE YEARS, not two. get_timeseries ignores the periods it is sent and returns the whole
++        // fiscal panel, and the sector drill-down draws all of it - so a two-point fixture would
++        // let a windowing bug through. The shape is the industry bar's real one: a hump peaking in
++        // FY2020-21, which is the reason the drill-down exists.
++        const path = [41.76, 45.56, 53.48, 55.57, 50.8, 61.97, 53.38, 32.13, 28.13];
++        return envelope(
++          path.map((v, i) => ({
++            display: v.toFixed(3), display_short: v.toFixed(2), value: v,
++            group: { period_id: `FY${2015 + i}-${String((16 + i) % 100).padStart(2, "0")}` },
++          })),
++          { request_type: "get_timeseries", axis: { ticks_short: ["0", "200", "400", "600"], unit_short: "Mt CO₂e" } },
++        );
+       }
+       if (url.includes("/query/compare")) {
+         const b = body as unknown as { left: { group_by?: string[] }; mode?: string };
+@@ -212,32 +220,73 @@ describe("Analyze", () => {
+     expect(screen.getByTestId("explainer-stat")).toHaveTextContent("net increase · +18.23%");
+     expect(screen.getByTestId("explainer-sector-link")).toHaveTextContent("What changed within agriculture?");
+     expect(screen.getByTestId("explainer-hint")).toHaveTextContent("Select any bar to explain that sector.");
+-    expect(screen.getByTestId("change-note")).toHaveTextContent("Small year-to-year shifts should be interpreted with caution.");
+-    // the industry caveat folds under "More about this analysis" (words, no digits; the fixture
+-    // carries no server limitation for it, so the authored copy renders)
+-    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("Covered industrial-combustion emissions fell, reflecting lower recorded fuel use.");
+-    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("should not be interpreted as a verified reduction");
++    // the caution strip and the series caption were both removed on request (2026-09-14): the
++    // card carries the numbers and the return control, and nothing that only hedges them
++    expect(screen.queryByTestId("change-note")).toBeNull();
++    // THE INDUSTRY CAVEAT IS GONE FROM EVERY SURFACE (2026-09-13). The release still publishes the
++    // `industry_reported_fuel_series` limitation and the API still serves it; the web no longer
++    // renders it. It used to reach the page three ways at once - the fold below, the inline caveat
++    // in the explainer, and the industry methods page - and seven sentences of source criticism sat
++    // between the reader and the number the card exists to show. This asserts it stays gone, because
++    // the string arrives from the release payload and would otherwise return on its own.
++    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("Sectors are grouped by where IPCC 2006 reports each source");
++    for (const gone of ["Covered industrial-combustion emissions fell", "REPORTED-FUEL", "Cement/Other Industry", "Computed in the", "verified reduction"]) {
++      expect(screen.getByTestId("analyze-more-change")).not.toHaveTextContent(gone);
++    }
+     expect(screen.getByTestId("analyze-more-change")).not.toHaveTextContent("economic-sector view");
+     // no Key finding card anywhere: the explainer replaced it
+     expect(screen.queryByTestId("change-key-finding")).toBeNull();
+     // the map backdrop follows the To year; selection steers its sector
+     expect(screen.getByTestId("analyze-map-pane")).toContainElement(screen.getByTestId("map-stub"));
+     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-period", "FY2023-24");
+-    // SELECT agriculture: the bar highlights, the chart stays at sector grain,
+-    // the explainer becomes the sector's own story - where, never why
++    // SELECT agriculture: the chart panel now SWAPS THE WATERFALL FOR THAT SECTOR'S OWN SERIES
++    // (2026-09-13), and the explainer becomes the sector's story - where, never why.
++    //
++    // This revises two assertions on purpose. Before, the waterfall stayed put and the selected
++    // bar highlighted, so the test checked `data-selected` and that a sibling bar survived. The
++    // bar highlight cannot be asserted any more because the bar is gone with the waterfall; the
++    // selection is evidenced by the series, the panel title and the return control instead. A
++    // sector's path was previously unreachable from this card, which is what made an endpoint
++    // difference the only thing a reader could see.
+     fireEvent.click(screen.getByTestId("change-waterfall-bar-agriculture"));
+-    await waitFor(() => expect(screen.getByTestId("change-waterfall-bar-agriculture")).toHaveAttribute("data-selected", "1"));
++    await waitFor(() => expect(screen.getByTestId("change-series")).toBeInTheDocument());
++    expect(screen.queryByTestId("change-waterfall")).toBeNull();
++    expect(screen.getByTestId("change-chart-panel")).toHaveTextContent("Agriculture · annual series");
++    expect(screen.getByTestId("change-back")).toHaveTextContent("All sectors");
+     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "agriculture");
+-    expect(screen.getByTestId("change-waterfall-bar-power")).toBeInTheDocument();
++    // every fiscal year the release carries, not the two endpoints. The chart's aria-label is the
++    // points in order, so the years are assertable without ECharts having painted anything.
++    const seriesLabel = screen.getByTestId("change-series").getAttribute("aria-label") ?? "";
++    // The fixture declares only two of the nine periods, so periodShort prints the short label for
++    // those and falls back to the raw id for the rest - a mixture that says nothing about the app,
++    // which has all nine. The VALUES are the assertion that matters: the whole path, in order.
++    expect(seriesLabel.split(";")).toHaveLength(9);
++    expect(seriesLabel.split(";").map((p) => p.trim().split(" ").pop())).toEqual(
++      ["41.76", "45.56", "53.48", "55.57", "50.80", "61.97", "53.38", "32.13", "28.13"],
++    );
++    // THE SERIES IS ON THE SAME AXIS AS THE BAR IT CAME FROM. A `sectors` filter here would fetch
++    // the computing module and disagree with the bar - on industry that is -11.69 against -13.63.
++    const drillSeries = sent.filter((b) => (b as { step?: string }).step === "annual").pop() as
++      { query?: { reporting_sectors?: string[]; sectors?: string[] } } | undefined;
++    expect(drillSeries?.query?.reporting_sectors).toEqual(["agriculture"]);
++    expect(drillSeries?.query?.sectors).toBeUndefined();
+     await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Agriculture · +46.95 Mt CO₂e"));
+     await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from enteric fermentation."));
+     expect(screen.getByTestId("explainer-para")).toHaveTextContent("Agriculture's estimated emissions rose by 46.95 Mt CO₂e. Enteric fermentation added 32.97 Mt");
+     expect(await screen.findByTestId("explainer-stat")).toHaveTextContent("envelope -30.0 / +40.0 %");
+     expect(screen.getByTestId("explainer-methods")).toHaveAttribute("href", "/methods/sectors/agriculture");
+     expect(screen.getByTestId("explainer-footer")).toHaveTextContent("year-by-year activity data");
+-    // back to the whole
++    // back to the whole, from the chart panel's own control: the waterfall returns
++    fireEvent.click(screen.getByTestId("change-back"));
++    await waitFor(() => expect(screen.getByTestId("change-waterfall")).toBeInTheDocument());
++    expect(screen.queryByTestId("change-series")).toBeNull();
++    expect(screen.getByTestId("change-chart-panel")).toHaveTextContent("Sector contributions");
++    // and from the explainer's, which is the older door to the same state
++    fireEvent.click(screen.getByTestId("change-waterfall-bar-agriculture"));
++    await waitFor(() => expect(screen.getByTestId("change-series")).toBeInTheDocument());
+     fireEvent.click(screen.getByTestId("explainer-overall"));
+     await waitFor(() => expect(screen.getByTestId("explainer-headline")).toHaveTextContent("Most of the rise came from agriculture."));
++    expect(screen.getByTestId("change-waterfall")).toBeInTheDocument();
+     expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "");
+   });
+ 
+@@ -294,7 +343,7 @@ describe("Analyze", () => {
+     // the prose uses the short forms; the fold carries the view's note AND the industry caveat
+     await waitFor(() => expect(screen.getByTestId("explainer-para2")).toHaveTextContent("Power also increased. Declines in industrial offset part of that growth, but not enough to reverse it."));
+     expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("economic-sector view regroups the same sources");
+-    expect(screen.getByTestId("analyze-more-change")).toHaveTextContent("Covered industrial-combustion emissions fell");
++    expect(screen.getByTestId("analyze-more-change")).not.toHaveTextContent("Covered industrial-combustion emissions fell");
+     // select the aggregate: the eyebrow is the full label, the drill is an IPCC-code filter (never a sector), the caveat shows, the map steers no sector
+     fireEvent.click(bar);
+     await waitFor(() => expect(screen.getByTestId("explainer-eyebrow")).toHaveTextContent("Industrial (covered direct sources)"));
+diff --git a/web/src/components/analyze/ChangeSection.tsx b/web/src/components/analyze/ChangeSection.tsx
+index acadcfc..0df1b98 100644
+--- a/web/src/components/analyze/ChangeSection.tsx
++++ b/web/src/components/analyze/ChangeSection.tsx
+@@ -14,13 +14,15 @@ import { useRef } from "react";
+ import Link from "next/link";
+ import { ArrowRight, Download } from "lucide-react";
+ import { useExplorer } from "@/components/ExplorerContext";
+-import { useCompare, useNationalSeries, useUncertainty } from "@/lib/queries";
+-import { cellUnit, computedInModules, periodShort, sectorShortLabel, SECTOR_VIEW_GROUP_KEY, viewSectorLabel, viewSectorShortLabel } from "@/lib/labels";
++import { useCompare, useNationalSeries, useTimeseries, useUncertainty } from "@/lib/queries";
++import { drillSeriesBody } from "@/lib/requests";
++import { cellUnit, computedInModules, periodShort, SECTOR_VIEW_GROUP_KEY, viewSectorLabel, viewSectorShortLabel } from "@/lib/labels";
+ import { magnitudeOf } from "@/lib/uncertainty";
+-import { type Cell } from "@/lib/envelope";
+-import { WaterfallChart, type WaterfallStep } from "@/components/charts/WaterfallChart";
++import { shown, type Cell } from "@/lib/envelope";
++import { CHART_ASPECT, WaterfallChart, type WaterfallStep } from "@/components/charts/WaterfallChart";
++import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
+ import { ANALYZE, fractionWords, midSentence, nameList } from "./copy";
+-import { AnalysisCard, InfoStrip } from "./Section";
++import { AnalysisCard } from "./Section";
+ import type { AnalyzeSettings } from "./Analyze";
+ 
+ type Side = { display_short?: string; value?: number | null; unit?: string; unit_short?: string; group?: Record<string, string | null> };
+@@ -71,7 +73,7 @@ function othersSentence(deltas: Delta[], topId: string, rising: boolean, nameOf:
+ }
+ 
+ export function ChangeSection({ settings, selected, onSelect }: { settings: AnalyzeSettings; selected: string | null; onSelect: (id: string | null) => void }) {
+-  const { labels } = useExplorer();
++  const { labels, defaults } = useExplorer();
+   const { from: fromP, to: toP, gases, view } = settings;
+   const chartRef = useRef<HTMLDivElement>(null);
+ 
+@@ -97,6 +99,14 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
+   );
+   const envs = useUncertainty({ scope: "categories", resolution: "annual_national" }, !!selected);
+   const series = useNationalSeries();
++  // THE SELECTED BAR'S OWN SERIES. On drillFilter - the SAME object the category compare uses -
++  // so the series' From and To reproduce the bar's delta. Deriving the filter a second time is
++  // how the two would drift apart, and on the industry bar a drift is the whole argument: the
++  // reporting axis says -13.63 Mt and the computing module says -11.69.
++  const drill = useTimeseries(
++    selected ? drillSeriesBody({ config: defaults.configuration_id, gwp: defaults.gwp_basis, gases }, drillFilter(selected)) : null,
++    enabled && !!selected,
++  );
+ 
+   const totalCell = total.data?.values[0];
+   const relCell = relative.data?.values[0];
+@@ -106,41 +116,57 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
+   // the FULL label where there is room (eyebrow, bar title), the SHORT one mid-sentence and on the axis
+   const nameOf = (id: string) => viewSectorLabel(labels, view, id);
+   const shortOf = (id: string) => viewSectorShortLabel(labels, view, id);
+-  // 2026-09-11: the industry module is direct industrial fuel use, covered sources only, and its
+-  // coal series is under reconciliation; the economic view's industrial aggregate is the covered
+-  // direct boundary. The server's limitation strings are preferred (they land with the next
+-  // release payload); until then the same wording is authored in copy.ts - words only, no number.
+-  // a contract limitation is worded as a clause ("the industry (1.A.2) series is ..."); read on its
++  // a contract limitation is worded as a clause ("the economic-sector view is ..."); read on its
+   // own or after another note it must stand as a sentence
+   const sentence = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}${/[.!?]$/.test(s.trim()) ? "" : "."}`;
+-  const industryNote = sentence(labels.limitations.industry_reported_fuel_series ?? ANALYZE.change.industryCaveat);
+   const economicNote = sentence(labels.limitations.economic_sector_view ?? ANALYZE.change.economicNote);
+   const reportingNote = sentence(labels.limitations.reporting_sector_view ?? ANALYZE.change.reportingNote);
+-  // a sector whose atoms are computed in more than one module says so, because a reader comparing
+-  // this bar with a module table is owed the reason the two differ
+-  const computedNote = (id: string | null) => {
+-    const mods = computedInModules(labels, id);
+-    return mods.length ? `Computed in the ${mods.map((m) => sectorShortLabel(labels, m)).join(" and ")} modules.` : null;
+-  };
+-  const moreNote = view === "economic" ? `${economicNote} ${industryNote}` : `${reportingNote} ${industryNote}`;
+-  // the inline caveat stays readable: what this bar CONTAINS, then the caveat about the series.
+-  // The axis's own contract paragraph is long by design (it is the machine-readable limitation) and
+-  // belongs in the fold, where moreNote already carries it - repeating it here buried the sentence
+-  // a reader of this card actually needs.
++  const moreNote = view === "economic" ? economicNote : reportingNote;
++  // THE INDUSTRY CAVEAT IS NO LONGER RENDERED (2026-09-13). Nothing about the contract changed:
++  // the release still publishes the `industry_reported_fuel_series` limitation and the API still
++  // serves it in labels.limitations. It is the PRESENTATION that was wrong - seven sentences of
++  // source criticism sat between the reader and the number this card exists to show, and it
++  // reached the page three ways at once: this inline caveat, the "more about this analysis" fold,
++  // and the industry methods page. All three are gone, and analyze.test.tsx guards that they stay
++  // gone rather than drifting back with the next release payload.
++  //
++  // The "Computed in the ... modules." sentence went with it. computedInModules() returns a list
++  // only where a reporting sector's atoms come from more than one module, which today is industry
++  // alone, so that sentence had exactly one appearance and it was inside the removed paragraph.
++  // The function itself stays - the uncertainty join below is its real consumer.
++  //
++  // What survives is the ECONOMIC view's note, which says what that aggregate CONTAINS. That is a
++  // scope statement about the bar, not a caveat about a source, and a reader who has just switched
++  // to a non-IPCC grouping needs it.
+   const caveatFor = (id: string | null) =>
+-    view === "ipcc" && id === "industry"
+-      ? [computedNote(id), industryNote].filter(Boolean).join(" ")
+-      : view === "economic" && id === "industrial"
+-        ? `${economicNote} ${industryNote}`
+-        : view === "ipcc"
+-          ? computedNote(id)
+-          : null;
++    view === "economic" && id === "industrial" ? economicNote : null;
+   // the method pages are per MODULE; the economic aggregate's door is the industry module's
+   const methodsSector = (id: string) => (id === "industrial" ? "industry" : id);
+   const unit = tLeft ? cellUnit(tLeft as Cell) : "Mt CO₂e";
+   const mag = tLeft ? magnitudeOf(tLeft as Cell) : "Mt";
+   const rising = (totalCell?.value ?? 0) >= 0;
+ 
++  // THE DRILL SERIES AS COLUMNS. All nine years are drawn and the From->To window is marked,
++  // rather than clipping to the window. get_timeseries ignores the periods it is sent and returns
++  // the whole fiscal panel anyway (api/vendor/pakemis_query/functions.py), so the years either
++  // side are free - and on this card they are the point. The industry bar reads -13.63 Mt between
++  // the endpoints while the path rises 48% to a peak in FY2020-21 and then falls 55%; a reader
++  // shown only the two ends cannot see that, and has no way to know the question is open.
++  const drillCells = (drill.data?.values ?? []).filter((x) => typeof x.value === "number");
++  const drillIds = drillCells.map((x) => x.group?.period_id ?? "");
++  const winFrom = drillIds.indexOf(fromP);
++  const winTo = drillIds.indexOf(toP);
++  // a period the series does not carry mutes nothing: an unfound endpoint must not silently
++  // grey out the whole series
++  const inWindow = (i: number) => winFrom < 0 || winTo < 0 || (i >= Math.min(winFrom, winTo) && i <= Math.max(winFrom, winTo));
++  const drillPoints: ColumnPoint[] = drillCells.map((x, i) => ({
++    id: drillIds[i],
++    name: periodShort(labels, drillIds[i]),
++    value: x.value as number,
++    label: shown(x),
++    muted: !inWindow(i),
++  }));
++
+   const steps: WaterfallStep[] = [];
+   if (totalCell && tLeft && tRight) {
+     steps.push({ id: "start", name: periodShort(labels, fromP), value: (tLeft.value as number) ?? 0, label: tLeft.display_short ?? "", kind: "start" });
+@@ -172,9 +198,16 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
+       const catDeltas = alignedDeltas(catCmp.data?.values, "category");
+       const sameSign = catDeltas.filter(({ c }) => ((c.value as number) >= 0) === stepRising);
+       const [cat1, cat2] = sameSign;
++      // THE UNCERTAINTY ROWS ARE MODULE-KEYED, AND `selected` IS A REPORTING SECTOR.
++      // Matching c.module === selected worked only because "industry" happens to name both a
++      // module and a reporting sector; for any sector whose atoms come from more than one module
++      // it would silently find nothing, or the wrong row. The join goes through the server's own
++      // map of which modules compute a reporting sector.
++      const selectedModules = selected ? computedInModules(labels, selected) : [];
++      const modulesOf = selectedModules.length ? selectedModules : selected ? [selected] : [];
+       const envRow = (envs.data?.values ?? [])
+         .map((c) => c as Cell & { category?: string; module?: string; envelope?: { low_pct?: string; high_pct?: string } })
+-        .find((c) => c.module === selected && c.category === cat1?.id);
++        .find((c) => !!c.module && modulesOf.includes(c.module) && c.category === cat1?.id);
+       const frac = step && cat1 ? fractionWords(cat1.c.value as number, step.value as number) : null;
+       const catOthers = othersSentence(catDeltas, cat1?.id ?? "", stepRising, (id) => id);
+       return (
+@@ -268,9 +301,26 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
+           {explainer}
+         </aside>
+         <div className="rounded-xl border border-line p-4" data-testid="change-chart-panel">
+-          <div className="micro mb-1">{ANALYZE.change.sectorContributions}</div>
++          <div className="micro mb-1 flex items-center justify-between gap-3">
++            <span>{selected ? `${nameOf(selected)} · ${ANALYZE.change.seriesLabel}` : ANALYZE.change.sectorContributions}</span>
++            {selected && (
++              <button type="button" onClick={() => onSelect(null)} className="font-medium normal-case tracking-normal text-accent hover:underline" data-testid="change-back">
++                {ANALYZE.change.back}
++              </button>
++            )}
++          </div>
+           <div ref={chartRef}>
+-            {steps.length > 2 ? (
++            {selected ? (
++              drillPoints.length ? (
++                // the waterfall's own aspect, so the card does not change height when a bar is
++                // clicked - the reader is looking at the same panel, not a new one
++                <div style={{ aspectRatio: CHART_ASPECT }}>
++                  <ColumnChart points={drillPoints} ticks={drill.data?.axis?.ticks_short} height="100%" testId="change-series" />
++                </div>
++              ) : (
++                <p className="py-10 text-sm text-muted" data-testid="change-series-pending">{drill.isError ? "The release refuses this series." : "Loading the series…"}</p>
++              )
++            ) : steps.length > 2 ? (
+               <WaterfallChart
+                 steps={steps}
+                 unit={unit}
+@@ -286,7 +336,6 @@ export function ChangeSection({ settings, selected, onSelect }: { settings: Anal
+         </div>
+       </div>
+ 
+-      <InfoStrip>{ANALYZE.change.caution}</InfoStrip>
+     </AnalysisCard>
+   );
+ }
+diff --git a/web/src/components/analyze/SensitivitySection.tsx b/web/src/components/analyze/SensitivitySection.tsx
+index afa9c1a..b96f1f4 100644
+--- a/web/src/components/analyze/SensitivitySection.tsx
++++ b/web/src/components/analyze/SensitivitySection.tsx
+@@ -24,8 +24,8 @@ export function SensitivitySection({ settings, open, onOpen }: { settings: Analy
+   const alt = dims.configurations.find((c) => c !== defaults.configuration_id);
+ 
+   const pairU = useUncertainty({ scope: "series", period_id: pairKey }, open && !!fromP && !!toP && fromP !== toP);
+-  const ref = useEmissions({ periods: [defaults.period_id], group_by: ["sector_id"] }, open);
+-  const survey = useEmissions(alt ? { periods: [defaults.period_id], configuration_id: alt, group_by: ["sector_id"] } : null, open && !!alt);
++  const ref = useEmissions({ periods: [defaults.period_id], group_by: ["reporting_sector"] }, open);
++  const survey = useEmissions(alt ? { periods: [defaults.period_id], configuration_id: alt, group_by: ["reporting_sector"] } : null, open && !!alt);
+   const envs = useUncertainty({ scope: "categories", resolution: "annual_national" }, open);
+ 
+   const scenarios = (pairU.data?.values ?? []).filter((c): c is SeriesCell => typeof c.value === "number");
+diff --git a/web/src/components/analyze/SharedSourcesSection.tsx b/web/src/components/analyze/SharedSourcesSection.tsx
+index 8a06b4e..00ede56 100644
+--- a/web/src/components/analyze/SharedSourcesSection.tsx
++++ b/web/src/components/analyze/SharedSourcesSection.tsx
+@@ -48,6 +48,11 @@ export function SharedSourcesSection({ settings, open, onOpen }: { settings: Ana
+   const [scatterPol, setScatterPol] = useState<string>("PM2.5");
+ 
+   const enabled = !!fromP && !!toP && fromP !== toP;
++  // THIS SECTION STAYS ON THE MODULE AXIS, and it is the one place that should. It joins CO2e
++  // cells to AIR cells row for row, and the air lane carries no reporting_sector - the release
++  // contract says so. Grouping the CO2e side on the reporting axis would pair an industry that
++  // includes captive generation with an air industry that does not, and the co-benefit rows would
++  // be silently mismatched. The axis moves here when the air lane carries the column.
+   const cmp = useCompare({ left: { periods: [fromP], group_by: ["sector_id"] }, right: { periods: [toP], group_by: ["sector_id"] }, mode: "absolute" }, enabled && open);
+   const co2e = useEmissions({ periods: [period], group_by: ["sector_id"] }, open);
+   const ch4 = useEmissions({ periods: [period], gases: ["CH4"], group_by: ["sector_id"] }, open);
+diff --git a/web/src/components/analyze/copy.ts b/web/src/components/analyze/copy.ts
+index 27d106b..87151ff 100644
+--- a/web/src/components/analyze/copy.ts
++++ b/web/src/components/analyze/copy.ts
+@@ -40,10 +40,9 @@ export const ANALYZE = {
+     overallChange: "Overall change",
+     largestOffset: "Largest offset",
+     back: "‹ All sectors",
+-    caution: "Small year-to-year shifts should be interpreted with caution.",
++    seriesLabel: "annual series",
+     // 2026-09-11 (words only, no number). The server's own limitation strings are preferred once the
+     // next release payload carries them; these are the same wording until then.
+-    industryCaveat: "Covered industrial-combustion emissions fell, reflecting lower recorded fuel use. This does not mean Pakistan's total industrial emissions declined; several industrial sources are reported elsewhere or remain outside the inventory. The estimated decline is strongly influenced by the official industrial-coal series, whose magnitude has not yet been independently reconciled with production and fuel-supply evidence and should not be interpreted as a verified reduction from mitigation or efficiency improvements.",
+     reportingNote:
+       "Sectors are grouped by where IPCC 2006 reports each source, not by the module that computed it: captive self-generation is industrial fuel combustion (1.A.2) and is reported under industrial fuel use although the power module computes it. The grouping is additive - the power total loses exactly what the industrial total gains - so no emissions are added or removed.",
+     economicNote: "The economic-sector view regroups the same sources by what the IPCC code says the activity is: industrial = manufacturing fuel use (including captive generation, which the power module computes) plus the industrial process categories. It is additive with the IPCC view. Its industrial aggregate covers direct industrial sources only: cement, ammonia, iron and steel and lubricant use are inside it as nine-year series; nitric acid (a pair), HFCs, lime, glass, soda ash and industrial wastewater are screened or absent and are not; each enters only as a full 2015\u201316 to 2023\u201324 series, never in the latest year alone.",
+diff --git a/web/src/components/charts/WaterfallChart.tsx b/web/src/components/charts/WaterfallChart.tsx
+index a75a704..89d04e3 100644
+--- a/web/src/components/charts/WaterfallChart.tsx
++++ b/web/src/components/charts/WaterfallChart.tsx
+@@ -52,6 +52,12 @@ export function wrapAxis(text: string): string[] {
+ 
+ const W = 840;
+ const H = 320;
++/**
++ * The waterfall is an SVG that scales with its width, so its rendered height is width / this.
++ * Any chart that stands in the SAME panel has to match it or the card changes height when the
++ * reader clicks a bar - exported rather than restated, because two copies of 2.625 would drift.
++ */
++export const CHART_ASPECT = W / H;
+ const PAD = { top: 26, bottom: 44, left: 52, right: 8 };
+ 
+ export function WaterfallChart({ steps, unit, ticks, selected = null, onPick, testId = "waterfall" }: { steps: WaterfallStep[]; unit?: string; ticks?: readonly string[] | null; selected?: string | null; onPick?: (id: string) => void; testId?: string }) {

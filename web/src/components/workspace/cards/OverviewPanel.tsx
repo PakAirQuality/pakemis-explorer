@@ -20,7 +20,7 @@
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
 import { shown } from "@/lib/envelope";
-import { cellUnit, gasLabel, periodShort, periodSpanWords } from "@/lib/labels";
+import { cellUnit, periodShort, periodSpanWords } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { ContourMotif } from "@/components/ui/ContourMotif";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";

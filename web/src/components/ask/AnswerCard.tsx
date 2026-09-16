@@ -15,24 +15,30 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Download, ExternalLink, Rows3 } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { BarsWithAxis, type BarItem } from "@/components/charts/BarsWithAxis";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { api, apiUrl, receiptHref } from "@/lib/api";
 import type { Envelope } from "@/lib/envelope";
-import { cellUnit, columnLabel, functionLabel, limitationText } from "@/lib/labels";
+import { cellUnit, columnLabel, geographyName, inputChips, limitationText, periodShort, gwpLabel } from "@/lib/labels";
 import { gasColor, rampByRank } from "@/lib/palette";
 import { stateFromRequest } from "@/lib/requests";
 import { applyPatch, hrefForState } from "@/lib/urlState";
 import { renderAnswer } from "./answerText";
-import { barLabel, cellName, chartKind, downloadTool, exactnessWords, groupKeyOf, principalTool, receiptChips, resultCaption, rowsOf, scopeRows, sizeOf, uncertaintyTool } from "./answerParts";
+import { barLabel, cellName, chartKind, downloadTool, exactnessWords, groupKeyOf, principalTool, rowsOf, scopeRows, sizeOf, uncertaintyTool } from "./answerParts";
 import { useReceiptDrawer } from "./receiptDrawer";
+import { MapMovedLine, ProvenanceLine } from "./Provenance";
+import { WORD_KEYS, mapPatchFromInput, previousOf, undoPatch, type MapMove } from "./mapMove";
+import { attachmentOf, attachmentTitle, disclosureOf, followUps, isModelled, methodDisclosure, methodTool, periodSpan, scopeNote } from "./attachment";
+import { allocationSurfaceWords } from "@/components/methods/evidenceClassText";
 import type { Highlight } from "./ToolCard";
-import type { AnswerEvent, TimelineItem, ToolResultCell } from "./types";
+import type { AnswerEvent, LibrarySource, TimelineItem, ToolResultCell, ToolResultEvent } from "./types";
 
-export const UNCERTAINTY_FOLLOW_UP = "How certain is this?";
+/** Re-exported: the question lives beside the follow-up rules that offer it. */
+export { UNCERTAINTY_FOLLOW_UP } from "./attachment";
+import { UNCERTAINTY_FOLLOW_UP } from "./attachment";
 const MAX_ROWS = 12;
 const MAX_UNC_ROWS = 8;
 
@@ -60,15 +66,22 @@ function useReplay(receipt: string | null | undefined): Envelope | null {
   return q.data ?? null;
 }
 
-function Part({ id, title, children, action }: { id: string; title: string; children: React.ReactNode; action?: React.ReactNode }) {
+/** "national", "Punjab", "district-level" - the place the note names, through the release's labels. */
+function placeWords(labels: Parameters<typeof geographyName>[0], r: ToolResultEvent): string {
+  const level = typeof r.context?.geography_level === "string" ? r.context.geography_level : "national";
+  const ids = Array.isArray(r.context?.geography_ids) ? (r.context.geography_ids as unknown[]).filter((x): x is string => typeof x === "string") : [];
+  if (level === "national") return "national";
+  if (ids.length === 1) return geographyName(labels, ids[0]);
+  return level === "adm1" ? "provincial" : level === "adm2" ? "district-level" : "grid-cell";
+}
+
+/** One labelled line of the details: a name on the left, words on the right. */
+function Row({ name, testid, children }: { name: string; testid: string; children: React.ReactNode }) {
   return (
-    <section className="border-t border-line px-4 py-3" data-testid={`answer-part-${id}`}>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <h4 className="micro">{title}</h4>
-        {action}
-      </div>
-      {children}
-    </section>
+    <div className="flex gap-2" data-testid={testid}>
+      <dt className="w-28 shrink-0 text-muted">{name}</dt>
+      <dd className="min-w-0 flex-1 text-fg">{children}</dd>
+    </div>
   );
 }
 
@@ -81,8 +94,15 @@ function Value({ cell }: { cell: ToolResultCell }) {
   );
 }
 
-export function AnswerCard({ answer, items, onCite, onFollowUp }: { answer: AnswerEvent; items: TimelineItem[]; onCite: { hover: (h: Highlight) => void; click: (h: Highlight) => void }; onFollowUp: (question: string) => void }) {
-  const { labels, dims, state, defaults, release } = useExplorer();
+export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null, onUndoAgentMove }: {
+  answer: AnswerEvent;
+  items: TimelineItem[];
+  onCite: { hover: (h: Highlight) => void; click: (h: Highlight) => void };
+  onFollowUp: (question: string) => void;
+  agentMove?: MapMove | null;
+  onUndoAgentMove?: () => void;
+}) {
+  const { labels, dims, state, setState, defaults, release } = useExplorer();
   const principal = principalTool(items, answer.scope);
   const unc = uncertaintyTool(items);
   const dl = downloadTool(items);
@@ -91,19 +111,79 @@ export function AnswerCard({ answer, items, onCite, onFollowUp }: { answer: Answ
   const uncEnv = useReplay(unc && unc !== principal ? unc.result?.receipt : null);
   const drawer = useReceiptDrawer(labels);
   const [asTable, setAsTable] = useState(false);
-  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [clicked, setClicked] = useState<MapMove | null>(null);
+  // one line for both paths: the reader clicked Show on map, or the agent honoured "show me X"
+  const move = clicked ?? agentMove;
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
+  // `how_to_obtain` in the source register restates the document and then says how to get it, so
+  // printing both put every source on screen twice. Only the instruction is new information.
+  const obtainTail = (s: LibrarySource) => {
+    const raw = (s.how_to_obtain ?? "").trim();
+    if (!raw) return "";
+    const tail = raw.includes(" -- ") ? raw.slice(raw.indexOf(" -- ") + 4) : raw;
+    // case-insensitively: the register's own wording is sentence-cased into a title, so the
+    // restatement and the title differ in their first letter and nothing else
+    const head = s.title.slice(0, 40).toLowerCase();
+    return tail.toLowerCase().startsWith(head) ? "" : tail;
+  };
+  // the library's own turns carry `source: "library"` and structured source records rather than
+  // the inline <cite k cell receipt> tags a model writes
+  const fromLibrary = (answer as { source?: string }).source === "library";
+  const librarySources = (answer.citations ?? []).filter(
+    (c): c is LibrarySource => typeof (c as LibrarySource).source_id === "string");
+  // UNBOXED. The prose used to sit inside a bordered, shadowed card whether it was one sentence or
+  // twenty - the same furniture for every answer. It is a chat message now.
+  //
+  // A CITE STILL LEADS SOMEWHERE. Clicking a cited number used to scroll to the tool card that
+  // produced it; those cards are gone, so it opens the evidence instead - the same destination,
+  // which is the call, its filters and its receipt.
+  const citeHandlers = {
+    hover: onCite.hover,
+    click: (h: Highlight) => { setEvidenceOpen(true); onCite.click(h); },
+    modelled: ({ k, cell }: { k: number; cell: number; text: string }) => {
+      const t = items.find((i) => i.kind === "tool" && i.k === k);
+      const cells = t && t.kind === "tool" ? t.result?.cells ?? [] : [];
+      return isModelled(cells.find((c: ToolResultCell) => c.i === cell));
+    },
+  };
   const answerBody = (
-    <div className="px-4 py-3 text-sm leading-relaxed text-fg" data-testid="answer-part-answer">
-      {renderAnswer(answer.text, onCite)}
+    <div className="text-sm leading-relaxed text-fg" data-testid="answer-part-answer">
+      {renderAnswer(answer.text, citeHandlers)}
     </div>
   );
+  const attachment = attachmentOf(principal, answer, items);
   if (!principal || !r) {
+    // A PREPARED EXPLANATION IS NOT A DEFICIENT QUERY. When the library answers there is no tool
+    // call by design: the question was about what something MEANS, and the answer carries sources
+    // instead of a receipt. Its provenance line names the cards it was built from - the server
+    // sends their titles - and opening it shows the sources rather than a receipt it never minted.
+    const sources = fromLibrary ? librarySources : [];
+    const titles = (answer as { titles?: string[] }).titles ?? [];
+    const what = titles.length ? titles.join(" · ") : "Prepared explanation";
     return (
-      <article className="rounded-card border border-line bg-card shadow-card" data-testid="answer-card">
+      <div className="flex flex-col gap-2.5" data-testid="answer-card" data-from="library">
         {answerBody}
-        <p className="border-t border-line px-4 py-2 text-xs text-muted" data-testid="answer-no-query">No engine query stands behind this reply; it carries no figure.</p>
-      </article>
+        {fromLibrary && (
+          <ProvenanceLine what={what} open={sourcesOpen} onToggle={() => setSourcesOpen((o) => !o)} />
+        )}
+        {fromLibrary && sourcesOpen && (
+          <ul className="rounded-card border border-line bg-card px-3 py-1.5" data-testid="answer-sources">
+            {sources.map((s) => (
+              <li key={s.source_id} className="py-1 text-xs leading-snug" data-testid="answer-source" data-kind={s.kind}>
+                {s.url ? (
+                  <a href={s.url} target="_blank" rel="noreferrer" className="text-accent hover:underline">{s.title}</a>
+                ) : (
+                  <span className="text-fg">{s.title}</span>
+                )}
+                {obtainTail(s) ? <span className="block text-muted">{obtainTail(s)}</span> : null}
+              </li>
+            ))}
+            {sources.length === 0 && <li className="py-1 text-xs text-muted">This explanation cites no document.</li>}
+          </ul>
+        )}
+      </div>
     );
   }
 
@@ -112,7 +192,10 @@ export function AnswerCard({ answer, items, onCite, onFollowUp }: { answer: Answ
   const key = groupKeyOf(cells);
   const shownCells = cells.slice(0, MAX_ROWS);
   const showChart = !asTable && (kind === "bars" || kind === "columns");
-  const context = (answer.scope && typeof answer.scope === "object" ? answer.scope : null) ?? r.context;
+  // THE SCOPE FOLLOWS THE FIGURES. `answer.scope` is the LAST tool result's context, which is not
+  // necessarily the one the answer's numbers came from - so provincial figures were captioned
+  // "Pakistan (national)". The principal result is by definition where the figures are from.
+  const context = r.context;
   const cb = release.context_bar;
   const rows = scopeRows(labels, dims, context, principal.input, cb.basis_label ? { basis: cb.basis, label: cb.basis_label } : undefined);
   const ticks = env?.axis?.ticks_short ?? null;
@@ -123,230 +206,282 @@ export function AnswerCard({ answer, items, onCite, onFollowUp }: { answer: Answ
   const uncRows = r.uncertainty?.rows ?? [];
   const uncCells = unc?.result?.cells ?? [];
   const exactness = exactnessWords(cells);
+  const evidenceWords = [
+    ...r.limitations_hit.map((l) => limitationText(labels, l)),
+    ...exactness,
+    ...(r.unallocated ? ["some mass is unallocated at this grain"] : []),
+  ].filter(Boolean);
   const patch = principal.name === "set_map_view" ? {} : stateFromRequest({ name: principal.name, body: principal.input });
   const exploreHref = Object.keys(patch).length ? hrefForState(applyPatch({ ...state, c: null }, patch), defaults, "/data") : null;
-  const csv = dl?.result?.download?.csv ? apiUrl(dl.result.download.csv) : r.receipt ? api.downloadCsvUrl(r.receipt) : null;
-  const chips = receiptChips(labels, dims, principal.input);
-  const rowCounts = shownCells.map((c) => ({ name: cellName(labels, dims, c), n: rowsOf(c, env) }));
-  const known = rowCounts.filter((x) => x.n !== null);
+  // A CSV ONLY WHEN ONE WAS ASKED FOR. The fallback that used to sit here - `api.downloadCsvUrl(r.receipt)`
+  // - put an export under every answer, and what it exported was the QUERY, not the answer: a
+  // question about three agriculture categories offered a 33-cell national completeness ledger
+  // across unrelated sectors. That is backend output presented as a feature. `download_query_result`
+  // runs only when the reader asks to export, so its presence IS the asking.
+  const csv = dl?.result?.download?.csv ? apiUrl(dl.result.download.csv) : null;
+  const turnHasUncertainty = uncRows.length > 0 || uncCells.length > 0;
+  const suggestions = followUps(principal, answer, turnHasUncertainty, dims);
 
-  return (
-    <article className="rounded-card border border-line bg-card shadow-card" data-testid="answer-card" data-principal-k={principal.k}>
-      {answerBody}
+  // THE CHANGE PILL IS A SERVER STRING OR IT IS ABSENT. The envelope carries `change` already
+  // (change_pct_short, direction, and a note saying it compares the first and last period only);
+  // the browser computing "+17.1 %" from the cells is the one thing this panel may never do.
+  const change = env?.change ?? null;
+  const mt = methodTool(items);
+  const methodRecord = mt?.result ? methodDisclosure(mt.result) : null;
+  const level = typeof r.context?.geography_level === "string" ? r.context.geography_level : "";
+  const disclosure = disclosureOf(cells, methodRecord, { surface: allocationSurfaceWords, plainClass: () => "", level });
+  const spanWords = periodSpan(r, (id) => periodShort(labels, id));
 
-      <Part id="scope" title="Applied scope and filters">
-        {rows.length ? (
-          <div className="flex flex-wrap gap-1" data-testid="scope-rows">
-            {rows.map((row) => (
-              <span key={row.name + row.value} className={`pill border border-line px-2 py-px text-xs ${row.muted ? "text-muted" : "bg-surface text-fg"}`} title={row.id ? `${row.name} = ${row.id}` : row.name} data-testid="scope-row">
-                <span className="text-muted">{row.name}</span> {row.value}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-muted">The result carried no scope.</p>
-        )}
-      </Part>
+  const resultTable = (
+    <table className="w-full text-xs" data-testid="answer-rows">
+      <thead>
+        <tr className="text-left text-muted">
+          <th className="py-1 pr-2 font-semibold">{key ? columnLabel(key) : "Scope"}</th>
+          <th className="py-1 pr-2 text-right font-semibold">Value</th>
+          <th className="py-1 text-right font-semibold">Rows</th>
+        </tr>
+      </thead>
+      <tbody>
+        {shownCells.map((c) => (
+          <tr key={c.i} className="border-t border-line align-top" data-testid="answer-row">
+            <td className="py-1 pr-2 text-fg">{cellName(labels, dims, c)}</td>
+            <td className="py-1 pr-2 text-right"><Value cell={c} /></td>
+            <td className="num py-1 text-right text-muted">{rowsOf(c, env) ?? "—"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
-      <Part
-        id="result"
-        title="Result"
-        action={
-          (kind === "bars" || kind === "columns") && (
-            <button type="button" onClick={() => setAsTable((t) => !t)} className="text-micro normal-case tracking-normal text-accent hover:underline" data-testid="result-toggle">
-              {asTable ? "Show as chart" : "Show as table"}
-            </button>
-          )
-        }
-      >
-        <p className="caption mb-1.5" data-testid="result-caption">{functionLabel(principal.name)} · {resultCaption(labels, r, principal.input)}</p>
-        {kind === "none" && <p className="text-xs text-muted">No rows in this scope.</p>}
-        {kind === "figure" && (
-          <div className="flex items-baseline gap-2" data-testid="result-figure">
-            <span className="num text-3xl font-semibold text-fg" title={cells[0].display ? `${cells[0].display} (contract precision)` : undefined}>{cells[0].display_short ?? cells[0].display ?? ""}</span>{" "}
-            <span className="text-sm text-muted">{cellUnit(cells[0])}</span>
-            {isBounded(cells[0]) && <IntervalBadge cell={cells[0]} title={cells[0].interpretation ?? cells[0].exactness} />}
-          </div>
-        )}
-        {showChart && kind === "bars" && <BarsWithAxis items={bars} ticks={ticks} testId="answer-bars" />}
-        {showChart && kind === "columns" && <ColumnChart points={columns} ticks={ticks} height={180} testId="answer-columns" />}
-        {(kind === "table" || (asTable && (kind === "bars" || kind === "columns"))) && (
-          <table className="w-full text-xs" data-testid="answer-rows">
-            <thead>
-              <tr className="text-left text-muted">
-                <th className="py-1 pr-2 font-semibold">{key ? columnLabel(key) : "Scope"}</th>
-                <th className="py-1 pr-2 text-right font-semibold">Value</th>
-                <th className="py-1 text-right font-semibold">Rows</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shownCells.map((c) => (
-                <tr key={c.i} className="border-t border-line align-top" data-testid="answer-row">
-                  <td className="py-1 pr-2 text-fg">{cellName(labels, dims, c)}</td>
-                  <td className="py-1 pr-2 text-right"><Value cell={c} /></td>
-                  <td className="num py-1 text-right text-muted">{rowsOf(c, env) ?? "—"}</td>
+  const uncertaintyBody =
+    uncRows.length > 0 ? (
+      <div data-testid="uncertainty-rows">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-left text-muted">
+              <th className="py-1 pr-2 font-semibold">Category · resolution</th>
+              <th className="py-1 pr-2 text-right font-semibold" title="the probabilistic interval of the parameter draws, as a percentage of the estimate">Parametric</th>
+              <th className="py-1 text-right font-semibold" title="the parametric interval widened by the structural half-widths">Envelope</th>
+            </tr>
+          </thead>
+          <tbody>
+            {uncRows.slice(0, MAX_UNC_ROWS).map((row, i) => {
+              const priced = [pricedWord("timing", row.timing_pct, row.timing_status), pricedWord("placement", row.placement_pct, row.placement_status)].filter(Boolean).join(" · ");
+              return (
+                <tr key={i} className="border-t border-line align-top" data-testid="uncertainty-row" title={uncertaintyTooltip(row)}>
+                  <td className="py-1 pr-2">
+                    <div className="text-fg">{row.category || row.module || row.sector || ""}</div>
+                    <div className="text-muted">{(row.resolution ?? "").replace(/_/g, " · ")}{priced ? ` · ${priced}` : ""}</div>
+                  </td>
+                  <td className="num whitespace-nowrap py-1 pr-2 text-right" title={row.parametric_kind ?? undefined}>{pctRange(row.parametric_low_pct, row.parametric_high_pct)}</td>
+                  <td className="num whitespace-nowrap py-1 text-right" title={row.envelope_kind ?? undefined}>{pctRange(row.envelope_low_pct, row.envelope_high_pct)}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {cells.length > MAX_ROWS && <p className="mt-1 text-xs text-muted">first {MAX_ROWS} of {String(cells.length)} cells; the CSV carries every one</p>}
-        {r.truncated && <p className="mt-1 text-xs text-muted">{r.truncated}</p>}
-      </Part>
+              );
+            })}
+          </tbody>
+        </table>
+        {uncRows.length > MAX_UNC_ROWS && <p className="mt-1 text-xs text-muted">first {MAX_UNC_ROWS} of {String(uncRows.length)} rows</p>}
+        {r.uncertainty?.interpretation && <p className="caption mt-1">{r.uncertainty.interpretation}</p>}
+      </div>
+    ) : uncCells.length > 0 ? (
+      <div data-testid="uncertainty-cells">
+        <ul className="space-y-1 text-xs">
+          {uncCells.slice(0, 6).map((c) => {
+            const interval = (uncEnv?.values[c.i] as Record<string, unknown> | undefined)?.interval_short;
+            return (
+              <li key={c.i} className="flex flex-wrap items-baseline justify-between gap-x-2">
+                <span className="text-fg">{cellName(labels, dims, c)}</span>
+                <span>
+                  <Value cell={c} />
+                  {typeof interval === "string" && interval ? <span className="num ml-2 text-muted" title="95 % interval, as the envelope carries it">{interval}</span> : null}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        {unc?.result?.uncertainty?.interpretation && <p className="caption mt-1">{unc.result.uncertainty.interpretation}</p>}
+      </div>
+    ) : (
+      <p className="flex flex-wrap items-center gap-2 text-xs text-muted" data-testid="uncertainty-missing">
+        Uncertainty not requested —
+        <button type="button" onClick={() => onFollowUp(UNCERTAINTY_FOLLOW_UP)} className="pill border border-line bg-surface px-2 py-0.5 text-xs text-accent hover:border-accent" data-testid="uncertainty-follow-up">
+          ask &ldquo;{UNCERTAINTY_FOLLOW_UP}&rdquo;
+        </button>
+      </p>
+    );
 
-      <Part id="uncertainty" title="Uncertainty">
-        {uncRows.length > 0 ? (
-          <div data-testid="uncertainty-rows">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-muted">
-                  <th className="py-1 pr-2 font-semibold">Category · resolution</th>
-                  <th className="py-1 pr-2 text-right font-semibold" title="the probabilistic interval of the parameter draws, as a percentage of the estimate">Parametric</th>
-                  <th className="py-1 text-right font-semibold" title="the parametric interval widened by the structural half-widths">Envelope</th>
-                </tr>
-              </thead>
-              <tbody>
-                {uncRows.slice(0, MAX_UNC_ROWS).map((row, i) => {
-                  const priced = [pricedWord("timing", row.timing_pct, row.timing_status), pricedWord("placement", row.placement_pct, row.placement_status)].filter(Boolean).join(" · ");
-                  return (
-                    <tr key={i} className="border-t border-line align-top" data-testid="uncertainty-row" title={uncertaintyTooltip(row)}>
-                      <td className="py-1 pr-2">
-                        <div className="text-fg">{row.category || row.module || row.sector || ""}</div>
-                        <div className="text-muted">{(row.resolution ?? "").replace(/_/g, " · ")}{priced ? ` · ${priced}` : ""}</div>
-                      </td>
-                      <td className="num whitespace-nowrap py-1 pr-2 text-right" title={row.parametric_kind ?? undefined}>{pctRange(row.parametric_low_pct, row.parametric_high_pct)}</td>
-                      <td className="num whitespace-nowrap py-1 text-right" title={row.envelope_kind ?? undefined}>{pctRange(row.envelope_low_pct, row.envelope_high_pct)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {uncRows.length > MAX_UNC_ROWS && <p className="mt-1 text-xs text-muted">first {MAX_UNC_ROWS} of {String(uncRows.length)} rows</p>}
-            {r.uncertainty?.interpretation && <p className="caption mt-1">{r.uncertainty.interpretation}</p>}
-          </div>
-        ) : uncCells.length > 0 ? (
-          <div data-testid="uncertainty-cells">
-            <ul className="space-y-1 text-xs">
-              {uncCells.slice(0, 6).map((c) => {
-                const interval = (uncEnv?.values[c.i] as Record<string, unknown> | undefined)?.interval_short;
-                return (
-                  <li key={c.i} className="flex flex-wrap items-baseline justify-between gap-x-2">
-                    <span className="text-fg">{cellName(labels, dims, c)}</span>
-                    <span>
-                      <Value cell={c} />
-                      {typeof interval === "string" && interval ? <span className="num ml-2 text-muted" title="95 % interval, as the envelope carries it">{interval}</span> : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-            {unc?.result?.uncertainty?.interpretation && <p className="caption mt-1">{unc.result.uncertainty.interpretation}</p>}
-          </div>
-        ) : (
-          <p className="flex flex-wrap items-center gap-2 text-xs text-muted" data-testid="uncertainty-missing">
-            Uncertainty not requested —
-            <button type="button" onClick={() => onFollowUp(UNCERTAINTY_FOLLOW_UP)} className="pill border border-line bg-surface px-2 py-0.5 text-xs text-accent hover:border-accent" data-testid="uncertainty-follow-up">
-              ask &ldquo;{UNCERTAINTY_FOLLOW_UP}&rdquo;
+  // SHOW ON MAP IS AN OFFER, NOT AN ACT. It is derived here from the call's own input, so it is
+  // available whether or not the agent chose to move the map - and nothing moves until it is
+  // clicked. `stateFromRequest` is the same mapping the "Open in Explore" link already uses.
+  const mapPatch = mapPatchFromInput(principal.input);
+  const showOnMap = () => {
+    setClicked({ patch: mapPatch, previous: previousOf(state, mapPatch) });
+    setState(mapPatch);
+  };
+
+  const provenance = (
+    <ProvenanceLine
+      open={evidenceOpen}
+      onToggle={() => setEvidenceOpen((o) => !o)}
+      extra={
+        Object.keys(mapPatch).length > 0 && !move ? (
+          <button type="button" onClick={showOnMap}
+                  className="shrink-0 font-medium text-accent underline underline-offset-2 hover:text-accent-bright"
+                  data-testid="show-on-map">
+            Show on map
+          </button>
+        ) : undefined
+      }
+    />
+  );
+
+  // THE SCOPE, SAID ONCE, BY US. See attachment.scopeNote: the model used to write this and wrote it
+  // twice. It reads as the answer's last sentence, muted so it does not pretend to be the model's.
+  const note = scopeNote(r, {
+    period: (id) => periodShort(labels, id),
+    gwp: (id) => gwpLabel(labels, id),
+    place: (res) => placeWords(labels, res),
+    lulucf: labels.lulucf?.short ?? "",
+  });
+
+  const attachmentNode =
+    attachment === "none" ? null : (
+      <div className="overflow-hidden rounded-card border border-line bg-card" data-testid="answer-attachment" data-kind={attachment}>
+        <div className="flex items-start gap-2 px-3.5 pt-3">
+          {/* "National greenhouse-gas emissions / Mt CO2e · 2023-24" describes a chart. Over a method
+              record it described nothing, which is how "National emissions / method · 2023–24" came
+              to sit above a registry row. */}
+          <h4 className="min-w-0 flex-1 text-sm font-semibold leading-snug text-fg">
+            {attachment === "method" ? "How this is estimated" : attachment === "uncertainty" ? "Uncertainty" : attachmentTitle(r)}
+          </h4>
+          {change?.change_pct_short && (
+            <span className="pill shrink-0 bg-note-bg px-2 py-0.5 text-xs font-semibold text-note-text" data-testid="change-pill" title={change.note ?? undefined}>
+              {change.change_pct_short} %
+            </span>
+          )}
+          {(kind === "bars" || kind === "columns") && (
+            <button type="button" onClick={() => setAsTable((t) => !t)} className="shrink-0 text-micro normal-case tracking-normal text-accent hover:underline" data-testid="result-toggle">
+              {asTable ? "Chart" : "Table"}
             </button>
+          )}
+        </div>
+        {attachment === "chart" && (
+          <p className="px-3.5 pt-0.5 text-xs text-muted">
+            {cellUnit(cells[0])}{spanWords ? ` · ${spanWords}` : ""}
           </p>
         )}
-      </Part>
-
-      <Part id="evidence" title="Evidence qualification">
-        <div className="flex flex-wrap gap-1" data-testid="evidence-chips">
-          {r.limitations_hit.map((l) => (
-            <span key={l} className="pill border border-warn/30 bg-refusal px-2 py-px text-micro normal-case tracking-normal text-warn" title={l} data-testid="limitation-chip">
-              {limitationText(labels, l)}
-            </span>
-          ))}
-          {exactness.map((e) => (
-            <span key={e} className={`pill border px-2 py-px text-micro normal-case tracking-normal ${e.includes("bounded") ? "border-warn/30 bg-refusal text-warn" : "border-line bg-surface text-muted"}`} data-testid="exactness-badge">
-              {e}
-            </span>
-          ))}
-          {r.unallocated && <span className="pill border border-line bg-surface px-2 py-px text-micro normal-case tracking-normal text-muted">some mass is unallocated at this grain</span>}
-          {!r.limitations_hit.length && !exactness.length && !r.unallocated && <span className="text-xs text-muted">No limitation recorded on this result.</span>}
+        <div className="px-3.5 pb-2 pt-3">
+          {attachment === "uncertainty" ? uncertaintyBody : null}
+          {attachment === "method" && methodRecord ? (
+            <dl className="space-y-1 text-xs" data-testid="method-disclosure">
+              <div className="flex gap-1.5"><dt className="shrink-0 text-muted">Method:</dt><dd className="text-fg">{methodRecord.method}</dd></div>
+              {methodRecord.basis ? (
+                <div className="flex gap-1.5"><dt className="shrink-0 text-muted">Basis:</dt><dd className="text-fg">{methodRecord.basis}</dd></div>
+              ) : null}
+            </dl>
+          ) : null}
+          {attachment === "chart" && showChart && kind === "bars" && <BarsWithAxis items={bars} ticks={ticks} testId="answer-bars" />}
+          {attachment === "chart" && showChart && kind === "columns" && <ColumnChart points={columns} ticks={ticks} height={168} testId="answer-columns" />}
+          {attachment === "chart" && asTable ? resultTable : null}
+          {cells.length > MAX_ROWS && <p className="mt-1 text-xs text-muted">first {MAX_ROWS} of {String(cells.length)} cells; the CSV carries every one</p>}
+          {r.truncated && <p className="mt-1 text-xs text-muted">{r.truncated}</p>}
+          {/* the envelope's own caveat, and the reason it matters: the series this compares is not
+              monotonic, so the percentage alone would read as a steady climb */}
+          {change?.note && <p className="mt-1.5 text-xs text-muted" data-testid="change-note">{change.note}</p>}
         </div>
-      </Part>
+      </div>
+    );
 
-      <Part
-        id="rows"
-        title="Exact source rows"
-        action={
-          r.receipt && (
-            <button type="button" onClick={() => drawer.open(r.receipt!, "calculation")} className="flex items-center gap-1 text-micro normal-case tracking-normal text-accent hover:underline" data-testid="open-rows">
-              <Rows3 size={12} /> Open rows
-            </button>
-          )
-        }
-      >
-        {known.length === 0 ? (
-          <p className="text-xs text-muted" data-testid="rows-unknown">Row counts are not carried by this stream; Open rows lists them.</p>
-        ) : known.length === 1 && cells.length === 1 ? (
-          <p className="text-xs text-fg" data-testid="rows-line"><span className="num font-semibold">{String(known[0].n)}</span> {known[0].n === 1 ? "row" : "rows"} summed from the release tables</p>
-        ) : (
-          <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs" data-testid="rows-line">
-            {known.slice(0, 8).map((x) => (
-              <li key={x.name}><span className="text-muted">{x.name}</span> <span className="num font-semibold">{String(x.n)}</span> {x.n === 1 ? "row" : "rows"}</li>
-            ))}
-            {known.length > 8 && <li className="text-muted">… {String(known.length)} cells in all</li>}
-          </ul>
-        )}
-      </Part>
+  return (
+    <div className="flex flex-col gap-2.5" data-testid="answer-card" data-principal-k={principal.k}>
+      {answerBody}
+      {attachmentNode}
+      {/* ALWAYS THIS ORDER, chart or no chart: the answer, then what it is scoped to, then the way in
+          to its sources. The line used to live in the chart's footer, which put it in a different
+          place depending on what the question happened to return. */}
+      {/* THE DISCLOSURE. Two provinces derived from one national fuel total are equally modelled;
+          this says so once, in the release's own vocabulary, under the figures that say it too. */}
+      {(disclosure.estimate || disclosure.data || disclosure.proxies || disclosure.method) && (
+        <dl className="space-y-0.5 text-xs" data-testid="disclosure">
+          {disclosure.estimate && <Row name="Estimate type" testid="disclosure-estimate">{disclosure.estimate}</Row>}
+          {disclosure.data && <Row name="National data" testid="disclosure-data">{disclosure.data}</Row>}
+          {disclosure.proxies && <Row name="Spatial proxies" testid="disclosure-proxies">{disclosure.proxies}</Row>}
+          {disclosure.method && <Row name="Method" testid="disclosure-method">{disclosure.method}</Row>}
+        </dl>
+      )}
+      <p className="text-xs leading-relaxed text-muted" data-testid="scope-note">{note}</p>
+      {provenance}
+      {move && (
+        <MapMovedLine
+          words={inputChips(labels, dims, Object.fromEntries(WORD_KEYS.map((k) => [k, (move.patch as Record<string, unknown>)[k]]).filter(([, v]) => v))).map((c) => c.value).join(" · ")}
+          onUndo={() => { if (clicked) { setState(undoPatch(clicked)); setClicked(null); } else { onUndoAgentMove?.(); } }}
+        />
+      )}
 
-      <section className="border-t border-line px-4 py-2" data-testid="answer-part-receipt">
-        <button type="button" onClick={() => setReceiptOpen((o) => !o)} aria-expanded={receiptOpen} className="flex w-full items-center gap-1 text-left" data-testid="receipt-toggle">
-          {receiptOpen ? <ChevronDown size={12} className="text-muted" /> : <ChevronRight size={12} className="text-muted" />}
-          <span className="micro">Query and calculation receipt</span>
-        </button>
-        {receiptOpen && (
-          <div className="mt-2 space-y-2 text-xs" data-testid="receipt-body">
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-semibold text-fg">{functionLabel(principal.name)}</span>
-              <span className="mono text-muted">{principal.name}</span>
-              {r.request_type && r.request_type !== principal.name ? <span className="mono text-muted">{r.request_type}</span> : null}
-            </div>
-            {chips.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {chips.map((c) => (
-                  <span key={c.key} className="pill border border-line bg-surface px-2 py-px" title={`${c.key} = ${c.raw}`}>
-                    <span className="text-muted">{c.label}</span> {c.value}
-                  </span>
-                ))}
-              </div>
+      {evidenceOpen && (
+        <div className="overflow-hidden rounded-card border border-line bg-card px-4 py-3" data-testid="evidence-detail">
+          {/* HUMAN-READABLE ONLY. This held the result as the engine returned it - "Scope | Value |
+              Rows", the tool's own name and cell count, per-cell row counts, the bare receipt string
+              and "Uncertainty not requested". All of it was machine-facing, and a reader who opened
+              "View details" to understand an answer met a database row. Reproduction is the link at
+              the foot, which is what a receipt is for. */}
+          <dl className="space-y-2 text-xs" data-testid="detail-rows">
+            {disclosure.estimate && (
+              <Row name="Estimate type" testid="detail-estimate">{disclosure.estimate}</Row>
+            )}
+            {rows.length > 0 && (
+              <Row name="Applied to" testid="detail-scope">
+                <span className="flex flex-wrap gap-1">
+                  {rows.map((row) => (
+                    <span key={row.name + row.value} className="pill border border-line bg-surface px-2 py-px" data-testid="scope-row">
+                      <span className="text-muted">{row.name}</span> {row.value}
+                    </span>
+                  ))}
+                </span>
+              </Row>
+            )}
+            {disclosure.data && <Row name="National data" testid="detail-data">{disclosure.data}</Row>}
+            {disclosure.proxies && <Row name="Spatial proxies" testid="detail-proxies">{disclosure.proxies}</Row>}
+            {disclosure.method && <Row name="Method" testid="detail-method">{disclosure.method}</Row>}
+            {/* uncertainty appears only when there IS some: "Uncertainty not requested" told a
+                reader nothing about the answer and everything about the query we happened to run */}
+            {(uncRows.length > 0 || uncCells.length > 0) && <Row name="Uncertainty" testid="detail-uncertainty">{uncertaintyBody}</Row>}
+            {evidenceWords.length > 0 && <Row name="Qualifications" testid="detail-evidence">{evidenceWords.join(" · ")}</Row>}
+            {librarySources.length > 0 && (
+              <Row name="Sources" testid="detail-sources">
+                {librarySources.map((src) => src.title).join(" · ")}
+              </Row>
+            )}
+          </dl>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line pt-2.5 text-xs" data-testid="answer-part-links">
+            {exploreHref && (
+              <Link href={exploreHref} className="flex items-center gap-1 font-semibold text-accent hover:underline" data-testid="explore-permalink">
+                <ExternalLink size={12} /> Open in Explore
+              </Link>
+            )}
+            {csv && (
+              <a href={csv} className="flex items-center gap-1 text-accent hover:underline" data-testid="download-csv">
+                <Download size={12} /> Download CSV
+              </a>
             )}
             {r.receipt && (
-              <div>
-                <span className="micro">Result ID</span> <span className="mono break-all text-fg" data-testid="receipt-id">{r.receipt}</span>
-              </div>
-            )}
-            {r.receipt && (
-              <div className="flex flex-wrap gap-3">
-                <button type="button" onClick={() => drawer.open(r.receipt!, "calculation")} className="text-accent hover:underline" data-testid="open-calculation">Calculation</button>
-                <button type="button" onClick={() => drawer.open(r.receipt!, "request")} className="text-accent hover:underline" data-testid="open-request">API request</button>
-                <button type="button" onClick={() => drawer.open(r.receipt!, "sources")} className="text-accent hover:underline" data-testid="open-sources">Sources</button>
-              </div>
+              <Link href={receiptHref(r.receipt)} className="text-accent hover:underline" data-testid="reproduce-link">Reproduce this result →</Link>
             )}
           </div>
-        )}
-      </section>
+        </div>
+      )}
 
-      <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 text-xs" data-testid="answer-part-links">
-        {exploreHref && (
-          <Link href={exploreHref} className="flex items-center gap-1 font-semibold text-accent hover:underline" data-testid="explore-permalink">
-            <ExternalLink size={12} /> Open in Explore
-          </Link>
-        )}
-        {csv && (
-          <a href={csv} className="flex items-center gap-1 text-accent hover:underline" data-testid="download-csv">
-            <Download size={12} /> Download CSV
-          </a>
-        )}
-        {r.receipt && (
-          <Link href={receiptHref(r.receipt)} className="text-muted hover:text-fg" data-testid="reproduce-link">Reproduce this result →</Link>
-        )}
-      </footer>
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-2" data-testid="follow-ups">
+          {suggestions.map((q) => (
+            <button key={q} type="button" onClick={() => onFollowUp(q)}
+                    className="pill border border-line px-3 py-1.5 text-xs text-accent hover:bg-accent-soft" data-testid="follow-up">
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
       {drawer.node}
-    </article>
+    </div>
   );
 }

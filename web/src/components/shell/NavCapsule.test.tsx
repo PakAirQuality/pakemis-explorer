@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 /**
  * The nav capsule: the oxblood pill with the PAQI logo alone as the brand mark (no wordmark),
- * the four sections — Explore · Data · Methods · Downloads — in order with the current one
+ * the three sections — Explore · Methods · Downloads — in order with the current one
  * marked and underlined in saffron, and "Ask about this view" at its right end, which toggles
  * the drawer on the bus or calls a page's own handler. On the workspace it floats at the deck's
  * own left inset; everywhere else the same pill sits in a header row.
@@ -15,7 +15,7 @@ const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 describe("NavCapsule", () => {
-  it("lists Explore, Analyze, Methods, Downloads, at the deck's width, and offers no Ask action", () => {
+  it("lists Explore, Methods, Downloads, at the deck's width, and offers no Ask action", () => {
     pathname.value = "/";
     resetAskBus();
     const bus = vi.fn();
@@ -23,9 +23,17 @@ describe("NavCapsule", () => {
     render(<NavCapsule floating />);
     expect(screen.getByTestId("nav-capsule").className).toContain("w-[420px]");   // the deck's width: both edges line up
     const links = screen.getAllByTestId("nav-link");
-    expect(links.map((a) => a.textContent)).toEqual(["Explore", "Analyze", "Methods", "Downloads"]);
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/", "/analyze", "/methods", "/downloads"]);
+    // Analyze was removed on 2026-09-16: the assistant answers what the page was built for
+    expect(links.map((a) => a.textContent)).toEqual(["Explore", "Methods", "Downloads"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/", "/methods", "/downloads"]);
     expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_LINKS.map((l) => l.href));
+    // THE LINKS SPREAD, THEY DO NOT BUNCH. The capsule is pinned to the deck's 420 px so their
+    // edges line up, and the sections used to be pushed against the right end by justify-between -
+    // which looked deliberate at four and lopsided the moment Analyze left at three. The nav grows
+    // into the space instead, so the spacing survives the next section being added or removed.
+    const sections = screen.getByLabelText("Sections");
+    expect(sections.className).toContain("grow");
+    expect(sections.className).toContain("justify-evenly");
     expect(links[0]).toHaveAttribute("aria-current", "page");
     expect(links[1]).not.toHaveAttribute("aria-current");
     // the assistant has one entry only, the round button at the bottom left; the capsule offers it nowhere

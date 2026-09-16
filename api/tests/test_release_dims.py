@@ -79,7 +79,7 @@ def test_agent_block_reports_the_ask_module(release):
     """The ask module is mounted; without a provider key in the API's environment it
     reports itself disabled with a reason that names the missing variable(s) (never a value)."""
     agent = release["agent"]
-    assert set(agent) == {"enabled", "model", "provider", "reason"}
+    assert set(agent) == {"enabled", "model", "provider", "reason", "library"}
     assert agent["enabled"] is False
     assert agent["model"] in (None, "")                       # no model is built without the key
     assert agent["provider"] in ("anthropic", "gemini")

@@ -128,11 +128,39 @@ export function barLabel(cell: ToolResultCell, env: Envelope | null): string {
 }
 
 /** A cell's name in a chart or table: its group through the labels, else its identifying attrs, else "all". */
+/**
+ * A machine id: lower-case words joined by underscores, sometimes with dots.
+ * `ipcc2006_v2_ch3_eq3.2.1_road_co2`, `lognormal_ef_normal_activity_uniform_split`, `road_density`.
+ */
+const MACHINE_ID = /^[a-z0-9]+([_.][a-z0-9.+|]+)+$/;
+
+/** The attributes that are a NAME. Anything else is a field, a note or an id. */
+const READABLE_ATTRS = ["scenario_label", "category", "sub_category", "kind", "key", "name", "label"] as const;
+
+/**
+ * What to call a cell.
+ *
+ * ⚠ THIS IS THE LINE THAT LEAKED TWICE. It used to end
+ * `|| Object.values(a).join(" · ") || "all"` - so a cell with no `group` was labelled with EVERY
+ * attribute it carried, ids included. That is where
+ * "Enteric fermentation · 2006 V4 Ch10 Eq 10.19/10.20 · ipcc2006_v4_ch10_eq10.19_enteric_ch4 · …"
+ * came from, and then "ipcc2006_v2_ch3_eq3.2.1_road_co2 · lognormal_ef_normal_activity_uniform_split".
+ * Both times it looked like a problem with the tool that had been called; it was never that. It is
+ * this fallback, and any record-shaped cell walks into it.
+ *
+ * So: named readable attributes only, never a join of everything, and never a value that reads as an
+ * id. With nothing readable to say it returns "" and the caller omits the label rather than invents
+ * one - the same rule the scope sentence and the method disclosure follow.
+ */
 export function cellName(labels: Labels, dims: Dims, cell: ToolResultCell): string {
   const g = groupText(labels, dims, cell.group);
   if (g) return g;
   const a = cell.attrs ?? {};
-  return a.scenario_label || a.kind || a.key || Object.values(a).join(" · ") || "all";
+  for (const k of READABLE_ATTRS) {
+    const v = a[k];
+    if (typeof v === "string" && v && !MACHINE_ID.test(v)) return v;
+  }
+  return "";
 }
 
 /** The distinct exactness words the cells carry ("exact", "bounded …"), in first-seen order. */

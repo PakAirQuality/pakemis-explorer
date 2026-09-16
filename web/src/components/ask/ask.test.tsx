@@ -5,7 +5,7 @@
  * order, the cited number is the tool result's display, the refusal is a RefusalCard, the map
  * action reaches setState, a 503 is the DisabledCard, and the parser survives chunk boundaries.
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/components/Providers";
 import { ExplorerContext, type ExplorerContextValue } from "@/components/ExplorerContext";
@@ -107,7 +107,7 @@ function sseResponse(text: string, chunkSize = 37): Response {
 const DEFAULTS = { period_id: "FY2023-24", configuration_id: "REF_2023_24", gwp_basis: "AR5", spatial_view: "all", grid_gas: "CO2" };
 const base: ExplorerState = resolveState({}, DEFAULTS);
 
-function ctx(setState = vi.fn(), agent = { enabled: true, model: "claude-sonnet-5", reason: "" }, state = base): ExplorerContextValue {
+function ctx(setState = vi.fn(), agent = { enabled: true, model: "claude-sonnet-5", reason: "", library: "lib", usable: true }, state = base): ExplorerContextValue {
   const release = RELEASE as unknown as ReleaseInfo;
   return { state, setState, release, labels: releaseLabels(release), dims: releaseDims(release), defaults: DEFAULTS, contract: undefined, agent, isMobile: false };
 }
@@ -167,79 +167,95 @@ describe("AskDock", () => {
     mount(ctx(setState));
     expect(screen.getAllByTestId("suggestion").length).toBeGreaterThan(2);
     expect(screen.getByText("How have emissions changed since 2020–21?")).toBeTruthy(); // the release's short label, never the id
-    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Scope: Pakistan · 2023–24 · reference estimate");
+    // the scope is the composer's own chip row: it is sent with every question, so it belongs
+    // beside the box rather than behind a control a reader has to know to press
+    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Using this view:");
+    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent))
+      .toEqual(["Pakistan", "All gases", "2023–24"]);
     await askQuestion("How much did Punjab's agriculture emit in FY2023-24, and show it on the map");
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
-    // the request carried ui_state = the URL scope and no history on the first turn
-    const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url.endsWith("/ask")).toBe(true);
-    const body = JSON.parse(String(init.body));
+    // the request carried ui_state = the URL scope and no history on the first turn. Pick the /ask
+    // call by name: the empty state also asks the release for the figure it puts in one suggested
+    // question, so the first call this spy saw is not necessarily the question.
+    const calls = fetchSpy.mock.calls as unknown as [string, RequestInit][];
+    const ask = calls.find((c) => String(c[0]).endsWith("/ask"));
+    expect(ask).toBeTruthy();
+    const body = JSON.parse(String(ask![1].body));
     expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all" });
     expect(body.client_history).toEqual([]);
-    // the reasoning folds under "How this was answered" once the answer is in; opened, the cards are in arrival order before the card
+    // THE TURN IS A CHAT MESSAGE NOW: the bubble, the answer, and the notices that concern the
+    // reader. The model's reasoning, the per-call tool cards, the "How this was answered" fold and
+    // the token line are all gone from the screen.
     const turn = screen.getByTestId("turn");
     expect(turn.querySelector('[data-testid="tool-card"]')).toBeNull();
-    fireEvent.click(screen.getByTestId("how-answered-toggle"));
+    expect(screen.queryByTestId("thinking-card")).toBeNull();
+    expect(screen.queryByTestId("how-answered")).toBeNull();
+    expect(screen.queryByTestId("usage-line")).toBeNull();
     const kinds = Array.from(turn.querySelectorAll("[data-testid]"))
       .map((el) => el.getAttribute("data-testid"))
-      .filter((t) => ["thinking-card", "tool-card", "map-action", "refusal-card", "answer-card", "usage-line"].includes(t ?? ""));
-    expect(kinds).toEqual(["thinking-card", "tool-card", "tool-card", "map-action", "tool-card", "refusal-card", "answer-card", "usage-line"]);
-    // thinking merged from two deltas, collapsed
-    expect(screen.getByTestId("thinking-card")).toHaveTextContent("The user asks for Punjab's agriculture in FY2023-24; query_emissions at adm1 answers it.");
-    // the tool card: humanised name, chips through the labels, the result's display and unit verbatim, the Result details line
-    const cards = screen.getAllByTestId("tool-card");
-    expect(cards[0]).toHaveTextContent("Query emissions");
-    expect(within(cards[0]).getByText("Agriculture")).toBeTruthy();
-    const cell = within(cards[0]).getByTestId("result-cell");
-    expect(cell).toHaveTextContent(`${SHORT} Mt CO₂e`); // the card shows display_short with the unit as a reader sees it (no basis token); the display is its title
-    expect(cell.textContent).not.toContain(DISPLAY);
-    expect(cell).toHaveTextContent("Punjab");
-    expect(within(cards[0]).getByText("LULUCF is excluded")).toBeTruthy();
-    expect(within(cards[0]).getByTestId("receipt-footer")).toHaveTextContent("Result details");
-    expect(within(cards[0]).getByTestId("receipt-footer")).toHaveAttribute("data-receipt", RECEIPT);
-    expect(within(cards[0]).getByTestId("receipt-footer").textContent).not.toContain(RECEIPT.slice(0, 8));
-    // the cited number is the tool result's display, and hovering it highlights that card and cell
+      .filter((t) => ["user-message", "turn-refusal", "answer-card", "provenance"].includes(t ?? ""));
+    expect(kinds).toEqual(["user-message", "turn-refusal", "answer-card", "provenance"]);
+    // THE SIX-CHIP "moved the map" BLOCK IS GONE. It reported Config / Gwp / Level / Period /
+    // Sector / "View all three views" and a raw URL - internal state, none of it an answer to
+    // anything. The move is one quiet line with a way back.
+    expect(screen.queryByTestId("map-action")).toBeNull();
+    expect(screen.getByTestId("map-moved")).toHaveTextContent("Map updated to");
+
+    // the cited number is still the tool result's display, and clicking it opens the evidence -
+    // the same destination the tool card used to be
     const cites = screen.getAllByTestId("cite");
     expect(cites.map((c) => c.textContent)).toEqual([DISPLAY, UNIT]);
     expect(cites[0].getAttribute("data-k")).toBe("1");
     expect(cites[0].getAttribute("data-receipt")).toBe(RECEIPT);
-    fireEvent.mouseEnter(cites[0]);
-    expect(cards[0].className).toContain("border-accent");
-    expect(cell.className).toContain("bg-accent-soft");
-    fireEvent.mouseLeave(cites[0]);
-    expect(cards[0].className).not.toContain("border-accent");
-    // the refusal is the shared RefusalCard with error_class and limitation_id
-    const refusal = screen.getByTestId("refusal-card");
-    expect(refusal).toHaveTextContent("Refused: NotEstimated");
-    expect(refusal).toHaveTextContent("not_estimated");
-    expect(refusal.getAttribute("data-limitation")).toBe("ar6_adm2_ne");
+    expect(screen.queryByTestId("evidence-detail")).toBeNull();
+    fireEvent.click(cites[0]);
+    expect(screen.getByTestId("evidence-detail")).toBeInTheDocument();
+    // the way back to the source is a link, not a hash printed into the panel
+    expect(screen.getByTestId("reproduce-link")).toBeInTheDocument();
+    expect(screen.getByTestId("evidence-detail").textContent).not.toContain(RECEIPT);
+
+    // A REFUSAL IS ONE SENTENCE, NOT A CLASS NAME AND AN ID TWICE. The shared card led with
+    // "Refused: GrainUnavailable grain_unavailable limitation grain_unavailable" above an answer
+    // that explained the same thing in prose. The release's own message is what a reader needs.
+    const refusal = screen.getByTestId("turn-refusal");
     expect(refusal).toHaveTextContent("AR6 CO2e is not carried at ADM2");
-    // the map action reached setState with the URL keys, and is shown as a chip
+    expect(refusal.textContent).not.toContain("ar6_adm2_ne");
+    expect(refusal.textContent).not.toContain("NotEstimated");
+    expect(refusal.textContent).not.toContain("not_estimated");
+    // an explicit map request still moves the map, and undoing it NAMES EVERY KEY IT TOUCHED -
+    // a key that was unset goes back as null, because omitting it could never unset anything
     expect(setState).toHaveBeenCalledWith({ geo: "Punjab", level: "adm1", period: "FY2023-24", sector: "agriculture" });
-    expect(screen.getByTestId("map-action")).toHaveTextContent("moved the map");
+    fireEvent.click(screen.getByTestId("map-undo"));
+    const undo = setState.mock.calls.map((c) => c[0]).at(-1) as Record<string, unknown>;
+    expect(Object.keys(undo).sort()).toEqual(["geo", "level", "period", "sector"]);
+    expect(undo.geo).toBeNull();          // there was no province before; null is what unsets it
+    expect(undo.sector).toBeNull();
     // the conversation id went to the URL and the log to localStorage
     expect(setState).toHaveBeenCalledWith({ c: CID }, { history: "replace" });
     const stored = JSON.parse(window.localStorage.getItem(STORE_PREFIX + CID) ?? "null");
     expect(stored.turns).toHaveLength(1);
     expect(stored.turns[0].events.map((e: { name: string }) => e.name)).toEqual(EVENTS.map(([n]) => n));
-    // usage and elapsed as received
-    expect(screen.getByTestId("usage-line")).toHaveTextContent("in 400 · out 80 · ≈ $0.0031 · 4.213 s");
-    // "Show on map" maps the call's input to URL state through stateFromRequest (this is the workspace)
-    fireEvent.click(within(cards[0]).getByTestId("show-on-map"));
-    expect(setState).toHaveBeenLastCalledWith(expect.objectContaining({ level: "adm1", period: "FY2023-24", geo: "Punjab", sector: "agriculture" }));
-    // the "moved the map" chip links to the workspace with the action's state
-    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/?sector=agriculture&geo=Punjab");
+    // NEITHER THE TOKENS NOR THE ELAPSED TIME ARE ON SCREEN. Both are the operator's business, and
+    // both are still in the stream and the stored transcript - only nothing renders them.
+    const dockText = screen.getByTestId("ask-dock").textContent ?? "";
+    expect(dockText).not.toContain("in 400");
+    expect(dockText).not.toContain("0.0031");
+    expect(dockText).not.toContain("4.213");
+    // the call's own state is reachable from the evidence fold instead of a per-card "Show on map"
+    expect(screen.getByTestId("explore-permalink")).toBeInTheDocument();
     // every decimal on screen is a string the stream carried
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const tokens: string[] = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) tokens.push(...((n.textContent ?? "").match(/\d+\.\d+/g) ?? []));
     expect(tokens.length).toBeGreaterThan(0);
-    for (const t of tokens) expect([DISPLAY, SHORT, "0.0031", "4.213"]).toContain(t);
+    // "1.0" is the leading part of the release identity the footer prints (release_id, a server
+    // string), not a figure. Allowed by name so a genuinely invented number still fails here.
+    for (const t of tokens) expect([DISPLAY, SHORT, "0.0031", "4.213", "1.0"]).toContain(t);
     // the answer card's scope names the call's context through the labels
     expect(screen.getAllByTestId("scope-row").map((r) => r.textContent)).toContain("Geography Punjab (province)");
   });
 
-  it("away from the workspace, Show on map and the map chip are links to it with the state, and ?q= seeds one send", async () => {
+  it("away from the workspace the call's state is a link in the details fold, and ?q= seeds one send", async () => {
     pathname.value = "/ask";
     const fetchSpy = askFetch(EVENTS);
     vi.stubGlobal("fetch", fetchSpy);
@@ -265,11 +281,12 @@ describe("AskDock", () => {
       </Providers>,
     );
     expect(askCalls(fetchSpy)).toHaveLength(1); // sent once, never again
-    fireEvent.click(screen.getByTestId("how-answered-toggle"));
-    const link = within(screen.getAllByTestId("tool-card")[0]).getByTestId("show-on-map");
+    // away from the workspace the call's state is still reachable, as a link, from the details fold
+    fireEvent.click(screen.getByTestId("provenance-action"));
+    const link = screen.getByTestId("explore-permalink");
     expect(link.tagName).toBe("A");
-    expect(link).toHaveAttribute("href", "/?sector=agriculture&geo=Punjab");
-    expect(screen.getByTestId("map-action-link")).toHaveAttribute("href", "/?sector=agriculture&geo=Punjab");
+    expect(link.getAttribute("href")).toContain("sector=agriculture");
+    expect(link.getAttribute("href")).toContain("geo=Punjab");
     pathname.value = "/";
   });
 
@@ -286,25 +303,47 @@ describe("AskDock", () => {
     unmount();
   });
 
-  it("shows the DisabledCard with the API's reason on a 503, listing the contract's functions", async () => {
-    const reason = "ANTHROPIC_API_KEY is not set in the API's environment";
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 503, statusText: "Service Unavailable", json: async () => ({ error: "agent_disabled", reason }) }) as unknown as Response));
+  it("a 503 fails ONE question and keeps the conversation, showing the server's own message", async () => {
+    // DELIBERATELY CHANGED. This used to assert the opposite: a 503 replaced the whole panel with
+    // the DisabledCard and deleted the turn. That was wrong before and is worse now, because the
+    // server answers explanations without a provider key and returns 503 only for a question that
+    // needs the query - so a visitor could ask three things happily and lose all three on the
+    // fourth. The 429 path already kept the turn and showed an error card; this follows it. The
+    // server's `message` was also being discarded in favour of the bare reason code.
+    const reason = "no provider key is set in the API's environment";
+    const message = "This question needs the inventory query, which needs the assistant's model. Explanations of the concepts and methods still work.";
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 503, statusText: "Service Unavailable", json: async () => ({ error: "agent_disabled", reason, message }) }) as unknown as Response));
     mount(ctx());
-    await askQuestion("hello");
-    const card = await screen.findByTestId("disabled-card");
-    expect(card).toHaveTextContent(reason);
-    expect(within(card).getByText("query_emissions")).toBeTruthy();
-    expect(within(card).getByText("compare_emissions")).toBeTruthy();
-    expect(screen.queryByTestId("turn")).toBeNull();
+    await askQuestion("how much did agriculture emit?");
+    const card = await screen.findByTestId("error-card");
+    expect(card).toHaveAttribute("data-code", "agent_disabled");
+    expect(card).toHaveTextContent(message);
+    // the question stays in the transcript, and the composer stays usable
+    expect(screen.getByTestId("turn")).toBeTruthy();
+    expect(screen.getByTestId("user-message")).toHaveTextContent("how much did agriculture emit?");
+    expect(screen.queryByTestId("disabled-card")).toBeNull();
+    expect((screen.getByTestId("question") as HTMLTextAreaElement).disabled).toBe(false);
   });
 
-  it("renders the DisabledCard without a request when the release says the agent is disabled", () => {
+  it("renders the DisabledCard without a request only when NEITHER the model nor the library is there", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
-    mount(ctx(vi.fn(), { enabled: false, model: "", reason: "not mounted" }));
+    mount(ctx(vi.fn(), { enabled: false, model: "", reason: "not mounted", library: "", usable: false }));
     expect(screen.getByTestId("disabled-card")).toHaveTextContent("not mounted");
     expect((screen.getByTestId("question") as HTMLTextAreaElement).disabled).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("is usable with the explanation library alone, and does not claim a model it has not got", () => {
+    // `enabled` tracks the MODEL and keeps doing so. Keying the panel off it meant a site with no
+    // provider key rendered the disabled card and disabled the composer before sending anything,
+    // so the prepared explanations - which need no key and answer most of what a visitor asks -
+    // were unreachable from a browser.
+    const fetchSpy = vi.fn(async () => ({ ok: true, status: 200, body: null }) as unknown as Response);
+    vi.stubGlobal("fetch", fetchSpy);
+    mount(ctx(vi.fn(), { enabled: false, model: "", reason: "no provider key is set", library: "b4e422a0", usable: true }));
+    expect(screen.queryByTestId("disabled-card")).toBeNull();
+    expect((screen.getByTestId("question") as HTMLTextAreaElement).disabled).toBe(false);
   });
 
   it("shows a server error event as an inline error card with the code humanised", async () => {
@@ -324,6 +363,8 @@ describe("AskDock", () => {
     expect(err.getAttribute("data-code")).toBe("bare_numbers");
     expect(screen.getByTestId("correction")).toHaveTextContent("Draft rejected by the server");
     expect(screen.queryByTestId("answer-card")).toBeNull();
-    await waitFor(() => expect(screen.getByTestId("usage-line")).toHaveTextContent("in 300 · out 40"));
+    // an errored turn carries no token line either - it never did belong to the reader
+    expect(screen.queryByTestId("usage-line")).toBeNull();
+    expect(screen.getByTestId("ask-dock").textContent).not.toContain("in 300");
   });
 });

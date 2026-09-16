@@ -38,6 +38,8 @@ export const FALLBACK: Record<string, string> = {
   "--color-amber": "#ffb313",
   "--color-amber-soft": "#8a5a0c",
   "--color-panel": "rgba(255, 255, 255, 0.92)",
+  "--color-warm": "#fdfaf6",
+  "--color-ok": "#0a7955",
   "--color-map-outline": "#6b5b57",
   "--color-map-halo": "#ffffff",
   "--color-map-hatch": "rgba(94, 26, 42, 0.5)",
