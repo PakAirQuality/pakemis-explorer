@@ -129,7 +129,7 @@ describe("the catalogue is held to the release", () => {
       }
     }
     const activity = COLLECTIONS.find((c) => c.id === "activity")!;
-    expect(activity.unpublished?.why).toBeTruthy();
+    expect(activity.downloads.length).toBeGreaterThan(15);
   });
 
   it("EVERY DOWNLOAD NAMES EXACTLY ONE TABLE", () => {
@@ -243,34 +243,18 @@ describe("/downloads", () => {
     }
   });
 
-  it("the activity note reads as part of its card, not a box inside a box", async () => {
+  it("EVERY ACTIVITY COLLECTION IS A REAL DOWNLOAD NOW", async () => {
+    // ⚠ this page said "not part of the published release yet" for the whole collection until rc55,
+    // and for three of its nine until rc56. The assertion that matters is that no card is left
+    // claiming to be a placeholder, and that every row actually offers a file.
     mount();
     await screen.findAllByTestId("collection");
     const activity = screen.getAllByTestId("collection").find((c) => c.getAttribute("data-collection") === "activity")!;
-    const header = within(activity).getByTestId("collection-header");
-    expect(within(header).getByTestId("unpublished")).toBeInTheDocument();
-    expect(within(header).getByTestId("unpublished").className).not.toContain("bg-note-bg");
-  });
-
-  it("THE SIX PUBLISHED ACTIVITY TABLES ARE REAL DOWNLOADS, AND THE THREE THAT ARE NOT SAY SO", async () => {
-    // the collection the brief cares most about is the one with nothing to serve: 168 files exist in
-    // the engine's input tree, licence-cleared, and not one is in the release. Cards that 404 would
-    // be worse than a sentence saying why.
-    mount();
-    await screen.findAllByTestId("collection");
-    const activity = screen.getAllByTestId("collection").find((c) => c.getAttribute("data-collection") === "activity")!;
-    // ⚠ what used to be nine placeholders is now eight real tables and three still being packaged.
-    // The assertion that matters is that the two are not confusable: a published row offers a file,
-    // a pending card offers none, and the note describes only the ones that are still coming.
-    expect(within(activity).getByTestId("unpublished")).toHaveTextContent("have not had the packaging pass");
-    expect(within(activity).getAllByTestId("download-row").length).toBe(8);
-    expect(within(activity).getAllByTestId("download-card").length).toBe(3);
-    for (const row of within(activity).getAllByTestId("download-row")) {
-      expect(within(row).getAllByTestId("format-button").length).toBe(1);
-    }
-    for (const card of within(activity).getAllByTestId("download-card")) {
-      expect(within(card).queryAllByTestId("format-button")).toEqual([]);
-    }
+    expect(within(activity).queryAllByTestId("download-card")).toEqual([]);
+    const rows = within(activity).getAllByTestId("download-row");
+    expect(rows.length).toBeGreaterThan(15);
+    for (const row of rows) expect(within(row).getAllByTestId("format-button").length).toBe(1);
+    for (const c of COLLECTIONS) for (const d of c.downloads) expect(d.pending).toBeUndefined();
   });
 
   it("the search matches a column name, and a tab narrows to one collection", async () => {

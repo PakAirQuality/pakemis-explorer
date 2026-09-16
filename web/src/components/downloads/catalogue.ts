@@ -54,8 +54,6 @@ export type Collection = {
   title: string;
   dek: string;
   downloads: Download[];
-  /** Set when the collection is designed but has nothing to serve yet. */
-  unpublished?: { why: string; sources: string };
 };
 
 export const COLLECTIONS: Collection[] = [
@@ -106,15 +104,10 @@ export const COLLECTIONS: Collection[] = [
     id: "activity",
     title: "The activity behind the estimates",
     dek: "The fuel, agriculture and household data the emissions are calculated from — usable on their own, without the emissions.",
-    // ⚠ SIX OF THE NINE SHIPPED IN rc55. Each is a normalised table drawn from the engine's
+    // ⚠ ALL NINE COLLECTIONS SHIP AS OF rc56. Each is a normalised table drawn from the engine's
     // hand-verified ingest tree under one declared vocabulary: every row says what the quantity is,
     // where and when it applies, what kind of evidence it is, where it came from, what the project
-    // changed, and whether it may be added to its neighbours. The three still marked `pending` are
-    // licence-cleared and designed; what they lack is the packaging pass the other six have had.
-    unpublished: {
-      why: "Industrial fuel and production, the gas tables and the waste flows have not had the packaging pass the other six have. They are licence-cleared and the ingest tree holds them; they are not published here yet.",
-      sources: "HDIP · OGRA · NFDC · company reports · HIES · JMP",
-    },
+    // changed, and whether it may be added to its neighbours.
     downloads: [
       {
         id: "fuel",
@@ -188,9 +181,87 @@ export const COLLECTIONS: Collection[] = [
         files: ["fact_activity_household_fuel.csv"],
         finds: ["firewood", "dung", "charcoal", "cooking", "LPG", "HIES", "household"],
       },
-      { id: "industry", title: "Industrial fuel use and production", icon: Factory, dek: "Fuel use by industrial customer group, and clinker and fertiliser production.", coverage: "HDIP · NFDC · company reports", files: [], pending: true, finds: ["cement", "clinker", "coal", "steel", "ammonia"] },
-      { id: "gas", title: "Gas production, consumption and infrastructure", icon: Flame, dek: "Field production, sales, pipeline lengths and unaccounted-for gas — which is not itself a leakage measurement.", coverage: "OGRA", files: [], pending: true, finds: ["gas", "pipeline", "unaccounted", "field"] },
-      { id: "waste", title: "Waste services and waste flows", icon: Trash2, dek: "Reported disposal and sanitation shares, kept apart from modelled waste flows.", coverage: "HIES · JMP", files: [], pending: true, finds: ["waste", "sanitation", "disposal", "landfill"] },
+      {
+        id: "industry",
+        title: "Industrial fuel use",
+        icon: Factory,
+        dek: "Coal and gas by published customer group, and the gas a fertiliser plant turns into ammonia kept apart from the gas it burns.",
+        coverage: "Nine fiscal years · HDIP · OGRA · NFDC",
+        files: ["fact_activity_industry_fuel.csv"],
+        finds: ["coal", "gas", "cement", "brick kiln", "consumer", "feedstock", "industry"],
+      },
+      {
+        id: "industry-production",
+        title: "Industrial production",
+        icon: Boxes,
+        dek: "Clinker and cement as each company reported it, with national output controls and clinker trade. Company figures are never split across plants.",
+        coverage: "Company reports · PBS · UN Comtrade",
+        files: ["fact_activity_industry_production.csv"],
+        finds: ["clinker", "cement", "company", "APCMA", "production", "trade", "steel"],
+      },
+      {
+        id: "gas",
+        title: "Gas and oil production",
+        icon: Flame,
+        dek: "National and provincial output, and the gas each field supplies to each utility system.",
+        coverage: "Fifteen years · OGRA · PBS",
+        files: ["fact_activity_gas_supply.csv"],
+        finds: ["gas", "crude oil", "field", "production", "SNGPL", "SSGCL", "MMCFD"],
+      },
+      {
+        id: "gas-network",
+        title: "Gas network and unaccounted-for gas",
+        icon: Layers,
+        dek: "Utility sales, pipeline lengths and customer counts. Unaccounted-for gas is here too — and it is not a leakage measurement.",
+        coverage: "OGRA",
+        files: ["fact_activity_gas_network.csv"],
+        finds: ["pipeline", "unaccounted", "UFG", "network", "utility", "sales", "losses"],
+      },
+      {
+        id: "waste",
+        title: "Waste services and sanitation",
+        icon: Trash2,
+        dek: "How households say their waste is collected, and JMP's sanitation shares. Reported services, not measured tonnage.",
+        coverage: "HIES 2024–25 · WHO/UNICEF JMP",
+        files: ["fact_activity_waste_services.csv"],
+        finds: ["waste", "sanitation", "disposal", "collected", "sewer", "latrine", "HIES"],
+      },
+      {
+        id: "waste-flows",
+        title: "Waste flows (modelled)",
+        icon: Sigma,
+        dek: "Generation, collection, open burning and the unresolved remainder. An estimate from a per-capita rate and a fate partition — not measured municipal tonnage.",
+        coverage: "Reference year · modelled",
+        files: ["fact_activity_waste_flows.csv"],
+        finds: ["waste", "burning", "generation", "collection", "modelled", "landfill"],
+      },
+      {
+        id: "railways",
+        title: "Railway fuel and traffic",
+        icon: Ruler,
+        dek: "Pakistan Railways' own metered diesel and furnace oil, with train-, passenger- and tonne-kilometres beside it.",
+        coverage: "Year Books · fiscal years",
+        files: ["fact_activity_railways.csv"],
+        finds: ["railway", "rail", "diesel", "train", "passenger", "freight", "tonne-km"],
+      },
+      {
+        id: "aviation",
+        title: "Airport movements and passengers",
+        icon: Globe,
+        dek: "Aircraft movements, passengers, cargo and mail by airport across eighteen fiscal years, and the same year cut by airline.",
+        coverage: "Eighteen fiscal years · PCAA",
+        files: ["fact_activity_aviation.csv"],
+        finds: ["airport", "airline", "movements", "passengers", "cargo", "aviation", "flights"],
+      },
+      {
+        id: "vehicles",
+        title: "Registered vehicles by district",
+        icon: LayoutGrid,
+        dek: "Cumulative registered stock as at 30 June, by district and class. Not observed traffic, and not an active fleet.",
+        coverage: "2003–2024 · districts",
+        files: ["fact_activity_vehicles.csv"],
+        finds: ["vehicles", "registered", "motorcycle", "district", "fleet", "transport"],
+      },
     ],
   },
   {

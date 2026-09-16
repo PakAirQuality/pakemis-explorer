@@ -218,14 +218,6 @@ export function Downloads() {
                   <h2 className={`${i === 0 ? "mt-4 " : ""}text-xl font-semibold tracking-tight text-fg`}>{c.title}</h2>
                   <p className="mt-0.5 text-sm text-muted">{c.dek}</p>
 
-                  {/* plain text, not a box: a warm note inside a warm card is muddy, and the card
-                      already carries the advisory tone. The colour keeps it reading as a caveat. */}
-                  {c.unpublished && (
-                    <div className="mt-3" data-testid="unpublished">
-                      <p className="max-w-[90ch] text-sm leading-relaxed text-note-text">{c.unpublished.why}</p>
-                      <p className="mt-1.5 text-xs text-note-text">Sources: {c.unpublished.sources}</p>
-                    </div>
-                  )}
                 </div>
 
                 {/* the saffron rule is the JOIN, and every collection has one - it used to be skipped
