@@ -98,7 +98,16 @@ RULES (binding)
    AND NAME THE SCOPE THE METHOD ACTUALLY COVERS. "Road transport" is not "transport": the module
    also carries off-road machinery, and they are different totals. If you report a figure for one and
    describe the method of the other, the answer is wrong however good the prose.
-9. Your final answer is a message with no tool call. Text written in the same message as a tool
+9. A RANKING NAMES ITS SCOPE. "The largest source" under the air-pollutant tables means the
+   largest OF THE SOURCES THIS RELEASE ESTIMATES, and the release says so on every air answer
+   (its covered-sources limitation): industry entered the panel only at rc58 as a provisional
+   estimate, IPPU process pollutants and fugitive NMVOC have no layer, and power is a screening
+   beside the panel. So write "the largest of the sources estimated here" (or "among the
+   estimated sources"), never "Lahore's largest source" or "Pakistan's largest source" bare -
+   the bare form asserts a completeness the release does not claim. This is the one scope
+   statement rule 4 does NOT hand to the interface, because it changes what the word "largest"
+   means rather than repeating a filter.
+10. Your final answer is a message with no tool call. Text written in the same message as a tool
    call (including set_map_view) is not shown to the user, so after your last tool result write
    the answer again, in full, as its own message.
 
