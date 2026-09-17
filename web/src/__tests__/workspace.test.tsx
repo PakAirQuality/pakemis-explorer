@@ -94,8 +94,9 @@ beforeEach(() => {
       if (url.endsWith("/openapi.json")) return { paths: { "/api/v1/emissions/release": {} }, components: { schemas: { QueryEmissions: { properties: { gwp_basis: { description: "AR5 | AR6" }, spatial_view: { description: "all | physical | origin | accounting" } } }, GridCellRequest: { properties: { gas: { default: "CO2" }, month: { description: 'YYYYMM or "annual"' } } } } } };
       if (url.includes("/tiles/")) return { raster: undefined, adm1: {}, adm2: {} };
       if (url.includes("/timeseries")) {
-        const q = (body as { query?: { geography_ids?: string[] } } | undefined)?.query;
-        if (q?.geography_ids?.length) return SERIES_REFUSAL;
+        // answered at every grain since 2026-09-17; a district under AR6 is the one typed refusal left
+        const q = (body as { query?: { geography_level?: string; gwp_basis?: string } } | undefined)?.query;
+        if (q?.geography_level === "adm2" && q?.gwp_basis === "AR6") return SERIES_REFUSAL;
         return envelope(SERIES, { request_type: "get_timeseries", axis: SERIES_AXIS, change: CHANGE });
       }
       if (url.includes("/query/air")) {
@@ -155,7 +156,7 @@ function serverDecimals(): Set<string> {
 }
 
 async function loaded() {
-  await screen.findByTestId(/^card-(overview|snapshot)-sentence$/);
+  await screen.findByTestId("card-overview-sentence");
   await screen.findByTestId("card-sectors-sentence");
   await screen.findByTestId("card-places-sentence");
 }
@@ -322,7 +323,7 @@ describe("the workspace's state", () => {
   it("a scope read from the URL becomes the filter panel's values (the chips row is gone), and clearing each returns to the defaults", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
     mount("?sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
-    await screen.findByTestId("card-snapshot-sentence");
+    await screen.findByTestId("card-overview-sentence");
     expect(screen.queryByTestId("scope-chips")).toBeNull();
     openFilters();
     expect(screen.getByTestId("sector-select")).toHaveValue("power");
@@ -354,7 +355,7 @@ describe("the workspace's state", () => {
     // the province select writes `geo`, and the deck re-writes itself to the province's cards
     fireEvent.click(screen.getByTestId("place-picker"));
     fireEvent.click(screen.getByTestId("place-option-Punjab"));
-    await waitFor(() => expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
+    await waitFor(() => expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e."));
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "Punjab");
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "province");
     expect(screen.getByTestId("place-title")).toHaveTextContent("Punjab");
@@ -396,7 +397,7 @@ describe("the workspace's state", () => {
   it("Reset filters clears the level, the place, the sector, the gas and the year at once", async () => {
     const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
     mount("?level=adm2&sector=power&gas=CH4&period=FY2020-21", (e) => updates.push(e));
-    await screen.findByTestId("card-snapshot-sentence");
+    await screen.findByTestId("card-overview-sentence");
     openFilters();
     fireEvent.click(screen.getByTestId("reset-filters"));
     await waitFor(() => expect(updates[updates.length - 1].queryString).toBe(""));

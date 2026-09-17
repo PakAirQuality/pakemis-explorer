@@ -175,9 +175,10 @@ export type DrawerBodies = {
 /**
  * The selected geography's requests, a pure function of the URL state: the total, the one-key
  * sector breakdown (`reporting_sector` at every grain since rc54 - the district tables carry the
- * axis now), the spatial-view breakdown at ADM grain, the annual series
- * (refused by the release off the national scope, shown by name), the lineage at ADM grain and
- * the province envelope whose `derived` carries the placed / unallocated strings.
+ * axis now), the spatial-view breakdown at ADM grain, the annual series (answered at every grain
+ * from the by-year tables, fact_adm1_year / fact_adm2_year, AR5 - the release refuses ADM2 under
+ * AR6 and ADM1 under AR6 off the reference year, by name), the lineage at ADM grain and the
+ * province envelope whose `derived` carries the placed / unallocated strings.
  */
 export function drawerBodies(s: ExplorerState, months: string[]): DrawerBodies {
   const selection = selectionOf(s);

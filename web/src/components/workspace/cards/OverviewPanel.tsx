@@ -1,7 +1,7 @@
 "use client";
 /**
- * The national overview as ONE larger panel (the atlas pattern the briefing pointed at),
- * folding what were the snapshot and trend cards into a single composition:
+ * The overview as ONE larger panel (the atlas pattern the briefing pointed at), folding what
+ * were the snapshot and trend cards into a single composition:
  *
  *   sentence + figure + chip     the snapshot's own pieces, unchanged;
  *   the year rail                nine fiscal ticks, the chosen one flagged - CLICKING a
@@ -13,9 +13,13 @@
  *                                the seven air species) as a selector: clicking one
  *                                re-scopes the panel to that gas's metrics.
  *
- * Serves the national AND the chosen-gas scope; a sector, province or district
- * keeps its own card set, and a pollutant swaps to the air deck (which carries the
- * same rail).
+ * Serves EVERY scope since 2026-09-17 - national, gas, sector, province and district - so a
+ * clicked place keeps the nine years the country shows (the release answers the series at
+ * ADM1 and ADM2 from its by-year tables; what it refuses, ADM2 under AR6, it refuses by name
+ * inside the series block). A pollutant swaps to the air deck, which carries the same rail.
+ * The share sentence is the SERVER's own cell of the partition: a sector's or a gas's share of
+ * the national total, a province's of the allocated total; a district's total is a bounded
+ * interval and carries the badge instead.
  */
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
@@ -26,7 +30,8 @@ import { ContourMotif } from "@/components/ui/ContourMotif";
 import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import type { Scope } from "../cards";
 import { DeckCard, Pending } from "./DeckCard";
-import { scopeWholeWords, sentenceOf } from "./SnapshotCard";
+import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
+import { scopeWholeWords, sentenceOf, whatWords } from "./sentence";
 import { GasRail } from "../GasRail";
 import { YearRail } from "../YearRail";
 import { cellFor, rankedCells } from "./data";
@@ -40,10 +45,11 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
 
   const top = scope.kind === "national" ? rankedCells(deck.breakdown.data)[0] ?? null : null;
   const topName = top ? sectorLabel(labels, top.group?.[deck.bodies.breakdown.key]) : "";
-  // a chosen gas's share of the gas partition, from the server's own cell - folded
-  // into the sentence (the chip it used to ride on is gone)
+  // the selected cell's own share of its partition (a gas of the gas partition, a sector of the
+  // sector partition, a province of the province partition), from the server's own cell - folded
+  // into the sentence (the chip it used to ride on is gone); a district has no partition share
   const ranked = deck.bodies.ranked;
-  const mine = scope.kind === "gas" && ranked ? cellFor(deck.ranked.data, ranked.key, ranked.id) : null;
+  const mine = scope.kind !== "national" && scope.kind !== "district" && ranked ? cellFor(deck.ranked.data, ranked.key, ranked.id) : null;
   const gasShare = mine && mine.share_pct_short ? (
     <> That is <b className="num">{mine.share_pct_short} %</b> of {scopeWholeWords(scope)}
       {typeof mine.rank === "number" && deck.ranked.data ? <> — rank <b className="num">{String(mine.rank)}</b> of <b className="num">{String(deck.ranked.data.values.length)}</b></> : null}.
@@ -70,10 +76,11 @@ export function OverviewPanel({ id, scope, deck, place, title, open, onToggle }:
           <div className="relative flex flex-wrap items-baseline gap-x-2">
             <span className="num text-4xl font-semibold tracking-tight text-accent" data-testid="overview-display" title={`${cell.display} ${cell.unit}`}>{shown(cell)}</span>
             <span className="text-sm text-muted">{cellUnit(cell)}</span>
+            {isBounded(cell) && <IntervalBadge cell={cell} title={String((cell as Record<string, unknown>).interpretation ?? "")} />}
           </div>
         </div>
       ) : (
-        <Pending q={deck.total} what="the national total" />
+        <Pending q={deck.total} what={whatWords(scope, place)} />
       )}
 
       <YearRail periods={dims.fiscalPeriods} current={state.period} onPick={(p) => setState({ period: p })} labels={labels} />

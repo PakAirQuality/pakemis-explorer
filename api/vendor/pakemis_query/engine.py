@@ -281,7 +281,7 @@ class Engine:
     # --- query_air (the air beta) ---------------------------------------------------------
 
     AIR_GROUPS = ("pollutant", "sector_id", "category", "subitem", "province", "shape_id", "year", "period_id")
-    AIR_SECTORS = ("agriculture", "aviation", "power", "railways", "residential", "transport", "waste")
+    AIR_SECTORS = ("agriculture", "aviation", "fugitives", "industry", "ippu", "power", "railways", "residential", "transport", "waste")
 
     def query_air(self, request):
         """Native kt of a named species from the PakEmis-Air beta tables; never CO2e, and
@@ -300,8 +300,9 @@ class Engine:
                                               % (pl, ", ".join(sorted(pollutants))), dimension="pollutant", value=pl)
         for sec in q.sectors:
             if sec not in self.AIR_SECTORS:
-                raise E.NotEstimated("the air beta carries no %s layer; industry, IPPU and "
-                                     "fugitives are recorded NE in the completeness ledger" % sec,
+                raise E.NotEstimated("the air beta carries no %s layer; IPPU and fugitives are "
+                                     "recorded NE in the completeness ledger (industry entered "
+                                     "the covered panel at rc58)" % sec,
                                      "air_sector_ne")
         if q.geography_level not in GEOGRAPHY_LEVELS:
             raise E.UnknownDimensionValue("%r is not a geography level" % q.geography_level, dimension="geography_level")

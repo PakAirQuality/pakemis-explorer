@@ -15,10 +15,8 @@ import type { Deck } from "@/lib/queries";
 import type { DeckWants } from "@/lib/queries";
 import { cardTitle } from "@/components/overview/copy";
 import type { CardId, Scope } from "../cards";
-import { SnapshotCard } from "./SnapshotCard";
 import { OverviewPanel } from "./OverviewPanel";
 import { BreakdownCard } from "./BreakdownCard";
-import { TrendCard } from "./TrendCard";
 import { RankingCard } from "./RankingCard";
 import { PlacementCard } from "./PlacementCard";
 import { EvidenceCard } from "./EvidenceCard";
@@ -27,11 +25,9 @@ import { SourcesCard } from "./SourcesCard";
 /** The envelopes each card reads; the deck unions those of its OPEN cards and disables the rest. */
 export const CARD_NEEDS: Record<CardId, (keyof DeckWants)[]> = {
   overview: ["total", "ranked", "breakdown", "series"],
-  snapshot: ["total", "ranked", "breakdown"],
   sectors: ["breakdown"],
   categories: ["breakdown"],
   composition: ["breakdown"],
-  trend: ["series"],
   places: ["provinces"],
   peers: ["provinces", "peers"],
   placement: ["total"],
@@ -57,14 +53,10 @@ export function renderCard({ id, scope, deck, place, open, onToggle, onSector, p
   switch (id) {
     case "overview":
       return <OverviewPanel key={id} {...common} place={place} />;
-    case "snapshot":
-      return <SnapshotCard key={id} {...common} place={place} />;
     case "sectors":
     case "categories":
     case "composition":
       return <BreakdownCard key={id} {...common} onSector={onSector} selected={picked} />;
-    case "trend":
-      return <TrendCard key={id} {...common} place={place} />;
     case "places":
     case "peers":
       return <RankingCard key={id} {...common} />;

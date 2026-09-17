@@ -139,8 +139,10 @@ beforeEach(() => {
       if (url.includes("/tiles/")) return { raster: undefined, adm1: {}, adm2: {} };
       if (url.includes("/spatial/lineage/")) return envelope(LINEAGE, { request_type: "get_spatial_lineage" });
       if (url.includes("/timeseries")) {
-        const q = (body as { query?: { geography_ids?: string[] } } | undefined)?.query;
-        if (q?.geography_ids?.length) return SERIES_REFUSAL;
+        // the release answers the annual series at every grain (fact_adm1_year / fact_adm2_year, AR5);
+        // the one typed refusal left is a district under AR6
+        const q = (body as { query?: { geography_level?: string; gwp_basis?: string } } | undefined)?.query;
+        if (q?.geography_level === "adm2" && q?.gwp_basis === "AR6") return SERIES_REFUSAL;
         return envelope(SERIES, { request_type: "get_timeseries", axis: SERIES_AXIS, change: CHANGE });
       }
       const b = body ?? {};
@@ -197,8 +199,8 @@ function shownCards(): string[] {
 }
 const set = (search = "") => mount(search);
 async function ready() {
-  // the first card is the overview panel nationally, the snapshot elsewhere
-  await screen.findByTestId(/^card-(overview|snapshot)-sentence$/);
+  // every scope opens with the overview panel
+  await screen.findByTestId("card-overview-sentence");
 }
 
 describe("the deck's card set follows the scope", () => {
@@ -219,14 +221,16 @@ describe("the deck's card set follows the scope", () => {
     expect(screen.getByTestId("card-places")).toHaveTextContent("Spatial distribution");
     expect(await screen.findByTestId("card-places-sentence")).toHaveTextContent("Punjab carried 228.72 Mt of the allocated total — 50.6 %, the largest provincial share.");
   });
-  it("a sector chosen: its total against the national partition, its categories, its series, its provincial split", async () => {
+  it("a sector chosen: the same panel against the national partition (figure, rail, series), its categories, its provincial split", async () => {
     set("?sector=power");
     await ready();
-    expect(shownCards()).toEqual(["snapshot", "categories", "trend", "places"]);
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Sector overview");
-    expect(screen.getByTestId("snapshot-display")).toHaveTextContent("63.37");
-    // the share and the rank are the SERVER's, off the sector partition's own cell
-    expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("14.0 % of the national total · rank 2 of 2");
+    expect(shownCards()).toEqual(["overview", "categories", "places"]);
+    expect(screen.getByTestId("card-overview")).toHaveTextContent("Sector overview");
+    expect(screen.getByTestId("overview-display")).toHaveTextContent("63.37");
+    // the share and the rank are the SERVER's, off the sector partition's own cell, in the sentence
+    expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("That is 14.0 % of the national total — rank 2 of 2.");
+    expect(screen.getByTestId("year-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-series")).toBeInTheDocument();
     expect(screen.getByTestId("card-categories")).toHaveTextContent("Category breakdown");
     expect(await screen.findByTestId("card-categories-sentence")).toHaveTextContent("enteric fermentation was the largest source of emissions, contributing 151.66 Mt");
   });
@@ -240,13 +244,22 @@ describe("the deck's card set follows the scope", () => {
     expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("That is 55.0 % of the national total — rank 1 of 2.");
     expect(screen.getByTestId("card-sectors")).toHaveTextContent("Contributing sectors");
   });
-  it("a province selected: its total with the province partition's share and rank, its modules, the provinces ranked, what it retains", async () => {
+  it("a province selected: the same panel - its total with the province partition's share and rank, the rail and the nine-year series - its modules, the provinces ranked, what it retains", async () => {
     set("?geo=Punjab");
     await ready();
-    expect(shownCards()).toEqual(["snapshot", "composition", "peers", "placement"]);
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("Province overview");
-    expect(screen.getByTestId("card-snapshot-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e.");
-    expect(screen.getByTestId("snapshot-chip")).toHaveTextContent("50.6 % of the national allocated total · rank 1 of 2");
+    expect(shownCards()).toEqual(["overview", "composition", "peers", "placement"]);
+    expect(screen.getByTestId("card-overview")).toHaveTextContent("Province overview");
+    expect(screen.getByTestId("card-overview-sentence")).toHaveTextContent("In 2023–24, Punjab's allocated emissions were 228.72 Mt CO₂e. That is 50.6 % of the national allocated total — rank 1 of 2.");
+    // the nine-year composition the country shows, for the province: the rail and the series
+    // (the series asked at ADM1 for Punjab, the change sentence the server's)
+    expect(screen.getByTestId("year-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-series")).toBeInTheDocument();
+    expect(await screen.findByTestId("overview-change")).toHaveTextContent("By 2023–24, emissions had risen to 452.35 Mt CO₂e");
+    const series = posts.filter((p) => p.url.includes("/timeseries"));
+    expect(series.length).toBeGreaterThan(0);
+    expect((series[series.length - 1].body?.query as { geography_level?: string; geography_ids?: string[] }).geography_level).toBe("adm1");
+    expect((series[series.length - 1].body?.query as { geography_ids?: string[] }).geography_ids).toEqual(["Punjab"]);
+    expect(screen.queryByTestId("snapshot-chip")).toBeNull();
     expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest source of emissions, contributing 123.30 Mt");
     expect(await screen.findByTestId("card-peers-sentence")).toHaveTextContent("Punjab is 1 of 2 provinces, at 228.72 Mt (50.6 %).");
     expect(await screen.findByTestId("card-placement-sentence")).toHaveTextContent("Of Punjab's allocated total, 223.88 Mt CO₂e is placed at a finer grain and 4.84 Mt CO₂e is retained at province level");
@@ -255,14 +268,19 @@ describe("the deck's card set follows the scope", () => {
   it("a district selected: its total, its modules, its peers within its own province, then evidence and sources", async () => {
     set(`?level=adm2&geo=${SHAPE}`);
     await ready();
-    expect(shownCards()).toEqual(["snapshot", "composition", "peers", "evidence", "sources"]);
+    expect(shownCards()).toEqual(["overview", "composition", "peers", "evidence", "sources"]);
     expect(screen.getByTestId("deck")).toHaveAttribute("data-scope", "district");
     expect(screen.getByTestId("deck-header")).toHaveTextContent("EMISSIONS TRENDS");
     expect(screen.getByTestId("place-title")).toHaveTextContent("Lahore");
-    expect(screen.getByTestId("card-snapshot")).toHaveTextContent("District overview");
-    // the release bounds an ADM2 total: the card prints its interval string and its badge, and no share
-    expect(screen.getByTestId("snapshot-display")).toHaveTextContent("[14.30, 14.32]");
-    expect(screen.queryByTestId("snapshot-chip")).toBeNull();
+    expect(screen.getByTestId("card-overview")).toHaveTextContent("District overview");
+    // the release bounds an ADM2 total: the panel prints its interval string and its badge, and no share
+    expect(screen.getByTestId("overview-display")).toHaveTextContent("[14.30, 14.32]");
+    expect(screen.getByTestId("card-overview-sentence")).not.toHaveTextContent("rank");
+    // and the same rail and nine-year series, asked at ADM2 for the district
+    expect(screen.getByTestId("year-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-series")).toBeInTheDocument();
+    const series = posts.filter((p) => p.url.includes("/timeseries"));
+    expect((series[series.length - 1].body?.query as { geography_level?: string }).geography_level).toBe("adm2");
     expect(await screen.findByTestId("card-composition-sentence")).toHaveTextContent("agriculture was the largest source of emissions, contributing 2.85 Mt");
     expect(await screen.findByTestId("card-peers-sentence")).toHaveTextContent("Lahore is one of 1 districts in the same province");
   });
@@ -294,19 +312,19 @@ describe("the deck re-writes itself from the shared selection", () => {
     expect(shownCards()).toEqual(["overview", "sectors", "places"]);
 
     await act(async () => void patch({ sector: "power" }));
-    await waitFor(() => expect(shownCards()).toEqual(["snapshot", "categories", "trend", "places"]));
-    await waitFor(() => expect(screen.getByTestId("snapshot-display")).toHaveTextContent("63.37"));
+    await waitFor(() => expect(shownCards()).toEqual(["overview", "categories", "places"]));
+    await waitFor(() => expect(screen.getByTestId("overview-display")).toHaveTextContent("63.37"));
 
     await act(async () => void patch({ sector: null, gas: "CH4" }));
     await waitFor(() => expect(shownCards()).toEqual(["overview", "sectors"]));
     await waitFor(() => expect(screen.getByTestId("overview-display")).toHaveTextContent("248.75"));
 
     await act(async () => void patch({ gas: null, geo: "Punjab" }));
-    await waitFor(() => expect(shownCards()).toEqual(["snapshot", "composition", "peers", "placement"]));
+    await waitFor(() => expect(shownCards()).toEqual(["overview", "composition", "peers", "placement"]));
     await waitFor(() => expect(screen.getByTestId("place-title")).toHaveTextContent("Punjab"));
 
     await act(async () => void patch({ level: "adm2", geo: SHAPE }));
-    await waitFor(() => expect(shownCards()).toEqual(["snapshot", "composition", "peers", "evidence", "sources"]));
+    await waitFor(() => expect(shownCards()).toEqual(["overview", "composition", "peers", "evidence", "sources"]));
 
     await act(async () => void patch({ level: "adm1", geo: null }));
     await waitFor(() => expect(shownCards()).toEqual(["overview", "sectors", "places"]));
@@ -323,7 +341,7 @@ describe("the deck re-writes itself from the shared selection", () => {
     set("?geo=Punjab&sector=power");
     await ready();
     // the place chooses the card set; the sector still chooses the KEY the server is asked for
-    expect(shownCards()).toEqual(["snapshot", "composition", "peers", "placement"]);
+    expect(shownCards()).toEqual(["overview", "composition", "peers", "placement"]);
     const refused = await within(screen.getByTestId("card-composition")).findByTestId("refusal-card");
     expect(refused).toHaveTextContent("Refused: GrainUnavailable");
     expect(refused).toHaveTextContent("'category' is not a column the release carries at province grain");
@@ -334,6 +352,26 @@ describe("the deck re-writes itself from the shared selection", () => {
     expect(asked[asked.length - 1].body?.geography_level).toBe("adm1");
     // rc54: "module" is no longer a grouping any surface sends - one axis, at every grain
     expect(posts.some((p) => ((p.body?.group_by as string[] | undefined) ?? []).includes("module"))).toBe(false);
+  });
+});
+
+describe("a place keeps the country's nine years", () => {
+  it("clicking a rail tick in a province scope writes the period, and the place's own total is asked in that year", async () => {
+    set("?geo=Punjab");
+    await ready();
+    const mark = posts.length;
+    fireEvent.click(screen.getByTestId("rail-FY2020-21"));
+    await waitFor(() => expect(posts.slice(mark).some((p) => p.url.includes("/query/emissions") && (p.body?.periods as string[] | undefined)?.[0] === "FY2020-21" && p.body?.geography_level === "adm1")).toBe(true));
+    // the rail stays, the series stays: the panel is the same composition off the reference year
+    expect(screen.getByTestId("year-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-series")).toBeInTheDocument();
+  });
+  it("a district under AR6 shows the release's typed refusal inside the series block, never a blank", async () => {
+    set(`?level=adm2&geo=${SHAPE}&gwp=AR6`);
+    await ready();
+    const refused = await within(screen.getByTestId("overview-series")).findByTestId("refusal-card");
+    expect(refused).toHaveTextContent("Refused: GrainUnavailable");
+    expect(screen.getByTestId("year-rail")).toBeInTheDocument();
   });
 });
 

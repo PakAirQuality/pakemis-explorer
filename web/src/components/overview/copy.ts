@@ -75,10 +75,8 @@ export const INDEPENDENT_LINE = "This is an independent public-data reconstructi
  * Which cards a scope shows is workspace/cards.ts; these are only their words.
  */
 export const CARD_TITLES: Record<string, string> = {
-  snapshot: "Overview",
   sectors: "Emission sources",
   categories: "Category breakdown",
-  trend: "Change over time",
   places: "Spatial distribution",
   composition: "Composition",
   peers: "Peer comparison",
@@ -86,13 +84,11 @@ export const CARD_TITLES: Record<string, string> = {
   evidence: "Evidence",
   sources: "Sources",
   "national.overview": "National overview",
-  "national.snapshot": "National overview",
-  "sector.snapshot": "Sector overview",
+  "sector.overview": "Sector overview",
   "gas.overview": "Gas overview",
-  "gas.snapshot": "Gas overview",
   "gas.sectors": "Contributing sectors",
-  "province.snapshot": "Province overview",
-  "district.snapshot": "District overview",
+  "province.overview": "Province overview",
+  "district.overview": "District overview",
 };
 
 /** The title of a card in a scope: the scope's own words where it has them, else the card's. */

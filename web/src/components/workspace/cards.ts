@@ -18,7 +18,7 @@ import { geoGrain } from "@/lib/geography";
 import type { ExplorerState } from "@/lib/urlState";
 
 /** Every card the deck can show. The id is also the card's `data-testid` stem and its collapse key. */
-export const CARD_IDS = ["overview", "snapshot", "sectors", "categories", "trend", "places", "composition", "peers", "placement", "evidence", "sources"] as const;
+export const CARD_IDS = ["overview", "sectors", "categories", "places", "composition", "peers", "placement", "evidence", "sources"] as const;
 export type CardId = (typeof CARD_IDS)[number];
 
 export type Scope =
@@ -48,29 +48,32 @@ export function scopeOf(s: Pick<ExplorerState, "level" | "geo" | "sector" | "gas
 /**
  * The card set of each scope, in the order the deck stacks them.
  *
- * · Pakistan, all sectors, all gases — the total, where it comes from, how it changed, where it
- *   is placed.
- * · A sector — its total against the national partition, its IPCC categories, its own series,
- *   its provincial split.
- * · A gas — its total against the gas partition, which sectors emit it, its own series. No
- *   placement card: the release's placed / unallocated strings are a property of the geography,
- *   not of the gas.
- * · A province — its total, share and rank from the province partition, what it is made of, the
- *   five provinces ranked, and what the province retains unplaced.
- * · A district — its total, what it is made of, its peers within its own province, then the two
- *   cards the map drawer used to carry: the spatial evidence of the allocation and its sources.
+ * EVERY scope opens with the same overview panel (the atlas pattern): the figure, the nine-year
+ * rail, the nine-year series with the server's change sentence, and the gas rail. Through
+ * 2026-09-17 a sector, a province and a district opened with a single-year snapshot instead (a
+ * sector with a separate trend card, a place with none), so clicking Punjab reduced nine years to
+ * one; the panel now serves all five scopes, and the release answers its series at every grain
+ * (fact_adm1_year / fact_adm2_year, AR5) - what it refuses (ADM2 under AR6) it refuses by name.
  *
- * Off the reference year nothing here changes: the national cards are asked as usual and each
- * spatial card carries the release's own typed refusal instead of a figure.
+ * · Pakistan, all sectors, all gases — the panel, where it comes from, where it is placed.
+ * · A sector — the panel against the national partition, its IPCC categories, its provincial split.
+ * · A gas — the panel against the gas partition, which sectors emit it. No placement card: the
+ *   release's placed / unallocated strings are a property of the geography, not of the gas.
+ * · A province — the panel with its share and rank from the province partition, what it is made
+ *   of, the five provinces ranked, and what the province retains unplaced.
+ * · A district — the panel (a bounded total, no share), what it is made of, its peers within its
+ *   own province, then the two cards the map drawer used to carry: the spatial evidence of the
+ *   allocation and its sources.
+ *
+ * Off the reference year nothing here changes: the cards are asked as usual and each card the
+ * release cannot answer carries its own typed refusal instead of a figure.
  */
 const CARDS: Record<ScopeKind, readonly CardId[]> = {
-  // one LARGE panel nationally (the atlas pattern): figure + nine-year rail +
-  // series + the three gases, folding the old snapshot and trend cards into it
   national: ["overview", "sectors", "places"],
-  sector: ["snapshot", "categories", "trend", "places"],
+  sector: ["overview", "categories", "places"],
   gas: ["overview", "sectors"],
-  province: ["snapshot", "composition", "peers", "placement"],
-  district: ["snapshot", "composition", "peers", "evidence", "sources"],
+  province: ["overview", "composition", "peers", "placement"],
+  district: ["overview", "composition", "peers", "evidence", "sources"],
 };
 
 export function cardsFor(scope: Scope): CardId[] {
