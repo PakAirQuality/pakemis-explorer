@@ -59,6 +59,9 @@ const PRODUCTS = {
     { name: "pakemis_grid_0p05_monthly_survey", kind: "cube", formats: [fmt("pakemis_grid_0p05_monthly_survey", "nc", 3953003, "cubesur", "manifest")] },
     { name: "pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24", kind: "cube", formats: [fmt("pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24", "nc", 8649428, "cubeair", "manifest")] },
     { name: "pakemis_grid_0p1_edgar_aligned", kind: "cube", formats: [fmt("pakemis_grid_0p1_edgar_aligned", "nc", 3035658, "cubeedg", "manifest")] },
+    // rc57: the technical record behind the readable activity tables, and their column guide
+    { name: "fact_activity_source_details", kind: "table", table_kind: "fact", formats: [fmt("fact_activity_source_details", "csv", 40000000, "actdet")], rows: 101808, columns: ["Record ID", "source_id", "value", "unit"], primary_key: ["result_row_id"] },
+    { name: "dim_activity_columns", kind: "table", table_kind: "dim", formats: [fmt("dim_activity_columns", "csv", 60000, "actcol")], rows: 250, columns: ["file", "column", "meaning"], primary_key: ["file", "column"] },
   ],
   families: [
     { id: "annual", title: "Annual inventory", description: "Nine fiscal years by sector, IPCC category, component, gas, configuration and GWP basis, with every dimension table.", tables: ["fact_annual", "dim_gas"], formats: ["csv", "parquet"] },
