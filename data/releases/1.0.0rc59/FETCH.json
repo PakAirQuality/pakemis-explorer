@@ -1,0 +1,652 @@
+{
+ "digests": {
+  "release_manifest.json": "7e7fed3f559f0c1379ea8aa412bc9b1d0bfd58c074be68ac5ca21687713c874a",
+  "semantic_release.json": "bf9fef0dde2db46d595391c36dda50be45f9525289ec7ec3e434dd81af0b4316"
+ },
+ "fetched_at": "2026-09-17T15:33:29+00:00",
+ "files": {
+  "data/adm2_canonical.csv": {
+   "bytes": 28154,
+   "sha256": "c7436e78b285a24d4372e3990b1877eaf29345e47fed476cdfdf970474ead2c1"
+  },
+  "data/gis/BOUNDARY_SOURCES.json": {
+   "bytes": 821,
+   "sha256": "ee5567b95bee85dd6d700a6bbbcec2b1f34cce2710ee6c27d28b0970c6dfdd49"
+  },
+  "data/gis/PAK_ADM1.geojson": {
+   "bytes": 159152,
+   "sha256": "c7ff4e70bcf740cfba47b871a7c2b2b2b243b59e4c0656e6e1bc2a64e295d93a"
+  },
+  "data/gis/PAK_ADM2.geojson": {
+   "bytes": 921802,
+   "sha256": "f274cfc377b3b570b6fd620c2911b5e4acd14460f9cb48551747f1d698566f2e"
+  },
+  "data/method_registry.csv": {
+   "bytes": 15256,
+   "sha256": "a7d968fb615c5b8157a5a5d502eae180d3e6e772b8c28245550a2b1db7938e86"
+  },
+  "data/registries/allowed_grid_fallbacks.csv": {
+   "bytes": 3144,
+   "identity": "manifest_sources",
+   "sha256": "0243b69ca6d1be8383f955ebbd4b713494f36bd69803d695da11074ec469cd9d",
+   "source_path": "data/allowed_grid_fallbacks.csv"
+  },
+  "data/registries/benchmarks.csv": {
+   "bytes": 20686,
+   "identity": "manifest_sources",
+   "sha256": "5ac345b4b540101a4b25f2e1729424d55625962b4a59abcae481a699f30e0611",
+   "source_path": "data/benchmarks.csv"
+  },
+  "data/registries/data_gaps.csv": {
+   "bytes": 109671,
+   "identity": "manifest_sources",
+   "sha256": "e71b2bc7d9b6ac8e6431c92ad5f6830c47f4eb31efbb775f6cb6f01149555333",
+   "source_path": "data/data_gaps.csv"
+  },
+  "data/registries/emission_factors.csv": {
+   "bytes": 93802,
+   "identity": "manifest_sources",
+   "sha256": "a2a15d92f74e3d225aa77982ae2e367ff3c9c72ab4fadc6f032111f025e0c44e",
+   "source_path": "data/emission_factors.csv"
+  },
+  "data/registries/geometry_sets.csv": {
+   "bytes": 6749,
+   "identity": "manifest_sources",
+   "sha256": "105b8615ae2ac5f24d9f087fabb88e672a1b0c4b8fc573da6d545f34e9312c4a",
+   "source_path": "data/geometry_sets.csv"
+  },
+  "data/registries/national_uncertainty_parameters.csv": {
+   "bytes": 146001,
+   "identity": "fetch",
+   "sha256": "7ed9e7d61541089909a06d3a2ad704f2800955d1ad190d8c1a05aee7a4850bd6",
+   "source_path": "outputs/national_uncertainty_parameters.csv"
+  },
+  "data/registries/pakemis_grid_fallbacks.csv": {
+   "bytes": 71717,
+   "identity": "manifest_products",
+   "sha256": "08e57ab78d76544eae50c42f99def4a01a6ff8221da4683cb31a32b618e77d10",
+   "source_path": "outputs/pakemis_grid_fallbacks.csv"
+  },
+  "data/registries/pakemis_source_register.csv": {
+   "bytes": 130146,
+   "identity": "manifest_products",
+   "sha256": "b453070d364981e290ddbffb1ce3f36e3b05faab08ac8b480af41265ed1afe47",
+   "source_path": "outputs/pakemis_source_register.csv"
+  },
+  "data/registries/pakemis_source_streams.csv": {
+   "bytes": 136430,
+   "identity": "manifest_products",
+   "sha256": "4931da40d723ce05b2c7ede4a7d237679c72911c14188efb4e8df8ea21ecea03",
+   "source_path": "outputs/pakemis_source_streams.csv"
+  },
+  "data/registries/pakemis_temporal_profiles.csv": {
+   "bytes": 11316488,
+   "identity": "manifest_products",
+   "sha256": "099af9654318069334642edc48ea594af33d726482aca9476333a2547d8bb524",
+   "source_path": "outputs/pakemis_temporal_profiles.csv"
+  },
+  "data/registries/pakemis_validation_catalog.csv": {
+   "bytes": 71392,
+   "identity": "manifest_products",
+   "sha256": "c875bca7ec8e133af3e73948c1751d0202fb2e4ceb80a806478a691a0f51b50a",
+   "source_path": "outputs/pakemis_validation_catalog.csv"
+  },
+  "data/registries/pakemis_validation_scorecard.csv": {
+   "bytes": 4496,
+   "identity": "manifest_products",
+   "sha256": "4777db08fd8d25a77f21fca15b09e7d938ff2d57b3831d5edfef30b7ce311599",
+   "source_path": "outputs/pakemis_validation_scorecard.csv"
+  },
+  "data/registries/pakemis_validation_sector_scorecard.csv": {
+   "bytes": 6984,
+   "identity": "manifest_products",
+   "sha256": "3dc4587a76545bf0a8c96332f1f4c1619dc9657037ebc0c73edc45a3430daad9",
+   "source_path": "outputs/pakemis_validation_sector_scorecard.csv"
+  },
+  "data/registries/parameters.csv": {
+   "bytes": 6962,
+   "identity": "manifest_sources",
+   "sha256": "31e5f495842d6cf3dab6e550fcc718c2ac64fa0aec6eda5ebfb9cee097ae900a",
+   "source_path": "data/parameters.csv"
+  },
+  "data/registries/public_documents.csv": {
+   "bytes": 1110,
+   "identity": "manifest_sources",
+   "sha256": "22b16d4280c096ebb0017eef1affc1a6a3e692a8e247b040aa215d28619719dc",
+   "source_path": "data/public_documents.csv"
+  },
+  "data/registries/release_heights.csv": {
+   "bytes": 3763,
+   "identity": "manifest_sources",
+   "sha256": "f119d92e401c54f96070b99eea0f3108c5df1baa95d00e6f023dcf01cb8eefa1",
+   "source_path": "data/release_heights.csv"
+  },
+  "data/registries/source_documents.csv": {
+   "bytes": 58916,
+   "identity": "manifest_sources",
+   "sha256": "0a796ffb87adf65737e07a90d55e7ec1f67d2513075d5d1494940e2ba50243e2",
+   "source_path": "data/source_documents.csv"
+  },
+  "data/registries/stream_geometry.csv": {
+   "bytes": 9361,
+   "identity": "manifest_sources",
+   "sha256": "d345958a562fbdf20c606f57fe81eaef11400ad3a92ebd75e0ece19df49f14ac",
+   "source_path": "data/stream_geometry.csv"
+  },
+  "data/registries/stream_grid_proxy.csv": {
+   "bytes": 5626,
+   "identity": "manifest_sources",
+   "sha256": "1889323f11c0da4fca5231dd0bebb118ae7ddacfdccbd08b61c5423a6e26b62a",
+   "source_path": "data/stream_grid_proxy.csv"
+  },
+  "data/registries/temporal_profiles.csv": {
+   "bytes": 10650,
+   "identity": "manifest_sources",
+   "sha256": "9dfaca876f5cb1229d5983bcbc50290c1c81ec9dbf78e754fbd8e26b5c616991",
+   "source_path": "data/temporal_profiles.csv"
+  },
+  "data/registries/validation_catalog.csv": {
+   "bytes": 68943,
+   "identity": "manifest_sources",
+   "sha256": "ee602b8696583c7fdd8246f7cf36580fecff9569978a5d44fc885185a41ff898",
+   "source_path": "data/validation_catalog.csv"
+  },
+  "outputs/pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24.nc": {
+   "bytes": 8678067,
+   "sha256": "634ea4554d28c4971eda51804d33834c7a11b927f92638538b3cfb005e7acb77"
+  },
+  "outputs/pakemis_air_grid_0p05_annual_survey_fy2015_16_fy2023_24.nc": {
+   "bytes": 8728429,
+   "sha256": "1ec138737ca3a324e3d7774c5b85281e1fe4dcbc22e3e03db6f27e36505dc8fc"
+  },
+  "outputs/pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24.nc": {
+   "bytes": 9507576,
+   "sha256": "827681a31e238a8e635389b15e2e9af3ea086e9f5934b33210331bd4685218f5"
+  },
+  "outputs/pakemis_grid_0p05_monthly.nc": {
+   "bytes": 6311499,
+   "sha256": "8dbaeff3ad47c1ba8d830d2bb50dbe403040e958a45267a982efea5167fd8eaa"
+  },
+  "outputs/pakemis_grid_0p05_monthly_survey.nc": {
+   "bytes": 3953003,
+   "sha256": "e6372ddf08df86558a0b1075f416fb2add2cf8419a0a0859699f6a599cedc25b"
+  },
+  "outputs/pakemis_grid_0p1_edgar_aligned.nc": {
+   "bytes": 3035658,
+   "sha256": "d81ce25b1953f7210353320df90583c74c6c8c6f10847bc08e94b1584072c652"
+  },
+  "outputs/release_manifest.json": {
+   "bytes": 147039,
+   "sha256": "7e7fed3f559f0c1379ea8aa412bc9b1d0bfd58c074be68ac5ca21687713c874a"
+  },
+  "outputs/semantic/dim_activity_columns.csv": {
+   "bytes": 38597,
+   "sha256": "a996471fe907060732a1b6fe38e86fe83bec652f40f8f2a9b7352bcb2f2cbdf0"
+  },
+  "outputs/semantic/dim_activity_columns.parquet": {
+   "bytes": 10792,
+   "sha256": "f1feb1d6d1870d218bca5474bc294cc9fbc17ba2e732f2ac082651acc16222cb"
+  },
+  "outputs/semantic/dim_category.csv": {
+   "bytes": 10882,
+   "sha256": "a6047dc09d3360e2985d8b23eedeb561db9441160d90cabb07a973381fa1e232"
+  },
+  "outputs/semantic/dim_category.parquet": {
+   "bytes": 9989,
+   "sha256": "4411c5f9da0c7a13349bddcb7f2cb699f137454ac7f6307d682be952f408e236"
+  },
+  "outputs/semantic/dim_configuration.csv": {
+   "bytes": 21098,
+   "sha256": "0678b27bc16df85b476c442639b12549b3f93b303413ff9bfa6bf24b955c994a"
+  },
+  "outputs/semantic/dim_configuration.parquet": {
+   "bytes": 18222,
+   "sha256": "3d4c5d5d7054150a18e6e6c0086a14a89b0bede1b4c2741919b5a2ad54794b09"
+  },
+  "outputs/semantic/dim_evidence_class.csv": {
+   "bytes": 1326,
+   "sha256": "237654c6d7564a48b092990ee8e3b385cfc7006f6ede62b1e513bcec880e67d1"
+  },
+  "outputs/semantic/dim_evidence_class.parquet": {
+   "bytes": 2631,
+   "sha256": "1676a915ecac2ea1b5ac0f37f12be1031bde7846ed0e40d61c25aacbaf83f619"
+  },
+  "outputs/semantic/dim_gas.csv": {
+   "bytes": 232,
+   "sha256": "8fffa255c206d709a254f359c402848c92b565683503b86ed52165403b057ce5"
+  },
+  "outputs/semantic/dim_gas.parquet": {
+   "bytes": 1556,
+   "sha256": "f55dc475f0bf48acbed9ee0f45330c5d6d3033fcf96aa56a510752664285c079"
+  },
+  "outputs/semantic/dim_geography.csv": {
+   "bytes": 26471,
+   "sha256": "d1504f58816565358bcee9d01e1cfecababba40e80aab1d281b3221d113172f1"
+  },
+  "outputs/semantic/dim_geography.parquet": {
+   "bytes": 16512,
+   "sha256": "f8ff6fc9074e09df9b1993dfd76587358e0da6935845d4a1ab456249f8a753b0"
+  },
+  "outputs/semantic/dim_gwp.csv": {
+   "bytes": 5164,
+   "sha256": "984757620a6aa4739fb76014b87e461549a7ae23d3eff1c52de02bc6e03040c4"
+  },
+  "outputs/semantic/dim_gwp.parquet": {
+   "bytes": 3775,
+   "sha256": "439699d7a0091d6245fdfab80ec6053145d024d91f0f5a287460da6e841c3ba6"
+  },
+  "outputs/semantic/dim_month.csv": {
+   "bytes": 8760,
+   "sha256": "57bc33e29ef865397a2fe0c19392dee028712d19279d122d6218e268780123e8"
+  },
+  "outputs/semantic/dim_month.parquet": {
+   "bytes": 7957,
+   "sha256": "2e1f16e67f4ccb326c9f5f513b76ec05e269386dee6ba4574234e06b375da153"
+  },
+  "outputs/semantic/dim_notation_key.csv": {
+   "bytes": 275,
+   "sha256": "8f49230301a4b00c9bcbd25185ed20d3833f465fbb9560d9a758145fcc4f45c0"
+  },
+  "outputs/semantic/dim_notation_key.parquet": {
+   "bytes": 1514,
+   "sha256": "e7aa79ece5cdf475b57404ec065d3c9a2595961d40efe8aaf00c0c7fc7c0d1a6"
+  },
+  "outputs/semantic/dim_period.csv": {
+   "bytes": 8908,
+   "sha256": "5869ff420e74e5333a97b900d32076a8c1ac0421386d6e7a437f86a423509e1a"
+  },
+  "outputs/semantic/dim_period.parquet": {
+   "bytes": 5939,
+   "sha256": "7b43a55be0fb293e9f8dd1dba00abb05195d82a7d9d3cfb1f021edbf81da8e0e"
+  },
+  "outputs/semantic/dim_pollutant.csv": {
+   "bytes": 1192,
+   "sha256": "293010e4103c083d437a8d81c922d3f011b9abb70f1fcd86b73f51f4bc221bf2"
+  },
+  "outputs/semantic/dim_pollutant.parquet": {
+   "bytes": 2839,
+   "sha256": "74a9ff5b27d9a419646e27e50925b03184a32d25e2b218d3f75025b94a2ca03e"
+  },
+  "outputs/semantic/dim_stream.csv": {
+   "bytes": 99995,
+   "sha256": "752330baf683bb38a43d4868796d7af10781497fa20c2ea3798e866a804e1909"
+  },
+  "outputs/semantic/dim_stream.parquet": {
+   "bytes": 27182,
+   "sha256": "40b76a659db7b81edbd468970ec6743565e8be77f3605c740aaec805f0d1ecbe"
+  },
+  "outputs/semantic/fact_activity_aviation.csv": {
+   "bytes": 1727159,
+   "sha256": "d738ff5632eeaa1af063a31e2417485f117bc928dd02eb5dfb2818bcdf2eba8b"
+  },
+  "outputs/semantic/fact_activity_aviation.parquet": {
+   "bytes": 192268,
+   "sha256": "a2aea7a1f0f317cde07238aa2af13f072fea523cd36f8c1a927d9651b9347733"
+  },
+  "outputs/semantic/fact_activity_crops.csv": {
+   "bytes": 2930997,
+   "sha256": "1b29d1a619b96ade61003d4ce468f1f534f4e636d165565d3e69ee2af06dd826"
+  },
+  "outputs/semantic/fact_activity_crops.parquet": {
+   "bytes": 354032,
+   "sha256": "ffdcc7bdb6ffa6b47f72615bc1f71d7e64cf618fde73841e82799bcf5fefb76a"
+  },
+  "outputs/semantic/fact_activity_fertiliser.csv": {
+   "bytes": 1255084,
+   "sha256": "a4803e4c97929de4d21f638ac1ff7ed75af2fab4c267218fa3c4f7cb5213552d"
+  },
+  "outputs/semantic/fact_activity_fertiliser.parquet": {
+   "bytes": 134278,
+   "sha256": "e2841964e2e2a95477e17d0cccf1b4470b40a676f6aa9aa4c895b7087f7acb57"
+  },
+  "outputs/semantic/fact_activity_fuel_sales_area.csv": {
+   "bytes": 16100928,
+   "sha256": "aed9ec155c33eacd1305656c54e54e343a1c3a7e73bda9a3bd52b584f144ae01"
+  },
+  "outputs/semantic/fact_activity_fuel_sales_area.parquet": {
+   "bytes": 1362014,
+   "sha256": "8ef2bd0fa1077b3bc0c1473ee361a333d52cf0dcfa0367bb1d362146e869b078"
+  },
+  "outputs/semantic/fact_activity_fuel_sales_national.csv": {
+   "bytes": 1587076,
+   "sha256": "9601e1702b88314b7b21ad0b57080f186b4e9dfcd0ddfffff1871f830af8c25e"
+  },
+  "outputs/semantic/fact_activity_fuel_sales_national.parquet": {
+   "bytes": 136182,
+   "sha256": "15d3218ee7ae8d25139bde086f58bdf7bccc4150085c1e6b8aed537e96485459"
+  },
+  "outputs/semantic/fact_activity_gas_network.csv": {
+   "bytes": 10925,
+   "sha256": "227a5779a330f45a1caedcc093bc6c3f38b14182caf0b94f3db6151e9765cb08"
+  },
+  "outputs/semantic/fact_activity_gas_network.parquet": {
+   "bytes": 6955,
+   "sha256": "d695de40fb98499f11fcfa666fcb567684f3c097b57c2523306e8e5bb8df7029"
+  },
+  "outputs/semantic/fact_activity_gas_supply.csv": {
+   "bytes": 45796,
+   "sha256": "0f494e5397c12ee7ab953c964d7ff78af6c688d7529c7dee54a7613b35756de1"
+  },
+  "outputs/semantic/fact_activity_gas_supply.parquet": {
+   "bytes": 11115,
+   "sha256": "104ee20a6171203e2159ea7b1b082d51bb27e017bebd942ee613247a6fb5cbfe"
+  },
+  "outputs/semantic/fact_activity_household_fuel.csv": {
+   "bytes": 226838,
+   "sha256": "dcd198b57e7be066d008b23dcbcc31562d605b47b6bca2534ca6ad035a45c133"
+  },
+  "outputs/semantic/fact_activity_household_fuel.parquet": {
+   "bytes": 27870,
+   "sha256": "8cd7644df985496c7a5ccef05661024c318172785c2cc0fe9e9e4556b5330e83"
+  },
+  "outputs/semantic/fact_activity_industry_fuel.csv": {
+   "bytes": 550843,
+   "sha256": "465cd5e55e3a34a2334076cfe94cb8764e7994b4180646c61e0e157e486b8c06"
+  },
+  "outputs/semantic/fact_activity_industry_fuel.parquet": {
+   "bytes": 64506,
+   "sha256": "3fc65bf1eca399fec33185e0cf73a1703ed0fe5e575b0df47fb7984f215e863c"
+  },
+  "outputs/semantic/fact_activity_industry_production.csv": {
+   "bytes": 414087,
+   "sha256": "2c9cd3ca205b0f9ba12db70cda2bca7dce68f47663d352f02bc9ee208cfcf6c2"
+  },
+  "outputs/semantic/fact_activity_industry_production.parquet": {
+   "bytes": 52431,
+   "sha256": "24d87fcff697eda952d804d279bf3447f1b35297980591f738d75e7707765cd9"
+  },
+  "outputs/semantic/fact_activity_livestock.csv": {
+   "bytes": 304337,
+   "sha256": "49d76e708de3f0d4edca95b02b40809ad494b4f88cc957de3c3d68186a5386c9"
+  },
+  "outputs/semantic/fact_activity_livestock.parquet": {
+   "bytes": 49639,
+   "sha256": "d2b5505fb2c8c3c18d30a34d13460a091fb58e7342d23c1010ba7da05d5fe48c"
+  },
+  "outputs/semantic/fact_activity_power_monthly.csv": {
+   "bytes": 6026587,
+   "sha256": "807fd43916364ba7e4685bec12a300e3ba1ec827881f822dbf2a47d9bbf3cdc1"
+  },
+  "outputs/semantic/fact_activity_power_monthly.parquet": {
+   "bytes": 573835,
+   "sha256": "f00198c82f29ecb8a8cef481814423f663a9c2e91c22ec639414350d81f5ba71"
+  },
+  "outputs/semantic/fact_activity_power_plants.csv": {
+   "bytes": 619311,
+   "sha256": "c1d8b850517afbd8b89a04a0272c2c9d8f9eb4cae210af44887a2024b6ca7582"
+  },
+  "outputs/semantic/fact_activity_power_plants.parquet": {
+   "bytes": 69472,
+   "sha256": "cc5ceb5352ac08aec4fa31bd078e416de674b8f3a33b8d636b9dddb9409c4e89"
+  },
+  "outputs/semantic/fact_activity_railways.csv": {
+   "bytes": 18195,
+   "sha256": "99b863ef95d4d51e2f2510343827c84dcea10e7b43a82c020eba7e53eb0590a5"
+  },
+  "outputs/semantic/fact_activity_railways.parquet": {
+   "bytes": 8373,
+   "sha256": "5e06dc63250c79b369738860d6e02c6a0609a734e7d25307ba453b715bc4e0cd"
+  },
+  "outputs/semantic/fact_activity_source_details.csv": {
+   "bytes": 44426162,
+   "sha256": "b26cbc5abe00f7a46c32ea4754e7090642bcccb906912c8bdb3242fce0b0fd1c"
+  },
+  "outputs/semantic/fact_activity_source_details.parquet": {
+   "bytes": 6183334,
+   "sha256": "474979e1cd237473c91624b5a7f477f2f457c6d5a8b588cf3733854c76cfabae"
+  },
+  "outputs/semantic/fact_activity_vehicles.csv": {
+   "bytes": 6927140,
+   "sha256": "aac956e016c018b6ba6d253cbe1bfd574625ad2e6e7ad0196987f52b530efffb"
+  },
+  "outputs/semantic/fact_activity_vehicles.parquet": {
+   "bytes": 452506,
+   "sha256": "6c737460f8fb8a4502296702429f091ba6777b2fb1589a0ca0ee2d109b80e4f9"
+  },
+  "outputs/semantic/fact_activity_waste_flows.csv": {
+   "bytes": 4256,
+   "sha256": "7f3e156a699dc251a556fba3415abc4db0fb9719789e399c53aa9cec4115e947"
+  },
+  "outputs/semantic/fact_activity_waste_flows.parquet": {
+   "bytes": 5780,
+   "sha256": "68847d3d193a74dd67280b3c4ba9e092abb13fc6e79abb8a04485d3b1770de42"
+  },
+  "outputs/semantic/fact_activity_waste_services.csv": {
+   "bytes": 86892,
+   "sha256": "5241e40417fd736323522754562dea83b87ce5ab71d531a833f9cb8b58c36fb6"
+  },
+  "outputs/semantic/fact_activity_waste_services.parquet": {
+   "bytes": 13862,
+   "sha256": "78b8fcd41b6f8a4d130d7697955620c1bc37ac0df862568b4be375f18443fd5c"
+  },
+  "outputs/semantic/fact_adm1_month.csv": {
+   "bytes": 3492732,
+   "sha256": "3e7448c183a7d4dc06b61488acd27efa0932e06a3a8ccbd6e5218c586349be53"
+  },
+  "outputs/semantic/fact_adm1_month.parquet": {
+   "bytes": 704222,
+   "sha256": "685ca9b9ca13c0e5b6a42ce0b7aa63afab9d496c2d34a26060218248fe117f8c"
+  },
+  "outputs/semantic/fact_adm1_year.csv": {
+   "bytes": 1447347,
+   "sha256": "63b77bd65f761a7319f6003032de50b2ae2beeed41dc1a3d2d8f5ec3a17d75f5"
+  },
+  "outputs/semantic/fact_adm1_year.parquet": {
+   "bytes": 436618,
+   "sha256": "39b0e3e893be17ba49ab47e3fe0ba79c08b39e8806d1bacd9151a959b46a734f"
+  },
+  "outputs/semantic/fact_adm2_month.csv": {
+   "bytes": 9652654,
+   "sha256": "35109e4af3bc2589bbf64eb1b1096a23f961345da0e21831e79d38db947e6112"
+  },
+  "outputs/semantic/fact_adm2_month.parquet": {
+   "bytes": 2188484,
+   "sha256": "5239e96dbc966e459d02168885457f9ae304f0333179e4aa719614b3e28da542"
+  },
+  "outputs/semantic/fact_adm2_year.csv": {
+   "bytes": 6691971,
+   "sha256": "512867e7997e1d458c8cab6145001788cb776037fbe85fd0d8a7d714e7ff8ce0"
+  },
+  "outputs/semantic/fact_adm2_year.parquet": {
+   "bytes": 1668641,
+   "sha256": "f4de8d74ebae0723f2a8a95ee4c8c58be55abf1c12674ca32f703bde56d61b30"
+  },
+  "outputs/semantic/fact_air_absence_screening.csv": {
+   "bytes": 19193,
+   "sha256": "9f5a22b39d0b68c58d3f598a50c95dacd8559dc0e238cdf7dacad52a08c5fa68"
+  },
+  "outputs/semantic/fact_air_absence_screening.parquet": {
+   "bytes": 6949,
+   "sha256": "2d0ea97c56e86bdc481957e12bfab2f8d88076c29b33dd2dfb0c9c399fdca094"
+  },
+  "outputs/semantic/fact_air_adm1.csv": {
+   "bytes": 344705,
+   "sha256": "d0f034a7cc8bd91a4969882f9007f55095b9e947bd13efc4cbad17677d03df66"
+  },
+  "outputs/semantic/fact_air_adm1.parquet": {
+   "bytes": 82436,
+   "sha256": "4f2ba41f6978eeacbf88626014dc3d5fe1b14cedf9570e4aa6b10693a6965e49"
+  },
+  "outputs/semantic/fact_air_adm1_year.csv": {
+   "bytes": 3283547,
+   "sha256": "8635c83b3c477e92a795232be3cc462fe0bee20cd637238f29fdf5f2649bd3a6"
+  },
+  "outputs/semantic/fact_air_adm1_year.parquet": {
+   "bytes": 790133,
+   "sha256": "7236beaf40a71fefe365e3b2d59dd869108b97c94b5b272e1c8d012cb1b42da9"
+  },
+  "outputs/semantic/fact_air_adm2.csv": {
+   "bytes": 9037384,
+   "sha256": "f036ea988d2eac23d95f2b79c14cfeec2e5fdfcd6157e72cdeae1be5ca3f5566"
+  },
+  "outputs/semantic/fact_air_adm2.parquet": {
+   "bytes": 1648350,
+   "sha256": "e004a03abdf6e8d774c966243102acc65207c6671a599d1ae06746cc83295894"
+  },
+  "outputs/semantic/fact_air_adm2_year.csv": {
+   "bytes": 18365091,
+   "sha256": "702df0bf1e63b8c27c561a2990de0535bfbf9fabc808181fe416b612a4d66707"
+  },
+  "outputs/semantic/fact_air_adm2_year.parquet": {
+   "bytes": 4462677,
+   "sha256": "c9646526a4715de1c5052d1a174d6f08b6374c6517479acd9ac1afb8521293a9"
+  },
+  "outputs/semantic/fact_air_annual.csv": {
+   "bytes": 49619,
+   "sha256": "b97fbb4884bb1180c9d4d57d38f7fefec727c56ecc26109d7aaba4639e40df52"
+  },
+  "outputs/semantic/fact_air_annual.parquet": {
+   "bytes": 21144,
+   "sha256": "3929564349195f4db10556f1cf2b24fcfa83d75f71ccb285e2ea7a6d7a662f1d"
+  },
+  "outputs/semantic/fact_air_lahore.csv": {
+   "bytes": 383690,
+   "sha256": "3c9c4ae33c888f099d744d21d4e0ee2ef4f41f9232ca9b933eb062f751d6f871"
+  },
+  "outputs/semantic/fact_air_lahore.parquet": {
+   "bytes": 46863,
+   "sha256": "95cc8825daac7ca9faf267bf5352735d024f2dc980293f36f6d0fe7364fb60f3"
+  },
+  "outputs/semantic/fact_air_panel.csv": {
+   "bytes": 176469,
+   "sha256": "ef6c91c1740d9867b0525e8401b4f810b08d37b4d49dd17720ee04075298fdd3"
+  },
+  "outputs/semantic/fact_air_panel.parquet": {
+   "bytes": 51015,
+   "sha256": "4a44a5c5e060125278625648d148ccb6ec17580bf1900dc3d984c081e6de1fd0"
+  },
+  "outputs/semantic/fact_air_source_classes.csv": {
+   "bytes": 734509,
+   "sha256": "f8373564bdc330740be54c702a5f611478627297ba68c6a985d683006af5b954"
+  },
+  "outputs/semantic/fact_air_source_classes.parquet": {
+   "bytes": 78208,
+   "sha256": "6fce732082602c61e327208e515bbbeaac8b989496483bf08f6930cdc6dbafde"
+  },
+  "outputs/semantic/fact_air_timeseries.csv": {
+   "bytes": 34639,
+   "sha256": "31e3bf007f26250eac5dbb35677fa66f370a5d17e99b4f7ba2ba2a9af21444aa"
+  },
+  "outputs/semantic/fact_air_timeseries.parquet": {
+   "bytes": 21863,
+   "sha256": "a7116541bb7a6d553393f14a05cb732c08bc4f22d5d0d72d23219f1f68e799c1"
+  },
+  "outputs/semantic/fact_annual.csv": {
+   "bytes": 712927,
+   "sha256": "606066c3af050a8a91a9e2d5c3a61a9266426a06df7a9b8d093d8e0d774e3d07"
+  },
+  "outputs/semantic/fact_annual.parquet": {
+   "bytes": 116179,
+   "sha256": "9a88e28fae6b30fcdb41de0338589a5a7c16f5c9dbceeb79a0f92eab77ae02b7"
+  },
+  "outputs/semantic/fact_annual_calendar.csv": {
+   "bytes": 23211,
+   "sha256": "b339d32c85b47c8467fd6e85109fab1bd2268b7eb600fdd890732e59fdb68d63"
+  },
+  "outputs/semantic/fact_annual_calendar.parquet": {
+   "bytes": 12738,
+   "sha256": "ad5c65f106e7c9bf6d40aefaa083feea8a1789a50e1715778afc7b61a323d3c7"
+  },
+  "outputs/semantic/fact_completeness.csv": {
+   "bytes": 55186,
+   "sha256": "3191d52757dd0d9cae497ecd39c4d2eb8f404b8d383b13bd138bea76c6cf7bf1"
+  },
+  "outputs/semantic/fact_completeness.parquet": {
+   "bytes": 38842,
+   "sha256": "b5aa303a2566b252508725d2951f94f37b8c3209031e862b6a5e64aa9d40cf22"
+  },
+  "outputs/semantic/fact_completeness_mass.csv": {
+   "bytes": 14773,
+   "sha256": "3a50898aff00ed1ea0af73b319ad80dd385e7e29b0bff9f3f06d9d6a13bd35bd"
+  },
+  "outputs/semantic/fact_completeness_mass.parquet": {
+   "bytes": 14667,
+   "sha256": "7ecf24d7f5525a8af7d5e1254ab7416e3bd523ba994abed40bdc2b884c69d83c"
+  },
+  "outputs/semantic/fact_evidence.csv": {
+   "bytes": 52635,
+   "sha256": "6760c5013b0cd7d1614d5344ea346e3b66852e57479edac8e0683dd36d12c50d"
+  },
+  "outputs/semantic/fact_evidence.parquet": {
+   "bytes": 18544,
+   "sha256": "5b55dbecfa7892892a2dbf56e46b6e81ba8b2658f43f7ff5f414fef48e3cedc6"
+  },
+  "outputs/semantic/fact_monthly.csv": {
+   "bytes": 8153981,
+   "sha256": "d07b72cc7578618ae14d1776c64ee2b2d9b9d06143f4ad794bbbfe0c4426e828"
+  },
+  "outputs/semantic/fact_monthly.parquet": {
+   "bytes": 1166547,
+   "sha256": "f74cabbed6f170eabd4fa54aa3b243ea1b98e6a96167407925eb4c91a583420e"
+  },
+  "outputs/semantic/fact_transfer.csv": {
+   "bytes": 19652,
+   "sha256": "5d739581e746c386d6ff380d34466ca3f7ab9cf17379e740c237af8ec36ac0af"
+  },
+  "outputs/semantic/fact_transfer.parquet": {
+   "bytes": 13997,
+   "sha256": "7736fc530c6517fc15acba905d02f9b514cd527444548fc5eb7dfa96f49403db"
+  },
+  "outputs/semantic/fact_unallocated.csv": {
+   "bytes": 53655,
+   "sha256": "deb59969d59c903cefb8897902976c820d2e56312548d0869b26a1f898a64266"
+  },
+  "outputs/semantic/fact_unallocated.parquet": {
+   "bytes": 15262,
+   "sha256": "2c7880e8afe2a5768a2c881b71de883b976079ebd2021e8ff3a1ddc64664a532"
+  },
+  "outputs/semantic/fact_uncertainty.csv": {
+   "bytes": 69646,
+   "sha256": "9004006514a7d4911526d69ccba7ae7ef84408a4bef4400cd4fb64d304d5bb3f"
+  },
+  "outputs/semantic/fact_uncertainty.parquet": {
+   "bytes": 18439,
+   "sha256": "20e2191e218caa3a3b107a1b406d638a6881e820ae605184737a6cd8fd575c7a"
+  },
+  "outputs/semantic/fact_uncertainty_series.csv": {
+   "bytes": 22139,
+   "sha256": "5007171efa8cbb9941cb89a859bc2198922e39e0d78bff8df7304ea845ddacd5"
+  },
+  "outputs/semantic/fact_uncertainty_series.parquet": {
+   "bytes": 12773,
+   "sha256": "f450474fb0935b439b59a02d6400149b3c287ea96bd8961b60cc171f6c5817b9"
+  },
+  "outputs/semantic/semantic_release.json": {
+   "bytes": 679454,
+   "sha256": "bf9fef0dde2db46d595391c36dda50be45f9525289ec7ec3e434dd81af0b4316"
+  }
+ },
+ "registries": [
+  "data/registries/allowed_grid_fallbacks.csv",
+  "data/registries/benchmarks.csv",
+  "data/registries/data_gaps.csv",
+  "data/registries/emission_factors.csv",
+  "data/registries/geometry_sets.csv",
+  "data/registries/national_uncertainty_parameters.csv",
+  "data/registries/pakemis_grid_fallbacks.csv",
+  "data/registries/pakemis_source_register.csv",
+  "data/registries/pakemis_source_streams.csv",
+  "data/registries/pakemis_temporal_profiles.csv",
+  "data/registries/pakemis_validation_catalog.csv",
+  "data/registries/pakemis_validation_scorecard.csv",
+  "data/registries/pakemis_validation_sector_scorecard.csv",
+  "data/registries/parameters.csv",
+  "data/registries/public_documents.csv",
+  "data/registries/release_heights.csv",
+  "data/registries/source_documents.csv",
+  "data/registries/stream_geometry.csv",
+  "data/registries/stream_grid_proxy.csv",
+  "data/registries/temporal_profiles.csv",
+  "data/registries/validation_catalog.csv"
+ ],
+ "release_id": "PakEmis 1.0.0rc59",
+ "schema": "pakemis_explorer.fetch/v1",
+ "source": {
+  "commit": "5915e0c0fe59ba242473f2a650acb7e85f51d175",
+  "kind": "git",
+  "manifest_describes_commit": "eeef83297587fa60548ce40f0539519f6132c74b",
+  "ref": "5915e0c0",
+  "repository": "/Users/rehanahmad/Desktop/emissions"
+ },
+ "version": "1.0.0rc59"
+}

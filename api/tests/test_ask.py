@@ -305,7 +305,7 @@ def test_set_map_view_valid_emits_map_action(ask_client, fake):
     actions = only(events, "map_action")
     assert actions == [{"level": "adm1", "geo": "Punjab", "period": "FY2023-24", "sector": "agriculture"}]
     # rc54 payload: receipts carry the release identity, so every pinned receipt moved at the jump
-    assert only(events, "tool_result")[0]["receipt"] == "9af6fa2ac1e0036e29e4257539998d64"
+    assert only(events, "tool_result")[0]["receipt"] == "8df62437abed796f3c5564713d18b135"
     assert [c["k"] for c in only(events, "tool_call")] == [1, 2]
     assert only(events, "answer")
     # ui_state was prepended to the user message
@@ -335,17 +335,17 @@ def test_set_map_view_district_name_resolves_to_shape_id(ask_client, fake):
 # --- download and receipts ---------------------------------------------------------------------
 
 def test_download_only_for_receipts_the_conversation_holds(ask_client, fake):
-    fake.load([tool_use("download_query_result", {"receipt_id": "bc4c82daf26e324711f3d87adee84085"}), stop("tool_use")],
+    fake.load([tool_use("download_query_result", {"receipt_id": "51f8dcb6e255c6b499d0134dc6e0359d"}), stop("tool_use")],
               [text("Run the query first."), stop()])
     events = ask(ask_client, "download it")
     assert only(events, "refusal")[0]["name"] == "download_query_result"
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
-              [tool_use("download_query_result", {"receipt_id": "bc4c82daf26e324711f3d87adee84085"}), stop("tool_use")],
+              [tool_use("download_query_result", {"receipt_id": "51f8dcb6e255c6b499d0134dc6e0359d"}), stop("tool_use")],
               [text("Links below."), stop()])
     events = ask(ask_client, "total then download")
     results = only(events, "tool_result")
-    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/bc4c82daf26e324711f3d87adee84085.csv",
-                                      "receipt_json": "/api/v1/emissions/download/bc4c82daf26e324711f3d87adee84085.receipt.json"}
+    assert results[1]["download"] == {"csv": "/api/v1/emissions/download/51f8dcb6e255c6b499d0134dc6e0359d.csv",
+                                      "receipt_json": "/api/v1/emissions/download/51f8dcb6e255c6b499d0134dc6e0359d.receipt.json"}
     assert ask_client.get(results[1]["download"]["csv"]).status_code == 200
 
 
@@ -425,14 +425,16 @@ def test_the_prompt_forbids_claiming_an_observation_the_release_lacks(ask_client
 def test_the_prompt_makes_a_ranking_name_its_scope(ask_client):
     """The assistant answered that residential combustion was Lahore's largest source. The
     honest form is "the largest of the sources estimated here": the air panel covered six
-    sectors through rc57, industry entered at rc58 as a provisional estimate, and IPPU process
-    pollutants and fugitive NMVOC still have no layer. A bare "largest source" asserts a
+    sectors through rc57; industry (rc58), IPPU process pollutants and fugitive NMVOC with
+    flaring (rc59) entered as provisional estimates from a register that types what it cannot
+    price absent, and power is a screening beside the panel. A bare "largest source" asserts a
     completeness the release does not claim - the one scope statement the interface cannot
     print for the model, because it changes what the word means."""
     system = ask_client.app.state.ask.system
     assert "A RANKING NAMES ITS SCOPE" in system
     assert "the largest of the sources estimated here" in system
-    assert "entered the panel only at rc58" in system
+    assert "provisional estimates from a" in system
+    assert "types what it cannot price absent" in system
 
 
 def test_system_prompt_names_no_version_and_carries_dims(ask_client):

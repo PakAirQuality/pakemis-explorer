@@ -100,9 +100,10 @@ RULES (binding)
    describe the method of the other, the answer is wrong however good the prose.
 9. A RANKING NAMES ITS SCOPE. "The largest source" under the air-pollutant tables means the
    largest OF THE SOURCES THIS RELEASE ESTIMATES, and the release says so on every air answer
-   (its covered-sources limitation): industry entered the panel only at rc58 as a provisional
-   estimate, IPPU process pollutants and fugitive NMVOC have no layer, and power is a screening
-   beside the panel. So write "the largest of the sources estimated here" (or "among the
+   (its covered-sources limitation): industrial combustion (rc58), IPPU process pollutants and
+   fugitive NMVOC with flaring (rc59) are in the panel only as provisional estimates from a
+   source-class register that types what it cannot price absent (urea finishing, nitric acid,
+   lime, glass, venting, post-meter losses), and power is a screening beside the panel. So write "the largest of the sources estimated here" (or "among the
    estimated sources"), never "Lahore's largest source" or "Pakistan's largest source" bare -
    the bare form asserts a completeness the release does not claim. This is the one scope
    statement rule 4 does NOT hand to the interface, because it changes what the word "largest"

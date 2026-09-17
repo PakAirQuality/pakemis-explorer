@@ -315,13 +315,13 @@ export const COLLECTIONS: Collection[] = [
         finds: ["district", "adm2", "air", "spatial"],
       },
       {
-        id: "air-industry",
-        title: "Industrial combustion by source class",
+        id: "air-source-classes",
+        title: "Air pollutants by source class",
         icon: Factory,
-        dek: "Boilers, furnaces, engines, kilns and captive generators, each with its factor rows, activity and uncertainty — and the typed absences beside them.",
+        dek: "Boilers, furnaces, engines, kilns and captive generators; ammonia, steel and soda ash processes; oil and gas segments, refineries and flares — each with its factor rows, activity and uncertainty, and the typed absences beside them.",
         coverage: "Nine fiscal years · provisional",
-        files: ["fact_air_industry.csv"],
-        finds: ["industry", "brick", "cement", "captive", "kiln", "boiler"],
+        files: ["fact_air_source_classes.csv"],
+        finds: ["industry", "brick", "cement", "captive", "kiln", "boiler", "ammonia", "steel", "soda ash", "flaring", "fugitive", "refinery", "petrol"],
       },
       {
         id: "air-lahore",

@@ -74,7 +74,7 @@ export function BarChart({ env, horizontal = false, height = 220, labels, dims, 
             data,
             barMaxWidth: 22,
             label: { show: !compact, position: horizontal ? "right" : "top", fontSize: 11, color: t.fg, fontFamily: t.font, formatter: (p: { dataIndex: number }) => displays[p.dataIndex] },
-            cursor: onClick ? "pointer" : "default",
+            cursor: clickRef.current ? "pointer" : "default",
           },
         ],
       });

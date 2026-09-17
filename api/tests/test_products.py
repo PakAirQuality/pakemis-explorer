@@ -47,7 +47,8 @@ def test_listing_shape(listing, contract):
     tables = {n for n, p in products.items() if p["kind"] == "table"}
     assert tables == set(contract["dimensions"]) | set(contract["facts"])
     # 29 at the air beta: dim_pollutant + the four air facts joined the contract.
-    # 54: 52 at rc57, plus fact_air_industry and fact_air_lahore (rc58)
+    # 54: 52 at rc57, plus fact_air_industry and fact_air_lahore (rc58); fact_air_industry became
+    # fact_air_source_classes at rc59 (ippu and fugitives joined the register), count unchanged
     assert len(tables) == 54
     # EVERY CUBE THE MANIFEST HASHES IS SERVABLE. The nine-year GHG annual grid and the EDGAR-parity
     # lattice shipped in the release and were hashed, but were never named in the catalogue - so the
