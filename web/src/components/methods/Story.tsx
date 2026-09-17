@@ -35,7 +35,7 @@ const TEXT_LINK = "inline-flex items-center gap-1.5 text-sm font-semibold text-a
 const PALE_BORDER = "border border-nav-line";
 const PALE_CARD = `rounded-card ${PALE_BORDER} bg-nav`;
 /** The two-column split the hero card and every chapter card share on a wide screen. */
-const SPLIT = "lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-10";
+const SPLIT = "lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-8";
 /** A chapter card: white for the odd chapters, pale yellow for the even - the mock-up's rhythm, as cards. */
 const CHAPTER = `overflow-hidden rounded-card ${PALE_BORDER} shadow-card`;
 
@@ -65,17 +65,18 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
   const neCount = completeness.data?.values.length ?? null;
 
   return (
-    <main className="px-5 pb-16" data-testid="story">
+    // a contained column, like a reading page: the cards stop well short of a wide screen's edges
+    <main className="mx-auto w-full max-w-[1040px] px-5 pb-14" data-testid="story">
       {/* --- the hero card: the opening figure --------------------------------------------- */}
-      <section className={`relative overflow-hidden ${PALE_CARD} px-6 py-6 md:px-8 md:py-8`} data-testid="story-hero">
+      <section className={`relative overflow-hidden ${PALE_CARD} px-5 py-5 md:px-7 md:py-6`} data-testid="story-hero">
         <ContourMotif corner="top-right" />
         <div className={`relative ${SPLIT}`}>
           <div>
             <div className="micro">{STORY.eyebrow}</div>
-            <h1 className="mt-2 max-w-[14em] text-3xl font-semibold leading-tight tracking-tight text-fg md:text-4xl">{STORY.headline}</h1>
-            <p className="mt-3 max-w-[34em] text-md leading-relaxed text-muted">{STORY.dek}</p>
-            <p className="mt-3 text-sm text-muted" data-testid="story-scope">{STORY.scope}</p>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <h1 className="mt-2 max-w-[14em] text-2xl font-semibold leading-tight tracking-tight text-fg md:text-3xl">{STORY.headline}</h1>
+            <p className="mt-3 max-w-[34em] text-sm leading-relaxed text-muted">{STORY.dek}</p>
+            <p className="mt-2 text-xs text-muted" data-testid="story-scope">{STORY.scope}</p>
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
               <a href="#story-steps" className={PRIMARY} data-testid="follow-reconstruction">
                 {STORY.follow} <ArrowDown size={15} aria-hidden="true" />
               </a>
@@ -87,14 +88,14 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
               </Link>
             </div>
           </div>
-          <div className="mt-8 lg:mt-0" data-testid="story-figure">
+          <div className="mt-6 lg:mt-0" data-testid="story-figure">
             <Illustration file={STORY.heroFile} alt={STORY.heroAlt} />
           </div>
         </div>
       </section>
 
       {/* --- the strip: the six chapters, as anchors --------------------------------------- */}
-      <nav id="story-steps" aria-label={STORY.strip} className="mt-4 scroll-mt-20 rounded-card border border-line bg-card px-6 py-3 shadow-card" data-testid="story-steps-nav">
+      <nav id="story-steps" aria-label={STORY.strip} className="mt-3 scroll-mt-20 rounded-card border border-line bg-card px-5 py-2.5 shadow-card" data-testid="story-steps-nav">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <span className="micro">{STORY.strip}</span>
           <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
@@ -128,18 +129,18 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
             </p>
           ) : null;
         return (
-          <section key={s.id} id={anchorOf(s.id)} className={`mt-6 scroll-mt-24 ${CHAPTER} ${pale ? "bg-nav" : "bg-card"} px-6 py-6 md:px-8 md:py-8`} data-testid={`story-section-${i + 1}`}>
+          <section key={s.id} id={anchorOf(s.id)} className={`mt-4 scroll-mt-24 ${CHAPTER} ${pale ? "bg-nav" : "bg-card"} px-5 py-5 md:px-7 md:py-6`} data-testid={`story-section-${i + 1}`}>
             <div className={SPLIT}>
               <div className="flex gap-5">
                 {/* the numbered rail: the chapter number, the gold dot, the thread down the card */}
                 <div className="flex shrink-0 flex-col items-center" aria-hidden="true">
-                  <span className="num text-2xl font-semibold leading-none text-accent">{s.n}</span>
+                  <span className="num text-xl font-semibold leading-none text-accent">{s.n}</span>
                   <span className="mt-2 h-2.5 w-2.5 rounded-full bg-brand-gold ring-2 ring-accent" />
                   <span className="mt-2 w-px flex-1 bg-accent/30" />
                 </div>
                 <article className="min-w-0 pb-1">
-                  <h2 className="text-xl font-semibold tracking-tight text-fg md:text-2xl">{s.title}</h2>
-                  <p className="mt-3 max-w-[30em] text-md leading-relaxed text-muted">{s.body}</p>
+                  <h2 className="text-lg font-semibold tracking-tight text-fg md:text-xl">{s.title}</h2>
+                  <p className="mt-2 max-w-[30em] text-sm leading-relaxed text-muted">{s.body}</p>
                   {s.id === "sectors" ? (
                     <div className="mt-4 flex flex-wrap gap-1.5" data-testid="story-module-chips">
                       {dims.sectors.map((m) => (
@@ -159,7 +160,7 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
               </div>
               {/* the illustration: under the text on a narrow screen, beside it on a wide one; on a
                   pale card it sits on a white panel so it reads crisply */}
-              <div className={`mt-6 lg:mt-0 ${pale ? "rounded-card border border-line bg-card p-3" : ""}`}>
+              <div className={`mt-5 lg:mt-0 ${pale ? "rounded-card border border-line bg-card p-2" : ""}`}>
                 <Illustration file={s.file} alt={s.alt} testId={`story-illustration-${i + 1}`} />
               </div>
             </div>
@@ -168,12 +169,12 @@ export function Story({ onBrowse }: { onBrowse: () => void }) {
       })}
 
       {/* --- the close card ------------------------------------------------------------------ */}
-      <section className={`relative mt-8 overflow-hidden ${PALE_CARD} px-6 py-8 md:px-10`} data-testid="story-close">
+      <section className={`relative mt-6 overflow-hidden ${PALE_CARD} px-5 py-6 md:px-8`} data-testid="story-close">
         <ContourMotif corner="bottom-right" opacity={0.18} />
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-accent">{STORY.close.title}</h2>
-            <p className="mt-2 max-w-[38em] text-md text-muted">{STORY.close.dek}</p>
+            <h2 className="text-xl font-semibold tracking-tight text-accent">{STORY.close.title}</h2>
+            <p className="mt-1.5 max-w-[38em] text-sm text-muted">{STORY.close.dek}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/" className={PRIMARY} data-testid="close-explore">
