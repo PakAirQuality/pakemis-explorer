@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * /methods: the sector cards over mocked get_evidence / get_method / get_completeness /
+ * /methods: the story (six illustrated chapters with the fixed stage) and the sector cards over mocked get_evidence / get_method / get_completeness /
  * query_emissions envelopes (the eyebrow from the module's IPCC codes, the status badge from
  * the NE rows, the four steps with the release's lists and the sector envelope's
  * display_short, the evidence dimensions worded verbatim from dim_evidence_class, the module's
@@ -12,7 +12,7 @@ import "@testing-library/jest-dom/vitest";
  * grain refused by name and shown, a permalink reopening the record); and the audits
  * (decimals are server strings, no FY, no raw id, no avoid-list phrase).
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -293,27 +293,94 @@ describe("/methods/evidence", () => {
 });
 
 describe("/methods (the story)", () => {
-  it("the story opens the page: hero, pipeline with the envelope's total, module chips, the gaps note; Browse the evidence crosses to the catalogue", async () => {
-    const updates: string[] = [];
-    mountAt(<MethodsPage />, "/methods", "", ({ queryString }) => updates.push(queryString));
-    expect(await screen.findByRole("heading", { level: 1, name: "From public records to Pakistan\u2019s emissions inventory" })).toBeInTheDocument();
-    // the inventory circle prints the envelope's own string, never a client sum
+  it("the story opens the page: the hero with the opening figure, the strip, six illustrated chapters with the mock-up's titles, the two live captions; Browse the evidence crosses to the catalogue", async () => {
+    mountAt(<MethodsPage />, "/methods");
+    expect(await screen.findByRole("heading", { level: 1, name: "From public records to Pakistan\u2019s emissions" })).toBeInTheDocument();
+    expect(within(screen.getByTestId("story-figure")).getByRole("img")).toHaveAttribute("src", "/methods/00-overview.svg");
+    // the six chapters, in the mock-up's order and words
+    expect([1, 2, 3, 4, 5, 6].map((n) => within(screen.getByTestId(`story-section-${n}`)).getByRole("heading", { level: 2 }).textContent)).toEqual([
+      "Every number starts with a source",
+      "Turn activity into an estimate",
+      "Different sectors. Consistent accounting.",
+      "Build the national picture",
+      "Show when and where",
+      "Make uncertainty and gaps visible",
+    ]);
+    // the strip names the same six and links to their anchors
+    const strip = screen.getByTestId("story-steps-nav");
+    expect(within(strip).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["#step-sources", "#step-calculations", "#step-sectors", "#step-totals", "#step-time-place", "#step-limits"]);
+    // chapter 4's caption prints the envelope's own string, never a client sum
     expect(await screen.findByTestId("story-total-display")).toHaveTextContent("452.35");
-    // the modules card and chips count the release's dims (three in this fixture)
-    expect(screen.getByTestId("story-modules")).toHaveTextContent("3 sector modules");
+    expect(screen.getByTestId("story-section-4")).toContainElement(screen.getByTestId("story-total-display"));
+    // chapter 3's chips count the release's dims (three in this fixture)
     expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link").map((a) => a.textContent)).toEqual(["Agriculture", "Power", "Residential"]);
     expect(within(screen.getByTestId("story-module-chips")).getAllByRole("link")[0]).toHaveAttribute("href", "/methods/sectors/agriculture");
-    // the source chips come from the evidence envelope through sourceWords
-    expect(screen.getByTestId("story-sources")).toHaveTextContent("PBS");
-    // months from the release's month dim (two per period in the fixture)
-    expect(screen.getByTestId("story-months")).toHaveTextContent("Monthly estimates");
-    // the gaps note counts the NE rows and quotes the release's LULUCF sentence
+    // chapter 6's caption counts the NE rows and quotes the release's land-use sentence
     await waitFor(() => expect(screen.getByTestId("story-gaps")).toHaveTextContent("4 categories are recorded NE"));
-    expect(screen.getByTestId("follow-reconstruction")).toHaveAttribute("href", "#reconstruction");
+    expect(screen.getByTestId("story-section-6")).toContainElement(screen.getByTestId("story-gaps"));
+    // each chapter carries its own illustration for narrow screens, with words for the reader who cannot see it
+    for (let n = 1; n <= 6; n++) {
+      const img = screen.getByTestId(`story-illustration-${n}`);
+      expect(img).toHaveAttribute("src", `/methods/${["01-sources", "02-calculation", "03-sectors", "04-totals", "05-time-place", "06-limits"][n - 1]}.svg`);
+      expect((img.getAttribute("alt") ?? "").length).toBeGreaterThan(20);
+    }
+    expect(screen.getByTestId("follow-reconstruction")).toHaveAttribute("href", "#story-steps");
     expect(screen.getByTestId("read-methodology")).toHaveAttribute("href", "/methodology");
+    expect(screen.getByTestId("close-explore")).toHaveAttribute("href", "/");
+    // the reader-page vocabulary ban now holds the story too
+    assertPublicLanguage(screen.getByTestId("story"));
     // the outline CTA navigates to the sector catalogue route
     fireEvent.click(screen.getByTestId("browse-evidence"));
     expect(push).toHaveBeenCalledWith("/methods/sectors/");
+  });
+  it("the fixed illustration beside the text follows the chapter in view; without an observer it shows the first", async () => {
+    // no IntersectionObserver in jsdom: the stage shows chapter 1 and the strip marks it current
+    mountAt(<MethodsPage />, "/methods");
+    await screen.findByTestId("story-total-display");
+    expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-sources");
+    expect(screen.getByTestId("story-stage-sources")).toHaveClass("opacity-100");
+    expect(screen.getByTestId("story-stage-sectors")).toHaveClass("opacity-0");
+    expect(screen.getByTestId("story-step-link-sources")).toHaveAttribute("aria-current", "step");
+    expect(screen.getByTestId("story-step-link-sectors")).not.toHaveAttribute("aria-current");
+  });
+  it("with an observer, the chapter crossing the band becomes the active one - the lowest when two cross", async () => {
+    type Entry = { target: Element; isIntersecting: boolean };
+    const observers: { cb: (entries: Entry[]) => void; targets: Element[] }[] = [];
+    class FakeObserver {
+      cb: (entries: Entry[]) => void;
+      targets: Element[] = [];
+      constructor(cb: (entries: Entry[]) => void) {
+        this.cb = cb;
+        observers.push(this);
+      }
+      observe(el: Element) {
+        this.targets.push(el);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    try {
+      mountAt(<MethodsPage />, "/methods");
+      await screen.findByTestId("story-total-display");
+      expect(observers).toHaveLength(1);
+      expect(observers[0].targets.map((t) => t.id)).toEqual(["step-sources", "step-calculations", "step-sectors", "step-totals", "step-time-place", "step-limits"]);
+      const section = (n: number) => screen.getByTestId(`story-section-${n}`);
+      await act(async () => observers[0].cb([{ target: section(3), isIntersecting: true }]));
+      expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-sectors");
+      expect(screen.getByTestId("story-stage-sectors")).toHaveClass("opacity-100");
+      expect(within(screen.getByTestId("story-stage-sectors")).getByRole("img")).toHaveAttribute("src", "/methods/03-sectors.svg");
+      expect(screen.getByTestId("story-step-link-sectors")).toHaveAttribute("aria-current", "step");
+      expect(screen.getByTestId("story-section-3")).toHaveAttribute("data-active", "true");
+      // two chapters cross at once: the lower one wins
+      await act(async () => observers[0].cb([{ target: section(4), isIntersecting: true }]));
+      expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-totals");
+      // the lower one leaves: back to the one still crossing
+      await act(async () => observers[0].cb([{ target: section(4), isIntersecting: false }]));
+      expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-sectors");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
   it("the legacy single-page URLs replace to their routes", async () => {
     const a = mountAt(<MethodsPage />, "/methods", "?mode=catalogue&sector=power");

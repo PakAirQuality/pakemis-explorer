@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="m01-scene" width="960" height="440" viewBox="0 0 960 440" role="img" aria-labelledby="m01-title m01-desc">
+  <title id="m01-title">Every number starts with a public source</title>
+  <desc id="m01-desc">A layered Agricultural Census report with its livestock numbers row highlighted. A curved arrow points to a readable extracted record showing source, year, quantity and unit. This is an illustrative example.</desc>
+  <defs>
+    <filter id="m01-shadow" x="-15%" y="-15%" width="140%" height="145%"><feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/><feOffset in="blur" dy="2" result="offset"/><feFlood flood-color="#64192D" flood-opacity=".08" result="color"/><feComposite in="color" in2="offset" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="m01-paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFEFD"/><stop offset="1" stop-color="#F5F1ED"/></linearGradient>
+    <linearGradient id="m01-highlight"><stop stop-color="#FFE398"/><stop offset="1" stop-color="#FFE9AC"/></linearGradient>
+    <marker id="m01-arrow" markerWidth="12" markerHeight="12" refX="8" refY="6" orient="auto"><path d="m3 2 5 4-5 4" fill="none" stroke="#64192D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <clipPath id="m01-pageclip"><path d="M0 0H357L376 17V398H0Z"/></clipPath>
+    <style>#m01-scene text{font-family:Arial,Helvetica,sans-serif;fill:#342B2E}#m01-scene .muted{fill:#807880}#m01-scene .rule{stroke:#E6DFD9;stroke-width:2}#m01-scene .ghost{fill:#DAD4D1;opacity:.48}</style>
+  </defs>
+  <g id="m01-public-report" transform="translate(39 25) scale(.965) rotate(-5 196 190)">
+    <rect x="-8" y="17" width="375" height="388" rx="12" fill="#DBD4D0" opacity=".72"/>
+    <path d="M-2 8H352L371 26V403H-2Z" fill="#EFEAE5" stroke="#E0D8D2" stroke-width="1.5"/>
+    <path d="M0 0H357L376 17V398H0Z" fill="url(#m01-paper)" stroke="#E8DED2" stroke-width="1.8" filter="url(#m01-shadow)"/>
+    <path d="M357 0V17H376" fill="#F3EEE9" stroke="#E8DED2" stroke-width="1.4"/>
+    <g id="m01-report-content" clip-path="url(#m01-pageclip)">
+      <g id="m01-ornamental-rosette" transform="translate(43 52)" fill="none" stroke="#A89A7D" stroke-width="1.2">
+        <circle r="16"/><circle r="11"/><circle r="6"/>
+        <path d="M0-22 3-17 8-20 9-14 15-15 14-9 20-8 17-3 22 0 17 3 20 8 14 9 15 15 9 14 8 20 3 17 0 22-3 17-8 20-9 14-15 15-14 9-20 8-17 3-22 0-17-3-20-8-14-9-15-15-9-14-8-20-3-17Z"/>
+        <path d="m-7 21-4 13 11-5 11 5-4-13"/>
+      </g>
+      <text x="83" y="47" font-size="22" font-weight="700">Agricultural Census</text>
+      <text x="84" y="69" font-size="17" class="muted">Government of Pakistan</text>
+      <g id="m01-source-table">
+        <rect class="ghost" x="37" y="110" width="72" height="11"/><rect class="ghost" x="124" y="110" width="110" height="11"/><rect class="ghost" x="256" y="110" width="82" height="11"/>
+        <path class="rule" d="M36 138H338"/>
+        <rect class="ghost" x="41" y="153" width="68" height="8"/><rect class="ghost" x="124" y="153" width="106" height="8"/><rect class="ghost" x="256" y="153" width="82" height="8"/>
+        <rect class="ghost" x="41" y="168" width="58" height="6"/><rect class="ghost" x="124" y="168" width="97" height="6"/><rect class="ghost" x="256" y="168" width="71" height="6"/>
+        <rect x="24" y="189" width="327" height="48" rx="8" fill="url(#m01-highlight)"/>
+        <text x="45" y="220" font-size="23" font-weight="700">Livestock numbers</text>
+        <rect x="269" y="207" width="65" height="11" rx="2" fill="#E6CF8F" opacity=".4"/>
+        <rect class="ghost" x="41" y="254" width="69" height="8"/><rect class="ghost" x="132" y="254" width="95" height="8"/><rect class="ghost" x="257" y="254" width="81" height="8"/>
+        <rect class="ghost" x="41" y="269" width="55" height="6"/><rect class="ghost" x="132" y="269" width="93" height="6"/><rect class="ghost" x="257" y="269" width="76" height="6"/>
+        <path class="rule" d="M36 287H338"/>
+        <rect class="ghost" x="41" y="303" width="76" height="8"/><rect class="ghost" x="137" y="303" width="94" height="8"/><rect class="ghost" x="257" y="303" width="81" height="8"/>
+        <rect class="ghost" x="41" y="318" width="61" height="6"/><rect class="ghost" x="137" y="318" width="90" height="6"/><rect class="ghost" x="257" y="318" width="71" height="6"/>
+        <path class="rule" d="M36 339H338"/>
+        <rect class="ghost" x="41" y="354" width="73" height="8"/><rect class="ghost" x="137" y="354" width="101" height="8"/><rect class="ghost" x="257" y="354" width="81" height="8"/>
+        <rect class="ghost" x="41" y="370" width="64" height="6"/><rect class="ghost" x="137" y="370" width="89" height="6"/><rect class="ghost" x="257" y="370" width="66" height="6"/>
+        <path class="rule" d="M36 389H338"/>
+      </g>
+    </g>
+  </g>
+  <g id="m01-extraction-arrow"><path d="M456 211C478 182 506 190 534 190" fill="none" stroke="#64192D" stroke-width="2.8" stroke-linecap="round" marker-end="url(#m01-arrow)"/></g>
+  <g id="m01-extracted-record" transform="translate(557 70)">
+    <rect width="378" height="274" rx="16" fill="#FFF6E3" stroke="#EDDFC0" stroke-width="1.6" filter="url(#m01-shadow)"/>
+    <text x="27" y="42" font-size="24" font-weight="700" fill="#64192D">Extracted record</text>
+    <g font-size="19">
+      <text x="27" y="96">Source</text><text x="151" y="96" class="muted">Agricultural Census</text>
+      <path d="M27 111H350" stroke="#EAE0CA" stroke-width="1"/>
+      <text x="27" y="144">Year</text><text x="151" y="144" class="muted">Reporting year</text>
+      <path d="M27 159H350" stroke="#EAE0CA" stroke-width="1"/>
+      <text x="27" y="192">Quantity</text><text x="151" y="192" class="muted">Livestock numbers</text>
+      <path d="M27 207H350" stroke="#EAE0CA" stroke-width="1"/>
+      <text x="27" y="240">Unit</text><text x="151" y="240" class="muted">head (number)</text>
+    </g>
+  </g>
+  <text id="m01-example-note" x="934" y="408" text-anchor="end" class="muted" font-size="16">Illustrative example</text>
+</svg>

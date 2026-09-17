@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="m02-scene" width="960" height="440" viewBox="0 0 960 440" role="img" aria-labelledby="m02-title m02-desc">
+  <title id="m02-title">A livestock example: activity multiplied by an emission factor</title>
+  <desc id="m02-desc">A cow and calf represent livestock numbers from public statistics. Multiplication by methane per animal from an IPCC method produces estimated methane, shown in a pale pink cloud. The scene is illustrative, with no numerical result implied.</desc>
+  <defs>
+    <filter id="m02-shadow" x="-15%" y="-15%" width="140%" height="145%"><feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/><feOffset in="blur" dy="2" result="offset"/><feFlood flood-color="#64192D" flood-opacity=".075" result="color"/><feComposite in="color" in2="offset" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="m02-paper"><stop stop-color="#FFFEFD"/><stop offset="1" stop-color="#F5F1ED"/></linearGradient>
+    <linearGradient id="m02-cloud" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F6E9E7"/><stop offset="1" stop-color="#F1DFDE"/></linearGradient>
+    <style>#m02-scene text{font-family:Arial,Helvetica,sans-serif;fill:#342B2E}#m02-scene .muted{fill:#807880}#m02-scene .animal-line{stroke:#754331;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style>
+  </defs>
+  <text id="m02-example-heading" x="23" y="31" font-size="21" font-weight="700">A livestock example</text>
+  <g id="m02-livestock-illustration">
+    <path d="M9 227H282" stroke="#AD8066" stroke-width="2.1" stroke-linecap="round"/>
+    <g id="m02-small-shrub" class="animal-line" stroke-width="1.7">
+      <path d="m37 226-4-31m5 20 11-14m-12 7-8-10m15 28 3-28" fill="none"/>
+      <path d="M25 203c-11 0-15-11-7-16-5-7 1-15 8-13-1-10 10-13 15-6 9-5 16 4 12 11 11 1 15 13 7 19-3 9-10 10-15 6-8 9-15 8-20-1Z" fill="#D7D7BF" stroke="#9C9C81"/>
+      <path d="m36 224-1-36m2 14 9-7m-11 0-7-8" fill="none" stroke="#9A896D"/>
+    </g>
+    <g id="m02-cow" class="animal-line">
+      <path d="M92 183c-5 12-6 23-3 32l7 10h9l-8-13 8-28M127 184l-6 26 4 15h9l-5-17 11-24M174 177l-3 33 1 15h9l-1-15 7-33M190 171l-2 35 3 18h9l-4-19 5-39" fill="#FFF8E9"/>
+      <path d="M88 127c-9 13-9 27-10 45l-1 16" fill="none" stroke-width="4"/>
+      <path d="M77 183c-5 5-5 15-3 20 5-3 6-9 5-15" fill="#64192D" stroke="none"/>
+      <path d="M87 129c4-11 15-12 35-12h51c12 0 21-7 27-13l4-9 11-2 8 5 1 9 13 13-2 8-16 1-10-6-10 18c-6 13-5 27-17 36-15 14-47 16-68 7-14-5-23-20-26-37Z" fill="#FFF9E9"/>
+      <path d="M99 119c-1 8 4 11 10 13 4 2 5 8 3 13-1 8-7 12-10 20-6-3-10-9-12-18-3-14 0-22 9-28Z" fill="#64192D" stroke="none"/>
+      <path d="M126 118h43c10 0 21-6 30-11l8 13-13 20-7 4c-2 10-6 17-13 17-8 0-11-5-14-10-7 1-8 9-17 9-11 0-14-9-15-18l-11-6c-5-6 1-14 9-18Z" fill="#64192D" stroke="none"/>
+      <path d="m188 136-4 18c-2 7-6 13-7 21l-3 35h7l6-33c7-10 10-17 10-28Z" fill="#64192D" stroke="none"/>
+      <path d="m200 105 5-11 11-1 8 5v9l8 8-11 3-12-8-1 7Z" fill="#64192D" stroke="none"/>
+      <path d="m204 98-5-8c5-4 10-1 12 4m10 2 8-4c5 4 4 8-4 10" fill="#FFF8E9"/>
+      <path d="m210 97 2-11 6 9" fill="#DDC7A2" stroke-width="1.8"/>
+      <path d="m224 121 11-1" fill="none" stroke-width="1.5"/>
+      <circle cx="223" cy="109" r="1.9" fill="#342B2E" stroke="none"/>
+      <path d="M141 185c0 7 4 11 10 11 7 0 11-5 11-9m-17 7v6m10-5v6" fill="#E4BDB0" stroke-width="1.7"/>
+      <path d="M92 225h13m20 0h10m36 0h11m10-1h9" fill="none" stroke-width="2.6"/>
+    </g>
+    <g id="m02-calf" class="animal-line" transform="translate(216 165) scale(.66)">
+      <path d="m10 46-3 26 7 13h9L16 70l5-22m19 1-2 23 4 13h8l-6-14 7-24m33-7-4 31 4 14h8l-5-15 7-28" fill="#FFF8E9"/>
+      <path d="M7 21C4 30 5 39 4 49" fill="none"/>
+      <path d="M11 14c12-7 38-1 55-3 7-1 13-6 18-12l9 1 6 7 13 5-2 8-12 3-8-2-6 14c-6 13-17 20-35 21-17 1-27-3-35-12-6-9-9-21-3-30Z" fill="#F9EEDF"/>
+      <path d="m84 1 0-8c6-1 10 3 10 8m4 4 11-4 3 5-10 7" fill="#F9EEDF"/>
+      <path d="M14 15c4 5 1 13 5 17 8 1 12 7 9 15-9-3-13-8-16-14-3-9-1-14 2-18m47-2c3 8-2 13-1 22 4 6 11 7 15 3l5-12 6-11-9-8Z" fill="#B47F6F" opacity=".52" stroke="none"/>
+      <circle cx="96" cy="11" r="2" fill="#342B2E" stroke="none"/>
+      <path d="m104 18 5-1M12 85h11m18 0h9m33 0h9" fill="none" stroke-width="2"/>
+    </g>
+    <path d="m148 226-2-9m3 8 3-6m-4 1-5-4m111 10 1-10m-2 7-3-5" stroke="#AE9B76" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+  </g>
+  <text id="m02-multiply" x="334" y="212" text-anchor="middle" font-size="49" fill="#64192D">×</text>
+  <g id="m02-method-document" transform="translate(393 64)">
+    <path d="M8 10H204L222 29V201H8Z" fill="#EAE4DF"/>
+    <path d="M0 0H197L214 17V213H0Z" fill="url(#m02-paper)" stroke="#E3DBD4" stroke-width="2" filter="url(#m02-shadow)"/>
+    <path d="M197 0V17H214" fill="#F0EAE5" stroke="#E3DBD4" stroke-width="1.5"/>
+    <g id="m02-mini-page" transform="translate(30 28)" fill="none" stroke="#BEB5B1" stroke-width="1.5"><path d="M0 0H30L39 9V55H0Z"/><path d="M30 0V10H39M6 17H31M6 24H31M6 31H31M6 38H31M6 45H31"/></g>
+    <text x="90" y="47" font-size="17" font-weight="700" class="muted">IPCC</text>
+    <path d="M89 62H187M89 74H187M89 86H146M29 110H187M29 132H187M29 154H187M29 176H157" fill="none" stroke="#D5CDC8" stroke-width="3.5"/>
+  </g>
+  <text id="m02-equals" x="661" y="212" text-anchor="middle" font-size="49" fill="#64192D">=</text>
+  <g id="m02-methane-cloud">
+    <path d="M745 153c-21-36 2-74 43-75 27-53 98-47 111 8 44-9 70 32 51 67 38 23 38 72 1 94 8 35-22 62-54 54-22 25-57 24-80 3-40 14-72-7-74-34-38-4-57-38-43-70 7-23 24-39 45-47Z" transform="translate(-13 27) scale(.98)" fill="url(#m02-cloud)"/>
+    <g stroke="#F4BC42" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".62"><path d="M826 54V35m40 28 10-16m-92 22-10-14M742 111c-18 7-27 20-28 37m184-51c17-1 28 5 37 14m9 12 6 14"/></g>
+    <text x="824" y="204" text-anchor="middle" font-size="29" font-weight="700" fill="#64192D"><tspan x="824">Estimated</tspan><tspan x="824" dy="35">methane</tspan></text>
+  </g>
+  <g id="m02-activity-label" transform="translate(20 244)">
+    <rect width="272" height="88" rx="15" fill="#FFFFFF" fill-opacity=".86" stroke="#E8DED2" stroke-width="1.5" filter="url(#m02-shadow)"/>
+    <text x="136" y="36" text-anchor="middle" font-size="22" font-weight="700" fill="#64192D">Livestock numbers</text><text x="136" y="65" text-anchor="middle" font-size="20" class="muted">(activity data)</text>
+  </g>
+  <g id="m02-factor-label" transform="translate(380 244)">
+    <rect width="242" height="88" rx="15" fill="#FFFFFF" fill-opacity=".94" stroke="#E8DED2" stroke-width="1.5" filter="url(#m02-shadow)"/>
+    <text x="121" y="36" text-anchor="middle" font-size="21" font-weight="700">Methane per animal</text><text x="121" y="65" text-anchor="middle" font-size="20" class="muted">(emission factor)</text>
+  </g>
+  <g id="m02-scene-captions" font-size="19" text-anchor="middle" class="muted"><text x="156" y="372" class="muted">Public statistics</text><text x="501" y="372" class="muted">IPCC method</text><text x="824" y="372" class="muted">Resulting estimate</text></g>
+  <text id="m02-example-note" x="937" y="417" text-anchor="end" font-size="16" class="muted">Illustrative example</text>
+</svg>

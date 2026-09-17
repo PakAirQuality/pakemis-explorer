@@ -16,20 +16,8 @@ import { Story } from "./Story";
 import { MapMotif } from "@/components/shell/MapMotif";
 import { MotifCredit } from "@/components/shell/MotifCredit";
 
-export const METHODS = {
-  title: "Methods & evidence",
-  dek: "Understand how an estimate was constructed, where its activity data came from and which parts are observed, modelled, proxy-allocated or not estimated.",
-  read: "Read methodology",
-  search: "Find a sector, IPCC category or source",
-  browse: "Browse sectors",
-  steps: ["Source records", "Activity", "Method", "Result"],
-  methodLead: "Registered IPCC category equations",
-  dimensions: "Evidence dimensions",
-  limitations: "Known limitations",
-  equations: "View equations",
-  sources: "Inspect sources",
-  rows: "Open data rows",
-} as const;
+/** The sector pages' labels live in copy.ts with the story's; re-exported here for the routes that import them from this module. */
+export { METHODS } from "./copy";
 
 type StreamCell = Cell & { source_stream_id?: string; ipcc_code?: string; ipcc_category?: string; sub_category?: string; source_id?: string };
 
