@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * /methods: the story (six illustrated chapters with the fixed stage) and the sector cards over mocked get_evidence / get_method / get_completeness /
+ * /methods: the story (a hero card and six illustrated chapter cards over the map) and the sector cards over mocked get_evidence / get_method / get_completeness /
  * query_emissions envelopes (the eyebrow from the module's IPCC codes, the status badge from
  * the NE rows, the four steps with the release's lists and the sector envelope's
  * display_short, the evidence dimensions worded verbatim from dim_evidence_class, the module's
@@ -12,7 +12,7 @@ import "@testing-library/jest-dom/vitest";
  * grain refused by name and shown, a permalink reopening the record); and the audits
  * (decimals are server strings, no FY, no raw id, no avoid-list phrase).
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -318,7 +318,7 @@ describe("/methods (the story)", () => {
     // chapter 6's caption counts the NE rows and quotes the release's land-use sentence
     await waitFor(() => expect(screen.getByTestId("story-gaps")).toHaveTextContent("4 categories are recorded NE"));
     expect(screen.getByTestId("story-section-6")).toContainElement(screen.getByTestId("story-gaps"));
-    // each chapter carries its own illustration for narrow screens, with words for the reader who cannot see it
+    // each chapter card carries its illustration (beside the text on a wide screen, under it on a narrow one), with words for the reader who cannot see it
     for (let n = 1; n <= 6; n++) {
       const img = screen.getByTestId(`story-illustration-${n}`);
       expect(img).toHaveAttribute("src", `/methods/${["01-sources", "02-calculation", "03-sectors", "04-totals", "05-time-place", "06-limits"][n - 1]}.svg`);
@@ -333,54 +333,20 @@ describe("/methods (the story)", () => {
     fireEvent.click(screen.getByTestId("browse-evidence"));
     expect(push).toHaveBeenCalledWith("/methods/sectors/");
   });
-  it("the fixed illustration beside the text follows the chapter in view; without an observer it shows the first", async () => {
-    // no IntersectionObserver in jsdom: the stage shows chapter 1 and the strip marks it current
+  it("cards over the map, nothing fixed: white and pale-yellow chapter cards alternate, no element is sticky, each card holds its own illustration beside its text", async () => {
     mountAt(<MethodsPage />, "/methods");
     await screen.findByTestId("story-total-display");
-    expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-sources");
-    expect(screen.getByTestId("story-stage-sources")).toHaveClass("opacity-100");
-    expect(screen.getByTestId("story-stage-sectors")).toHaveClass("opacity-0");
-    expect(screen.getByTestId("story-step-link-sources")).toHaveAttribute("aria-current", "step");
-    expect(screen.getByTestId("story-step-link-sectors")).not.toHaveAttribute("aria-current");
-  });
-  it("with an observer, the chapter crossing the band becomes the active one - the lowest when two cross", async () => {
-    type Entry = { target: Element; isIntersecting: boolean };
-    const observers: { cb: (entries: Entry[]) => void; targets: Element[] }[] = [];
-    class FakeObserver {
-      cb: (entries: Entry[]) => void;
-      targets: Element[] = [];
-      constructor(cb: (entries: Entry[]) => void) {
-        this.cb = cb;
-        observers.push(this);
-      }
-      observe(el: Element) {
-        this.targets.push(el);
-      }
-      unobserve() {}
-      disconnect() {}
+    for (let n = 1; n <= 6; n++) {
+      const card = screen.getByTestId(`story-section-${n}`);
+      expect(card).toHaveClass("rounded-card");
+      expect(card).toHaveClass(n % 2 === 0 ? "bg-nav" : "bg-card");
+      expect(card).toContainElement(screen.getByTestId(`story-illustration-${n}`));
     }
-    vi.stubGlobal("IntersectionObserver", FakeObserver);
-    try {
-      mountAt(<MethodsPage />, "/methods");
-      await screen.findByTestId("story-total-display");
-      expect(observers).toHaveLength(1);
-      expect(observers[0].targets.map((t) => t.id)).toEqual(["step-sources", "step-calculations", "step-sectors", "step-totals", "step-time-place", "step-limits"]);
-      const section = (n: number) => screen.getByTestId(`story-section-${n}`);
-      await act(async () => observers[0].cb([{ target: section(3), isIntersecting: true }]));
-      expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-sectors");
-      expect(screen.getByTestId("story-stage-sectors")).toHaveClass("opacity-100");
-      expect(within(screen.getByTestId("story-stage-sectors")).getByRole("img")).toHaveAttribute("src", "/methods/03-sectors.svg");
-      expect(screen.getByTestId("story-step-link-sectors")).toHaveAttribute("aria-current", "step");
-      expect(screen.getByTestId("story-section-3")).toHaveAttribute("data-active", "true");
-      // two chapters cross at once: the lower one wins
-      await act(async () => observers[0].cb([{ target: section(4), isIntersecting: true }]));
-      expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-totals");
-      // the lower one leaves: back to the one still crossing
-      await act(async () => observers[0].cb([{ target: section(4), isIntersecting: false }]));
-      expect(screen.getByTestId("story-stage")).toHaveAttribute("data-active", "step-sectors");
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    expect(screen.getByTestId("story-hero")).toHaveClass("bg-nav");
+    expect(screen.queryByTestId("story-stage")).toBeNull();
+    expect(document.querySelectorAll("[class*='sticky']")).toHaveLength(0);
+    // the strip's anchors carry no scroll-driven state
+    expect(document.querySelectorAll('[aria-current="step"]')).toHaveLength(0);
   });
   it("the legacy single-page URLs replace to their routes", async () => {
     const a = mountAt(<MethodsPage />, "/methods", "?mode=catalogue&sector=power");
