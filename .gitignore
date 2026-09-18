@@ -20,3 +20,6 @@ web/public/tiles/
 *.log
 .DS_Store
 /api/.env
+
+# the Firebase CLI's per-deploy upload cache: a local artefact of the last deploy, not content
+.firebase/
