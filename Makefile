@@ -5,7 +5,6 @@ VERSION   ?= $(shell sed -n 's/^pinned:[[:space:]]*//p' RELEASES.md)
 export PAKEMIS_QUERY_PATH ?= $(EMISSIONS)/src
 
 BUCKET    ?= pakemis-releases
-comma     := ,
 
 .PHONY: fetch verify library api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy
 
@@ -47,10 +46,11 @@ docker-run:         ## serve the image on :8080 with the local release payload m
 push-release:       ## upload data/releases/$(VERSION) (payload + tiles) to gs://$(BUCKET)/releases/$(VERSION) for the service to pull
 	gsutil -m rsync -r data/releases/$(VERSION) gs://$(BUCKET)/releases/$(VERSION)
 
-# SUBS: extra --substitutions for cloudbuild.yaml, e.g. the internal deployment's sign-in gate
-#   make deploy SUBS="_REQUIRE_AUTH=firebase,_AUTH_PROJECT=hawanama-2,_AUTH_DOMAINS=example.org"
+# SUBS: extra substitutions, TILDE-separated so a value may itself be a comma list of addresses
+# (a comma would end the substitution and an @ is in every address):
+#   make deploy SUBS="_REQUIRE_AUTH=firebase~_AUTH_PROJECT=hawanama-2~_AUTH_EMAILS=a@x.org,b@y.org"
 deploy:             ## Cloud Build: image + Cloud Run service `pakemis` (cloudbuild.yaml)
-	gcloud builds submit --config cloudbuild.yaml --substitutions _RELEASES_BUCKET=$(BUCKET),_RELEASE_VERSION=$(VERSION)$(if $(SUBS),$(comma)$(SUBS)) .
+	gcloud builds submit --config cloudbuild.yaml --substitutions=^~^_RELEASES_BUCKET=$(BUCKET)~_RELEASE_VERSION=$(VERSION)$(if $(SUBS),~$(SUBS)) .
 
 web:                ## Next.js dev server on :3000 (NEXT_PUBLIC_API_BASE defaults to http://localhost:8000/api/v1/emissions)
 	cd web && npm run dev

@@ -525,9 +525,9 @@ side simply carries the identity the host already holds.
 
 ```
 # the API: the same build, with the gate on
-make deploy BUCKET=pakemis-releases \
-  SUBS="_RELEASE_VERSION=1.0.0rc59,_ALLOWED_ORIGINS=https://pakemis.web.app,\
-_REQUIRE_AUTH=firebase,_AUTH_PROJECT=hawanama-2,_AUTH_DOMAINS=pakairquality.com"
+make deploy BUCKET=pakemis-releases SUBS="_ALLOWED_ORIGINS=https://pakemis.web.app\
+~_REQUIRE_AUTH=firebase~_AUTH_PROJECT=hawanama-2~_AUTH_DOMAINS=pakairquality.com"
+# SUBS entries are tilde-separated: a comma would end the substitution list and every address has an @
 
 # the web app: the same build, told who its host is
 NEXT_PUBLIC_API_BASE=/api/v1/emissions \
