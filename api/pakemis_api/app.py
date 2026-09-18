@@ -39,6 +39,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from pakemis_api import models_gen as G
 from pakemis_api.ask.router import install_ask, router as ask_router
 from pakemis_api.claim import ClaimError, ClaimStore
+from pakemis_api.auth import AuthGateMiddleware
 from pakemis_api.middleware import HeadAsGetMiddleware, ResponseHeadersMiddleware
 from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate
 from pakemis_api.products import ProductCatalog, router as products_router
@@ -684,6 +685,11 @@ def create_app(settings=None, model_client=None):
                               "Routes live under %s; the same routes under %s are a deprecated alias for one release." % (API_PREFIX, LEGACY_PREFIX))
     # add_middleware wraps outermost-last: gzip innermost, then the headers, HEAD->GET, CORS on the outside
     app.add_middleware(GZipMiddleware, minimum_size=1024)          # skips text/event-stream and pre-encoded (tile) bodies
+    # the sign-in gate, when the deployment asks for one (PAKEMIS_REQUIRE_AUTH): inside the header
+    # and CORS layers, so its 401 carries both, and outside nothing else - no route runs unsigned
+    policy = settings.auth_policy
+    if policy.on:
+        app.add_middleware(AuthGateMiddleware, policy=policy)
     app.add_middleware(ResponseHeadersMiddleware, prefix=API_PREFIX, legacy_prefix=LEGACY_PREFIX)
     app.add_middleware(HeadAsGetMiddleware)
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.allowed_origins), allow_methods=["*"], allow_headers=["*"],

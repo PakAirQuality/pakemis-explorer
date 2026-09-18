@@ -46,7 +46,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Layers, Locate } from "lucide-react";
 import type { Map as MBMap } from "mapbox-gl";
 import type { ExplorerState, Level } from "@/lib/urlState";
-import { api } from "@/lib/api";
+import { absoluteApiBase, api } from "@/lib/api";
 import { adm1Body, airMapBody, mapBody, parseCell } from "@/lib/requests";
 import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
 import { useExplorer } from "@/components/ExplorerContext";
@@ -77,6 +77,7 @@ import { exceptionIndex, exceptionItems } from "./exceptions";
 import { categoryOf, EXCEPTION_KINDS, mapsPeriod, SPATIAL_CLASSES, statusWords } from "./layerModes";
 import { RAMP } from "@/lib/palette";
 import type { Cell } from "@/lib/envelope";
+import { heldToken } from "@/lib/embedAuth";
 
 const LEVEL_WORD = { adm1: "Provinces", adm2: "Districts", grid: "Grid" } as const;
 
@@ -243,6 +244,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
       // The token is assigned here and nowhere else; it leaves the page only as the query
       // parameter of Mapbox's own requests.
       mapboxgl.accessToken = bm.token;
+      const apiOrigin = absoluteApiBase();
       const initial = stateRef.current.cam?.split(",").map(Number);
       const m = new mapboxgl.Map({
         container: containerRef.current,
@@ -260,6 +262,14 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
         pitchWithRotate: false,
         renderWorldCopies: false,
         antialias: false,
+        // Mapbox fetches the tiles and the raster frames itself, so our own fetch wrapper never
+        // sees them: in the embedded build they carry the reader's identity through this transform
+        // (a no-op in the public build, where heldToken() is always empty).
+        transformRequest: (url: string) => {
+          const bearer = heldToken();
+          if (!bearer || !url.startsWith(apiOrigin)) return { url };
+          return { url, headers: { Authorization: `Bearer ${bearer}` } };
+        },
       });
       mapRef.current = m;
       (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = m; // inspection aid: the map holds no numbers

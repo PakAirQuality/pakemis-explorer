@@ -7,6 +7,7 @@ import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import { AskDrawer } from "@/components/ask/AskDrawer";
 import { AskFab } from "@/components/shell/AskFab";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
+import { EmbedGate } from "@/components/shell/EmbedGate";
 
 export const metadata: Metadata = {
   title: "Pakistan Air Quality Initiative — emissions",
@@ -20,15 +21,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
       <body>
         <NuqsAdapter>
-          <Providers>
-            {/* before the provider, so the overlay covers the release fetch too */}
-            <LoadingScreen />
-            <ExplorerProvider>
-              {children}
-              <AskDrawer />
-              <AskFab />
-            </ExplorerProvider>
-          </Providers>
+          {/* the embedded build waits here for its host to say who is reading; the public build
+              is a pass-through and nothing below it knows the difference */}
+          <EmbedGate>
+            <Providers>
+              {/* before the provider, so the overlay covers the release fetch too */}
+              <LoadingScreen />
+              <ExplorerProvider>
+                {children}
+                <AskDrawer />
+                <AskFab />
+              </ExplorerProvider>
+            </Providers>
+          </EmbedGate>
         </NuqsAdapter>
       </body>
     </html>

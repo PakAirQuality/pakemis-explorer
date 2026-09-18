@@ -9,6 +9,10 @@ PAKEMIS_RELEASES_ROOT   data/releases (default) - the directory fetch_release.py
 PAKEMIS_RELEASE_VERSION the version to serve (default: the `pinned:` line of RELEASES.md).
 PAKEMIS_RECEIPT_STORE   a JSON file mapping receipt -> canonical request (default data/receipts.json);
                         receipts are replayed from the request, never served from a stored result.
+PAKEMIS_REQUIRE_AUTH    ""/off (default) -> the API answers anyone, as a public-data API does;
+                        "firebase" -> every route but /healthz needs a Firebase ID token from
+                        PAKEMIS_AUTH_PROJECT held by PAKEMIS_AUTH_DOMAINS/PAKEMIS_AUTH_EMAILS
+                        (auth.py). An internal deployment turns it on; nothing else changes.
 PAKEMIS_ASK_PROVIDER    auto (default) | anthropic | gemini. auto picks gemini when PAKEMIS_ASK_MODEL
                         starts with "gemini" or when GEMINI_API_KEY (or GOOGLE_API_KEY) is set and
                         ANTHROPIC_API_KEY is not; otherwise anthropic.
@@ -54,8 +58,13 @@ def default_query_path():
 
 def parse_origins(text):
     """'a, b' -> ('a', 'b'); empty -> ('*',)."""
-    origins = tuple(o.strip() for o in (text or "").split(",") if o.strip())
-    return origins or ("*",)
+    return parse_list(text) or ("*",)
+
+
+def parse_list(text):
+    """'a, b' -> ('a', 'b'); empty -> (). Unlike parse_origins, empty means EMPTY - an allowlist
+    nobody wrote admits nobody, where an origin list nobody wrote admits everyone."""
+    return tuple(o.strip() for o in (text or "").split(",") if o.strip())
 
 
 def pinned_version(releases_md):
@@ -77,6 +86,10 @@ class Settings:
     ask_model: str = ""                           # ask: PAKEMIS_ASK_MODEL; empty -> the provider's default; caps are read by ask/limits.py
     ask_provider: str = "auto"                    # ask: PAKEMIS_ASK_PROVIDER
     allowed_origins: tuple = ("*",)               # ALLOWED_ORIGINS (CORS); `*` in development
+    require_auth: str = ""                        # PAKEMIS_REQUIRE_AUTH; "" -> open, "firebase" -> the gate
+    auth_project: str = ""                        # PAKEMIS_AUTH_PROJECT
+    auth_domains: tuple = ()                      # PAKEMIS_AUTH_DOMAINS
+    auth_emails: tuple = ()                       # PAKEMIS_AUTH_EMAILS
 
     @classmethod
     def from_env(cls, **override):
@@ -91,7 +104,19 @@ class Settings:
             ask_model=override.get("ask_model") or os.environ.get("PAKEMIS_ASK_MODEL", ""),
             ask_provider=override.get("ask_provider") or os.environ.get("PAKEMIS_ASK_PROVIDER", "auto"),
             allowed_origins=override.get("allowed_origins") or parse_origins(os.environ.get("ALLOWED_ORIGINS", "*")),
+            require_auth=override.get("require_auth") or os.environ.get("PAKEMIS_REQUIRE_AUTH", ""),
+            auth_project=override.get("auth_project") or os.environ.get("PAKEMIS_AUTH_PROJECT", ""),
+            auth_domains=override.get("auth_domains") or parse_list(os.environ.get("PAKEMIS_AUTH_DOMAINS", "")),
+            auth_emails=override.get("auth_emails") or parse_list(os.environ.get("PAKEMIS_AUTH_EMAILS", "")),
         )
+
+    @property
+    def auth_policy(self):
+        """The sign-in gate this deployment asks for; `.on` is False for the open default."""
+        from pakemis_api.auth import AuthPolicy
+
+        return AuthPolicy(mode=(self.require_auth or "").strip().lower(), project=self.auth_project,
+                          domains=self.auth_domains, emails=self.auth_emails).validate()
 
     @property
     def resolved_ask_provider(self):

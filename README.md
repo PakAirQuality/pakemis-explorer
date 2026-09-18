@@ -515,9 +515,49 @@ make deploy BUCKET=...          # gcloud builds submit --config cloudbuild.yaml 
   `Deprecation: true`; `api/openapi.json` names only the `/api/v1/emissions/*` paths, so
   `make types` regenerates `web/src/types.gen.ts` with the new paths.
 
+## Deploying inside another dashboard (the internal deployment)
+
+The default build is open: anyone may query it, as a public-data API should be. One deployment is
+not — the Hawanama internal dashboard embeds this app as its **Emissions** tab, and there the
+operator wants what that dashboard already has: only the people who signed in. A dashboard's
+sign-in is client-side, so it cannot hide an API; the gate therefore lives here, and the browser
+side simply carries the identity the host already holds.
+
+```
+# the API: the same build, with the gate on
+make deploy BUCKET=pakemis-releases \
+  SUBS="_RELEASE_VERSION=1.0.0rc59,_ALLOWED_ORIGINS=https://pakemis.web.app,\
+_REQUIRE_AUTH=firebase,_AUTH_PROJECT=hawanama-2,_AUTH_DOMAINS=pakairquality.com"
+
+# the web app: the same build, told who its host is
+NEXT_PUBLIC_API_BASE=/api/v1/emissions \
+NEXT_PUBLIC_EMBED_AUTH=parent \
+NEXT_PUBLIC_EMBED_PARENT_ORIGIN=https://hawanama-dashboard.web.app \
+npm --prefix web run build && npx firebase deploy --only hosting:pakemis
+```
+
+- **The gate** (`api/pakemis_api/auth.py`): with `PAKEMIS_REQUIRE_AUTH=firebase` every route but
+  `/healthz` needs `Authorization: Bearer <Firebase ID token>` from `PAKEMIS_AUTH_PROJECT`, held by
+  a verified address in `PAKEMIS_AUTH_DOMAINS` or `PAKEMIS_AUTH_EMAILS`. The token is checked
+  against Google's certificates (cached an hour); a policy with no allowlist refuses to start,
+  because a gate that admits every Google account is not a gate. Unset, none of it is installed.
+- **The identity** (`web/src/lib/embedAuth.ts`): with `NEXT_PUBLIC_EMBED_AUTH=parent` the page asks
+  its host window for the signed-in person's token (`pakemis:auth-request` →
+  `pakemis:auth-token`), believes only `NEXT_PUBLIC_EMBED_PARENT_ORIGIN`, attaches it to every
+  request including Mapbox's own tile fetches, and on a 401 asks once more. Opened directly rather
+  than through the dashboard, the page says where it lives instead of failing request by request.
+  Unset, `authedFetch` is `fetch` and nothing is asked of anyone.
+- **The host's half** is ~60 lines in the dashboard (`apps/dashboard-frontend/src/app/(app)/
+  emissions/page.tsx` in hawanama-main): a full-pane iframe plus a `message` listener that answers
+  the request with `user.getIdToken()`, origin-checked. The Explorer is not copied into that
+  repository; lifting it out later is deleting that page and the two variables above.
+- **The key**: the model key stays in Secret Manager and is injected into the service; it never
+  reaches a browser. With the gate on it is spendable only by someone the allowlist admits.
+
 ## What is NOT here
 
-- No authentication, no users, no PostgreSQL. Receipts live in an in-memory map mirrored to
+- No users and no PostgreSQL; no authentication in the default build (one optional, off-by-default
+  sign-in gate for an internal deployment — above). Receipts live in an in-memory map mirrored to
   `data/receipts.json`; conversations live in the API process and the browser.
 - No object storage, no CDN. The API serves the tiles from the release payload; the web app is
   static files on Firebase Hosting (or any file server) with one rewrite to the API.

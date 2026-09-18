@@ -13,6 +13,7 @@ import { loadConversation, saveConversation } from "./store";
 import { rememberConversation } from "./history";
 import { clientHistory } from "./timeline";
 import type { AskEvent, DoneEvent, MapActionEvent, Turn } from "./types";
+import { authedFetch } from "@/lib/embedAuth";
 
 export { createSseParser, parseSse } from "./sse";
 
@@ -109,7 +110,7 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
       (async () => {
         let res: Response;
         try {
-          res = await fetch(api.askUrl(), {
+          res = await authedFetch(api.askUrl(), {
             method: "POST",
             headers: { "content-type": "application/json", accept: "text/event-stream" },
             body: JSON.stringify({ conversation_id: cid ?? undefined, message: text, ui_state: turn.ui_state, client_history: history }),

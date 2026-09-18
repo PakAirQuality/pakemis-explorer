@@ -6,6 +6,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
+import { authedFetch } from "./embedAuth";
 
 export type ContractOptions = { gwp: string[]; geographyLevel: string[]; spatialView: string[]; basis: string[]; configuration: string[]; routes: string[]; gridGas: string; gridAnnual: string };
 
@@ -21,7 +22,7 @@ function parseOptions(description: string | undefined): string[] {
 export async function fetchContractOptions(): Promise<ContractOptions> {
   let res: Response | null = null;
   for (const url of api.openapiUrls()) {
-    res = await fetch(url);
+    res = await authedFetch(url);
     if (res.ok) break;
   }
   if (!res?.ok) throw new Error(`${res?.status ?? "no response"} for openapi.json`);

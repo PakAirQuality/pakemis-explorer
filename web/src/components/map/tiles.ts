@@ -7,6 +7,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { API_BASE, absoluteApiBase } from "@/lib/api";
+import { authedFetch } from "@/lib/embedAuth";
 
 export type Anchor = { row: number; col: number; lat: number; lon: number; month_of_max?: string };
 export type RasterInfo = {
@@ -28,7 +29,7 @@ export const bboxesUrl = (base: string = API_BASE) => `${base}/tiles/bboxes`;
 export const rasterUrl = (name: string, base: string = absoluteApiBase()) => `${base}/tiles/raster/${name}`;
 
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await authedFetch(url);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
   return res.json() as Promise<T>;
 }

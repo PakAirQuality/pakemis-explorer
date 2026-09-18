@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { API_BASE, RefusalError } from "./api";
 import { RefusalSchema, type Envelope } from "./envelope";
+import { authedFetch } from "./embedAuth";
 
 export const ProductFormatSchema = z
   .object({
@@ -78,7 +79,7 @@ export function productUrl(filename: string): string {
 }
 
 export async function fetchProducts(): Promise<Products> {
-  const res = await fetch(`${API_BASE}/products`, { headers: { accept: "application/json" } });
+  const res = await authedFetch(`${API_BASE}/products`, { headers: { accept: "application/json" } });
   if (res.status === 422) {
     const refusal = RefusalSchema.safeParse(await res.json());
     if (refusal.success) throw new RefusalError(refusal.data);

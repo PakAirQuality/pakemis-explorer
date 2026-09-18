@@ -11,8 +11,16 @@
 substitutions:
   _REGION: asia-south1
   _RELEASES_BUCKET: pakemis-releases
-  _RELEASE_VERSION: 1.0.0rc42
+  _RELEASE_VERSION: 1.0.0rc59
   _ALLOWED_ORIGINS: https://pakemis.web.app
+  # The sign-in gate (api/pakemis_api/auth.py). Empty _REQUIRE_AUTH deploys the open API this
+  # repository's default is; "firebase" serves only holders of a token from _AUTH_PROJECT whose
+  # address is in _AUTH_DOMAINS or _AUTH_EMAILS - what an internal deployment wants, and what
+  # keeps the assistant's key spendable by staff alone.
+  _REQUIRE_AUTH: ""
+  _AUTH_PROJECT: ""
+  _AUTH_DOMAINS: ""
+  _AUTH_EMAILS: ""
 
 steps:
   - name: 'gcr.io/cloud-builders/docker'
@@ -45,7 +53,7 @@ steps:
       - '--allow-unauthenticated'
       - '--port=8080'
       - '--set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest'
-      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini'
+      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}'
       - '--cpu=2'
       - '--memory=2Gi'
       - '--concurrency=20'

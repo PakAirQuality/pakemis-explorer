@@ -4,6 +4,7 @@
  * types (src/types.gen.ts), so a body that diverges from the contract fails to compile.
  */
 import { EnvelopeSchema, RefusalSchema, ReleaseSchema, type Envelope, type Refusal, type ReleaseInfo } from "./envelope";
+import { authedFetch } from "./embedAuth";
 import type { components } from "@/types.gen";
 
 /** Every request field has a contract default server-side, so a body may omit any of them. */
@@ -73,7 +74,8 @@ export class RefusalError extends Error {
 }
 
 async function call(path: string, init?: RequestInit): Promise<unknown> {
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
+  // authedFetch IS fetch in the public build; in an embedded one it carries the reader's identity
+  const res = await authedFetch(`${API_BASE}${path}`, { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
   if (res.status === 422) {
     const body = await res.json();
     const refusal = RefusalSchema.safeParse(body);
@@ -123,7 +125,7 @@ function refusalFromDetail(body: unknown): Refusal | null {
 
 export async function fetchClaim(selector: ClaimSelector): Promise<unknown> {
   const path = claimPath(selector);
-  const res = await fetch(`${API_BASE}${path}`, { headers: { accept: "application/json" } });
+  const res = await authedFetch(`${API_BASE}${path}`, { headers: { accept: "application/json" } });
   if (res.status >= 400 && res.status < 500) {
     const body = await res.json().catch(() => null);
     const refusal = RefusalSchema.safeParse(body);
