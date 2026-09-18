@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { BrandMark } from "./BrandLogo";
 import { EMBEDDED, authToken, embedStatus, watchEmbedStatus, type EmbedStatus } from "@/lib/embedAuth";
+import { interceptApiDownloads } from "@/lib/embedDownloads";
 
 const HOST = process.env.NEXT_PUBLIC_EMBED_PARENT_ORIGIN ?? "";
 
@@ -25,8 +26,13 @@ export function EmbedGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!EMBEDDED) return;
     const stop = watchEmbedStatus(setStatus);
+    // a file link is a navigation and carries no identity; embedded, the click is served by fetch
+    const release = interceptApiDownloads();
     void authToken().then(() => setStatus(embedStatus()));
-    return stop;
+    return () => {
+      stop();
+      release();
+    };
   }, []);
 
   if (!EMBEDDED || status === "open" || status === "ready") return <>{children}</>;
