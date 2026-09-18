@@ -1,0 +1,20 @@
+# What `gcloud builds submit .` must NOT upload. Without this file gcloud falls back to
+# .gitignore, which happens to exclude the release payloads too - but by accident, and a future
+# .gitignore edit would silently start shipping 1.9 GB of them to Cloud Build. The image needs
+# api/, data/verify_release.py and RELEASES.md and nothing else (api/Dockerfile); the release
+# reaches the service from GCS at start (api/start.sh), never through the build.
+.git/
+.gitignore
+node_modules/
+web/node_modules/
+web/.next/
+web/out/
+data/releases/
+data/receipts.json
+assistant/
+tiles/
+**/__pycache__/
+*.pyc
+.env
+.env.*
+api/.env
