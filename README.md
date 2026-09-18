@@ -510,7 +510,10 @@ make deploy BUCKET=...          # gcloud builds submit --config cloudbuild.yaml 
 - **Environment**: `PAKEMIS_RELEASES_BUCKET`, `PAKEMIS_RELEASE_VERSION`, `ALLOWED_ORIGINS`
   (the hosting site's origins; `*` in development), `PAKEMIS_ASK_PROVIDER=gemini`;
   `GEMINI_API_KEY` from Secret Manager (`--set-secrets`). `cloudbuild.yaml` sets 2 CPU / 2 GiB,
-  concurrency 20, timeout 300 s, min-instances 1 (DuckDB + netCDF4 cold starts).
+  concurrency 20, timeout 300 s and **min-instances 0**: nothing is billed while nobody is reading,
+  and the first reader after an idle period waits the whole start - about 35 s measured (6 s to pull
+  the payload, 12 s to verify it, 15 s for DuckDB and netCDF4 to load and listen). min-instances 1
+  keeps an instance warm instead, at roughly $25-35 a month.
 - **Prefix change**: clients on `/v1/*` keep working for one release and receive
   `Deprecation: true`; `api/openapi.json` names only the `/api/v1/emissions/*` paths, so
   `make types` regenerates `web/src/types.gen.ts` with the new paths.

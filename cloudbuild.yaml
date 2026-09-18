@@ -58,7 +58,14 @@ steps:
       - '--memory=2Gi'
       - '--concurrency=20'
       - '--timeout=300'
-      - '--min-instances=1'
+      # SCALE TO ZERO (2026-09-18, the operator's call): nothing is billed while nobody is
+      # reading, and the first reader after an idle period waits for the whole start - measured at
+      # about 35 s on the running revision: 6 s to pull the 239 MB payload from the bucket, 12 s to
+      # verify every digest, 15 s to load the release and listen. Cloud Run's request timeout (300 s
+      # below) covers it and the app's own loading screen covers the wait. Set this to 1 to keep an
+      # instance warm instead, at roughly $25-35 a month; baking the payload into the image would
+      # cut most of the 35 s if both were ever wanted at once.
+      - '--min-instances=0'
       - '--max-instances=4'
 
 options:
