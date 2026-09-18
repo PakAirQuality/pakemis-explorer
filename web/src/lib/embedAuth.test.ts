@@ -103,6 +103,21 @@ describe("the embedded build", () => {
     expect((fetchMock.mock.calls[1][1] as RequestInit).headers).toMatchObject({ Authorization: "Bearer fresh" });
   });
 
+  it("keeps asking while it waits: one message would be lost to a host that is not listening yet", async () => {
+    vi.useFakeTimers();
+    const embed = await load({ NEXT_PUBLIC_EMBED_AUTH: "parent", NEXT_PUBLIC_EMBED_PARENT_ORIGIN: HOST });
+    const posts = fakeParent();
+    const pending = embed.authToken();
+    expect(posts).toHaveLength(1);                       // the first ask is immediate
+    await vi.advanceTimersByTimeAsync(embed.RETRY_MS * 3 + 10);
+    expect(posts.length).toBeGreaterThanOrEqual(4);      // and it keeps asking
+    answer("late-token");
+    expect(await pending).toBe("late-token");
+    const asked = posts.length;
+    await vi.advanceTimersByTimeAsync(embed.RETRY_MS * 3);
+    expect(posts).toHaveLength(asked);                   // answered: it stops asking
+  });
+
   it("when no host answers, it says so and sends no identity rather than hanging", async () => {
     vi.useFakeTimers();
     const embed = await load({ NEXT_PUBLIC_EMBED_AUTH: "parent", NEXT_PUBLIC_EMBED_PARENT_ORIGIN: HOST });

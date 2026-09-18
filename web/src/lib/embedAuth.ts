@@ -27,7 +27,11 @@ export const EMBEDDED = MODE === "parent";
 export const AUTH_REQUEST = "pakemis:auth-request";
 export const AUTH_REPLY = "pakemis:auth-token";
 /** How long a host has to answer before the reader is told to open the page from the dashboard. */
-export const WAIT_MS = 5000;
+export const WAIT_MS = 8000;
+/** How often to ask again while waiting. ONE request is not enough: this frame loads faster than
+ *  the host's own listener attaches, so the first ask can land before anyone is listening and a
+ *  single message would be lost - the frame then sat blank until it was reloaded by hand. */
+export const RETRY_MS = 700;
 /** A Firebase token lasts an hour; re-ask well before, so a long reading session never breaks. */
 const REUSE_MS = 45 * 60 * 1000;
 
@@ -35,7 +39,7 @@ export type EmbedStatus = "open" | "waiting" | "ready" | "unavailable" | "miscon
 
 let token = "";
 let tokenAt = 0;
-let pending: { promise: Promise<string>; resolve: (t: string) => void; timer: ReturnType<typeof setTimeout> } | null = null;
+let pending: { promise: Promise<string>; resolve: (t: string) => void; timer: ReturnType<typeof setTimeout>; retry: ReturnType<typeof setInterval> } | null = null;
 let listening = false;
 const watchers = new Set<(s: EmbedStatus) => void>();
 let status: EmbedStatus = EMBEDDED ? (PARENT_ORIGIN ? "waiting" : "misconfigured") : "open";
@@ -62,6 +66,7 @@ function listen() {
     settle("ready");
     if (pending) {
       clearTimeout(pending.timer);
+      clearInterval(pending.retry);
       pending.resolve(token);
       pending = null;
     }
@@ -86,13 +91,16 @@ export function authToken(): Promise<string> {
   const promise = new Promise<string>((r) => {
     resolve = r;
   });
+  const ask = () => window.parent?.postMessage({ type: AUTH_REQUEST }, PARENT_ORIGIN);
+  const retry = setInterval(ask, RETRY_MS);
   const timer = setTimeout(() => {
+    clearInterval(retry);
     pending = null;
     settle(token ? "ready" : "unavailable");
     resolve(token);
   }, WAIT_MS);
-  pending = { promise, resolve, timer };
-  window.parent?.postMessage({ type: AUTH_REQUEST }, PARENT_ORIGIN);
+  pending = { promise, resolve, timer, retry };
+  ask();
   return promise;
 }
 
@@ -145,7 +153,10 @@ export async function authedFetch(url: string, init?: RequestInit): Promise<Resp
 export function resetEmbedAuth(): void {
   token = "";
   tokenAt = 0;
-  if (pending) clearTimeout(pending.timer);
+  if (pending) {
+    clearTimeout(pending.timer);
+    clearInterval(pending.retry);
+  }
   pending = null;
   status = EMBEDDED ? (PARENT_ORIGIN ? "waiting" : "misconfigured") : "open";
 }
