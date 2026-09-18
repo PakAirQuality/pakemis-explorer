@@ -5,8 +5,11 @@
   "targets": {
     "hawanama-2": {
       "hosting": {
-        "pakemis": ["pakemis"]
+        "pakemis": [
+          "pakemis"
+        ]
       }
     }
-  }
+  },
+  "etags": {}
 }
