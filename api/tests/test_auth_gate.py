@@ -92,10 +92,12 @@ def test_an_anonymous_request_is_refused_by_name(gated):
 
 
 def test_the_health_check_still_answers_without_a_token(gated):
-    """Cloud Run calls /healthz unsigned; a gate that failed it would take the service down."""
+    """A health checker calls it unsigned; a gate that failed it would take the service down. The
+    trailing slash is the same route to a checker, so it is the same answer here."""
     c = gated(StubVerifier("good"))
     assert c.get("/healthz").status_code == 200
     assert c.get(P + "/healthz").status_code == 200
+    assert c.get(P + "/healthz/", follow_redirects=False).status_code in (200, 307)
 
 
 def test_a_signed_in_request_passes_through(gated):

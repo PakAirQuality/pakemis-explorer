@@ -38,6 +38,8 @@ MODES = ("", "off", "firebase")
 
 # The routes that answer without an identity: the container's health check (Cloud Run calls it with
 # no token at all, and a failing health check would take the service down), under either prefix.
+# On Cloud Run the ROOT /healthz never arrives - Google's front end answers that exact path with
+# its own 404 before the container sees it - so a deployment there checks the prefixed one.
 EXEMPT_SUFFIXES = ("/healthz",)
 CERT_TTL = 3600.0          # Google rotates the securetoken certs slowly; an hour is their own hint
 
@@ -157,7 +159,9 @@ class AuthGateMiddleware:
         self.verifier = verifier or FirebaseVerifier(policy)
 
     def exempt(self, scope):
-        path = scope.get("path", "")
+        # the trailing slash is stripped first: /healthz and /healthz/ are one route to a health
+        # checker, and an exemption that turned on a slash would be a trap rather than a rule
+        path = (scope.get("path", "") or "/").rstrip("/") or "/"
         return scope.get("method") == "OPTIONS" or any(path == s or path.endswith(s) for s in EXEMPT_SUFFIXES)
 
     async def __call__(self, scope, receive, send):
