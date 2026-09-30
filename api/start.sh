@@ -24,18 +24,6 @@ if [ ! -f "$ROOT/$VERSION/outputs/semantic/semantic_release.json" ]; then
   fi
 fi
 
-echo "verifying release $VERSION under $ROOT"
-python3 - "$VERSION" "$ROOT" <<'PY'
-import sys
-sys.path.insert(0, "data")
-import verify_release as V
-try:
-    out = V.verify(sys.argv[1], releases_root=sys.argv[2])
-except V.Mismatch as exc:
-    print("VERIFY FAILED: %s" % exc, file=sys.stderr)
-    sys.exit(1)
-print("OK %s verified in %s" % (out["release_id"], out["directory"]))
-PY
-
+# Service startup verifies the complete payload before accepting requests.
 echo "starting uvicorn on :${PORT:-8080}"
 exec python3 -m uvicorn pakemis_api.app:app --app-dir api --host 0.0.0.0 --port "${PORT:-8080}" --workers 1 --proxy-headers --forwarded-allow-ips='*'

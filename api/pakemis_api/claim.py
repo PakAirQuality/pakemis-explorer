@@ -104,7 +104,7 @@ class ClaimStore:
     """Built once at startup: the registries under data/registries/ indexed in Python, the fact
     tables in a private read-only DuckDB session as text, the dims from the release."""
 
-    def __init__(self, release, registries_dir, fetch_files, method_rows, labels, manifest_path):
+    def __init__(self, release, registries_dir, fetch_files, method_rows, labels, manifest_path, assets=None):
         self.release = release
         self.labels = labels
         self.method_rows = method_rows
@@ -113,6 +113,12 @@ class ClaimStore:
         self.registries = {}
         self.digests = {}
         for name, filename in REGISTRY_FILES.items():
+            asset = assets.bound(name, "claim_registries") if assets else None
+            if asset:
+                self.registries[name] = assets.rows(asset)
+                self.digests[name] = {"path": asset["path"], "sha256": asset["sha256"],
+                                      "identity": "contract", "source_path": asset["legacy_path"]}
+                continue
             rel = "data/registries/%s" % filename
             path = os.path.join(registries_dir, filename)
             if not os.path.exists(path):
@@ -122,12 +128,17 @@ class ClaimStore:
             self.digests[name] = {"path": rel, "sha256": rec.get("sha256"), "identity": rec.get("identity"), "source_path": rec.get("source_path", rel)}
         method_rec = fetch_files.get("data/method_registry.csv") or {}
         self.digests["method_registry"] = {"path": "data/method_registry.csv", "sha256": method_rec.get("sha256"), "identity": "fetch", "source_path": "data/method_registry.csv"}
+        method_asset = assets.bound("method_registry") if assets else None
+        if method_asset:
+            self.digests["method_registry"] = {"path": method_asset["path"], "sha256": method_asset["sha256"],
+                                               "identity": "contract", "source_path": method_asset["legacy_path"]}
         self._index()
         self.con = duckdb.connect(database=":memory:")
         self.con.execute("SET threads TO 1")
         for name in FACT_TABLES + ("fact_evidence", "fact_uncertainty", "fact_completeness", "fact_completeness_mass"):
-            path = os.path.join(release.directory, os.path.basename(release.tables[name]["path"]))
-            self.con.execute("CREATE TABLE %s AS SELECT * FROM read_csv(?, header=true, all_varchar=true)" % name, [path])
+            path, kind = release.table_path(name)
+            reader = "read_parquet(?)" if kind == "parquet" else "read_csv(?, header=true, all_varchar=true)"
+            self.con.execute("CREATE TABLE %s AS SELECT * FROM %s" % (name, reader), [path])
         self.stream_by_id = {r["source_stream_id"]: r for r in release.dim("dim_stream")}
         self.category_by_code = {r["ipcc_code"]: r for r in release.dim("dim_category")}
         self.geo_by_id = {r["geography_id"]: r for r in release.dim("dim_geography")}

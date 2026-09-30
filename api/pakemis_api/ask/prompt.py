@@ -118,8 +118,13 @@ HOW THE DATA IS SHAPED
 - Levels: national for every fiscal year; adm1 (provinces) and adm2 (districts) for the reference
   year only; the grid is a visual product read one cell at a time.
 - Gases: CO2, CH4, N2O; CO2e on AR5 (reported) or AR6 (secondary; not at adm2).
+- TWO FAMILIES, TWO VOCABULARIES. The greenhouse-gas tables carry `gas`; the AIR tables carry
+  `pollutant` and no gas column at all. query_air takes `pollutants` and groups by the air list
+  below - passing `gas`, `module`, `spatial_view`, `ipcc_code`, `component_id`, `month`,
+  `configuration_id` or `reporting_sector` to it is rejected. Each tool's own schema lists what it
+  accepts; that list is authoritative.
 - Sectors are the modules listed below; categories and IPCC codes filter within them; group_by
-  splits a result into cells (sector_id, gas, month, province, shape_id, category, ...).
+  splits a result into cells (sector_id, gas or pollutant, month, province, shape_id, category, ...).
 - The user's interface state is given at the top of each message as [ui_state]; use it to resolve
   "here", "this year", "this sector" and to default the map action.
 """
@@ -135,7 +140,13 @@ def dims_appendix(dims):
     lines.append("gases: " + ", ".join(dims.gases) + "; GWP bases: " + ", ".join(dims.gwp_bases))
     lines.append("sectors (sector_id / module): " + ", ".join(dims.sectors))
     lines.append("spatial views: " + ", ".join(dims.views))
-    lines.append("group_by values: " + ", ".join(dims.groups))
+    # NAMED BY FAMILY, not presented as one universal list. This said "group_by values: <the GHG
+    # list>" with nothing to say it was the GHG list, which is half of why `gas` was passed to an
+    # air query. Both lists come from the same place the tool schemas read.
+    lines.append("group_by values (greenhouse-gas tools): " + ", ".join(dims.groups))
+    lines.append("group_by values (query_air): " + ", ".join(dims.air_groups))
+    lines.append("pollutants (query_air; the air tables carry `pollutant`, never `gas`): "
+                 + ", ".join(dims.pollutants))
     lines.append("provinces (adm1 geography_ids / set_map_view.geo): " + ", ".join(dims.adm1_names)
                  + " (Other receives mass with no polygon; GB, AJK and Islamabad receive no cell)")
     lines.append("months: %s .. %s; adm1/adm2 months: %s .. %s" % (dims.month_min, dims.month_max,

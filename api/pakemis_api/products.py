@@ -24,10 +24,12 @@ those bytes are hashed once at startup and the entry says so (`identity: "comput
 """
 import hashlib
 import os
+import re
 import zipfile
 
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from pakemis_api.assets import ReleaseAssets
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -36,6 +38,11 @@ MEDIA_TYPES = {
     "parquet": "application/vnd.apache.parquet",
     "nc": "application/x-netcdf",
     "json": "application/json",
+    "geojson": "application/geo+json",
+    "md": "text/markdown; charset=utf-8",
+    "txt": "text/plain; charset=utf-8",
+    "pdf": "application/pdf",
+    "zip": "application/zip",
 }
 CACHE_CONTROL = "public, max-age=31536000, immutable"
 
@@ -112,6 +119,9 @@ class ProductCatalog:
         self.version = release.version
         self.files = {}
         self.entries = []
+        self.download_catalog = release.contract.get("download_catalog")
+        assets = ReleaseAssets(release.contract, release_dir)
+        self.library = None
         for name in sorted(release.tables):
             table = release.tables[name]
             formats = []
@@ -119,13 +129,26 @@ class ProductCatalog:
             formats.append(self._format(name, "csv", csv_path, table["sha256_csv"], "contract"))
             pq_path = os.path.join(semantic_dir, os.path.basename(table["parquet"]["path"]))
             if os.path.exists(pq_path):
-                formats.append(self._format(name, "parquet", pq_path, sha256_file(pq_path), "computed"))
+                digest = verification.get("file_digests", {}).get(os.path.realpath(pq_path)) or sha256_file(pq_path)
+                formats.append(self._format(name, "parquet", pq_path, digest, "computed"))
             agg = table.get("aggregation") or {}
             self.entries.append({
                 "name": name, "kind": "table", "table_kind": table.get("kind", ""), "formats": formats,
                 "rows": table.get("rows"), "columns": list(table.get("columns") or ()),
                 "primary_key": list(table.get("primary_key") or ()),
                 "aggregation_rule": agg.get("rule", ""), "closure": agg.get("closure", ""),
+            })
+        for table in release.contract.get("activity_inputs", {}).get("tables", []) if not assets.catalog else []:
+            name = "input_" + re.sub(r"[^a-zA-Z0-9_]", "_", table["table_id"])
+            path = os.path.join(release_dir, table["path"])
+            if not os.path.isfile(path):
+                raise RuntimeError("canonical input is absent: %s" % table["path"])
+            self.entries.append({
+                "name": name, "kind": "input", "title": table["title"],
+                "source_path": table["source_path"], "rows": table["row_count"],
+                "columns": [c["name"] for c in table["columns"]] + ["Record ID", "Source row"],
+                "primary_key": ["Record ID"],
+                "formats": [self._format(name, "csv", path, table["sha256"], "contract")],
             })
         by_path = {p["path"]: p["sha256"] for p in manifest.get("products", [])}
         for cube in CUBES:
@@ -148,7 +171,7 @@ class ProductCatalog:
                                  "formats": [self._format(name, ext, path, metadata_digests[filename] or sha256_file(path), "verification")]})
         # the registries GET /claim joins: FETCH.json names each one's identity (the manifest's
         # sources or products list, or the fetch alone) and its digest
-        for rel, rec in sorted((fetch_files or {}).items()):
+        for rel, rec in sorted((fetch_files or {}).items()) if not assets.catalog else []:
             if not rel.startswith(REGISTRIES_DIR + "/") or not rel.endswith(".csv"):
                 continue
             path = os.path.join(release_dir, rel)
@@ -159,11 +182,53 @@ class ProductCatalog:
                 continue
             self.entries.append({"name": name, "kind": "registry", "source_path": rec.get("source_path", rel),
                                  "formats": [self._format(name, "csv", path, rec["sha256"], rec.get("identity", "fetch"))]})
+        if assets.catalog:
+            library = []
+            for asset in assets.entries.values():
+                formats = []
+                if asset.get("downloadable"):
+                    if not asset.get("packaged") or asset.get("publication") not in {"library", "compatibility"}:
+                        raise RuntimeError("public asset is not packaged: %s" % asset["asset_id"])
+                    if asset.get("license") not in {"own-work", "own-work-compilation", "public-licence"}:
+                        raise RuntimeError("public asset has no redistribution grant: %s" % asset["asset_id"])
+                    path = assets.path(asset)
+                    filename = asset["filename"]
+                    name, ext = filename.rsplit(".", 1)
+                    formats.append(self._format(name, ext, path, asset["sha256"], "contract"))
+                    for alias in asset.get("aliases", []):
+                        if alias in self.files and self.files[alias][0] != path:
+                            raise RuntimeError("public filename collision: %s" % alias)
+                        self.files[alias] = self.files[filename]
+                    columns = [column["name"] for column in asset.get("columns", [])]
+                    if asset.get("table_id"):
+                        columns += ["Record ID", "Source row"]
+                    self.entries.append({"name": name, "asset_id": asset["asset_id"],
+                                         "kind": "input" if asset.get("table_id") else "asset",
+                                         "title": asset["title"], "formats": formats,
+                                         "columns": columns, "rows": asset.get("row_count"),
+                                         "primary_key": asset.get("primary_key", []),
+                                         "source_path": asset.get("legacy_path", "")})
+                if asset.get("publication") == "library":
+                    fields = ("asset_id", "table_id", "owner_sector", "sectors", "purpose", "kind", "title",
+                              "description", "license", "source_refs", "producer", "row_count", "columns",
+                              "bundle_id", "downloadable")
+                    library.append(dict({key: asset[key] for key in fields if key in asset}, formats=formats))
+            self.library = {"schema": "pakemis.data_library/v1", "assets": library,
+                            "sectors": sorted({sector for asset in library for sector in [asset["owner_sector"], *asset["sectors"]]}),
+                            "purposes": sorted({asset["purpose"] for asset in library})}
+        if self.download_catalog:
+            for collection in self.download_catalog["collections"]:
+                for item in collection["downloads"]:
+                    for filename in item["files"]:
+                        if filename not in self.files:
+                            raise RuntimeError("download catalogue names an unavailable file: %s" % filename)
         self.families = self._families()
 
     def _format(self, name, ext, path, sha256, identity):
         filename = "%s.%s" % (name, ext)
-        self.files[filename] = (path, sha256, MEDIA_TYPES[ext])
+        if filename in self.files and self.files[filename][0] != path:
+            raise RuntimeError("public filename collision: %s" % filename)
+        self.files[filename] = (path, sha256, MEDIA_TYPES.get(ext, "application/octet-stream"))
         return {"ext": ext, "filename": filename, "bytes": os.path.getsize(path), "sha256": sha256, "identity": identity}
 
     def _families(self):
@@ -172,7 +237,13 @@ class ProductCatalog:
         registries = [e["name"] for e in self.entries if e["kind"] == "registry"]
         everything = [e["name"] for e in self.entries]
         out = []
-        for family in FAMILIES:
+        families = FAMILIES
+        if self.download_catalog:
+            families = tuple({"id": c["id"], "title": c["title"], "description": c["dek"],
+                              "tables": tuple(dict.fromkeys(f.rsplit(".", 1)[0] for item in c["downloads"] for f in item["files"])),
+                              "formats": tuple(sorted({f.rsplit(".", 1)[1] for item in c["downloads"] for f in item["files"]}))}
+                             for c in self.download_catalog["collections"]) + (FAMILIES[-1],)
+        for family in families:
             tables = []
             for t in family["tables"]:
                 if t == "dims":
@@ -186,7 +257,7 @@ class ProductCatalog:
             entry = {"id": family["id"], "title": family["title"], "description": family["description"],
                      "tables": tables, "formats": list(family["formats"])}
             if family["id"] == "complete":
-                entry["archive"] = {"filename": ARCHIVE, "members": len(self.files) + 2,
+                entry["archive"] = {"filename": ARCHIVE, "members": len(self.archive_members()) + 2,
                                     "note": "every catalogued file under its payload path, plus SHA256SUMS (the digests above) and FETCH.json; streamed, deflated, not itself hashed"}
             out.append(entry)
         return out
@@ -209,10 +280,20 @@ class ProductCatalog:
             out.append(f)
         return out
 
+    def library_listing(self, base_url):
+        if self.library is None:
+            return None
+        assets = [dict(asset, formats=[dict(f, url="%s/%s" % (base_url, f["filename"]))
+                                      for f in asset["formats"]]) for asset in self.library["assets"]]
+        return dict(self.library, assets=assets)
+
     def archive_members(self):
         """(arcname, path, sha256) for every catalogued file, by payload path."""
-        members = []
+        members, seen = [], set()
         for filename, (path, sha256, _) in sorted(self.files.items()):
+            if os.path.realpath(path) in seen:
+                continue
+            seen.add(os.path.realpath(path))
             members.append((os.path.relpath(path, self.release_dir), path, sha256))
         return members
 
@@ -272,6 +353,8 @@ def products(request: Request):
     return {"release": svc.release.release_id, "version": svc.release.version,
             "count": len(catalog.entries), "products": catalog.listing(base),
             "families": catalog.families_listing(base),
+            **({"download_catalog": catalog.download_catalog} if catalog.download_catalog else {}),
+            **({"data_library": catalog.library_listing(base)} if catalog.library is not None else {}),
             "note": "sha256 is the file's identity: the contract's CSV digest for a table's CSV, the manifest's for a cube, the "
                     "verified digest for a metadata file, the manifest's sources/products digest (or FETCH.json's) for a registry; "
                     "a Parquet twin is hashed by this service at startup (the contract leaves it unhashed: the CSV is the identity). "

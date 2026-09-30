@@ -31,6 +31,15 @@ PRICE_PER_MTOK = {
 }
 CACHE_READ_FACTOR = 0.1
 CACHE_WRITE_FACTOR = 1.25
+# ONE SET OF WEIGHTS FOR THE INVOICE AND THE CAP. The cost display discounted a cache read to a
+# tenth and the budget counted it at full weight, and that disagreement is what drained the
+# conversation cap: a turn that makes eight model calls replays the whole cached prefix eight
+# times, so one looping question charged the prefix over and over at full price against a 400k cap
+# its real content never approached. The next question then died on `budget_exhausted` before it
+# ran. The budget has no reason to disagree with what is actually billed.
+BUDGET_WEIGHTS = {"input_tokens": 1.0, "output_tokens": 1.0,
+                  "cache_read_input_tokens": CACHE_READ_FACTOR,
+                  "cache_creation_input_tokens": CACHE_WRITE_FACTOR}
 
 
 def _int(name, default):
@@ -76,8 +85,8 @@ def cost_estimate_usd(model_id, usage):
 
 
 def usage_total(usage):
-    return sum(usage.get(k, 0) for k in ("input_tokens", "output_tokens", "cache_read_input_tokens",
-                                          "cache_creation_input_tokens"))
+    """Tokens charged against the budgets, weighted the way the bill weights them."""
+    return int(round(sum((usage.get(k, 0) or 0) * w for k, w in BUDGET_WEIGHTS.items())))
 
 
 class DailyBudget:

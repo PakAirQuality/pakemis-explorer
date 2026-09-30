@@ -52,7 +52,8 @@ export type AnswerEvent = { text: string; receipts: string[]; citations: (Citati
                             elapsed_s: number; scope?: AnswerScope;
                             /** present when the prepared library answered, with no model call */
                             source?: string; card_ids?: string[] };
-export type ErrorEvent = { code: string; message?: string };
+/** `scope` narrows a code that covers more than one cause: budget_exhausted is "conversation" or "daily". */
+export type ErrorEvent = { code: string; message?: string; scope?: string };
 export type DoneEvent = { conversation_id: string; usage: Record<string, number>; cost_estimate_usd: number | null };
 
 /** One parsed event of the stream: the SSE name and its JSON payload. */
@@ -64,7 +65,7 @@ export type TimelineItem =
   | { kind: "map_action"; action: MapActionEvent }
   | { kind: "correction"; reason: string }
   | { kind: "answer"; answer: AnswerEvent }
-  | { kind: "error"; code: string; message: string };
+  | { kind: "error"; code: string; message: string; scope?: string };
 
 export type TurnStatus = "streaming" | "done" | "failed";
 

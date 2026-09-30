@@ -25,6 +25,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "api"))
+from pakemis_api.assets import ReleaseAssets
 RELEASES = os.path.join(HERE, "releases")
 
 
@@ -79,13 +81,21 @@ def verify(version, releases_root=RELEASES, releases_md=os.path.join(ROOT, "RELE
         contract = json.load(handle)
     if contract["release"]["version"] != version:
         raise Mismatch("%s: contract names version %s" % (contract_path, contract["release"]["version"]))
+    # Cache only within this audit: every fresh startup still verifies current bytes.
+    file_digests = {}
+    def digest(path):
+        path = os.path.realpath(path)
+        if path not in file_digests:
+            file_digests[path] = sha256_file(path)
+        return file_digests[path]
+
     checked = 0
     tables = dict(contract["dimensions"], **contract["facts"])
     for name, table in tables.items():
         csv_path = os.path.join(d, table["path"])
         if not os.path.exists(csv_path):
             raise Mismatch("%s: %s is absent" % (name, csv_path))
-        got = sha256_file(csv_path)
+        got = digest(csv_path)
         if got != table["sha256_csv"]:
             raise Mismatch("%s: sha256 %s != contract %s" % (table["path"], got, table["sha256_csv"]))
         checked += 1
@@ -97,6 +107,20 @@ def verify(version, releases_root=RELEASES, releases_md=os.path.join(ROOT, "RELE
             checked += 1
     log("  %d semantic tables (CSV + Parquet twins) match semantic_release.json" % checked)
 
+    assets = ReleaseAssets(contract, d)
+    for asset in assets.entries.values():
+        if not asset.get("packaged"):
+            continue
+        path = assets.path(asset)
+        if not os.path.isfile(path) or digest(path) != asset["sha256"]:
+            raise Mismatch("release asset missing or changed: %s" % asset["path"])
+    for table in contract.get("activity_inputs", {}).get("tables", []) if not assets.catalog else []:
+        path = os.path.join(d, table["path"])
+        if not os.path.isfile(path):
+            raise Mismatch("canonical input is absent: %s" % table["path"])
+        if digest(path) != table["sha256"]:
+            raise Mismatch("canonical input differs from the contract: %s" % table["path"])
+
     manifest_path = os.path.join(d, "outputs", "release_manifest.json")
     with open(manifest_path, encoding="utf-8") as handle:
         manifest = json.load(handle)
@@ -106,7 +130,7 @@ def verify(version, releases_root=RELEASES, releases_md=os.path.join(ROOT, "RELE
     for product in list(manifest["products"]) + list(contract["products"]):
         path = os.path.join(d, product["path"])
         if os.path.exists(path):
-            got = sha256_file(path)
+            got = digest(path)
             if got != product["sha256"]:
                 raise Mismatch("%s: sha256 %s != listed %s" % (product["path"], got, product["sha256"]))
             listed += 1
@@ -119,7 +143,7 @@ def verify(version, releases_root=RELEASES, releases_md=os.path.join(ROOT, "RELE
         path = os.path.join(d, rel)
         if not os.path.exists(path):
             raise Mismatch("%s: recorded in FETCH.json but absent" % rel)
-        got = sha256_file(path)
+        got = digest(path)
         if got != rec["sha256"]:
             raise Mismatch("%s: sha256 %s != FETCH.json %s" % (rel, got, rec["sha256"]))
     log("  %d fetched files match FETCH.json" % len(fetch["files"]))
@@ -142,7 +166,7 @@ def verify(version, releases_root=RELEASES, releases_md=os.path.join(ROOT, "RELE
             raise Mismatch("%s: unknown identity %r in FETCH.json" % (rel, identity))
         if listed is None:
             raise Mismatch("%s: FETCH.json claims identity %s but the manifest does not list %s" % (rel, identity, source_path))
-        got = sha256_file(os.path.join(d, rel))
+        got = digest(os.path.join(d, rel))
         if got != listed:
             raise Mismatch("%s: sha256 %s != the manifest's %s for %s (%s)" % (rel, got, listed, source_path, identity))
         registries += 1
@@ -158,7 +182,9 @@ def verify(version, releases_root=RELEASES, releases_md=os.path.join(ROOT, "RELE
     return {"version": version, "release_id": contract["release"]["release_id"], "directory": d,
             "semantic_release_sha256": fetch["digests"]["semantic_release.json"],
             "release_manifest_sha256": fetch["digests"]["release_manifest.json"],
-            "commit": fetch["source"]["commit"]}
+            "commit": fetch["source"]["commit"],
+            "semantic_tables": {name: table["sha256_csv"] for name, table in tables.items()},
+            "file_digests": file_digests}
 
 
 def main(argv=None):

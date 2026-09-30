@@ -39,7 +39,7 @@ import { Widget, WIDGET_TITLE } from "@/components/ui/Widget";
 import { Frame } from "@/components/ui/Frame";
 import { RefusalCard } from "@/components/ui/RefusalCard";
 import { DOWNLOADS } from "./copy";
-import { COLLECTIONS, matches, type Collection, type Download as Item } from "./catalogue";
+import { collectionsFor, matches, type Collection, type Download as Item } from "./catalogue";
 import { PreviewDrawer } from "./PreviewDrawer";
 import { MapMotif, MOTIF_CREDIT } from "@/components/shell/MapMotif";
 
@@ -118,14 +118,15 @@ export function Downloads() {
     return out;
   }, [products.data]);
 
+  const collections = useMemo(() => collectionsFor(products.data?.download_catalog), [products.data?.download_catalog]);
   const shown: Collection[] = useMemo(() => {
     const columnsOf = (item: Item) => item.files.flatMap((f) => byName.get(f)?.columns ?? []);
-    const picked = tab && tab !== "all" ? COLLECTIONS.filter((c) => c.id === tab) : COLLECTIONS;
+    const picked = tab && tab !== "all" ? collections.filter((c) => c.id === tab) : collections;
     if (!query.trim()) return picked;
     return picked
       .map((c) => ({ ...c, downloads: c.downloads.filter((d) => matches(d, query, columnsOf(d))) }))
       .filter((c) => c.downloads.length > 0);
-  }, [tab, query, byName]);
+  }, [tab, query, byName, collections]);
 
   const setMode = (next: (typeof MODES)[number]) => {
     if (next === "files") setReceiptParam(null);
@@ -141,6 +142,7 @@ export function Downloads() {
         <NavCapsule />
         {/* the actions wrap as a group rather than letting the segmented switch fall off the edge */}
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          <Link href="/data-library" className={TEXT_BUTTON}>Data library</Link>
           <a href={api.docsUrl()} className={TEXT_BUTTON} data-testid="api-docs"><ExternalLink size={12} /> {DOWNLOADS.docs}</a>
           <a href={productUrl("complete.zip")} className={TEXT_BUTTON} data-testid="archive-download" title={products.data?.families.find((f) => f.id === "complete")?.archive?.note}>
             <Download size={12} /> {DOWNLOADS.completeRelease}

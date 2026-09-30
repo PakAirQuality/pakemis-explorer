@@ -28,6 +28,8 @@ export const ERROR_TITLES: Record<string, string> = {
   placeholder_error: "Answer withheld: the draft named a result cell that does not exist",
   turn_limit: "Stopped: too many model calls without a final answer",
   budget_exhausted: "Stopped: the token budget is spent",
+  "budget_exhausted:conversation": "Stopped: this conversation has spent its token budget",
+  "budget_exhausted:daily": "Stopped: today's shared token budget is spent",
   model_error: "Model error",
   model_refusal: "The model declined this request",
   agent_disabled: "The assistant is not enabled",
@@ -37,8 +39,12 @@ export const ERROR_TITLES: Record<string, string> = {
   network_error: "Could not reach the API",
 };
 
-export function errorTitle(code: string): string {
-  return ERROR_TITLES[code] ?? code.replace(/_/g, " ");
+/* A TITLE THAT NAMES THE REMEDY. `budget_exhausted` covered two different situations - this
+   conversation is full, or the whole day's budget is gone - and said "the token budget is spent"
+   for both, so a reader could not tell whether starting a new conversation would help. The
+   stream now says which; the title says it too, because the title is the line that gets read. */
+export function errorTitle(code: string, scope?: string): string {
+  return (scope && ERROR_TITLES[`${code}:${scope}`]) ?? ERROR_TITLES[code] ?? code.replace(/_/g, " ");
 }
 
 /* The phases the stream reports - model, tool, correction, tool_limit - used to be worded and
@@ -124,7 +130,7 @@ export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAg
       {tl.answer && <AnswerCard answer={tl.answer} items={tl.items} onCite={onCite} onFollowUp={(q) => onFollowUp?.(q)} agentMove={agentMove} onUndoAgentMove={onUndoAgentMove} />}
       {errors.map((item, i) => (
         <div key={i} className="rounded-card border border-warn/30 bg-refusal px-3 py-2 text-sm text-warn" data-testid="error-card" data-code={item.code}>
-          <div className="font-semibold">{errorTitle(item.code)}</div>
+          <div className="font-semibold">{errorTitle(item.code, item.scope)}</div>
           {item.message && <div className="mt-0.5 text-xs">{item.message}</div>}
           <div className="mono mt-0.5 text-micro normal-case tracking-normal text-muted">{item.code}</div>
         </div>

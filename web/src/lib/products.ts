@@ -56,6 +56,36 @@ export const FamilySchema = z
   })
   .passthrough();
 
+/** Reader-facing catalogue supplied by the same release as the downloadable files. */
+export const DownloadCatalogSchema = z.object({
+  schema: z.literal("pakemis.download_catalog/v1"),
+  collections: z.array(z.object({
+    id: z.enum(["emissions", "activity", "air", "methods", "maps"]),
+    title: z.string(), dek: z.string(),
+    downloads: z.array(z.object({
+      id: z.string(), title: z.string(), dek: z.string(), coverage: z.string(),
+      icon: z.string(), files: z.array(z.string()), finds: z.array(z.string()).optional(),
+      pending: z.literal(true).optional(),
+    })),
+  })),
+});
+export type DownloadCatalog = z.infer<typeof DownloadCatalogSchema>;
+
+export const LibraryAssetSchema = z.object({
+  asset_id: z.string(), table_id: z.string().optional(), title: z.string(), description: z.string(),
+  owner_sector: z.string(), sectors: z.array(z.string()), purpose: z.string(), kind: z.string(),
+  license: z.string(), source_refs: z.array(z.string()), producer: z.string().optional(),
+  bundle_id: z.string().optional(), downloadable: z.boolean(), row_count: z.number().optional(),
+  columns: z.array(z.object({ field_id: z.string(), name: z.string(), unit: z.string().optional(),
+    storage_type: z.string().optional() })).optional(),
+  formats: z.array(ProductFormatSchema),
+}).passthrough();
+export const DataLibrarySchema = z.object({
+  schema: z.literal("pakemis.data_library/v1"), assets: z.array(LibraryAssetSchema),
+  sectors: z.array(z.string()), purposes: z.array(z.string()),
+});
+export type LibraryAsset = z.infer<typeof LibraryAssetSchema>;
+
 export const ProductsSchema = z
   .object({
     release: z.string(),
@@ -63,6 +93,8 @@ export const ProductsSchema = z
     count: z.number(),
     products: z.array(ProductSchema),
     families: z.array(FamilySchema),
+    download_catalog: DownloadCatalogSchema.nullable().optional(),
+    data_library: DataLibrarySchema.nullable().optional(),
     note: z.string().optional(),
   })
   .passthrough();

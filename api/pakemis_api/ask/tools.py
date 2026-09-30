@@ -10,7 +10,7 @@ import copy
 import re
 
 from pakemis_api import models_gen as G
-from pakemis_query import functions as F
+from pakemis_query import Engine, functions as F
 from pakemis_query.models import GROUPS, VIEWS
 
 # function name (query_contract.functions) -> request model name (models_gen.MODELS)
@@ -116,6 +116,14 @@ class Dims:
         self.gwp_bases = ["AR5", "AR6"]
         self.views = list(VIEWS)
         self.groups = list(GROUPS)
+        # THE AIR TABLES GROUP DIFFERENTLY, AND THE SCHEMA USED TO SAY OTHERWISE. Every request
+        # model was enriched with the GHG `GROUPS`, so the query_air tool advertised `gas`,
+        # `module`, `spatial_view` and five more the air validator rejects, and omitted
+        # `pollutant`, `subitem` and `year`, which it requires. A model that passed `gas` for an
+        # air question was following the schema it was given. Read from the engine that does the
+        # validating, never re-typed here: a second copy of this list is how the drift started.
+        self.air_groups = list(Engine.AIR_GROUPS)
+        self.pollutants = sorted(rel.dim_values("dim_pollutant", "pollutant"))
         self.sectors = sorted({s["module"] for s in rel.dim("dim_stream")})
         geo = rel.dim("dim_geography")
         self.adm1_names = sorted(g["name"] for g in geo if g["level"] == "adm1")
@@ -144,9 +152,14 @@ class Dims:
             raise RuntimeError("query_contract names functions this agent has no model for: %s" % missing)
 
 
-def _field_values(dims):
-    """field name -> (allowed values, note) used to enrich the schemas; ids and names only."""
-    return {
+def _field_values(dims, model_name=None):
+    """field name -> (allowed values, note) used to enrich the schemas; ids and names only.
+
+    `model_name` exists because the allowed values are NOT global. The air family and the
+    greenhouse-gas family share field NAMES and not field VOCABULARIES, and enriching both from one
+    dictionary is what told the model to group an air query by `gas`.
+    """
+    values = {
         "periods": (dims.fiscal_periods + ["CY1990..CY2024 (calendar basis, agriculture only)"], "period ids"),
         "basis": (["fiscal", "calendar"], "calendar only with sectors=[agriculture]"),
         "configuration_id": (dims.configurations, "queryable configurations; S_2023_24 exists for %s only" % dims.reference_period),
@@ -173,6 +186,14 @@ def _field_values(dims):
         "format": (["csv"], "the explorer serves CSV and RECEIPT.json"),
         "module": (dims.sectors, ""),
     }
+    if model_name == "QueryAir":
+        values["group_by"] = (dims.air_groups,
+                              "the AIR tables; they do not carry gas, module, spatial_view, "
+                              "ipcc_code, component_id, month, configuration_id or reporting_sector")
+        values["pollutants"] = (dims.pollutants,
+                                "air species; the air tables carry `pollutant`, never `gas`. "
+                                "Empty -> every pollutant, grouped")
+    return values
 
 
 def _enrich(schema, dims, values):
@@ -198,7 +219,7 @@ def _enrich(schema, dims, values):
 
 def function_tool(name, dims):
     model = G.MODELS[FUNCTION_MODEL[name]]
-    schema = _enrich(inline_schema(model.model_json_schema()), dims, _field_values(dims))
+    schema = _enrich(inline_schema(model.model_json_schema()), dims, _field_values(dims, FUNCTION_MODEL[name]))
     schema.pop("description", None)
     dc = G.BY_NAME[FUNCTION_MODEL[name]]
     fn = getattr(F, name, None)

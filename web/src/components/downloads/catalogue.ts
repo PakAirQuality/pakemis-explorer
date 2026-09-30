@@ -30,6 +30,8 @@ import {
   SlidersHorizontal, Table2, Trash2, Wheat, Wind, Zap, type LucideIcon,
 } from "lucide-react";
 
+import type { DownloadCatalog } from "@/lib/products";
+
 export type CollectionId = "emissions" | "activity" | "air" | "methods" | "maps";
 
 export type Download = {
@@ -56,6 +58,9 @@ export type Collection = {
   downloads: Download[];
 };
 
+/** Compatibility for already-published releases without download_catalog.
+ * New releases supply this content from emissions/data/download_catalog.json.
+ */
 export const COLLECTIONS: Collection[] = [
   {
     id: "emissions",
@@ -493,6 +498,21 @@ export const COLLECTIONS: Collection[] = [
     ],
   },
 ];
+
+const ICONS: Record<string, LucideIcon> = {
+  Beef, BookOpen, Boxes, BarChart3, CalendarDays, Factory, FlaskConical, Flame, Fuel, Gauge,
+  Globe, Grid3x3, Home, Layers, LayoutGrid, ListChecks, MapPin, Ruler, Scale, Sigma,
+  SlidersHorizontal, Table2, Trash2, Wheat, Wind, Zap,
+};
+
+/** Scientific metadata and file membership belong to the release; glyph components stay local. */
+export function collectionsFor(catalog: DownloadCatalog | null | undefined): Collection[] {
+  if (!catalog) return COLLECTIONS;
+  return catalog.collections.map((collection) => ({
+    ...collection,
+    downloads: collection.downloads.map((item) => ({ ...item, icon: ICONS[item.icon] ?? Table2 })),
+  }));
+}
 
 /** Every file the page names, for the test that holds this module to the served catalogue. */
 export function catalogueFiles(): string[] {

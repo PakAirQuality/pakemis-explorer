@@ -265,7 +265,26 @@ def refusal_payload(k, call_id, name, exc, service=None):
 
 
 def _validation_message(exc):
-    return "; ".join("%s: %s" % (".".join(str(p) for p in e.get("loc", ())), e.get("msg")) for e in exc.errors())
+    """What was rejected, what was sent, and what would have been accepted.
+
+    This kept `loc` and `msg` and discarded pydantic's `input` and `ctx`. The generated request
+    models are permissive - the vocabularies are enforced by the engine, which already returns
+    structured errors - so what the echo of `input` reliably recovers is WHICH value offended: a
+    model told only "limit: Input should be a valid integer" cannot see which of the several
+    things it passed was wrong; told `(received "abc")` it can. `ctx["expected"]` is the
+    permitted-values list where pydantic supplies one, and is included when it does.
+    """
+    parts = []
+    for e in exc.errors():
+        line = "%s: %s" % (".".join(str(p) for p in e.get("loc", ())) or "(root)", e.get("msg"))
+        if "input" in e:
+            got = json.dumps(e["input"], default=str, sort_keys=True)
+            line += " (received %s)" % (got if len(got) <= 200 else got[:197] + "...")
+        expected = (e.get("ctx") or {}).get("expected")
+        if expected:
+            line += "; permitted: %s" % expected
+        parts.append(line)
+    return "; ".join(parts)
 
 
 class Turn:
@@ -279,11 +298,63 @@ class Turn:
         self.scope = None          # the last tool result's compact context (the answer's `scope`)
         self.usage = {k: 0 for k in USAGE_KEYS}
         self.rejected_drafts = []
+        # (tool, input) -> (k, body, is_error, envelope) for every call already made this message,
+        # so an identical retry is answered rather than re-run. See `_execute`.
+        self._calls = {}
+        # tokens this turn has spent but the CONVERSATION has not yet accepted. See `_spend`.
+        self.turn_spent = 0
+
+    # -- repeated calls ---------------------------------------------------------------------
+
+    @staticmethod
+    def _repeat_key(call):
+        return "%s(%s)" % (call.name, json.dumps(call.input, sort_keys=True, default=str))
+
+    def _repeat(self, k, call, prior):
+        """An identical call has already been made this message. Do not make it again."""
+        first_k, body, was_error, env, out = prior
+        self.results.append(env)
+        if not was_error:
+            # identical to a call that already succeeded. Hand back the same envelope rather than
+            # re-running it: nothing about the release changed between the two. The events are
+            # replayed at THIS k and call id, so the citations resolve and the timeline shows the
+            # result the model was actually given.
+            replay = [("status", {"phase": "repeated_call", "k": k, "same_as": first_k})]
+            for name, payload in out:
+                replay.append((name, dict(payload, k=k, id=call.id) if isinstance(payload, dict) else payload))
+            return body, False, replay
+        first = str(body).strip().splitlines()[0] if str(body).strip() else "(no message)"
+        err = ToolInputError(
+            "call %d repeats call %d exactly, and call %d failed: %s -- repeating it cannot "
+            "succeed. Change the input, or answer with the results already obtained."
+            % (k, first_k, first_k, first[:400]))
+        return "error: %s" % err, True, [("refusal", refusal_payload(k, call.id, call.name, err, self.service))]
 
     # -- tool execution ---------------------------------------------------------------------
 
     def _execute(self, k, call):
-        """-> (tool_result content for the model, is_error, [(event, payload)...])."""
+        """-> (tool_result content for the model, is_error, [(event, payload)...]).
+
+        REFUSES AN IDENTICAL RETRY. Nothing recorded what had already been asked, so a model whose
+        call was rejected could re-issue it byte-for-byte; with a schema that disagreed with the
+        validator there was no input it could reach that would work, and it spent all eight turns
+        discovering that. The second identical call now returns a different error - one that says
+        it is a repeat and that repeating cannot help - instead of the same rejection a third,
+        fourth and fifth time.
+        """
+        key = self._repeat_key(call)
+        prior = self._calls.get(key)
+        if prior is not None:
+            return self._repeat(k, call, prior)
+        before = len(self.results)
+        out = self._execute_once(k, call)
+        # `_execute_once` appends exactly one entry to self.results on every path; keep it so a
+        # repeat can replay the same envelope at its own k.
+        env = self.results[before] if len(self.results) > before else None
+        self._calls[key] = (k, out[0], out[1], env, out[2])
+        return out
+
+    def _execute_once(self, k, call):
         name, payload = call.name, call.input
         if name == MAP_TOOL:
             try:
@@ -338,7 +409,14 @@ class Turn:
         for key in USAGE_KEYS:
             self.usage[key] += usage.get(key, 0) or 0
         spent = usage_total(usage)
-        self.conv.tokens_spent += spent
+        # THE DAY PAYS FOR WHAT WAS BILLED; THE CONVERSATION PAYS FOR WHAT IT KEEPS. These were the
+        # same counter, so a turn that ended at the turn limit raised conv.tokens_spent and
+        # appended NO history - the conversation carried all of the cost and none of the benefit,
+        # and the next question died on `budget_exhausted` before it ran. That is the second half
+        # of the screenshot. The daily budget still sees every token, because those were really
+        # spent; the conversation cap is about the context it carries, and a turn that carries
+        # nothing forward has not grown it. Committed at the one place history is retained.
+        self.turn_spent += spent
         if self.budget is not None:
             self.budget.spend(spent)
 
@@ -354,8 +432,18 @@ class Turn:
         corrected = False
         started = time.time()
         while True:
-            if self.conv.tokens_spent >= self.limits.conversation_tokens or (self.budget is not None and self.budget.remaining() <= 0):
-                yield "error", {"code": "budget_exhausted", "message": "the token budget for this conversation or this day is spent"}
+            # "this conversation OR this day" left a reader unable to tell whether starting a new
+            # conversation would help. It is knowable here, so say which, and say the remedy.
+            over_day = self.budget is not None and self.budget.remaining() <= 0
+            over_conv = self.conv.tokens_spent + self.turn_spent >= self.limits.conversation_tokens
+            if over_day or over_conv:
+                yield "error", {"code": "budget_exhausted",
+                                "scope": "daily" if over_day else "conversation",
+                                "message": ("the shared daily token budget is spent; it resets at "
+                                            "00:00 UTC, and a new conversation will not help")
+                                if over_day else
+                                ("this conversation has spent its token budget; start a new one to "
+                                 "carry on - the daily budget still has room")}
                 break
             if turns >= self.limits.max_turns:
                 yield "error", {"code": "turn_limit", "message": "the agent made %d model calls without a final answer" % turns}
@@ -450,6 +538,8 @@ class Turn:
                     break
             self.conv.append("user", user_text)
             self.conv.append("assistant", rendered)
+            self.conv.tokens_spent += self.turn_spent      # history kept, so the cost is kept too
+            self.turn_spent = 0
             yield "answer", {"text": rendered, "receipts": list(dict.fromkeys(self.receipts)), "citations": citations,
                              "scope": self.scope, "elapsed_s": round(time.time() - started, 3)}
             break

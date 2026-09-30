@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from conftest import load_goldens
 from pakemis_api.ask.loop import ModelEvent
+from pakemis_api.ask.tools import ENGINE_TOOLS, FUNCTION_MODEL, function_tool
 from pakemis_api.ask.render import BareNumberError, render_multi
 from pakemis_query.placeholders import PlaceholderError
 
@@ -565,3 +566,292 @@ def test_answer_scope_is_null_without_a_result(ask_client, fake):
     fake.load([text("Ask me for a number and I will look it up."), stop()])
     events = ask(ask_client, "hello")
     assert only(events, "answer")[0]["scope"] is None
+
+
+# --- the schema and the validator must agree ----------------------------------------------------
+
+def _allowed(tool, field):
+    """The values a tool's schema advertises for one field, parsed back out of its description."""
+    prop = tool["input_schema"]["properties"].get(field)
+    if not prop:
+        return None
+    match = re.search(r"Allowed: (.+?)\.(?: |$)", prop.get("description", ""))
+    return [v.strip() for v in match.group(1).split(",")] if match else None
+
+
+def test_the_air_tool_advertises_the_groupings_the_air_engine_accepts(ask_client):
+    """THE BUG THIS TEST EXISTS FOR, and it reached a user.
+
+    Every request model was enriched from one dictionary, so `query_air` advertised the
+    GREENHOUSE-GAS grouping list: gas, ipcc_code, component_id, month, module, spatial_view,
+    configuration_id, reporting_sector - none of which the air tables carry - while omitting
+    pollutant, subitem and year, which they require. A reader asked for "total pollutants in
+    Lahore district"; the model passed `gas` because the schema said it could; the engine rejected
+    it with the correct list; the model retried and burned the conversation's budget.
+
+    The model was not wrong. The instructions were."""
+    dims = ask_client.app.state.ask.dims
+    advertised = _allowed(function_tool("query_air", dims), "group_by")
+    assert advertised, "query_air must advertise its groupings"
+    from pakemis_query import Engine
+    assert set(advertised) == set(Engine.AIR_GROUPS), (
+        "the air tool schema and the air validator disagree; schema says %s, engine accepts %s"
+        % (sorted(advertised), sorted(Engine.AIR_GROUPS)))
+    assert "gas" not in advertised, "no air table carries a gas column"
+    assert "pollutant" in advertised
+
+
+def test_no_tool_advertises_a_grouping_its_own_engine_would_reject(ask_client):
+    """The general form. Every value a tool offers for `group_by` must be one its own validator
+    accepts - otherwise the schema is instructing the model to fail, which is what happened."""
+    dims = ask_client.app.state.ask.dims
+    from pakemis_query import Engine
+    accepted = {"QueryAir": set(Engine.AIR_GROUPS)}
+    from pakemis_query.models import GROUPS
+    mismatched = []
+    for name in ENGINE_TOOLS:
+        advertised = _allowed(function_tool(name, dims), "group_by")
+        if advertised is None:
+            continue
+        allowed = accepted.get(FUNCTION_MODEL[name], set(GROUPS))
+        stray = sorted(set(advertised) - allowed)
+        if stray:
+            mismatched.append((name, stray))
+    assert not mismatched, "tools advertise groupings their engine rejects: %s" % mismatched
+
+
+def test_the_air_tool_names_its_pollutants(ask_client):
+    """`pollutants` had no entry in the allowed-values table at all, so the one field an air
+    question turns on was the one field the model was given no vocabulary for."""
+    dims = ask_client.app.state.ask.dims
+    advertised = _allowed(function_tool("query_air", dims), "pollutants")
+    assert advertised, "query_air must name the pollutants it accepts"
+    assert "SO2" in advertised and "PM2.5" in advertised
+
+
+# --- the loop: what turned one bad call into a spent budget -----------------------------------
+
+def test_an_identical_rejected_call_is_refused_as_a_repeat_not_re_run(ask_client, fake):
+    """THE LOOP. Nothing recorded what had already been asked, so a model whose call was rejected
+    could re-issue it byte-for-byte and get the identical rejection back, turn after turn, until
+    max_turns=8 was gone. With a schema that disagreed with the validator there was no input it
+    could reach that would work, so that is exactly what happened.
+
+    The second identical call must come back with a DIFFERENT error - one that says it is a repeat
+    and that repeating cannot help - so the model has a reason to stop.
+    """
+    bad = {"group_by": ["gas"], "geography_level": "adm2"}
+    fake.load([tool_use("query_air", bad, call_id="c1"), stop("tool_use")],
+              [tool_use("query_air", bad, call_id="c2"), stop("tool_use")],
+              [text("I cannot group the air tables by gas; they carry pollutant instead."), stop()])
+    events = ask(ask_client, "total pollutants in Lahore district for 2023")
+    refusals = only(events, "refusal")
+    assert len(refusals) == 2, events
+    first, second = refusals
+    assert "repeats call 1" in second["message"], second["message"]
+    assert "cannot succeed" in second["message"]
+    assert second["message"] != first["message"], "the repeat got the same rejection again"
+    # and the engine was not asked a second time: the repeat is answered from what is already known
+    assert only(events, "answer"), events
+
+
+def test_a_repeated_successful_call_replays_rather_than_re_running(ask_client, fake):
+    """The same bookkeeping, on the other branch: an identical call that already SUCCEEDED gets the
+    same envelope back, so citations at the second k still resolve."""
+    req = {"periods": ["FY2023-24"]}
+    fake.load([tool_use("query_emissions", req, call_id="d1"), stop("tool_use")],
+              [tool_use("query_emissions", req, call_id="d2"), stop("tool_use")],
+              [text("The national total is {{result_2_cell_0}} {{result_2_cell_0.unit}}."), stop()])
+    events = ask(ask_client, "national total for the reference year, twice")
+    results = only(events, "tool_result")
+    assert len(results) == 2, events
+    assert results[0]["receipt"] == results[1]["receipt"]
+    answers = only(events, "answer")
+    assert answers, events
+    # the citation on the SECOND result rendered, which it cannot do if the replay appended nothing
+    assert answers[0]["citations"], answers[0]["text"]
+
+
+def test_a_turn_that_keeps_no_history_does_not_charge_the_conversation(ask_client, fake, settings):
+    """THE SECOND HALF OF THE SCREENSHOT. A turn that ended at the turn limit raised
+    conv.tokens_spent and appended no history: the conversation carried all of the cost and none of
+    the benefit, so the NEXT question died on `budget_exhausted` before it ran. The day still pays
+    - those tokens were really spent - but the conversation cap measures the context it carries.
+    """
+    ask_state = ask_client.app.state.ask
+    limit = ask_state.limits.max_turns
+    call = {"group_by": ["gas"]}
+    # burn the whole turn budget on calls that never reach an answer, each one distinct so the
+    # repeat guard does not end it early
+    fake.load(*[[tool_use("query_air", dict(call, limit=i + 1), call_id="t%d" % i), stop("tool_use")]
+                for i in range(limit + 1)])
+    events = ask(ask_client, "make a table of annual emissions trend by sector for Lahore district")
+    errors = only(events, "error")
+    assert errors and errors[0]["code"] == "turn_limit", events
+    conv_id = only(events, "done")[0]["conversation_id"]
+    conv = ask_state.memory._by_id.get(conv_id)
+    assert conv is not None, "the conversation was not retained"
+    assert not conv.messages, "a turn with no answer appended history"
+    assert conv.tokens_spent == 0, (
+        "a turn that appended no history charged the conversation %d tokens" % conv.tokens_spent)
+    # the DAY still paid: those tokens were really spent, whatever the conversation kept
+    assert ask_state.budget.daily_tokens - ask_state.budget.remaining() > 0
+
+
+def test_the_budget_refusal_says_which_budget_and_what_to_do(ask_client, fake):
+    """`budget_exhausted` said "this conversation or this day", so a reader could not tell whether
+    starting a new conversation would help. Neither branch had a single test."""
+    from pakemis_api.ask.loop import Turn
+    from pakemis_api.ask.limits import Limits, DailyBudget
+
+    class Conv:
+        id, messages, tokens_spent = "c", [], 0
+        receipts = set()
+
+        def append(self, *a):
+            pass
+
+    def run(conv_spent, daily_left):
+        conv = Conv()
+        conv.tokens_spent = conv_spent
+        budget = DailyBudget(daily_tokens=1000)
+        budget.spend(1000 - daily_left)
+        t = Turn(ask_client.app.state.ask.service, fake, [], "", ask_client.app.state.ask.dims,
+                 conv, "q", {}, Limits(conversation_tokens=100), budget)
+        return [d for n, d in t.events() if n == "error"][0]
+
+    out = run(conv_spent=200, daily_left=1000)
+    assert out["code"] == "budget_exhausted" and out["scope"] == "conversation"
+    assert "start a new one" in out["message"] and "daily budget still has room" in out["message"]
+
+    out = run(conv_spent=0, daily_left=0)
+    assert out["code"] == "budget_exhausted" and out["scope"] == "daily"
+    assert "resets at 00:00 UTC" in out["message"]
+    assert "new conversation will not help" in out["message"]
+
+
+def test_cache_reads_are_charged_at_the_rate_they_are_billed():
+    """Eight replays of a large cached prefix are what actually drained the 400k conversation cap.
+    The cost display already discounted a cache read to a tenth; the budget counted it whole."""
+    from pakemis_api.ask.limits import usage_total, CACHE_READ_FACTOR, CACHE_WRITE_FACTOR
+    usage = {"input_tokens": 100, "output_tokens": 50,
+             "cache_read_input_tokens": 100_000, "cache_creation_input_tokens": 1_000}
+    assert usage_total(usage) == int(round(
+        100 + 50 + 100_000 * CACHE_READ_FACTOR + 1_000 * CACHE_WRITE_FACTOR))
+    assert usage_total(usage) < 100_000, "a cache read still costs the budget full price"
+    # and the two agree: the budget weights what the invoice weights
+    assert usage_total({"cache_read_input_tokens": 1000}) == int(round(1000 * CACHE_READ_FACTOR))
+
+
+def test_a_rejected_tool_input_echoes_what_was_sent(ask_client, fake):
+    """`_validation_message` kept `loc` and `msg` and discarded pydantic's `input` and `ctx`.
+
+    The generated request models are permissive, so most vocabulary errors come from the engine
+    (which is already structured). What the echo recovers is which VALUE offended: "limit: Input
+    should be a valid integer" names the field but not the offending value, and a model that
+    passed several things cannot tell which to change.
+    """
+    fake.load([tool_use("query_air", {"limit": "abc"}, call_id="v1"), stop("tool_use")],
+              [text("That limit is not a number; the release could not be queried."), stop()])
+    events = ask(ask_client, "pollutants with a nonsense limit")
+    refusals = only(events, "refusal")
+    assert refusals, events
+    msg = refusals[0]["message"]
+    assert "limit" in msg
+    assert '"abc"' in msg or "'abc'" in msg, "the rejection does not echo what was sent: %s" % msg
+
+
+# --- the two questions from the screenshot, end to end ----------------------------------------
+
+def _lahore_shape(dims):
+    for name, shape_id in dims.adm2_by_name.items():
+        if "lahore" in name.lower():
+            return shape_id
+    return None
+
+
+def _advertised(dims, field):
+    from pakemis_api.ask.tools import function_tool
+    tool = function_tool("query_air", dims)
+    schema = tool.get("input_schema") or tool.get("parameters") or tool
+    prop = (schema.get("properties") or {}).get(field) or {}
+    m = re.search(r"Allowed: ([^.]+)\.", prop.get("description", ""))
+    return [v.strip() for v in m.group(1).split(",")] if m else []
+
+
+def test_screenshot_question_2_total_pollutants_in_lahore_answers(ask_client, fake):
+    """"total pollutants in Lahore district for 2023" - which died on `budget_exhausted` after the
+    model passed `gas` twice, because the schema told it `gas` was a grouping of the air tables.
+
+    The point of this test is that the request is built ONLY from values the tool schema
+    advertises. If the schema and the validator ever disagree again, this fails.
+    """
+    dims = ask_client.app.state.ask.dims
+    shape = _lahore_shape(dims)
+    if shape is None:
+        pytest.skip("no Lahore shape_id in this release")
+    groups = _advertised(dims, "group_by")
+    assert "pollutant" in groups and "gas" not in groups
+    req = {"geography_level": "adm2", "geography_ids": [shape],
+           "periods": ["FY2023-24"], "group_by": ["pollutant"]}
+    fake.load([tool_use("query_air", req, call_id="s2"), stop("tool_use")],
+              [text("Lahore's air emissions in FY2023-24 lead with {{result_1_cell_0}} "
+                    "{{result_1_cell_0.unit}}."), stop()])
+    events = ask(ask_client, "total pollutants in Lahore district for 2023")
+    assert not only(events, "refusal"), only(events, "refusal")
+    assert not only(events, "error"), only(events, "error")
+    results = only(events, "tool_result")
+    assert len(results) == 1 and results[0]["cells"], events
+    assert only(events, "answer"), events
+
+
+def test_screenshot_question_1_lahore_sector_trend_answers(ask_client, fake):
+    """"Make a table of annual emissions trend by sector for Lahore district" - which spent all
+    eight turns on two refusals that contradicted each other.
+
+    `sector_id` and `period_id` are both carried by fact_air_adm2_year, and both are advertised.
+    """
+    dims = ask_client.app.state.ask.dims
+    shape = _lahore_shape(dims)
+    if shape is None:
+        pytest.skip("no Lahore shape_id in this release")
+    groups = _advertised(dims, "group_by")
+    assert {"sector_id", "period_id"} <= set(groups)
+    base = {"geography_level": "adm2", "geography_ids": [shape],
+            "group_by": ["period_id", "sector_id"], "pollutants": ["SO2"]}
+    # TURN ONE asks without naming the periods and is refused. TURN TWO does what the refusal
+    # says. That is the whole point: the refusal a district trend actually hits is now one a
+    # reader - or a model - can act on, so the question is answered on the second call instead of
+    # being retried until the turn limit. Before this fix the two refusals it hit contradicted
+    # each other ("not carried at national grain; available at national grain") and named a grain
+    # that could not answer a district question at all.
+    fake.load([tool_use("query_air", base, call_id="s1a"), stop("tool_use")],
+              [tool_use("query_air", dict(base, periods=["FY2015-16", "FY2023-24"]), call_id="s1b"),
+               stop("tool_use")],
+              [text("Lahore SO2 by sector and year begins at {{result_2_cell_0}} "
+                    "{{result_2_cell_0.unit}}."), stop()])
+    events = ask(ask_client, "Make a table of annual emissions trend by sector for Lahore district.")
+    refusals = only(events, "refusal")
+    assert len(refusals) == 1, events
+    # the refusal names the remedy, and it is the remedy that worked
+    assert "name the fiscal periods" in refusals[0]["message"], refusals[0]["message"]
+    assert not only(events, "error"), only(events, "error")
+    results = only(events, "tool_result")
+    assert len(results) == 1 and results[0]["cells"], events
+    answers = only(events, "answer")
+    assert answers and answers[0]["citations"], events
+
+
+
+def test_the_system_prompt_names_the_air_vocabulary_as_the_air_vocabulary(ask_client):
+    """The dims appendix said "group_by values: <the greenhouse-gas list>" with nothing to mark it
+    as the greenhouse-gas list, and never mentioned pollutants. Between that and a query_air schema
+    built from the same list, everything the model was told pointed at `gas`."""
+    from pakemis_api.ask.prompt import system_prompt
+    from pakemis_query import Engine
+    text = system_prompt(ask_client.app.state.ask.dims)
+    assert "group_by values (query_air):" in text
+    air_line = next(l for l in text.splitlines() if l.startswith("group_by values (query_air):"))
+    assert set(air_line.split(":", 1)[1].replace(" ", "").split(",")) == set(Engine.AIR_GROUPS)
+    assert "pollutants (query_air" in text and "SO2" in text
+    assert "never `gas`" in text

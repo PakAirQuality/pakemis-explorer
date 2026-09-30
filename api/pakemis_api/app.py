@@ -37,6 +37,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from starlette.middleware.gzip import GZipMiddleware
 
 from pakemis_api import models_gen as G
+from pakemis_api.assets import ReleaseAssets
 from pakemis_api.ask.router import install_ask, router as ask_router
 from pakemis_api.claim import ClaimError, ClaimStore
 from pakemis_api.auth import AuthGateMiddleware
@@ -58,10 +59,26 @@ from pakemis_query.models import canonical_json  # noqa: E402
 # OSM-derived allocation surfaces: a table extracted over them is a database under ODbL.
 ODBL_SURFACE_MARKERS = ("rail", "road", "osm", "landfill")
 SPATIAL_TABLES = ("fact_adm1_month", "fact_adm2_month", "fact_unallocated")
-# the tables query_emissions reads, by the grain that reads them: a group_by key the release has no
-# column for at the request's grain is refused with the grains whose table carries it
-GRAIN_TABLES = (("fact_annual", "national", ""), ("fact_monthly", "national", "with months set"),
-                ("fact_adm1_month", "adm1", ""), ("fact_adm2_month", "adm2", ""))
+# WHICH TABLES CARRY A COLUMN, DERIVED FROM THE CONTRACT RATHER THAN LISTED HERE.
+#
+# This was a hardcoded four-tuple of greenhouse-gas tables: fact_annual, fact_monthly,
+# fact_adm1_month, fact_adm2_month. The release carries 42 facts, including ten air facts and the
+# two GHG *_year tables, and none of those were in it. So the "available at ..." clause was
+# computed from four tables and was simply false for anything else - it told a reader that
+# `period_id` lives at national grain only, when fact_adm2_year, fact_air_adm2_year and seven more
+# carry it, and it did so while REJECTING that same column. A list maintained by hand beside a
+# contract that already knows the answer is a list that drifts.
+#
+# A table's grain is read off its own spatial key columns, for the same reason: nothing has to be
+# kept in step.
+SPATIAL_KEYS = (("adm2", ("shape_id", "adm2_ids")), ("adm1", ("province",)))
+# A TABLE YOU CAN GROUP EMISSIONS BY IS ONE THAT HOLDS EMISSIONS. fact_evidence and
+# fact_uncertainty both carry `module`, and naming them as the place to group by module would be
+# true and useless - neither holds a quantity to group. `fact_` was the wrong predicate; carrying a
+# measure is the right one, and it is a property of the contract rather than a list of names.
+MEASURE_PREFIXES = ("co2e_", "emissions_")
+# how many carrier tables to name before the message stops being readable
+CARRIERS_SHOWN = 4
 BINDER_COLUMN = re.compile(r'Referenced column "([^"]+)"')
 # the query core applies `categories` and `ipcc_codes` at national grain only (engine._filters):
 # at adm1/adm2 grain a category filter would silently answer with every row of the sector, so
@@ -257,7 +274,10 @@ class Service:
             log.error("release %s refused: %s", settings.version, exc)
             raise RuntimeError("release %s refused: %s" % (settings.version, exc)) from exc
         try:
-            self.release = Release.open(settings.semantic_dir, verify=True, manifest_path=settings.manifest_path)
+            # verify.verify above already checked every CSV AND canonical Parquet twin.
+            # Reuse that completed audit instead of re-reading the entire payload.
+            self.release = Release.open(settings.semantic_dir, verify=False, manifest_path=settings.manifest_path)
+            self.release.verified = dict(self.verification["semantic_tables"])
         except E.IdentityError as exc:
             log.error("release %s refused by pakemis_query: %s", settings.version, exc)
             raise RuntimeError("release %s refused: %s" % (settings.version, exc)) from exc
@@ -265,7 +285,9 @@ class Service:
         # one DuckDB connection per process, used by one request at a time: FastAPI runs sync
         # handlers on a threadpool, and a DuckDB connection is not safe under concurrent use
         self._lock = threading.Lock()
-        self.method_rows = self._read_methods(settings.method_registry)
+        self.assets = ReleaseAssets(self.release.contract, settings.release_dir)
+        methods = self.assets.bound("method_registry")
+        self.method_rows = self.assets.rows(methods) if methods else self._read_methods(settings.method_registry)
         self.cube_paths = settings.cube_paths
         self.receipts = ReceiptStore(settings.receipt_store)
         self.odbl_modules = {r["module"] for r in self.engine._fetch(
@@ -281,7 +303,7 @@ class Service:
         self.method_sectors = sorted({r["sector"] for r in self.method_rows if r.get("sector")})
         # the claim record's joins: the registries under data/registries and the fact tables in a
         # private read-only DuckDB session (never the engine's connection)
-        self.claims = ClaimStore(self.release, settings.registries_dir, self.fetch.get("files") or {}, self.method_rows, self.labels(), settings.manifest_path)
+        self.claims = ClaimStore(self.release, settings.registries_dir, self.fetch.get("files") or {}, self.method_rows, self.labels(), settings.manifest_path, assets=self.assets)
         # the map's per-cell evidence fields on adm2 envelopes (the dominant stream per module, from the same session)
         self.spatial_fields = SpatialFields(self.claims)
         # the map's tiles: one reader per archive, the outputs proven against TILES.json's digests
@@ -339,29 +361,95 @@ class Service:
             if keys:
                 raise E.GrainUnavailable(CATEGORY_GRAIN_MESSAGE, "grain_unavailable", key=keys[0], keys=keys, grain=level, available_at=["national"])
 
+    @staticmethod
+    def _table_grain(columns):
+        """The grain a fact table is cut at, from the spatial keys it carries."""
+        for grain, keys in SPATIAL_KEYS:
+            if any(k in columns for k in keys):
+                return grain
+        return "national"
+
+    def _carriers(self, key):
+        """[(table, grain)] for every FACT in the release that carries this column.
+
+        Only tables that hold a measure. dim_geography carries shape_id and fact_uncertainty carries
+        module, but naming either here would answer "where can I group emissions by this?" with a
+        table that holds no emissions - a true sentence that sends the reader nowhere.
+        """
+        out = []
+        for table, meta in sorted((self.release.tables or {}).items()):
+            columns = (meta or {}).get("columns") or ()
+            if key not in columns or not any(c.startswith(MEASURE_PREFIXES) for c in columns):
+                continue
+            out.append((table, self._table_grain(columns)))
+        return out
+
+    @staticmethod
+    def _name_tables(tables):
+        shown = ", ".join(tables[:CARRIERS_SHOWN])
+        return shown + (" and %d more" % (len(tables) - CARRIERS_SHOWN) if len(tables) > CARRIERS_SHOWN else "")
+
+    @staticmethod
+    def _asked_grain(request):
+        """The grain actually asked for, looking INSIDE a compare or timeseries wrapper.
+
+        `geography_level` was read off the top-level request. CompareRequest and TimeseriesRequest
+        do not have that field, so every wrapped adm1/adm2 query reported itself as national - and
+        a refusal could then say a column was missing at national grain and available at national
+        grain in one sentence. That tautology is what a reader saw.
+        """
+        for q in [request] + [getattr(request, a, None) for a in ("query", "left", "right")]:
+            level = getattr(q, "geography_level", "") if q is not None else ""
+            if level:
+                return level, getattr(q, "months", None)
+        return "national", getattr(request, "months", None)
+
     def grain_refusal(self, exc, request):
         """A DuckDB binder or catalog error under a request is the release having no column for a
-        key at the request's grain: the core's GrainUnavailable, naming the key, the grain asked
-        for and the grains whose table carries the key (read from the contract's columns)."""
-        level = getattr(request, "geography_level", "") or "national"
-        months = getattr(request, "months", None)
+        key in the table this request reads: the core's GrainUnavailable, naming the key, the grain
+        asked for, and the tables that DO carry it (read from the contract, never from a list kept
+        alongside it)."""
+        level, months = self._asked_grain(request)
         asked = "%s grain%s" % (level, " with months set" if months else "")
         match = BINDER_COLUMN.search(str(exc))
         if not match:
             first = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
             return E.GrainUnavailable("the release cannot answer this request at %s: %s" % (asked, first), "grain_unavailable", grain=level)
         key = match.group(1)
-        carriers = [(lvl, note) for table, lvl, note in GRAIN_TABLES if key in (self.release.tables.get(table) or {}).get("columns", ())]
-        parts = []
-        national = [note for lvl, note in carriers if lvl == "national"]
-        if national:
-            parts.append("national grain" + ("" if "" in national else " " + national[0]))
-        adm = [lvl for lvl, _ in carriers if lvl != "national"]
-        if adm:
-            parts.append("/".join(adm) + " grain")
-        available = " or ".join(parts) if parts else "no grain of this release"
+        carriers = self._carriers(key)
+        # SAME-GRAIN CARRIERS COME FIRST, and this ordering is the fix for the screenshot. Asking
+        # for `period_id` by district was refused with "available at national grain" - but
+        # fact_air_adm2_year carries period_id AT adm2. The column was not missing from the grain,
+        # it was missing from the TABLE this request reads, and the remedy is a different query
+        # (the air family), not a coarser geography. Reporting the other grains first threw that
+        # away and sent the reader to the one place that could not answer the question they asked.
+        same = [t for t, g in carriers if g == level]
+        if same:
+            # HOW to reach the table, not just its name. The old hardcoded tuple carried a written
+            # note, "with months set", for exactly this case - fact_monthly holds `month` at
+            # national grain and the engine reads it only when the request sets `months`. The note
+            # is derivable: if every table that could answer is a monthly one and this request set
+            # no months, setting them IS the remedy.
+            how = ""
+            if not months and all("month" in ((self.release.tables.get(t) or {}).get("columns") or ())
+                                  for t in same):
+                how = ", which this request reaches by setting `months`"
+            return E.GrainUnavailable(
+                "%r is carried at %s by %s%s, but not by the table this request reads; ask one of "
+                "those instead of changing grain" % (key, asked, self._name_tables(same), how),
+                "grain_unavailable", key=key, grain=level, available_at=[level], carried_by=same)
+        # NEVER offer the grain that was just refused. The request failed in a table at this grain,
+        # so naming that grain as the remedy is the contradiction this method used to print.
+        elsewhere = [(t, g) for t, g in carriers if g != level]
+        if elsewhere:
+            available = "%s grain (%s)" % ("/".join(sorted({g for _, g in elsewhere})),
+                                           self._name_tables([t for t, _ in elsewhere]))
+        else:
+            available = "no fact table of this release"
         return E.GrainUnavailable("%r is not a column the release carries at %s; available at %s" % (key, asked, available),
-                                  "grain_unavailable", key=key, grain=level, available_at=[lvl for lvl, _ in carriers])
+                                  "grain_unavailable", key=key, grain=level,
+                                  available_at=sorted({g for _, g in elsewhere}),
+                                  carried_by=[t for t, _ in elsewhere])
 
     def _run(self, request, method_rows=None):
         name = type(request).__name__

@@ -21,6 +21,8 @@ Usage:
     python3 data/fetch_release.py --zenodo https://zenodo.org/records/<id>   (not implemented)
 """
 import argparse
+import csv
+import io
 import datetime as dt
 import hashlib
 import json
@@ -29,6 +31,8 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "api"))
+from pakemis_api.assets import ReleaseAssets, safe_path
 RELEASES = os.path.join(HERE, "releases")
 FETCH_SCHEMA = "pakemis_explorer.fetch/v1"
 
@@ -102,32 +106,82 @@ def manifest_identity(manifest, rel):
     return "fetch", None
 
 
+def canonical_input_bytes(table, source, schema_version):
+    """Reconstruct ignored build artifacts from the release's committed source and schema.
+
+    This is the v1 CSV representation, not an inventory calculation. Both hashes
+    are required: a different source or representation cannot enter the payload.
+    """
+    if schema_version != "pkinv.canonical-inputs/v1":
+        raise ValueError("unsupported canonical input schema: %s" % schema_version)
+    if sha256_bytes(source) != table["source_sha256"]:
+        raise ValueError("canonical input source digest differs: %s" % table["source_path"])
+    reader = csv.DictReader(line for line in io.StringIO(source.decode("utf-8-sig"), newline="")
+                            if not line.startswith("#"))
+    if reader.fieldnames != [c["field_id"] for c in table["columns"]]:
+        raise ValueError("canonical input source header differs: %s" % table["source_path"])
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=[c["name"] for c in table["columns"]] + ["Record ID", "Source row"],
+                            lineterminator="\n")
+    writer.writeheader()
+    count = 0
+    for count, row in enumerate(reader, 1):
+        if None in row or any(v is None for v in row.values()):
+            raise ValueError("malformed canonical input source: %s" % table["source_path"])
+        readable = {c["name"]: row[c["field_id"]] for c in table["columns"]}
+        readable["Record ID"] = sha256_bytes((schema_version + "\x1f" + table["table_id"] + "\x1f" + str(count)).encode())[:24]
+        readable["Source row"] = str(count)
+        writer.writerow(readable)
+    payload = output.getvalue().encode("utf-8")
+    if count != table["row_count"] or sha256_bytes(payload) != table["sha256"]:
+        raise ValueError("canonical input reconstruction differs: %s" % table["table_id"])
+    return payload
+
+
 def fetch_from_git(repo, ref, out_root):
     commit = git(repo, "rev-parse", ref).strip()
-    contract = json.loads(git(repo, "show", "%s:outputs/semantic/semantic_release.json" % ref))
-    manifest = json.loads(git(repo, "show", "%s:outputs/release_manifest.json" % ref))
+    contract = json.loads(git(repo, "show", "%s:outputs/semantic/semantic_release.json" % commit))
+    manifest = json.loads(git(repo, "show", "%s:outputs/release_manifest.json" % commit))
     version = contract["release"]["version"]
     if manifest["version"] != version:
         sys.exit("manifest version %s != contract version %s" % (manifest["version"], version))
-    paths = list_tree(repo, ref, "outputs/semantic") + ["outputs/release_manifest.json"]
+    paths = list_tree(repo, commit, "outputs/semantic") + ["outputs/release_manifest.json"]
     paths += [p["path"] for p in manifest["products"] if p["path"].endswith(".nc")]
-    paths += GEOMETRY + EXTRA
+    assets = ReleaseAssets(contract, os.path.join(out_root, version))
+    if assets.catalog:
+        paths += [asset["path"] for asset in assets.entries.values() if asset.get("packaged")]
+    else:
+        paths += GEOMETRY + EXTRA
+    paths = list(dict.fromkeys(paths))
     dest = os.path.join(out_root, version)
     files = {}
     for rel in paths:
-        data = git(repo, "show", "%s:%s" % (ref, rel), binary=True)
-        target = os.path.join(dest, rel)
+        data = git(repo, "show", "%s:%s" % (commit, rel), binary=True)
+        target = safe_path(dest, rel)
         os.makedirs(os.path.dirname(target), exist_ok=True)
         with open(target, "wb") as handle:
             handle.write(data)
         files[rel] = {"sha256": sha256_bytes(data), "bytes": len(data)}
         print("  %s  %s  %d" % (files[rel]["sha256"][:12], rel, len(data)))
+    inputs = contract.get("activity_inputs", {})
+    for table in inputs.get("tables", []) if not assets.catalog else []:
+        source = git(repo, "show", "%s:%s" % (commit, table["source_path"]), binary=True)
+        data = canonical_input_bytes(table, source, inputs["schema_version"])
+        target = os.path.join(dest, table["path"])
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "wb") as handle:
+            handle.write(data)
+        files[table["path"]] = {"sha256": sha256_bytes(data), "bytes": len(data)}
+        print("  %s  %s  %d (reconstructed from committed source)" % (table["sha256"][:12], table["path"], len(data)))
     registries = {}
-    for rel in REGISTRIES:
-        if not exists_at(repo, ref, rel):
+    for asset in assets.entries.values():
+        if asset.get("packaged") and files[asset["path"]]["sha256"] != asset["sha256"]:
+            raise ValueError("committed asset differs from release contract: %s" % asset["asset_id"])
+    for rel in REGISTRIES if not assets.catalog else []:
+        if not exists_at(repo, commit, rel):
             print("  registry %s: absent at %s, skipped" % (rel, ref))
             continue
-        data = git(repo, "show", "%s:%s" % (ref, rel), binary=True)
+        data = git(repo, "show", "%s:%s" % (commit, rel), binary=True)
         dest_rel = "%s/%s" % (REGISTRIES_DIR, os.path.basename(rel))
         if dest_rel in files or dest_rel in registries:
             sys.exit("registry basename collision: %s" % dest_rel)
@@ -152,7 +206,8 @@ def fetch_from_git(repo, ref, out_root):
         "digests": {"semantic_release.json": files["outputs/semantic/semantic_release.json"]["sha256"],
                     "release_manifest.json": files["outputs/release_manifest.json"]["sha256"]},
         "files": dict(sorted(files.items())),
-        "registries": sorted(registries),
+        "registries": sorted(registries) if not assets.catalog else sorted({
+            assets.entries[asset_id]["path"] for asset_id in assets.catalog["bindings"]["claim_registries"].values()}),
     }
     with open(os.path.join(dest, "FETCH.json"), "w", encoding="utf-8") as handle:
         json.dump(record, handle, indent=1, sort_keys=True)

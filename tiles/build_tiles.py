@@ -39,6 +39,8 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "api"))
+from pakemis_api.assets import ReleaseAssets
 
 
 def out_dir(version):
@@ -268,8 +270,10 @@ def main(argv=None):
     version = args.version or pinned_version()
     rel = os.path.join(ROOT, "data", "releases", version)
     OUT = out_dir(version)
-    adm1 = os.path.join(rel, "data", "gis", "PAK_ADM1.geojson")
-    adm2 = os.path.join(rel, "data", "gis", "PAK_ADM2.geojson")
+    with open(os.path.join(rel, "outputs", "semantic", "semantic_release.json"), encoding="utf-8") as handle:
+        assets = ReleaseAssets(json.load(handle), rel)
+    adm1 = assets.binding_path("geometry_adm1", os.path.join(rel, "data", "gis", "PAK_ADM1.geojson"))
+    adm2 = assets.binding_path("geometry_adm2", os.path.join(rel, "data", "gis", "PAK_ADM2.geojson"))
     cube = os.path.join(rel, "outputs", CUBES["REF_2023_24"])
     for p in (adm1, adm2, cube):
         if not os.path.exists(p):

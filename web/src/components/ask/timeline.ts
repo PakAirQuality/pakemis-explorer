@@ -67,7 +67,7 @@ export function timelineOf(events: AskEvent[]): Timeline {
         break;
       case "error": {
         const e = data as ErrorEvent;
-        items.push({ kind: "error", code: e.code, message: e.message ?? "" });
+        items.push({ kind: "error", code: e.code, message: e.message ?? "", scope: e.scope });
         break;
       }
       case "done":
