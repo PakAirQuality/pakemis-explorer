@@ -21,6 +21,18 @@ def query_path():
 
 
 def golden_dir():
+    """The goldens VENDORED at the engine's pinned commit, or the checkout's if none are.
+
+    Reading them from the live checkout is what produced twenty meaningless failures: the
+    app serves a pinned release while the emissions tree moves on, so a later release that
+    refroze four fixtures made four goldens disagree with the data this API actually
+    serves. Paired at one vintage the same suite is green. The vendored copy is written by
+    scripts/vendor_query_core.py from the same commit as pakemis_query, so a golden failure
+    now means behaviour changed rather than somebody's checkout moved.
+    """
+    vendored = os.path.join(API_DIR, "vendor", "goldens")
+    if os.path.isdir(vendored) and glob.glob(os.path.join(vendored, "*.json")):
+        return vendored
     return os.path.join(os.path.dirname(query_path()), "tests", "semantic", "golden")
 
 

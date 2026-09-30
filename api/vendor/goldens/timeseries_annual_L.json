@@ -1,0 +1,18 @@
+{
+ "expect": [
+  {
+   "cell": 0,
+   "group": {
+    "period_id": "FY2015-16"
+   },
+   "note_rc55": "rc55 receipt re-base: 88cd8573aaf0c4dcc00f3a85798f8305 -> e8d553fac8783563a266edc6f61dc6c3. NO NUMBER MOVED. get_timeseries minted its receipt over the EXPANDED QueryEmissions and then overwrote `request` with the TimeseriesRequest, so the stored request did not reproduce the stored receipt and a replay of a timeseries download link failed receipt_not_reproduced. The receipt is now minted over the request the envelope actually carries, which is what compare_emissions always did."
+  }
+ ],
+ "expect_receipt": "ae87f50efaab71a28b2391f0caa69f41",
+ "function": "get_timeseries",
+ "golden_id": "timeseries_annual_L",
+ "request": {
+  "query": {},
+  "step": "annual"
+ }
+}

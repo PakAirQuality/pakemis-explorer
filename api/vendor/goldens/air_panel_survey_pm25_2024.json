@@ -1,0 +1,21 @@
+{
+ "expect": [
+  {
+   "cell": 0,
+   "display": "430.235"
+  }
+ ],
+ "expect_receipt": "a89626f4250dbd9119822c5ca9559a5d",
+ "function": "query_air",
+ "golden_id": "air_panel_survey_pm25_2024",
+ "request": {
+  "configuration_id": "S_HIES1925",
+  "order_by": "",
+  "periods": [
+   "FY2023-24"
+  ],
+  "pollutants": [
+   "PM2.5"
+  ]
+ }
+}

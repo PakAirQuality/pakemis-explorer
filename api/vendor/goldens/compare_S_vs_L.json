@@ -1,0 +1,24 @@
+{
+ "expect": [
+  {
+   "exact": "-5.13279",
+   "tolerance": "1e-5"
+  }
+ ],
+ "expect_receipt": "32b986d116fd9bc19788447fcb13f347",
+ "function": "compare_emissions",
+ "golden_id": "compare_S_vs_L",
+ "request": {
+  "left": {
+   "periods": [
+    "FY2023-24"
+   ]
+  },
+  "right": {
+   "configuration_id": "S_2023_24",
+   "periods": [
+    "FY2023-24"
+   ]
+  }
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "expect": [
+  {
+   "claims_pointer": "national_all_sectors.csv#row_kind=national_total#co2e_Mt_AR6",
+   "exact": "462.732849670000000000",
+   "note_rc52": "rc52 re-base: 459.013138920000000000 -> 462.732849670000000000 (ammonia, iron and steel, lubricant use entered the reference)",
+   "tolerance": "5e-6"
+  }
+ ],
+ "expect_receipt": "da8448b97c8e7a428659adbfad324b7d",
+ "function": "query_emissions",
+ "golden_id": "national_total_AR6",
+ "request": {
+  "gwp_basis": "AR6",
+  "periods": [
+   "FY2023-24"
+  ]
+ }
+}

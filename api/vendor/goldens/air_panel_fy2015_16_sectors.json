@@ -1,0 +1,27 @@
+{
+ "expect": [
+  {
+   "cell": 0,
+   "display": "501.313"
+  },
+  {
+   "cell": 5,
+   "display": "0.401"
+  }
+ ],
+ "expect_receipt": "47dab6c638f1121b75c770b055b135b5",
+ "function": "query_air",
+ "golden_id": "air_panel_fy2015_16_sectors",
+ "request": {
+  "group_by": [
+   "sector_id"
+  ],
+  "order_by": "value desc",
+  "periods": [
+   "FY2015-16"
+  ],
+  "pollutants": [
+   "PM2.5"
+  ]
+ }
+}

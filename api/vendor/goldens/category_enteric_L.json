@@ -1,0 +1,20 @@
+{
+ "expect": [
+  {
+   "claims_pointer": "national_totals_2024.csv#category=Enteric fermentation#co2e_Mt_AR5",
+   "exact": "151.658",
+   "tolerance": "5e-4"
+  }
+ ],
+ "expect_receipt": "72486d39c5ceb3ff9218889260da61d7",
+ "function": "query_emissions",
+ "golden_id": "category_enteric_L",
+ "request": {
+  "categories": [
+   "Enteric fermentation"
+  ],
+  "periods": [
+   "FY2023-24"
+  ]
+ }
+}

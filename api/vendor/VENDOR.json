@@ -12,6 +12,36 @@
   "receipt.py": "20f8b18ee58ff7794c353d5a0fea3629c12ebada59448dbef61c9bd391f46dd1",
   "release.py": "1d5dfb37e60622b5cce54666ed9779b1337d3ffa7ce6ff64a7e3172768124913"
  },
+ "goldens": {
+  "digest": "b5d9d93820cf2058b0bfbec77c8c93927a18f6136629da635bb8f090b6cb7afa",
+  "files": {
+   "adm1_punjab_agriculture.json": "ae8e56a6712dd882246d976688b9c55874137c3957f88d85a8dfc40c634f4188",
+   "adm2_power_fy2018_19.json": "cf9652cac3016069eb7d104becf5d2cde3efa06659e89f84b59b307b827b5860",
+   "air_adm1_year_punjab_nox_series.json": "88e7a4e270cc68fead10b76bc273c6d6935efa3a8c61e76c8df2fb7d6435f1f6",
+   "air_adm2_year_lahore_pm25_2020.json": "fe8b78871875c1f2d9ad15fa40884692146faa7f73717b5419f624e7ad7695de",
+   "air_panel_fy2015_16_sectors.json": "94b0fbab1bcccc2d8faf7ce02a939059725be0733233064d8cd731ff3bbd907a",
+   "air_panel_so2_series.json": "d4f10045be1a02c07f2e46b48d22bcf2ad6bc1df2524127fab27e9de9bb1e2f5",
+   "air_panel_survey_pm25_2024.json": "ff4c62e644fd2e6a0a4bc2f37be1607b5534e41a14d803bf87f71c443c13acd3",
+   "calendar_agriculture_1990_enteric.json": "b59b50f8abf2d338c054f167ff43f39859014534a6de3842ef8900203d6e6b03",
+   "category_enteric_L.json": "b5eb719424b9b92d25a3dc4d69dd208040ce8c3dc1edd9285bf8afde5b6c08f0",
+   "compare_S_vs_L.json": "e5ddf198fc47a82291d0389698b5aa0332054e846bc963858cdf0335af7d3670",
+   "completeness_ne_rows.json": "efc6f0932e3cbbf63e74a7c0311378b621eeaee46305a754e5e0bbcef3730664",
+   "national_total_AR6.json": "133976c65bb018f5af286c4e8e7c2a95b61218b12b60ff1c6c517c1cdf866bd3",
+   "national_total_L_fy2023_24.json": "f6fe1e60d93de34eeb66fcac11081093c02c7494181cc05bb7edcb39c32d2a80",
+   "national_total_S_fy2023_24.json": "a2bfa52551bed22afcd05d9c59aa3a200e9c27ab5b814b7877098504426cbb5e",
+   "refuse_S_outside_reference_year.json": "e3bc8d9552156ebf4a6f62a537e63af98c43dc6e0a7fda71034406eb2d0edbdc",
+   "refuse_adm2_monthly_history.json": "e5cb9f2eecee985385011816ad6185f51b4882de136435a2209c03b721ff83de",
+   "refuse_ar6_adm2.json": "bb13655f35516e971dd1b5a967e5726a2f938455b16cefeaeccf5295ea0f0b5a",
+   "refuse_bare_year.json": "053439a28fb813d6fa532cde731c7f0ff622d56657364a3ad7f09234c3c77af7",
+   "refuse_calendar_power.json": "a6f33e85d4f5288d4d5a9c500867806f90786a15bafe6235778c58c67b4c8b2b",
+   "refuse_mixed_basis.json": "025727c3c3230ed5b102d3ee20feed74d0e1d14ad24486e564eb9fd5cd5b75da",
+   "reporting_sector_breakdown_L.json": "9f0e923e4b6841619712f1d4da0655e16a8bbc1b74545cf2db2bd2b70c076b05",
+   "sector_breakdown_L.json": "a58f49899dfdc2c3d408f450dd1fc4bf388c82f81dcdb8af1d30501f23e76bf7",
+   "timeseries_annual_L.json": "07118073eba1bb0a651c459703f3d3d00e40343f96cdae054a1244fd6479df4f",
+   "transfers_dung.json": "29a8cdf53671a2a42e36ecafee7a8fbc43fb3afc8878e30b28c6b0298c8bd5f2"
+  },
+  "subdir": "tests/semantic/golden"
+ },
  "package": "pakemis_query",
  "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here",
  "schema": "pakemis_explorer.vendor/v1",
@@ -23,5 +53,5 @@
   "subdir": "src/pakemis_query",
   "working_tree_dirty_at_vendoring": false
  },
- "vendored_at": "2026-09-17T18:40:27+00:00"
+ "vendored_at": "2026-09-30T01:53:16+00:00"
 }

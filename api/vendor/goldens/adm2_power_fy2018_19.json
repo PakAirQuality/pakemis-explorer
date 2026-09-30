@@ -1,0 +1,26 @@
+{
+ "expect": [
+  {
+   "exact": "0.858978045174000000",
+   "group": {
+    "shape_id": "60131773B12131197496886"
+   },
+   "tolerance": "5e-6"
+  }
+ ],
+ "expect_receipt": "ac80e3e0bef2d63ac13696caefca7244",
+ "function": "query_emissions",
+ "golden_id": "adm2_power_fy2018_19",
+ "request": {
+  "geography_ids": [
+   "60131773B12131197496886"
+  ],
+  "geography_level": "adm2",
+  "periods": [
+   "FY2018-19"
+  ],
+  "sectors": [
+   "power"
+  ]
+ }
+}

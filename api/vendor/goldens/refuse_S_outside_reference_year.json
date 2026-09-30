@@ -1,0 +1,13 @@
+{
+ "expect": [],
+ "expect_error": "grain_unavailable",
+ "expect_receipt": "",
+ "function": "query_emissions",
+ "golden_id": "refuse_S_outside_reference_year",
+ "request": {
+  "configuration_id": "S_2023_24",
+  "periods": [
+   "FY2020-21"
+  ]
+ }
+}

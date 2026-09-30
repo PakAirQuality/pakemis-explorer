@@ -1,0 +1,24 @@
+{
+ "expect": [
+  {
+   "claims_pointer": "national_all_sectors.csv#row_kind=national_total#co2e_Mt_AR5",
+   "display": "469.63822",
+   "exact": "469.638223890000000000",
+   "note_rc52": "rc52 re-base: 465.918513140000000000 -> 469.638223890000000000 (ammonia, iron and steel, lubricant use entered the reference)",
+   "tolerance": "5e-6"
+  }
+ ],
+ "expect_context": {
+  "basis": "fiscal",
+  "configuration_id": "REF_2023_24",
+  "gwp_basis": "AR5"
+ },
+ "expect_receipt": "51f8dcb6e255c6b499d0134dc6e0359d",
+ "function": "query_emissions",
+ "golden_id": "national_total_L_fy2023_24",
+ "request": {
+  "periods": [
+   "FY2023-24"
+  ]
+ }
+}

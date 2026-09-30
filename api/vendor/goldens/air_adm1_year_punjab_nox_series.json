@@ -1,0 +1,45 @@
+{
+ "expect": [
+  {
+   "cell": 0,
+   "display": "455.363",
+   "group": {
+    "period_id": "FY2015-16"
+   }
+  },
+  {
+   "cell": 8,
+   "display": "551.894",
+   "group": {
+    "period_id": "FY2021-22"
+   }
+  }
+ ],
+ "expect_receipt": "b3f20888f48a0372b7348b9ac2197044",
+ "function": "query_air",
+ "golden_id": "air_adm1_year_punjab_nox_series",
+ "request": {
+  "geography_ids": [
+   "Punjab"
+  ],
+  "geography_level": "adm1",
+  "group_by": [
+   "period_id"
+  ],
+  "order_by": "value asc",
+  "periods": [
+   "FY2015-16",
+   "FY2016-17",
+   "FY2017-18",
+   "FY2018-19",
+   "FY2019-20",
+   "FY2020-21",
+   "FY2021-22",
+   "FY2022-23",
+   "FY2023-24"
+  ],
+  "pollutants": [
+   "NOx"
+  ]
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "expect": [
+  {
+   "cell": 0,
+   "display": "21.392"
+  }
+ ],
+ "expect_receipt": "c2dcef822ef2708739d38d84bc06c96c",
+ "function": "query_air",
+ "golden_id": "air_adm2_year_lahore_pm25_2020",
+ "request": {
+  "geography_ids": [
+   "60131773B12131197496886"
+  ],
+  "geography_level": "adm2",
+  "order_by": "",
+  "periods": [
+   "FY2019-20"
+  ],
+  "pollutants": [
+   "PM2.5"
+  ]
+ }
+}

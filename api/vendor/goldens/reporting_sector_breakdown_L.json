@@ -1,0 +1,34 @@
+{
+ "expect": [
+  {
+   "exact": "57.82049",
+   "group": {
+    "reporting_sector": "power"
+   },
+   "tolerance": "5e-3"
+  },
+  {
+   "exact": "28.13100",
+   "group": {
+    "reporting_sector": "industry"
+   },
+   "tolerance": "5e-3"
+  }
+ ],
+ "expect_receipt": "03a19735cb2c18b83a96cdafce99b1eb",
+ "function": "query_emissions",
+ "golden_id": "reporting_sector_breakdown_L",
+ "request": {
+  "group_by": [
+   "reporting_sector"
+  ],
+  "order_by": "value desc",
+  "periods": [
+   "FY2023-24"
+  ],
+  "reporting_sectors": [
+   "industry",
+   "power"
+  ]
+ }
+}

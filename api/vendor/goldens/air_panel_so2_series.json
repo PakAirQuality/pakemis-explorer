@@ -1,0 +1,35 @@
+{
+ "expect": [
+  {
+   "cell": 0,
+   "display": "457.188"
+  },
+  {
+   "cell": 8,
+   "display": "213.542"
+  }
+ ],
+ "expect_receipt": "9aa31130fa272660563059765a3ed659",
+ "function": "query_air",
+ "golden_id": "air_panel_so2_series",
+ "request": {
+  "group_by": [
+   "period_id"
+  ],
+  "order_by": "",
+  "periods": [
+   "FY2015-16",
+   "FY2016-17",
+   "FY2017-18",
+   "FY2018-19",
+   "FY2019-20",
+   "FY2020-21",
+   "FY2021-22",
+   "FY2022-23",
+   "FY2023-24"
+  ],
+  "pollutants": [
+   "SO2"
+  ]
+ }
+}

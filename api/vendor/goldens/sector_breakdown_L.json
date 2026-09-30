@@ -1,0 +1,24 @@
+{
+ "expect": [
+  {
+   "claims_pointer": "national_all_sectors.csv#row_kind=sector,sector=agriculture#co2e_Mt_AR5",
+   "exact": "223.45447",
+   "group": {
+    "sector_id": "agriculture"
+   },
+   "tolerance": "5e-4"
+  }
+ ],
+ "expect_receipt": "1880442572794959fafad60e4252cae1",
+ "function": "query_emissions",
+ "golden_id": "sector_breakdown_L",
+ "request": {
+  "group_by": [
+   "sector_id"
+  ],
+  "order_by": "value desc",
+  "periods": [
+   "FY2023-24"
+  ]
+ }
+}
