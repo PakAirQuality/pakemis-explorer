@@ -33,7 +33,19 @@ substitutions:
   _ASK_PER_IP_PER_HOUR: "60"
   # Addresses/CIDRs of the proxies in front of this service whose X-Forwarded-For hop is skipped
   # when the per-address limit picks its address (limits.client_address). Empty: the last hop.
-  _TRUSTED_PROXIES: ""
+  #
+  # MEASURED 2026-10-05 on this service. Reached directly, the header is `<caller's own>, <caller>`.
+  # Through Firebase Hosting it is `<caller>, <edge>`: Hosting REPLACES what the caller sent (a
+  # forged entry, and a forged Fastly-Client-IP, both vanished) and the edge hop was a different
+  # google-proxy address on every one of eight requests (66.249.93.x, 142.250.32.x). So with
+  # nothing trusted the limit does not over-count Hosting's readers, it stops counting them: each
+  # request lands in a new bucket. Those addresses are all in Google's published list of its own
+  # fetch proxies (developers.google.com/static/search/apis/ipranges/user-triggered-fetchers-google.json,
+  # 251 /27s that change), and the eight entries below are the goog.json blocks that cover that
+  # whole list - Google's own space, none of it customer cloud (no overlap with cloud.json). A
+  # caller who reaches run.app FROM that space could still forge the hop before theirs; the daily
+  # budget is what bounds that. The `ask from` log line shows the chain if the edge ever moves.
+  _TRUSTED_PROXIES: 64.233.160.0/19,66.102.0.0/20,66.249.64.0/19,74.125.0.0/16,142.250.0.0/15,172.253.0.0/16,192.178.0.0/15,2001:4860::/32
 
 steps:
   - name: 'gcr.io/cloud-builders/docker'
