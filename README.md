@@ -186,9 +186,13 @@ redirect stubs and `404.html`; there are no server routes, so a receipt's URL is
 deploy the `pakemis` Firebase Hosting target from the repository root:
 
 ```
-cd web && NEXT_PUBLIC_API_BASE=/api/v1/emissions npm run export && cd ..
-npx firebase deploy --only hosting:pakemis        # project and target from .firebaserc
+make deploy-web                                   # build-public, then firebase deploy --only hosting:pakemis
+make build-public                                 # the build alone, into web/out
 ```
+
+`build-public` is `NEXT_PUBLIC_API_BASE=/api/v1/emissions`, the two embed variables passed empty,
+and `NEXT_PUBLIC_SITE_URL=$(SITE_URL)`; it fails if the output names a dashboard as its host. The
+project and the target come from `.firebaserc`.
 
 `firebase.json` serves `web/out` (trailing slashes, immutable caching for `/_next/static/**`,
 `tiles/**` ignored) and rewrites `/api/v1/emissions/**` to the Cloud Run service `pakemis`
@@ -518,11 +522,53 @@ make deploy BUCKET=...          # gcloud builds submit --config cloudbuild.yaml 
   `Deprecation: true`; `api/openapi.json` names only the `/api/v1/emissions/*` paths, so
   `make types` regenerates `web/src/types.gen.ts` with the new paths.
 
+## The public deployment (emissions.hawanama.org)
+
+The site is public at `https://emissions.hawanama.org`: a custom domain on the Hosting site
+`pakemis` (Firebase project `hawanama-2`), whose DNS record lives in the Cloudflare zone for
+`hawanama.org` as DNS-only, like the apex. The same Hosting site still answers at
+`pakemis.web.app`; Hosting cannot redirect by hostname, so every page carries a canonical link to
+the public address instead (`web/src/lib/site.ts`, from `NEXT_PUBLIC_SITE_URL`), and
+`robots.txt` and `sitemap.xml` are written from the same variable. A build without it claims no
+address and asks not to be indexed.
+
+```
+make deploy BUCKET=pakemis-releases    # the API, open: no _REQUIRE_AUTH, so no gate is installed
+make deploy-web                        # the public web build, SITE_URL=https://emissions.hawanama.org
+```
+
+Nothing else moves with the address. The page and the API are one origin under either name (the
+rewrite in `firebase.json` belongs to the site, not to a domain), and the API writes its TileJSON,
+product and claim links from the forwarded host, so they follow whichever name the reader used.
+
+**What an open API exposes, and what holds it.** The assistant spends a model key on behalf of
+anyone who asks. Three things stand between that and the invoice:
+
+- **A per-address limit** (`PAKEMIS_ASK_PER_IP_PER_HOUR`, 60). The address is the right-most
+  `X-Forwarded-For` hop that is not one of this deployment's own proxies
+  (`limits.client_address`). It used to be the left-most, which is the one entry a caller writes
+  for themselves: a different value on each request bought a fresh bucket each time.
+  `PAKEMIS_TRUSTED_PROXIES` (`_TRUSTED_PROXIES`) names the edge's ranges, and it is not optional
+  behind Hosting: measured on this service, Hosting replaces what the caller sent and appends an
+  edge address that differed on every request, so with nothing trusted each request got a bucket
+  of its own. `cloudbuild.yaml` carries the ranges and how they were derived. Each request logs
+  the chain it arrived with beside the address chosen, so a stale list is visible.
+- **A daily token budget** (`PAKEMIS_ASK_DAILY_TOKENS`, 3M). It is counted in memory, per
+  instance: with `--max-instances=4` the ceiling is four times the number, and an instance that
+  scaled to zero starts again. It bounds a runaway; it is not an accounting.
+- **The provider's own quota on the key**, which is the only cap that holds across instances and
+  restarts. `_GEMINI_SECRET` names the Secret Manager secret so this deployment can spend a key of
+  its own rather than one shared with other services.
+
+Only `/ask` is limited. Queries, tiles and `/products/complete.zip` are bounded by the service's
+four instances and nothing finer.
+
 ## Deploying inside another dashboard (the internal deployment)
 
-The default build is open: anyone may query it, as a public-data API should be. One deployment is
-not — the Hawanama internal dashboard embeds this app as its **Emissions** tab, and there the
-operator wants what that dashboard already has: only the people who signed in. A dashboard's
+The default build is open: anyone may query it, as a public-data API should be. One deployment
+was not — until 2026-10 the Hawanama internal dashboard embedded this app as its **Emissions**
+tab, and there the operator wanted what that dashboard already had: only the people who signed
+in. That deployment is gone (the site is public, above) and what follows is how to make another. A dashboard's
 sign-in is client-side, so it cannot hide an API; the gate therefore lives here, and the browser
 side simply carries the identity the host already holds.
 
