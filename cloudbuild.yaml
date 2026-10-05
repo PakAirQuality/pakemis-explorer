@@ -2,7 +2,7 @@
 #
 #     make push-release BUCKET=<bucket>                     # once per release: the payload + tiles to GCS
 #     gcloud builds submit --config cloudbuild.yaml \
-#         --substitutions _RELEASES_BUCKET=<bucket>,_RELEASE_VERSION=1.0.0rc42,_ALLOWED_ORIGINS=https://<site>.web.app .
+#         --substitutions _RELEASES_BUCKET=<bucket>,_RELEASE_VERSION=1.0.0rc42 .
 #
 # The image carries the API and the vendored query core only; on start the service pulls
 # gs://${_RELEASES_BUCKET}/releases/${_RELEASE_VERSION}/ and verifies it (api/start.sh), so the
@@ -12,7 +12,8 @@ substitutions:
   _REGION: asia-south1
   _RELEASES_BUCKET: pakemis-releases
   _RELEASE_VERSION: 1.0.0rc59
-  _ALLOWED_ORIGINS: https://pakemis.web.app
+  # the public address and the site's own *.web.app name (the same Hosting site answers both)
+  _ALLOWED_ORIGINS: https://emissions.hawanama.org,https://pakemis.web.app
   # The sign-in gate (api/pakemis_api/auth.py). Empty _REQUIRE_AUTH deploys the open API this
   # repository's default is; "firebase" serves only holders of a token from _AUTH_PROJECT whose
   # address is in _AUTH_DOMAINS or _AUTH_EMAILS - what an internal deployment wants, and what
@@ -21,6 +22,18 @@ substitutions:
   _AUTH_PROJECT: ""
   _AUTH_DOMAINS: ""
   _AUTH_EMAILS: ""
+  # The assistant, on an API anyone can reach. The secret is named here so the public deployment
+  # can spend a key of its own (one with its own quota at the provider) instead of the estate's.
+  # The two caps are the code's defaults restated (api/pakemis_api/ask/limits.py) - and both are
+  # counted IN MEMORY, PER INSTANCE: with max-instances 4 the daily ceiling is four times
+  # _ASK_DAILY_TOKENS, and an instance that scales to zero starts its count again. The cap that
+  # holds across instances is the provider's quota on the key, which is why the key is separable.
+  _GEMINI_SECRET: GEMINI_API_KEY
+  _ASK_DAILY_TOKENS: "3000000"
+  _ASK_PER_IP_PER_HOUR: "60"
+  # Addresses/CIDRs of the proxies in front of this service whose X-Forwarded-For hop is skipped
+  # when the per-address limit picks its address (limits.client_address). Empty: the last hop.
+  _TRUSTED_PROXIES: ""
 
 steps:
   - name: 'gcr.io/cloud-builders/docker'
@@ -52,8 +65,8 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--port=8080'
-      - '--set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest'
-      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}'
+      - '--set-secrets=GEMINI_API_KEY=${_GEMINI_SECRET}:latest'
+      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}|PAKEMIS_ASK_DAILY_TOKENS=${_ASK_DAILY_TOKENS}|PAKEMIS_ASK_PER_IP_PER_HOUR=${_ASK_PER_IP_PER_HOUR}|PAKEMIS_TRUSTED_PROXIES=${_TRUSTED_PROXIES}'
       - '--cpu=2'
       - '--memory=2Gi'
       - '--concurrency=20'

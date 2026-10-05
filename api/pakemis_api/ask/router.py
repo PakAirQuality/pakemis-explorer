@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from pakemis_api.ask.local import Library, LocalTurn
-from pakemis_api.ask.limits import DailyBudget, Limits, PerIpBucket
+from pakemis_api.ask.limits import DailyBudget, Limits, PerIpBucket, client_address
 from pakemis_api.ask.loop import AnthropicModel, Turn
 from pakemis_api.ask.memory import Memory
 from pakemis_api.ask.prompt import system_prompt
@@ -123,11 +123,8 @@ def install_ask(app, service, settings, model_client=None):
     return app.state.ask
 
 
-def _client_ip(request: Request):
-    fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+def _client_ip(request: Request, trusted=()):
+    return client_address(request.headers.get("x-forwarded-for"), request.client.host if request.client else None, trusted)
 
 
 @router.post("/ask", tags=["ask"])
@@ -136,7 +133,13 @@ def ask(body: AskBody, request: Request):
     status = getattr(request.app.state.service, "agent_status", {}) or {}
     if runtime is None:
         return JSONResponse(status_code=503, content={"error": "agent_disabled", "reason": status.get("reason") or "no model client"})
-    if not runtime.per_ip.allow(_client_ip(request)):
+    address = _client_ip(request, runtime.limits.trusted_proxies)
+    # the chain as it arrived, beside the address chosen from it: the only way to see that the
+    # trusted ranges still describe the edge in front of this service (%r: a caller writes part of it)
+    log.info("ask from %s forwarded=%r edge-client=%r", address, (request.headers.get("x-forwarded-for") or "")[:200],
+             (request.headers.get("fastly-client-ip") or "")[:64])
+    if not runtime.per_ip.allow(address):
+        log.warning("ask from %s refused: over %d requests in the hour", address, runtime.limits.per_ip_per_hour)
         return JSONResponse(status_code=429, content={"error": "rate_limited", "message": "too many questions from this address; try again in an hour"})
     turn = runtime.turn(body)
     # the library answered nothing and there is no model to ask: this question needed the data

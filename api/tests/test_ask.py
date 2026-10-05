@@ -497,6 +497,45 @@ def test_503_when_disabled(settings, monkeypatch):
         assert "KEY" not in json.dumps(c.app.state.service.agent_status).replace("ANTHROPIC_API_KEY", "").replace("GEMINI_API_KEY", "")
 
 
+def test_the_rate_limited_address_is_the_one_a_proxy_observed():
+    """X-Forwarded-For is `<what the caller sent>, <caller>, <our proxies>`: the left-most entry
+    is the caller's own writing, and keying on it let anyone mint a bucket per request."""
+    from pakemis_api.ask.limits import client_address, parse_networks
+    edge = parse_networks("151.101.0.0/16, 2a04:4e42::/32")
+    # reached directly: the last hop is the caller, whatever they wrote before it
+    assert client_address("1.1.1.1, 203.0.113.9", "10.0.0.1") == "203.0.113.9"
+    assert client_address("203.0.113.9", "10.0.0.1") == "203.0.113.9"
+    # behind our own edge: the edge's hop is skipped and the caller it observed is next
+    assert client_address("1.1.1.1, 203.0.113.9, 151.101.1.5", "10.0.0.1", edge) == "203.0.113.9"
+    assert client_address("2001:db8::7, 2a04:4e42::15", None, edge) == "2001:db8::7"
+    # an edge nobody named is not skipped: its readers share a bucket, which over-limits
+    assert client_address("203.0.113.9, 151.101.1.5", "10.0.0.1") == "151.101.1.5"
+    # a caller cannot forge a trusted hop into the position a proxy writes
+    assert client_address("151.101.1.5, 203.0.113.9", "10.0.0.1", edge) == "203.0.113.9"
+    assert client_address("not-an-address, 203.0.113.9", "10.0.0.1", edge) == "203.0.113.9"
+    # no header at all (local development): the socket's peer
+    assert client_address(None, "127.0.0.1") == "127.0.0.1" and client_address("", None) == "unknown"
+    with pytest.raises(ValueError):
+        parse_networks("151.101.0.0/16, not-a-network")
+
+
+def test_a_forged_forwarded_address_does_not_buy_a_fresh_bucket(settings):
+    """The limit a public deployment leans on: the same caller, a different invented address in
+    front of their own on every request, is still one caller."""
+    from pakemis_api.app import create_app
+    from pakemis_api.ask.limits import PerIpBucket
+    model = FakeModel([[text("Ask me for a figure."), stop()] for _ in range(3)])
+    with TestClient(create_app(settings, model_client=model)) as c:
+        c.app.state.ask.per_ip = PerIpBucket(3)
+        codes = [c.post("/api/v1/emissions/ask", json={"message": "hello %d" % i, "ui_state": {}},
+                        headers={"X-Forwarded-For": "198.51.100.%d, 203.0.113.9" % i}).status_code for i in range(5)]
+        assert codes == [200, 200, 200, 429, 429]
+        # and another caller is not caught in it
+        other = c.post("/api/v1/emissions/ask", json={"message": "hello again", "ui_state": {}},
+                       headers={"X-Forwarded-For": "198.51.100.1, 203.0.113.10"})
+        assert other.status_code != 429
+
+
 def test_anthropic_model_builds_without_a_key(monkeypatch):
     """Construction reads no key; only a live call would (and none is made here)."""
     from pakemis_api.ask.loop import AnthropicModel

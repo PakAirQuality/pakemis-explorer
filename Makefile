@@ -5,8 +5,9 @@ VERSION   ?= $(shell sed -n 's/^pinned:[[:space:]]*//p' RELEASES.md)
 export PAKEMIS_QUERY_PATH ?= $(EMISSIONS)/src
 
 BUCKET    ?= pakemis-releases
+SITE_URL  ?= https://emissions.hawanama.org
 
-.PHONY: fetch verify library api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy
+.PHONY: fetch verify library api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy build-public deploy-web
 
 fetch:              ## copy a semantic release out of the emissions checkout at $(REF)
 	python3 data/fetch_release.py --from-git $(EMISSIONS) --ref $(REF)
@@ -51,6 +52,18 @@ push-release:       ## upload data/releases/$(VERSION) (payload + tiles) to gs:/
 #   make deploy SUBS="_REQUIRE_AUTH=firebase~_AUTH_PROJECT=hawanama-2~_AUTH_EMAILS=a@x.org,b@y.org"
 deploy:             ## Cloud Build: image + Cloud Run service `pakemis` (cloudbuild.yaml)
 	gcloud builds submit --config cloudbuild.yaml --substitutions=^~^_RELEASES_BUCKET=$(BUCKET)~_RELEASE_VERSION=$(VERSION)$(if $(SUBS),~$(SUBS)) .
+
+# THE PUBLIC BUILD, SCRIPTED. Whether a build is the open site or the one embedded in a dashboard
+# is three build-time variables, and until this target they lived only in whoever typed the
+# command: the embedded build was deployed by hand and nothing recorded which one was live. The
+# two embed variables are passed EMPTY rather than left out, so a shell or an .env file that still
+# holds them cannot leak into the public build; the grep is the same claim made of the output.
+build-public:       ## the public (not embedded) web build at $(SITE_URL) into web/out
+	cd web && NEXT_PUBLIC_API_BASE=/api/v1/emissions NEXT_PUBLIC_EMBED_AUTH= NEXT_PUBLIC_EMBED_PARENT_ORIGIN= NEXT_PUBLIC_SITE_URL=$(SITE_URL) npm run build
+	@! grep -rqs 'hawanama-dashboard\.web\.app' web/out || { echo "web/out names the dashboard as its host: this is the embedded build, not the public one" >&2; exit 1; }
+
+deploy-web: build-public  ## build-public, then Firebase Hosting target `pakemis`
+	npx firebase deploy --only hosting:pakemis
 
 web:                ## Next.js dev server on :3000 (NEXT_PUBLIC_API_BASE defaults to http://localhost:8000/api/v1/emissions)
 	cd web && npm run dev

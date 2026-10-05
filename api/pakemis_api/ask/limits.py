@@ -6,12 +6,15 @@ PAKEMIS_ASK_MAX_OUTPUT_TOKENS    max_tokens per model call (default 8000)
 PAKEMIS_ASK_CONVERSATION_TOKENS  input+output tokens one conversation may spend (default 400000)
 PAKEMIS_ASK_DAILY_TOKENS         input+output tokens the process may spend per UTC day (default 3000000)
 PAKEMIS_ASK_PER_IP_PER_HOUR      POST /ask requests one client address may make per hour (default 60)
+PAKEMIS_TRUSTED_PROXIES          comma list of addresses/CIDRs that are this deployment's OWN proxies
+                                 (default none); see client_address
 PAKEMIS_ASK_EFFORT               output_config.effort for the model (default medium)
 
 The price table is USD per million tokens (input, output); cache reads are billed at a tenth
 of input and cache writes at five quarters. The estimate on the `done` event is exactly that,
 an estimate: the invoice is the provider's.
 """
+import ipaddress
 import os
 import threading
 import time
@@ -47,6 +50,12 @@ def _int(name, default):
     return int(raw) if raw not in (None, "") else default
 
 
+def parse_networks(raw):
+    """A comma list of addresses or CIDRs -> networks; a typo stops the start rather than
+    silently trusting nothing (or everything)."""
+    return tuple(ipaddress.ip_network(part.strip(), strict=False) for part in (raw or "").split(",") if part.strip())
+
+
 @dataclass(frozen=True)
 class Limits:
     max_turns: int = 8
@@ -57,6 +66,7 @@ class Limits:
     per_ip_per_hour: int = 60
     effort: str = "medium"
     max_cells_for_model: int = 60
+    trusted_proxies: tuple = ()
 
     @classmethod
     def from_env(cls):
@@ -68,6 +78,7 @@ class Limits:
             daily_tokens=_int("PAKEMIS_ASK_DAILY_TOKENS", cls.daily_tokens),
             per_ip_per_hour=_int("PAKEMIS_ASK_PER_IP_PER_HOUR", cls.per_ip_per_hour),
             effort=os.environ.get("PAKEMIS_ASK_EFFORT") or cls.effort,
+            trusted_proxies=parse_networks(os.environ.get("PAKEMIS_TRUSTED_PROXIES")),
         )
 
 
@@ -112,6 +123,36 @@ class DailyBudget:
         with self._lock:
             self._roll(now if now is not None else time.time())
             self._spent += tokens
+
+
+def _is_trusted(hop, trusted):
+    try:
+        address = ipaddress.ip_address(hop)
+    except ValueError:
+        return False
+    return any(address in network for network in trusted)
+
+
+def client_address(forwarded_for, peer, trusted=()):
+    """The address a request is rate-limited under: the RIGHT-MOST X-Forwarded-For hop that is not
+    one of this deployment's own proxies.
+
+    Every proxy appends the address it received the request from, so the header reads
+    `<whatever the client sent>, <client>, <our proxies...>`. The left-most entry is therefore the
+    one part a caller writes for themselves: keying on it (which this did until the API went
+    public) let anyone mint a fresh bucket per request by sending a different value each time.
+    Read from the right instead, skipping only hops in `trusted`, and the first address reached is
+    one a proxy of ours observed.
+
+    With nothing trusted this is the last hop: correct for a caller that reaches the service
+    directly, and for one behind a shared edge it is the EDGE's address - many readers in one
+    bucket, which over-limits rather than under-limits. Naming the edge's ranges in
+    PAKEMIS_TRUSTED_PROXIES is what separates them again."""
+    hops = [hop.strip() for hop in (forwarded_for or "").split(",") if hop.strip()]
+    for hop in reversed(hops):
+        if not _is_trusted(hop, trusted):
+            return hop
+    return hops[0] if hops else (peer or "unknown")
 
 
 class PerIpBucket:

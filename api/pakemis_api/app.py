@@ -915,6 +915,21 @@ def create_app(settings=None, model_client=None):
     return app
 
 
+def _log_to_stderr():
+    """uvicorn configures its own loggers and no others, so every `log.info` in this package went
+    nowhere on the running service: the root logger has no handler and Python's last resort prints
+    warnings only. The served process (never a test or a script, which import lazily) gets one."""
+    package = logging.getLogger("pakemis_api")
+    if not package.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+        package.addHandler(handler)
+        package.propagate = False
+    package.setLevel(logging.INFO)
+
+
+if os.environ.get("PAKEMIS_API_LAZY") != "1":
+    _log_to_stderr()
 app = create_app() if os.environ.get("PAKEMIS_API_LAZY") != "1" else None
 
 if __name__ == "__main__":
