@@ -145,9 +145,10 @@ def client_address(forwarded_for, peer, trusted=()):
     one a proxy of ours observed.
 
     With nothing trusted this is the last hop: correct for a caller that reaches the service
-    directly, and for one behind a shared edge it is the EDGE's address - many readers in one
-    bucket, which over-limits rather than under-limits. Naming the edge's ranges in
-    PAKEMIS_TRUSTED_PROXIES is what separates them again."""
+    directly, and for one behind an edge it is the EDGE's address. A single edge address would put
+    every reader in one bucket; an edge that answers from a pool (Firebase Hosting's did, a
+    different address on every request when measured) puts every REQUEST in its own, and the limit
+    silently stops limiting. Naming the edge's ranges in PAKEMIS_TRUSTED_PROXIES fixes both."""
     hops = [hop.strip() for hop in (forwarded_for or "").split(",") if hop.strip()]
     for hop in reversed(hops):
         if not _is_trusted(hop, trusted):
