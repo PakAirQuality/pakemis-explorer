@@ -7,6 +7,12 @@ export PAKEMIS_QUERY_PATH ?= $(EMISSIONS)/src
 BUCKET    ?= pakemis-releases
 SITE_URL  ?= https://emissions.hawanama.org
 FACTS_API ?= http://localhost:8000/api/v1/emissions
+# The bot check on the assistant (web/src/lib/appCheck.ts): three identifiers a browser is meant to
+# hold. The fourth, the Firebase web app's browser key, is read from web/.env.local beside the
+# Mapbox token (NEXT_PUBLIC_FIREBASE_API_KEY). Empty APPCHECK_SITE_KEY builds without the check.
+APPCHECK_SITE_KEY   ?= 6LeRBeEtAAAAAMcCY_KbLBXwxYJpfFd29TgSP6Pm
+FIREBASE_APP_ID     ?= 1:152782825429:web:4c8987e5eb65feca33bf5c
+FIREBASE_PROJECT_ID ?= hawanama-2
 
 .PHONY: fetch verify library facts api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy build-public deploy-web
 
@@ -63,8 +69,11 @@ deploy:             ## Cloud Build: image + Cloud Run service `pakemis` (cloudbu
 # two embed variables are passed EMPTY rather than left out, so a shell or an .env file that still
 # holds them cannot leak into the public build; the grep is the same claim made of the output.
 build-public:       ## the public (not embedded) web build at $(SITE_URL) into web/out
-	cd web && NEXT_PUBLIC_API_BASE=/api/v1/emissions NEXT_PUBLIC_EMBED_AUTH= NEXT_PUBLIC_EMBED_PARENT_ORIGIN= NEXT_PUBLIC_SITE_URL=$(SITE_URL) npm run build
+	@[ -z "$(APPCHECK_SITE_KEY)" ] || grep -qs '^NEXT_PUBLIC_FIREBASE_API_KEY=.' web/.env.local || { echo "the bot check is configured (APPCHECK_SITE_KEY) but web/.env.local has no NEXT_PUBLIC_FIREBASE_API_KEY: the page would send no token and an enforcing API would refuse every question" >&2; exit 1; }
+	cd web && NEXT_PUBLIC_API_BASE=/api/v1/emissions NEXT_PUBLIC_EMBED_AUTH= NEXT_PUBLIC_EMBED_PARENT_ORIGIN= NEXT_PUBLIC_SITE_URL=$(SITE_URL) \
+		NEXT_PUBLIC_APPCHECK_SITE_KEY=$(APPCHECK_SITE_KEY) NEXT_PUBLIC_FIREBASE_APP_ID=$(FIREBASE_APP_ID) NEXT_PUBLIC_FIREBASE_PROJECT_ID=$(FIREBASE_PROJECT_ID) npm run build
 	@! grep -rqs 'hawanama-dashboard\.web\.app' web/out || { echo "web/out names the dashboard as its host: this is the embedded build, not the public one" >&2; exit 1; }
+	@[ -z "$(APPCHECK_SITE_KEY)" ] || grep -rqs '$(APPCHECK_SITE_KEY)' web/out/_next || { echo "the bot check's site key is not in the build" >&2; exit 1; }
 
 deploy-web: build-public  ## build-public, then Firebase Hosting target `pakemis`
 	npx firebase deploy --only hosting:pakemis

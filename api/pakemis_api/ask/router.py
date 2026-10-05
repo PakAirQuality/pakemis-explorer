@@ -25,8 +25,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
+from pakemis_api.appcheck import AppCheckPolicy, AppCheckVerifier
 from pakemis_api.ask.local import Library, LocalTurn
-from pakemis_api.ask.limits import DailyBudget, Limits, PerIpBucket, client_address
+from pakemis_api.ask.limits import Limits, PerIpBucket, build_budget, client_address
 from pakemis_api.ask.loop import AnthropicModel, Turn
 from pakemis_api.ask.memory import Memory
 from pakemis_api.ask.prompt import system_prompt
@@ -55,8 +56,12 @@ class AskRuntime:
         self.tools = build_tools(self.dims)
         self.system = system_prompt(self.dims)
         self.memory = Memory()
-        self.budget = DailyBudget(self.limits.daily_tokens)
+        self.budget = build_budget(self.limits)
+        if hasattr(self.budget, "warm"):                   # a shared budget: open its store before the first reader waits on it
+            self.budget.warm()
         self.per_ip = PerIpBucket(self.limits.per_ip_per_hour)
+        policy = AppCheckPolicy.from_env()
+        self.app_check = AppCheckVerifier(policy) if policy.on else None
         try:
             self.library = Library(dims=self.dims)
         except Exception:                                  # a broken library must not take Ask down
@@ -134,10 +139,14 @@ def ask(body: AskBody, request: Request):
     if runtime is None:
         return JSONResponse(status_code=503, content={"error": "agent_disabled", "reason": status.get("reason") or "no model client"})
     address = _client_ip(request, runtime.limits.trusted_proxies)
+    # whether this came from the site's own page in a browser (appcheck.py); "off" when not asked for
+    check = runtime.app_check.verdict(request.headers) if runtime.app_check is not None else "off"
     # the chain as it arrived, beside the address chosen from it: the only way to see that the
     # trusted ranges still describe the edge in front of this service (%r: a caller writes part of it)
-    log.info("ask from %s forwarded=%r edge-client=%r", address, (request.headers.get("x-forwarded-for") or "")[:200],
-             (request.headers.get("fastly-client-ip") or "")[:64])
+    log.info("ask from %s forwarded=%r edge-client=%r app-check=%s", address, (request.headers.get("x-forwarded-for") or "")[:200],
+             (request.headers.get("fastly-client-ip") or "")[:64], check)
+    if check not in ("off", "ok") and runtime.app_check.policy.enforced:
+        return JSONResponse(status_code=401, content={"error": "app_check_failed", "message": "This page could not confirm it is the site itself. Reload the page and ask again."})
     if not runtime.per_ip.allow(address):
         log.warning("ask from %s refused: over %d requests in the hour", address, runtime.limits.per_ip_per_hour)
         return JSONResponse(status_code=429, content={"error": "rate_limited", "message": "too many questions from this address; try again in an hour"})

@@ -578,6 +578,24 @@ anyone who asks. Three things stand between that and the invoice:
   restarts. `_GEMINI_SECRET` names the Secret Manager secret so this deployment can spend a key of
   its own rather than one shared with other services.
 
+Two more were added once the site was open (2026-10), both off unless a deployment asks:
+
+- **The daily budget is counted once** (`PAKEMIS_ASK_BUDGET_STORE=firestore`,
+  `limits.SharedDailyBudget`): one Firestore document a day that every instance adds to, re-read
+  at most every fifteen seconds, so the number above is the day's total and survives a scale to
+  zero. A store that fails is logged and the count carries on from what is known; it never
+  unlocks the budget and never takes the assistant down.
+- **A bot check** (`PAKEMIS_APP_CHECK=report|enforce`, `api/pakemis_api/appcheck.py` and
+  `web/src/lib/appCheck.ts`): Firebase App Check. The page obtains a token on a reCAPTCHA
+  Enterprise assessment made in that browser and sends it with each question; the API verifies it
+  against Google's key set, this project's number and, optionally, the app id. `report` logs and
+  answers regardless — run it first, and read `app-check=` on the `ask from` log lines until real
+  readers show `ok` — then `enforce` refuses a question that carries no valid token. It raises
+  the cost of abuse and does not end it: someone driving a real browser passes, and the budget
+  and the provider's quota are what bound that. The web build needs four public identifiers:
+  three are Makefile variables, and the Firebase web app's browser key is read from
+  `web/.env.local` (`NEXT_PUBLIC_FIREBASE_API_KEY`); `build-public` refuses to build half of it.
+
 Only `/ask` is limited. Queries, tiles and `/products/complete.zip` are bounded by the service's
 four instances and nothing finer.
 

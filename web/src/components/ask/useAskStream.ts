@@ -13,6 +13,7 @@ import { loadConversation, saveConversation } from "./store";
 import { rememberConversation } from "./history";
 import { clientHistory } from "./timeline";
 import type { AskEvent, DoneEvent, MapActionEvent, Turn } from "./types";
+import { appCheckHeaders } from "@/lib/appCheck";
 import { authedFetch } from "@/lib/embedAuth";
 
 export { createSseParser, parseSse } from "./sse";
@@ -112,7 +113,8 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
         try {
           res = await authedFetch(api.askUrl(), {
             method: "POST",
-            headers: { "content-type": "application/json", accept: "text/event-stream" },
+            // the bot check's token, where this build is configured for one (lib/appCheck.ts); {} otherwise
+            headers: { "content-type": "application/json", accept: "text/event-stream", ...(await appCheckHeaders()) },
             body: JSON.stringify({ conversation_id: cid ?? undefined, message: text, ui_state: turn.ui_state, client_history: history }),
             signal: ac.signal,
           });

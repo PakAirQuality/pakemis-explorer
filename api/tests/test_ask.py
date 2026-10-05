@@ -940,3 +940,78 @@ def test_the_system_prompt_names_the_air_vocabulary_as_the_air_vocabulary(ask_cl
     assert set(air_line.split(":", 1)[1].replace(" ", "").split(",")) == set(Engine.AIR_GROUPS)
     assert "pollutants (query_air" in text and "SO2" in text
     assert "never `gas`" in text
+
+
+# --- the daily budget counted once, across instances and restarts ------------------------------
+
+class _DayStore:
+    """A Firestore stand-in: one total per day, and switches to make reads or writes fail."""
+
+    def __init__(self):
+        self.totals, self.fail_read, self.fail_add, self.reads = {}, False, False, 0
+
+    def read(self, day):
+        self.reads += 1
+        if self.fail_read:
+            raise RuntimeError("store unreachable")
+        return self.totals.get(day, 0)
+
+    def add(self, day, tokens):
+        if self.fail_add:
+            raise RuntimeError("store unreachable")
+        self.totals[day] = self.totals.get(day, 0) + tokens
+
+
+def test_two_instances_and_a_restart_share_one_daily_budget():
+    """The in-memory budget gave every instance, and every start, a fresh allowance."""
+    from pakemis_api.ask.limits import SharedDailyBudget
+    store, t0 = _DayStore(), 1_790_000_000.0
+    a = SharedDailyBudget(1000, store, refresh=15)
+    b = SharedDailyBudget(1000, store, refresh=15)
+    assert a.remaining(t0) == 1000 and b.remaining(t0) == 1000
+    a.spend(600, t0 + 1)
+    assert a.remaining(t0 + 2) == 400                    # its own spending is seen at once
+    assert b.remaining(t0 + 2) == 1000                   # another instance's, within the refresh window, is not yet
+    assert b.remaining(t0 + 16) == 400                   # and then is
+    b.spend(500, t0 + 17)
+    assert b.remaining(t0 + 18) == -100 and a.remaining(t0 + 40) == -100
+    # an instance that starts now (a scale from zero) starts from the day's total, not from nothing
+    assert SharedDailyBudget(1000, store).remaining(t0 + 41) == -100
+    # the check a turn makes is not a round trip: many calls inside the window, one read
+    reads = store.reads
+    for i in range(50):
+        a.remaining(t0 + 41 + i * 0.1)
+    assert store.reads == reads
+    # a new UTC day is a new document and a full budget
+    assert a.remaining(t0 + 86400) == 1000
+
+
+def test_a_store_that_fails_neither_unlocks_the_budget_nor_stops_the_assistant():
+    from pakemis_api.ask.limits import SharedDailyBudget
+    store, t0 = _DayStore(), 1_790_000_000.0
+    store.fail_read = store.fail_add = True
+    budget = SharedDailyBudget(1000, store, refresh=15)
+    budget.spend(700, t0)                                # nothing raised: the turn goes on
+    assert budget.remaining(t0 + 1) == 300               # and it is counted, as the in-memory budget would
+    budget.spend(400, t0 + 2)
+    assert budget.remaining(t0 + 3) == -100              # exhausted on the local count alone
+    assert store.totals == {}
+    # the store comes back: what could not be added is added, once, and the count does not double
+    store.fail_read = store.fail_add = False
+    budget.spend(50, t0 + 20)
+    assert sum(store.totals.values()) == 1150
+    assert budget.remaining(t0 + 40) == -150
+
+
+def test_the_budget_store_is_chosen_by_the_deployment(monkeypatch):
+    from pakemis_api.ask.limits import DailyBudget, FirestoreDayStore, Limits, SharedDailyBudget, build_budget
+    monkeypatch.delenv("PAKEMIS_ASK_BUDGET_STORE", raising=False)
+    assert isinstance(build_budget(Limits()), DailyBudget)             # the repository's default
+    monkeypatch.setenv("PAKEMIS_ASK_BUDGET_STORE", "Firestore")
+    monkeypatch.setenv("PAKEMIS_ASK_BUDGET_COLLECTION", "explorer_ask_budget")
+    shared = build_budget(Limits(daily_tokens=5))
+    assert isinstance(shared, SharedDailyBudget) and shared.daily_tokens == 5
+    assert isinstance(shared.store, FirestoreDayStore) and shared.store.collection == "explorer_ask_budget"
+    monkeypatch.setenv("PAKEMIS_ASK_BUDGET_STORE", "redis")
+    with pytest.raises(ValueError):                                    # a typo must not run on the wrong budget in silence
+        build_budget(Limits())

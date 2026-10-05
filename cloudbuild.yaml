@@ -31,6 +31,17 @@ substitutions:
   _GEMINI_SECRET: GEMINI_API_KEY
   _ASK_DAILY_TOKENS: "3000000"
   _ASK_PER_IP_PER_HOUR: "60"
+  # WHERE the daily budget is counted. `firestore`: one document a day (in _ASK_BUDGET_COLLECTION
+  # of this project's database) that every instance adds to, so _ASK_DAILY_TOKENS is the day's
+  # total and not a per-instance, per-start allowance. Empty: each instance's own memory.
+  _ASK_BUDGET_STORE: firestore
+  _ASK_BUDGET_COLLECTION: explorer_ask_budget
+  # The bot check on POST /ask (api/pakemis_api/appcheck.py): empty = off, `report` = verify and
+  # log but answer regardless, `enforce` = refuse a question without a valid Firebase App Check
+  # token. _APP_CHECK_PROJECT is the project NUMBER; _APP_CHECK_APPS narrows it to named app ids.
+  _APP_CHECK: report
+  _APP_CHECK_PROJECT: "152782825429"
+  _APP_CHECK_APPS: 1:152782825429:web:4c8987e5eb65feca33bf5c
   # Addresses/CIDRs of the proxies in front of this service whose X-Forwarded-For hop is skipped
   # when the per-address limit picks its address (limits.client_address). Empty: the last hop.
   #
@@ -78,7 +89,7 @@ steps:
       - '--allow-unauthenticated'
       - '--port=8080'
       - '--set-secrets=GEMINI_API_KEY=${_GEMINI_SECRET}:latest'
-      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}|PAKEMIS_ASK_DAILY_TOKENS=${_ASK_DAILY_TOKENS}|PAKEMIS_ASK_PER_IP_PER_HOUR=${_ASK_PER_IP_PER_HOUR}|PAKEMIS_TRUSTED_PROXIES=${_TRUSTED_PROXIES}'
+      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}|PAKEMIS_ASK_DAILY_TOKENS=${_ASK_DAILY_TOKENS}|PAKEMIS_ASK_PER_IP_PER_HOUR=${_ASK_PER_IP_PER_HOUR}|PAKEMIS_TRUSTED_PROXIES=${_TRUSTED_PROXIES}|PAKEMIS_ASK_BUDGET_STORE=${_ASK_BUDGET_STORE}|PAKEMIS_ASK_BUDGET_COLLECTION=${_ASK_BUDGET_COLLECTION}|PAKEMIS_APP_CHECK=${_APP_CHECK}|PAKEMIS_APP_CHECK_PROJECT=${_APP_CHECK_PROJECT}|PAKEMIS_APP_CHECK_APPS=${_APP_CHECK_APPS}'
       - '--cpu=2'
       - '--memory=2Gi'
       - '--concurrency=20'

@@ -6,6 +6,9 @@ PAKEMIS_ASK_MAX_OUTPUT_TOKENS    max_tokens per model call (default 8000)
 PAKEMIS_ASK_CONVERSATION_TOKENS  input+output tokens one conversation may spend (default 400000)
 PAKEMIS_ASK_DAILY_TOKENS         input+output tokens the process may spend per UTC day (default 3000000)
 PAKEMIS_ASK_PER_IP_PER_HOUR      POST /ask requests one client address may make per hour (default 60)
+PAKEMIS_ASK_BUDGET_STORE         where the daily budget is counted: unset = this process's memory;
+                                 `firestore` = one document a day that every instance adds to
+PAKEMIS_ASK_BUDGET_COLLECTION    the Firestore collection holding those documents (default ask_budget)
 PAKEMIS_TRUSTED_PROXIES          comma list of addresses/CIDRs that are this deployment's OWN proxies
                                  (default none); see client_address
 PAKEMIS_ASK_EFFORT               output_config.effort for the model (default medium)
@@ -15,10 +18,13 @@ of input and cache writes at five quarters. The estimate on the `done` event is 
 an estimate: the invoice is the provider's.
 """
 import ipaddress
+import logging
 import os
 import threading
 import time
 from dataclasses import dataclass
+
+log = logging.getLogger("pakemis_api.ask")
 
 PRICE_PER_MTOK = {
     "claude-sonnet-5": (2.0, 10.0),
@@ -123,6 +129,124 @@ class DailyBudget:
         with self._lock:
             self._roll(now if now is not None else time.time())
             self._spent += tokens
+
+
+class FirestoreDayStore:
+    """One document per UTC day in a Firestore collection, holding the tokens spent that day by
+    every instance. `add` is an atomic server-side increment, so two instances adding at once both
+    count. The client is made on first use: nothing imports the library until a deployment asks
+    for this store."""
+
+    TIMEOUT = 6.0     # seconds: the first call on a new instance opens the channel (about 4 s measured from far away), later ones are a fraction of one
+
+    def __init__(self, collection="ask_budget", client=None):
+        self.collection = collection
+        self._client = client
+
+    def _doc(self, day):
+        if self._client is None:
+            from google.cloud import firestore
+            self._client = firestore.Client()
+        return self._client.collection(self.collection).document(day)
+
+    def read(self, day):
+        snapshot = self._doc(day).get(timeout=self.TIMEOUT, retry=None)
+        return int((snapshot.to_dict() or {}).get("tokens", 0)) if snapshot.exists else 0
+
+    def add(self, day, tokens):
+        from google.cloud import firestore
+        self._doc(day).set({"tokens": firestore.Increment(int(tokens)), "updated": firestore.SERVER_TIMESTAMP},
+                           merge=True, timeout=self.TIMEOUT, retry=None)
+
+
+class SharedDailyBudget:
+    """The daily budget counted ONCE, in a store every instance adds to.
+
+    DailyBudget counts in this process's memory. That was honest for one process and stopped
+    being so in production: the service runs up to four instances, each with its own count, and
+    an instance that scales to zero starts again from nothing - so "3M tokens a day" was really
+    3M per instance per start. This keeps the same two methods and puts the count where all of
+    them see it.
+
+    What is known here is the store's total as last read (`_remote`) plus what THIS instance has
+    spent since that read (`_since`). The store is re-read at most every `refresh` seconds, so the
+    check a turn makes costs no round trip; the price is that instances may together overshoot by
+    what they can spend in that window.
+
+    ⚠ A STORE THAT FAILS MUST NOT UNLOCK THE BUDGET, AND MUST NOT TAKE THE ASSISTANT DOWN. Every
+    failure is logged and the count carries on from what is already known - which, if the store has
+    never answered, is exactly DailyBudget's in-memory count. Tokens that could not be added are
+    kept (`_unsent`) and offered again with the next spend."""
+
+    def __init__(self, daily_tokens, store, refresh=15.0):
+        self.daily_tokens = daily_tokens
+        self.store = store
+        self.refresh = refresh
+        self._lock = threading.Lock()
+        self._day = None
+        self._remote = 0
+        self._since = 0
+        self._unsent = 0
+        self._read_at = None
+
+    def warm(self):
+        """Read the day's total in the background, now. The first call on a new instance opens the
+        store's channel and takes seconds; this spends them at start instead of inside somebody's
+        first question."""
+        threading.Thread(target=self.remaining, name="ask-budget-warm", daemon=True).start()
+
+    @staticmethod
+    def day_key(now):
+        return time.strftime("%Y-%m-%d", time.gmtime(now))
+
+    def _roll(self, now):
+        day = self.day_key(now)
+        if day != self._day:
+            self._day, self._remote, self._since, self._unsent, self._read_at = day, 0, 0, 0, None
+
+    def _sync(self, now):
+        if self._read_at is not None and now - self._read_at < self.refresh:
+            return
+        self._read_at = now                       # a failing store is asked once per window, not per call
+        try:
+            total = self.store.read(self._day)
+        except Exception:
+            log.warning("the shared daily budget could not be read; counting on from %d", self._remote + self._since, exc_info=True)
+            return
+        # the store's total, plus what this instance spent and has not managed to add to it
+        self._remote, self._since = total + self._unsent, 0
+
+    def remaining(self, now=None):
+        now = now if now is not None else time.time()
+        with self._lock:
+            self._roll(now)
+            self._sync(now)
+            return self.daily_tokens - (self._remote + self._since)
+
+    def spend(self, tokens, now=None):
+        now = now if now is not None else time.time()
+        with self._lock:
+            self._roll(now)
+            self._since += tokens
+            owed = self._unsent + tokens
+            try:
+                self.store.add(self._day, owed)
+                self._unsent = 0
+            except Exception:
+                self._unsent = owed
+                log.warning("the shared daily budget could not be written; %d tokens held to add later", owed, exc_info=True)
+
+
+def build_budget(limits):
+    """The daily budget this deployment asks for (PAKEMIS_ASK_BUDGET_STORE): in memory by default,
+    shared through Firestore when named. An unknown store stops the start: a typo here would
+    otherwise run a public assistant on the wrong budget and say nothing."""
+    store = (os.environ.get("PAKEMIS_ASK_BUDGET_STORE") or "").strip().lower()
+    if store == "":
+        return DailyBudget(limits.daily_tokens)
+    if store == "firestore":
+        return SharedDailyBudget(limits.daily_tokens, FirestoreDayStore(os.environ.get("PAKEMIS_ASK_BUDGET_COLLECTION") or "ask_budget"))
+    raise ValueError("PAKEMIS_ASK_BUDGET_STORE=%r is not a budget store this API knows (unset, or 'firestore')" % store)
 
 
 def _is_trusted(hop, trusted):

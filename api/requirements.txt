@@ -13,3 +13,5 @@ sse-starlette>=3.3
 pytest>=7.4
 google-auth>=2.30          # the optional sign-in gate (auth.py) verifies Firebase ID tokens; also a transitive dep of google-cloud-storage
 google-cloud-storage>=2.16
+google-cloud-firestore>=2.16   # the optional shared daily budget (ask/limits.py SharedDailyBudget); imported only when asked for
+PyJWT[crypto]>=2.8             # the optional bot check (appcheck.py) verifies Firebase App Check tokens; imported only when asked for
