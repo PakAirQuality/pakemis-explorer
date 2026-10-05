@@ -522,6 +522,24 @@ make deploy BUCKET=...          # gcloud builds submit --config cloudbuild.yaml 
   `Deprecation: true`; `api/openapi.json` names only the `/api/v1/emissions/*` paths, so
   `make types` regenerates `web/src/types.gen.ts` with the new paths.
 
+## The loading screen's facts
+
+The loading screen rotates sentences such as "Agriculture is Pakistan's largest source of
+emissions: 223.45 Mt CO₂e, or 47.6 % of the national total". No figure in them is typed:
+`web/scripts/build-loading-facts.mjs` asks a served release the questions the workspace deck asks
+and writes `web/src/components/shell/loadingFacts.gen.ts`, each fact beside the server strings it
+used and their receipts. `LoadingScreen.test.tsx` fails a digit that is not one of a fact's own
+recorded strings, and fails the whole file when it was built from a release other than the one
+`RELEASES.md` pins. So after a release moves:
+
+```
+make facts                                                     # against the local API (make api)
+make facts FACTS_API=https://emissions.hawanama.org/api/v1/emissions   # or against the deployed one
+```
+
+A sentence that glosses its subject ("methane from the digestion of cattle…") names the cell it
+expects at that rank, and the script stops if the release has put something else there.
+
 ## The public deployment (emissions.hawanama.org)
 
 The site is public at `https://emissions.hawanama.org`: a custom domain on the Hosting site

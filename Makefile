@@ -6,8 +6,9 @@ export PAKEMIS_QUERY_PATH ?= $(EMISSIONS)/src
 
 BUCKET    ?= pakemis-releases
 SITE_URL  ?= https://emissions.hawanama.org
+FACTS_API ?= http://localhost:8000/api/v1/emissions
 
-.PHONY: fetch verify library api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy build-public deploy-web
+.PHONY: fetch verify library facts api web types openapi tiles raster test test-api test-web build vendor docker-build docker-run push-release deploy build-public deploy-web
 
 fetch:              ## copy a semantic release out of the emissions checkout at $(REF)
 	python3 data/fetch_release.py --from-git $(EMISSIONS) --ref $(REF)
@@ -30,6 +31,9 @@ tiles:              ## ADM1/ADM2/grid PMTiles (geometry + ids only) + bboxes.jso
 
 raster:             ## visual-only grid rasters (2 configurations x 3 gases x 13 frames) + bboxes.json; numpy + Pillow, no tippecanoe
 	python3 tiles/build_tiles.py --raster
+
+facts:              ## rewrite the loading screen's facts (web/src/components/shell/loadingFacts.gen.ts) from the release $(FACTS_API) serves
+	cd web && PAKEMIS_API=$(FACTS_API) node scripts/build-loading-facts.mjs
 
 library:            ## rebuild the assistant's cards + source register from the pinned payload, then copy them into the API package the server imports
 	python3 assistant/scripts/build_sources.py

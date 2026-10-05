@@ -1,22 +1,34 @@
 import "@testing-library/jest-dom/vitest";
 /**
- * The loading screen: the logo, the title, the subtitle, the bar and a status line; the bar
- * moves with the bootstrap stages and finishes at the page's last one (or the ceiling); the
- * minimum display, the fade and the unmount under fake timers; once per session unless forced;
- * the lines carry no digit and pass the four audits; reduced motion paints a static canvas.
+ * The loading screen: the logo, the title, the subtitle, the bar and a fact; the bar moves with
+ * the bootstrap stages and finishes at the page's last one (or a ceiling - a short one once the
+ * release has answered, a long one before); the minimum display, the fade and the unmount under
+ * fake timers; once per session unless forced; every digit in a fact is a string the pinned
+ * release returned, and the facts pass the audits; reduced motion paints a static canvas.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { avoidPhrasesIn } from "@/__tests__/vocabulary";
 import { markStage, resetBootstrap } from "./bootstrap";
-import { CEILING_MS, FADE_MS, LINE_MS, LoadingScreen, MIN_SHOW_MS, readLoadingQuery, SESSION_KEY } from "./LoadingScreen";
-import { LOADING_LINES } from "./loadingLines";
-import { reducedMotion } from "./ParticleCanvas";
+import { CEILING_MS, CREEP_MS, FADE_MS, HARD_CAP_MS, LINE_MS, LoadingScreen, MIN_SHOW_MS, readLoadingQuery, SESSION_KEY } from "./LoadingScreen";
+import { FACTS_RELEASE, LOADING_FACTS } from "./loadingFacts.gen";
+import { reducedMotion } from "./PlumeCanvas";
 
 const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value }));
 
-const ctx = { clearRect: vi.fn(), beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(), setTransform: vi.fn(), fillStyle: "" };
+/** Which fact the screen is showing (the first is drawn at random). */
+function factShown(): number {
+  const text = screen.getByTestId("loading-line").textContent ?? "";
+  const ix = LOADING_FACTS.findIndex((f) => f.text === text);
+  expect(ix, text).toBeGreaterThanOrEqual(0);
+  return ix;
+}
+
+const gradient = { addColorStop: () => undefined };
+const ctx = { clearRect: vi.fn(), beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(), setTransform: vi.fn(), createRadialGradient: () => gradient, fillStyle: "" as unknown };
 let raf: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
@@ -35,12 +47,22 @@ afterEach(() => {
   delete (window as { matchMedia?: unknown }).matchMedia;
 });
 
+/**
+ * The fake clock drives requestAnimationFrame too, so a test that runs the clock for most of a
+ * minute would also paint some three thousand frames of smoke into a recording mock - which is
+ * what ran the first version of these tests out of memory. The tests about time still the smoke.
+ */
+function fakeClock() {
+  mockMatchMedia(true);
+  vi.useFakeTimers();
+}
+
 function mockMatchMedia(matches: boolean) {
   (window as { matchMedia?: unknown }).matchMedia = vi.fn(() => ({ matches, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 }
 
 describe("LoadingScreen", () => {
-  it("renders the logo, the initiative, its one-line description, an empty bar and the first line", () => {
+  it("renders the logo, the initiative, its one-line description, an empty bar and a fact", () => {
     render(<LoadingScreen force />);
     const screenEl = screen.getByTestId("loading-screen");
     expect(screenEl).toHaveAttribute("data-phase", "shown");
@@ -51,8 +73,8 @@ describe("LoadingScreen", () => {
     expect(screen.getByTestId("loading-subtitle")).toHaveTextContent("Pakistan's greenhouse-gas emissions, reconstructed from public documents");
     expect(screen.getByTestId("loading-progress")).toHaveAttribute("aria-valuenow", "0");
     expect(screen.getByTestId("loading-fill").style.width).toBe("0%");
-    expect(screen.getByTestId("loading-line")).toHaveTextContent(LOADING_LINES[0]);
-    expect(screen.getByTestId("particle-canvas")).toBeInTheDocument();
+    factShown();
+    expect(screen.getByTestId("plume-canvas")).toBeInTheDocument();
     expect(raf).toHaveBeenCalled();
   });
   it("the bar follows the stages the app marks, on the home page through the map", () => {
@@ -85,7 +107,7 @@ describe("LoadingScreen", () => {
     expect(screen.queryByTestId("loading-screen")).toBeNull();
     expect(document.body.style.overflow).toBe("");
   });
-  it("on the home page the map's load is the last stage; the six-second ceiling finishes the bar regardless", () => {
+  it("on the home page the map's load is the last stage; six seconds after the release answered, the ceiling finishes the bar regardless", () => {
     vi.useFakeTimers();
     render(<LoadingScreen force />);
     act(() => {
@@ -102,16 +124,48 @@ describe("LoadingScreen", () => {
     act(() => vi.advanceTimersByTime(FADE_MS));
     expect(screen.queryByTestId("loading-screen")).toBeNull();
   });
-  it("the status line advances and is re-keyed so its animation replays", () => {
-    vi.useFakeTimers();
+  it("a cold start is waited for: before the release answers the six-second ceiling does not apply, and the bar eases toward its first stage", () => {
+    fakeClock();
+    render(<LoadingScreen force />);
+    const el = () => screen.getByTestId("loading-screen");
+    act(() => vi.advanceTimersByTime(CREEP_MS * 3));
+    const early = Number(el().getAttribute("data-progress"));
+    expect(early).toBeGreaterThan(0);
+    // well past the short ceiling and the minimum display, with nothing answered: still here
+    act(() => vi.advanceTimersByTime(CEILING_MS * 5));
+    expect(el()).toHaveAttribute("data-phase", "shown");
+    const late = Number(el().getAttribute("data-progress"));
+    expect(late).toBeGreaterThan(early);
+    expect(late).toBeLessThan(35); // toward the first stage, never to it: only the release puts it there
+    act(() => markStage("release"));
+    expect(el()).toHaveAttribute("data-progress", "35");
+    // and from the answer the short ceiling runs
+    act(() => vi.advanceTimersByTime(CEILING_MS));
+    expect(el()).toHaveAttribute("data-progress", "100");
+    expect(el()).toHaveAttribute("data-phase", "fading");
+  });
+  it("an API that never answers does not trap anyone: the hard cap lets the page through", () => {
+    fakeClock();
+    render(<LoadingScreen force />);
+    act(() => vi.advanceTimersByTime(HARD_CAP_MS - 100));
+    expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "shown");
+    act(() => vi.advanceTimersByTime(100));
+    expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "fading");
+    act(() => vi.advanceTimersByTime(FADE_MS));
+    expect(screen.queryByTestId("loading-screen")).toBeNull();
+  });
+  it("the fact advances and is re-keyed so its animation replays; a fast load shows one fact whole", () => {
+    expect(LINE_MS).toBeGreaterThan(MIN_SHOW_MS);
+    fakeClock();
     render(<LoadingScreen force />);
     const first = screen.getByTestId("loading-line");
+    const start = factShown();
     act(() => vi.advanceTimersByTime(LINE_MS));
     const second = screen.getByTestId("loading-line");
-    expect(second).toHaveTextContent(LOADING_LINES[1]);
+    expect(factShown()).toBe((start + 1) % LOADING_FACTS.length);
     expect(second).not.toBe(first);
-    act(() => vi.advanceTimersByTime(LINE_MS * (LOADING_LINES.length - 1)));
-    expect(screen.getByTestId("loading-line")).toHaveTextContent(LOADING_LINES[0]);
+    act(() => vi.advanceTimersByTime(LINE_MS * (LOADING_FACTS.length - 1)));
+    expect(factShown()).toBe(start);
   });
   it("shown once per session: the second mount renders nothing, unless forced by the query", () => {
     const { unmount } = render(<LoadingScreen />);
@@ -137,19 +191,35 @@ describe("LoadingScreen", () => {
     expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-progress", "60");
     expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "shown");
   });
-  it("every line is digit-free and passes the audits: no FY, no avoid-list phrase, no raw id", () => {
-    expect(LOADING_LINES.length).toBe(8);
-    for (const line of LOADING_LINES) {
-      expect(line, line).not.toMatch(/\d/);
-      expect(line).not.toContain("FY");
-      expect(line).not.toMatch(/(^|[^A-Z0-9(])AR5(?![)\w])/);
-      expect(line).not.toContain("LULUCF");
-      expect(line).not.toMatch(/\b[A-Z]{2,}_[A-Z0-9_]+\b/); // REF_2023_24 and its kind
-      expect(line).not.toMatch(/\b[0-9][A-Z][0-9a-z]*\b/); // 1A3b and its kind
-      expect(avoidPhrasesIn(line)).toEqual([]);
+  it("every digit in a fact is a string the pinned release returned; the facts pass the audits", () => {
+    // the file is generated (scripts/build-loading-facts.mjs): a release bump fails here until `make facts` reruns
+    const pinned = /^pinned:\s*(\S+)/m.exec(readFileSync(join(__dirname, "..", "..", "..", "..", "RELEASES.md"), "utf8"))?.[1];
+    expect(FACTS_RELEASE).toBe(pinned);
+    expect(LOADING_FACTS.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(LOADING_FACTS.map((f) => f.text)).size).toBe(LOADING_FACTS.length);
+    for (const fact of LOADING_FACTS) {
+      expect(fact.figures.length, fact.text).toBeGreaterThan(0);
+      expect(fact.receipts.length, fact.text).toBeGreaterThan(0);
+      for (const receipt of fact.receipts) expect(receipt).toMatch(/^[0-9a-f]{32}$/);
+      // take each recorded server string out of the sentence, longest first; no digit may be left
+      let rest: string = fact.text;
+      for (const figure of [...fact.figures].sort((a, b) => b.length - a.length)) {
+        expect(rest, `${figure} in: ${fact.text}`).toContain(figure);
+        rest = rest.replace(figure, "");
+      }
+      expect(rest, fact.text).not.toMatch(/\d/);
+      expect(fact.text).not.toContain("FY");
+      expect(fact.text).not.toMatch(/(^|[^A-Z0-9(])AR5(?![)\w])/);
+      expect(fact.text).not.toContain("LULUCF");
+      expect(fact.text).not.toMatch(/\b[A-Z]{2,}_[A-Z0-9_]+\b/); // REF_2023_24 and its kind
+      expect(fact.text).not.toMatch(/\b[0-9][A-Z][0-9a-z]*\b/); // 1A3b and its kind
+      expect(avoidPhrasesIn(fact.text)).toEqual([]);
     }
+    // on screen: the fact is the only place a digit appears
     render(<LoadingScreen force />);
-    const text = screen.getByTestId("loading-screen").textContent ?? "";
+    const line = screen.getByTestId("loading-line").textContent ?? "";
+    expect(LOADING_FACTS.map((f) => f.text)).toContain(line);
+    const text = (screen.getByTestId("loading-screen").textContent ?? "").replace(line, "");
     expect(text).not.toMatch(/\d/);
     expect(avoidPhrasesIn(text)).toEqual([]);
   });
@@ -157,7 +227,7 @@ describe("LoadingScreen", () => {
     mockMatchMedia(true);
     expect(reducedMotion()).toBe(true);
     render(<LoadingScreen force />);
-    expect(screen.getByTestId("particle-canvas")).toHaveAttribute("data-motion", "static");
+    expect(screen.getByTestId("plume-canvas")).toHaveAttribute("data-motion", "static");
     expect(raf).not.toHaveBeenCalled();
     expect(ctx.arc).toHaveBeenCalled();
   });
@@ -166,12 +236,12 @@ describe("LoadingScreen", () => {
     const add = vi.spyOn(window, "addEventListener");
     const remove = vi.spyOn(window, "removeEventListener");
     const { unmount } = render(<LoadingScreen force />);
-    expect(screen.getByTestId("particle-canvas")).toHaveAttribute("data-motion", "animated");
+    expect(screen.getByTestId("plume-canvas")).toHaveAttribute("data-motion", "animated");
     const added = add.mock.calls.map((c) => c[0]);
     expect(added).toEqual(expect.arrayContaining(["resize", "pointermove"]));
     unmount();
     const removed = remove.mock.calls.map((c) => c[0]);
-    expect(removed).toEqual(expect.arrayContaining(["resize", "pointermove", "pointerdown", "pointerleave"]));
+    expect(removed).toEqual(expect.arrayContaining(["resize", "pointermove", "pointerdown", "pointerup", "pointercancel"]));
     expect(window.cancelAnimationFrame).toHaveBeenCalled();
   });
 });
