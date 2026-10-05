@@ -23,6 +23,26 @@ from pakemis_api.ask.loop import USAGE_KEYS, ModelError, ModelEvent
 log = logging.getLogger("pakemis_api.ask")
 
 DEFAULT_FALLBACKS = ("gemini-2.5-pro", "gemini-2.5-flash")
+
+
+def fallbacks_from_env(environ=None):
+    """The models to try, in order, when the configured one is unavailable: PAKEMIS_ASK_FALLBACKS,
+    a comma list; unset or empty is DEFAULT_FALLBACKS and the word `none` is no fallback at all.
+
+    ⚠ WHICH MODELS A KEY MAY CALL DEPENDS ON ITS PROJECT'S AGE. Google closes a retired model to
+    new projects while projects that already used it keep it: the two defaults above answer the
+    estate's old key and are a 404 to a key made in a project created after they were closed
+    (found 2026-10, giving the public explorer a key of its own). A 404 moves the chain on, and
+    the chain stays where it settles - so one busy moment on the first model would have parked
+    the service on a model that key can never call. A deployment therefore names fallbacks its
+    own key can reach."""
+    import os
+    raw = ((environ if environ is not None else os.environ).get("PAKEMIS_ASK_FALLBACKS") or "").strip()
+    if not raw:
+        return DEFAULT_FALLBACKS
+    if raw.lower() == "none":
+        return ()
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
 FORBIDDEN_SCHEMA_KEYS = ("additionalProperties", "$schema", "title", "const", "examples", "format")
 KEPT_SCHEMA_KEYS = ("type", "description", "enum", "required", "items", "properties", "default",
                     "nullable", "minimum", "maximum", "min_items", "max_items", "pattern")

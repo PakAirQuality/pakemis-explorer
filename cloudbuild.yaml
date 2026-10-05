@@ -23,12 +23,18 @@ substitutions:
   _AUTH_DOMAINS: ""
   _AUTH_EMAILS: ""
   # The assistant, on an API anyone can reach. The secret is named here so the public deployment
-  # can spend a key of its own (one with its own quota at the provider) instead of the estate's.
+  # spends a key of its own (one with its own quota at the provider) and not the estate's
+  # GEMINI_API_KEY, which hawanama's own API and ingest service run on.
   # The two caps are the code's defaults restated (api/pakemis_api/ask/limits.py) - and both are
   # counted IN MEMORY, PER INSTANCE: with max-instances 4 the daily ceiling is four times
   # _ASK_DAILY_TOKENS, and an instance that scales to zero starts its count again. The cap that
   # holds across instances is the provider's quota on the key, which is why the key is separable.
-  _GEMINI_SECRET: GEMINI_API_KEY
+  _GEMINI_SECRET: PAKEMIS_GEMINI_API_KEY
+  # That key lives in a project of its own (paqi-emissions-assistant, 2026-10), and a new project
+  # cannot call the retired models the code falls back to by default: they answer 404, the chain
+  # moves on a 404 and stays where it settles. So the fallbacks are ones THIS key reaches - checked
+  # by asking the real assistant a data question on gemini-3.8-flash with it. `none` = no fallback.
+  _ASK_FALLBACKS: gemini-3.8-flash
   _ASK_DAILY_TOKENS: "3000000"
   _ASK_PER_IP_PER_HOUR: "60"
   # WHERE the daily budget is counted. `firestore`: one document a day (in _ASK_BUDGET_COLLECTION
@@ -89,7 +95,7 @@ steps:
       - '--allow-unauthenticated'
       - '--port=8080'
       - '--set-secrets=GEMINI_API_KEY=${_GEMINI_SECRET}:latest'
-      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}|PAKEMIS_ASK_DAILY_TOKENS=${_ASK_DAILY_TOKENS}|PAKEMIS_ASK_PER_IP_PER_HOUR=${_ASK_PER_IP_PER_HOUR}|PAKEMIS_TRUSTED_PROXIES=${_TRUSTED_PROXIES}|PAKEMIS_ASK_BUDGET_STORE=${_ASK_BUDGET_STORE}|PAKEMIS_ASK_BUDGET_COLLECTION=${_ASK_BUDGET_COLLECTION}|PAKEMIS_APP_CHECK=${_APP_CHECK}|PAKEMIS_APP_CHECK_PROJECT=${_APP_CHECK_PROJECT}|PAKEMIS_APP_CHECK_APPS=${_APP_CHECK_APPS}'
+      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}|PAKEMIS_ASK_DAILY_TOKENS=${_ASK_DAILY_TOKENS}|PAKEMIS_ASK_PER_IP_PER_HOUR=${_ASK_PER_IP_PER_HOUR}|PAKEMIS_TRUSTED_PROXIES=${_TRUSTED_PROXIES}|PAKEMIS_ASK_BUDGET_STORE=${_ASK_BUDGET_STORE}|PAKEMIS_ASK_BUDGET_COLLECTION=${_ASK_BUDGET_COLLECTION}|PAKEMIS_APP_CHECK=${_APP_CHECK}|PAKEMIS_APP_CHECK_PROJECT=${_APP_CHECK_PROJECT}|PAKEMIS_APP_CHECK_APPS=${_APP_CHECK_APPS}|PAKEMIS_ASK_FALLBACKS=${_ASK_FALLBACKS}'
       - '--cpu=2'
       - '--memory=2Gi'
       - '--concurrency=20'

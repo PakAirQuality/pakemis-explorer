@@ -88,8 +88,8 @@ def build_model(settings, on_model_change=None):
     provider = settings.resolved_ask_provider
     model_id = settings.resolved_ask_model
     if provider == "gemini":
-        from pakemis_api.ask.gemini import GeminiModel
-        return GeminiModel(model_id, max_output_tokens=limits.max_output_tokens, on_model_change=on_model_change)
+        from pakemis_api.ask.gemini import GeminiModel, fallbacks_from_env
+        return GeminiModel(model_id, max_output_tokens=limits.max_output_tokens, fallbacks=fallbacks_from_env(), on_model_change=on_model_change)
     return AnthropicModel(model_id, max_tokens=limits.max_output_tokens, effort=limits.effort)
 
 

@@ -258,6 +258,24 @@ def test_chain_exhausted_is_model_error(monkeypatch, tools):
     assert len(fake.models.calls) == 3 and m.active_model == CHAIN[2]
 
 
+def test_a_deployment_names_the_fallbacks_its_own_key_can_reach(settings, monkeypatch):
+    """A key in a new project gets a 404 from the retired defaults, and the chain stays where it
+    settles: the fallbacks have to be ones that key may call."""
+    import dataclasses
+    from pakemis_api.ask.gemini import DEFAULT_FALLBACKS, fallbacks_from_env
+    from pakemis_api.ask.router import build_model
+    assert fallbacks_from_env({}) == DEFAULT_FALLBACKS and fallbacks_from_env({"PAKEMIS_ASK_FALLBACKS": "  "}) == DEFAULT_FALLBACKS
+    assert fallbacks_from_env({"PAKEMIS_ASK_FALLBACKS": " gemini-3.8-flash , gemini-3.5-flash,"}) == ("gemini-3.8-flash", "gemini-3.5-flash")
+    assert fallbacks_from_env({"PAKEMIS_ASK_FALLBACKS": "None"}) == ()
+    s = dataclasses.replace(settings, ask_model="gemini-3.1-pro-preview", ask_provider="gemini")
+    monkeypatch.setenv("PAKEMIS_ASK_FALLBACKS", "gemini-3.8-flash")
+    assert build_model(s).chain == ("gemini-3.1-pro-preview", "gemini-3.8-flash")
+    monkeypatch.setenv("PAKEMIS_ASK_FALLBACKS", "none")
+    assert build_model(s).chain == ("gemini-3.1-pro-preview",)
+    monkeypatch.delenv("PAKEMIS_ASK_FALLBACKS")
+    assert build_model(s).chain == ("gemini-3.1-pro-preview",) + DEFAULT_FALLBACKS
+
+
 def test_other_errors_do_not_move_the_chain(monkeypatch, tools):
     m, fake = scripted(monkeypatch, {CHAIN[0]: api_error(400, "INVALID_ARGUMENT", "bad schema")})
     with pytest.raises(ModelError) as info:
