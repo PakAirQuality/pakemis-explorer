@@ -1,18 +1,24 @@
 # Brand assets
 
 The Explorer carries the house style of the Pakistan Air Quality Initiative's deployed app,
-https://emissions.web.app/ ("Transport Emissions — Pakistan"). Two files are copied from it,
-byte for byte, and nothing else of theirs is vendored. A third, the mark on its own, was
-supplied directly by the initiative and is the only file here that is not a verbatim copy.
+https://emissions.web.app/ ("Transport Emissions — Pakistan"). The logo is copied from it, byte
+for byte, and the tab icon from hawanama.org; nothing else of theirs is vendored. The mark on its
+own was supplied directly by the initiative and is the only file here that is not a verbatim copy.
 
 | File | Origin | Shape | SHA-256 |
 | --- | --- | --- | --- |
 | `paqi-logo.png` | https://emissions.web.app/logo.png | 755 × 330, RGBA PNG: the wordmark "Pakistan / Air Quality / Initiative" beside the golden Urdu mark | `26c7d276729a7bf050b7068b322cbcaecf7023b014e032464c46add4ae7c81a7` |
-| `../favicon.svg` (also `src/app/icon.svg`) | https://emissions.web.app/favicon.svg | the purple bolt | `61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66` |
+| `../../src/app/icon.png` (also `apple-icon.png`) | https://hawanama.org/icon.png | 512 × 512, RGBA PNG: the golden Urdu mark on transparency — the tab icon hawanama.org carries | `5f04e751a91c90ad165b0e4e50ffd55534a089190b6ead46c946df6ac2357be2` |
+| `../../src/app/favicon.ico` | https://hawanama.org/favicon.ico | the same mark as a nine-size `.ico` | `d3807a152f13276de9d6da285ceccf04ac2876deb6a146edc3099075ce81b92c` |
 | `paqi-glyph.png` | `PAQI_final_4096.png`, supplied by the initiative (source sha256 `76fa86b4443ea890c8b8f697aa17ca856cac77892736b917cfac9ed0e787de29`) | 201 × 256, RGBA PNG: the white Urdu mark ALONE, on transparency | `6868199e3747aa1ae3dba17eddd4e0abac816f04feb4871d296dc550413954c3` |
 | `paqi-tile.png` | the same `PAQI_final_4096.png`, downscaled only | 128 × 128, RGBA PNG: the mark AS SUPPLIED — white glyph on its oxblood rounded square, corners transparent | `3e717b0b7b315c1feb8502353fe59b7e80fb61cef1fa124b6a2f5842619fa902` |
 
-Verify with `shasum -a 256 web/public/brand/paqi-logo.png web/public/favicon.svg`.
+Verify with `shasum -a 256 web/public/brand/paqi-logo.png web/src/app/icon.png web/src/app/favicon.ico`.
+
+THE TAB ICON IS HAWANAMA'S. Until 2026-10 it was the transport app's purple bolt
+(`favicon.svg`, copied with the logo). The site now lives at emissions.hawanama.org, beside
+hawanama.org, and carries the same two files that site serves; they sit in `src/app/` because
+Next's file convention writes the `<link>` tags from there, which is also how hawanama.org does it.
 
 THE GLYPH IS THE MARK WITHOUT ITS TILE. The initiative supplies the mark as a finished badge —
 white glyph already sitting on an oxblood rounded square — and the first version of this file kept

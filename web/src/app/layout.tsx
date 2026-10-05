@@ -13,7 +13,6 @@ import { SITE_URL } from "@/lib/site";
 const page: Metadata = {
   title: "Pakistan Air Quality Initiative — emissions",
   description: "Pakistan's greenhouse-gas emissions, reconstructed from public documents: every number a server string with a receipt.",
-  icons: { icon: "/favicon.svg" },
 };
 // a build that knows its public address says so on every page: "./" resolves against each
 // route, so one entry here gives each page its own canonical link under that address
