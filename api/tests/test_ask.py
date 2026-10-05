@@ -7,6 +7,7 @@ import copy
 import json
 import re
 
+import os
 import pytest
 from fastapi.testclient import TestClient
 
@@ -599,6 +600,51 @@ def test_the_air_tool_advertises_the_groupings_the_air_engine_accepts(ask_client
         % (sorted(advertised), sorted(Engine.AIR_GROUPS)))
     assert "gas" not in advertised, "no air table carries a gas column"
     assert "pollutant" in advertised
+
+
+def test_no_tool_describes_a_geography_level_as_reference_year_only(ask_client):
+    """A level the release serves for every year must not be advertised as one year's.
+
+    THE SAME DEFECT IN A SECOND PLACE. The system prompt said adm1 and adm2 existed for the
+    reference year only; the release carries fact_adm1_year for every fiscal year, and four
+    of thirty-four evaluation answers refused a historical provincial figure WITHOUT calling
+    a tool, quoting the prompt. The prompt was corrected in 68155c4. The TOOL SCHEMA still
+    said "adm1/adm2 exist for <reference period> only", so a model could read the same false
+    restriction off the function definition instead - and a correction that reaches one of
+    two statements of the same fact has not been made.
+
+    The period coverage is read from the release rather than asserted, so if a level ever
+    genuinely becomes single-period this stops demanding otherwise.
+    """
+    dims = ask_client.app.state.ask.dims
+    rel = ask_client.app.state.ask.service.release
+    assert "fact_adm1_year" in rel.tables, (
+        "the served release carries no fact_adm1_year; if annual province data really is gone, "
+        "the schema may restrict adm1 and this test should be retired")
+    # table_path returns (path, format) and prefers the parquet, which is why a first version
+    # of this test str()'d the tuple, found no file and SKIPPED - guarding nothing.
+    path, fmt = rel.table_path("fact_adm1_year")
+    periods = set()
+    if fmt == "parquet":
+        import pyarrow.parquet as pq
+        periods = set(pq.read_table(path, columns=["period_id"])["period_id"].to_pylist())
+    else:
+        import csv as _csv
+        import io as _io
+        with _io.open(path, encoding="utf-8") as handle:
+            periods = {r["period_id"] for r in _csv.DictReader(handle) if r.get("period_id")}
+    periods.discard(None)
+    assert len(periods) > 1, (
+        "fact_adm1_year carries %d period(s); if adm1 really is single-period now, the "
+        "schema may say so and this test should be retired" % len(periods))
+    prop = function_tool("query_emissions", dims)["input_schema"]["properties"]["geography_level"]
+    note = prop.get("description", "")
+    assert not (dims.reference_period and dims.reference_period in note and "only" in note), (
+        "adm1 is served for %d periods and the geography_level description still restricts it "
+        "to %s: %r" % (len(periods), dims.reference_period, note))
+    assert "every fiscal year" in note, (
+        "geography_level should state that the levels carry every fiscal year; it says %r"
+        % note)
 
 
 def test_no_tool_advertises_a_grouping_its_own_engine_would_reject(ask_client):

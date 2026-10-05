@@ -166,7 +166,16 @@ def _field_values(dims, model_name=None):
         "gwp_basis": (dims.gwp_bases, "AR6 is not carried at adm2"),
         "gases": (dims.gases, ""),
         "sectors": (dims.sectors, "sector ids (modules)"),
-        "geography_level": (["national", "adm1", "adm2"], "adm1/adm2 exist for %s only" % dims.reference_period),
+        # THE SAME FALSE RESTRICTION THE SYSTEM PROMPT CARRIED, in a second place. The prompt
+        # said adm1 was reference-year-only, the engine serves every fiscal year
+        # (fact_adm1_year, nine periods; Punjab FY2015-16 is 220.77 Mt), and four of
+        # thirty-four evaluation answers refused a historical provincial figure WITHOUT
+        # calling a tool - quoting the prompt. The prompt was corrected and this was not, so
+        # the model could still read the restriction off the tool schema. A correction that
+        # reaches one of two statements of the same fact has not been made.
+        "geography_level": (["national", "adm1", "adm2"],
+                            "all three carry every fiscal year; the GRID is the reference "
+                            "year only, which is a property of that product"),
         "geography_ids": (dims.adm1_names, "province names at adm1; ADM2 shape_ids (see the system prompt) at adm2"),
         "months": (["%s..%s" % (dims.month_min, dims.month_max)], "YYYYMM; adm1/adm2 months %s..%s" % (dims.spatial_months[0], dims.spatial_months[-1]) if dims.spatial_months else "YYYYMM"),
         "spatial_view": (dims.views, ""),
