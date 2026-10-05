@@ -1,0 +1,385 @@
+{
+ "cases": {
+  "H01": {
+   "y2122": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "national",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2021-22"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "497.77448",
+    "exact": "497.774482120000000000",
+    "unit": "Mt CO2e AR5",
+    "value": 497.77448212
+   },
+   "y2324": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "national",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "469.63822",
+    "exact": "469.638223890000000000",
+    "unit": "Mt CO2e AR5",
+    "value": 469.63822389
+   }
+  },
+  "H02": {
+   "waste": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "national",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "37.914",
+    "exact": "37.914318070000000000",
+    "unit": "Mt CO2e AR5",
+    "value": 37.91431807
+   }
+  },
+  "H03": {
+   "sindh": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "adm1",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "137.8333",
+    "exact": "137.833349765496000000",
+    "unit": "Mt CO2e AR5",
+    "value": 137.833349765496
+   }
+  },
+  "H04": {
+   "n2o": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "national",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "42.19932",
+    "exact": "42.199322520000000000",
+    "unit": "Mt CO2e AR5",
+    "value": 42.19932252
+   }
+  },
+  "H05": {
+   "nox": {
+    "context": {
+     "basis": null,
+     "configuration_id": "",
+     "geography_level": "national",
+     "gwp_basis": null,
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "842.495",
+    "exact": "842.494816000000000000",
+    "unit": "kt NOx",
+    "value": 842.494816
+   }
+  },
+  "H06": {
+   "__refusal__": {
+    "error_class": "GrainUnavailable",
+    "message": "a sum across pollutants is meaningless (BC is inside PM2.5, PM2.5 inside PM10); name exactly one pollutant or group by pollutant"
+   }
+  },
+  "H07": {
+   "residential": {
+    "context": {
+     "basis": null,
+     "configuration_id": "",
+     "geography_level": "national",
+     "gwp_basis": null,
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "336.595",
+    "exact": "336.595365000000000000",
+    "unit": "kt NOx",
+    "value": 336.595365
+   }
+  },
+  "H08": {
+   "__refusal__": {
+    "error_class": "NotEstimated",
+    "message": "calendar-year values exist for agriculture only"
+   }
+  },
+  "H09": {
+   "ar5": {
+    "display": "28.0",
+    "exact": null,
+    "rows": [
+     {
+      "f": "28.0"
+     }
+    ],
+    "unit": "",
+    "value": null
+   },
+   "ar6": {
+    "display": "27.0",
+    "exact": null,
+    "rows": [
+     {
+      "f": "27.0"
+     }
+    ],
+    "unit": "",
+    "value": null
+   }
+  },
+  "H10": {
+   "ref_lahore": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "adm2",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "11.4724",
+    "exact": "11.472441865664000000",
+    "unit": "Mt CO2e AR5",
+    "value": 11.472441865664
+   },
+   "s_lahore": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "S_2023_24",
+     "geography_level": "adm2",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "2.1632",
+    "exact": "2.163168818735000000",
+    "unit": "Mt CO2e AR5",
+    "value": 2.163168818735
+   }
+  },
+  "H11": {
+   "control": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "all",
+     "geography_level": null,
+     "gwp_basis": null,
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "86.1413",
+    "exact": "86.1413",
+    "unit": "Mt dry residue",
+    "value": 86.1413
+   },
+   "unresolved": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "all",
+     "geography_level": null,
+     "gwp_basis": null,
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "48.1012",
+    "exact": "48.101185",
+    "unit": "Mt dry residue",
+    "value": 48.101185
+   }
+  },
+  "H12": {
+   "control": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "all",
+     "geography_level": null,
+     "gwp_basis": null,
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "7209.4100",
+    "exact": "7209.41",
+    "unit": "kt petrol",
+    "value": 7209.41
+   },
+   "moved": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "all",
+     "geography_level": null,
+     "gwp_basis": null,
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "56.3282",
+    "exact": "56.3282",
+    "unit": "kt petrol",
+    "value": 56.3282
+   }
+  },
+  "H13": {
+   "__refusal__": {
+    "error_class": "UnknownDimensionValue",
+    "message": "'power_plant_physical_coal' is not a queryable configuration (REF_2023_24, S_2023_24)"
+   }
+  },
+  "H14": {
+   "p50": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": null,
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "474.198",
+    "exact": "474.198",
+    "unit": "Mt CO2e AR5",
+    "value": 474.198
+   }
+  },
+  "H15": {
+   "central": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": null,
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": null
+    },
+    "display": "151.650",
+    "exact": "151.65",
+    "unit": "Mt CO2e AR5",
+    "value": 151.65
+   }
+  },
+  "H16": {
+   "correlated": {
+    "display": "23.0186",
+    "exact": null,
+    "rows": [
+     {
+      "lo": "23.0186"
+     }
+    ],
+    "unit": "",
+    "value": null
+   },
+   "straddles": {
+    "display": "-5.6608",
+    "exact": null,
+    "rows": [
+     {
+      "lo": "-5.6608"
+     }
+    ],
+    "unit": "",
+    "value": null
+   }
+  },
+  "H17": {
+   "first": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "adm2",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "0.2624",
+    "exact": "0.262399954641",
+    "unit": "Mt CO2e AR5",
+    "value": 0.262399954641
+   }
+  },
+  "H18": {},
+  "H19": {
+   "n_cells": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "adm1",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "0",
+    "exact": "0",
+    "unit": "cells",
+    "value": 0.0
+   }
+  },
+  "H20": {
+   "ci": {
+    "display": "NE",
+    "exact": null,
+    "rows": [
+     {
+      "k": "NE"
+     }
+    ],
+    "unit": "",
+    "value": null
+   }
+  }
+ },
+ "manifest_sha256_16": "7e7fed3f559f0c13",
+ "release_version": "1.0.0rc59",
+ "split": "holdout"
+}

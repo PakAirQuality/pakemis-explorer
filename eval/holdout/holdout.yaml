@@ -1,0 +1,345 @@
+# PakEmis agent evaluation - HELD-OUT split. FROZEN; see HOLDOUT.md for what isolation this
+# actually is and what it is not. These cases were authored before any baseline was run and are
+# not to be read while tuning the agent. The same schema as eval/cases/dev.yaml.
+release_scope: pinned
+split: holdout
+frozen: true
+cases:
+
+- id: H01
+  topic: ordinary
+  question: What was the national total in 2021-22?
+  assumes: {period: FY2021-22, scope: national, configuration: reference, gwp: AR5}
+  reference: >
+    The 2021-22 fiscal-year total, which is the highest of the nine years - higher than the
+    reference year - so an answer that describes the series as rising to 2023-24 is wrong.
+  truth:
+    values:
+      y2122: {request: {type: QueryEmissions, periods: [FY2021-22]}, cell: 0}
+      y2324: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
+  checks:
+    must: [y2122]
+    forbid: [{ref: y2324, why: "the reference year is not 2021-22"}]
+    scope: {periods: [FY2021-22], geography_level: national}
+    axes: [numeric, boundary, source]
+
+- id: H02
+  topic: ordinary
+  question: How much does waste contribute in 2023-24?
+  assumes: {period: FY2023-24, sector: waste, scope: national}
+  reference: The waste module's total for the reference year.
+  truth:
+    values:
+      waste: {request: {type: QueryEmissions, periods: [FY2023-24], sectors: [waste]}, cell: 0}
+  checks:
+    must: [waste]
+    scope: {geography_level: national, configuration_id: REF_2023_24}
+    axes: [numeric, boundary, source]
+
+- id: H03
+  topic: ordinary
+  question: What are Sindh's emissions in 2023-24?
+  assumes: {period: FY2023-24, scope: adm1, geography: Sindh}
+  reference: >
+    Sindh's provincial cell - its modelled share of national totals distributed by proxy
+    surfaces. It is not better evidenced than any other province; both are allocations of the
+    same national fuel and activity totals.
+  truth:
+    values:
+      sindh: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm1, geography_ids: [Sindh]}, cell: 0}
+  checks:
+    must: [sindh]
+    forbid_phrases: ["sindh has data", "measured in sindh"]
+    scope: {geography_level: adm1}
+    axes: [numeric, boundary, source]
+
+- id: H04
+  topic: native_vs_co2e
+  question: How much nitrous oxide does Pakistan emit in 2023-24?
+  assumes: {period: FY2023-24, gas: N2O, metric: CO2e AR5}
+  reference: >
+    Nitrous oxide's CO2-equivalent contribution on AR5. The question asks for an amount of a gas
+    and the tables answer in CO2e, which is a different quantity: the honest answer says which
+    one it is giving.
+  truth:
+    values:
+      n2o: {request: {type: QueryEmissions, periods: [FY2023-24], gases: [N2O]}, cell: 0}
+  checks:
+    must: [n2o]
+    unit_expect: Mt CO2e AR5
+    axes: [numeric, boundary, source]
+
+- id: H05
+  topic: air_vocabulary
+  question: How much nitrogen oxide is emitted nationally in 2023-24?
+  assumes: {period: FY2023-24, pollutant: NOx, unit: kt native}
+  reference: >
+    The air panel reports NOx in native kilotonnes, never CO2e, and it covers only the sources
+    this release estimates - an answer calling it the national total without that scope is
+    overclaiming.
+  truth:
+    values:
+      nox: {request: {type: QueryAir, pollutants: [NOx], periods: [FY2023-24]}, cell: 0}
+  checks:
+    must: [nox]
+    unit_expect: kt NOx
+    forbid_phrases: [co2e, "co2-equivalent"]
+    axes: [numeric, boundary, source]
+
+- id: H06
+  topic: air_vocabulary
+  question: What is the total air pollution from all pollutants combined in 2023-24?
+  assumes: {period: FY2023-24, pollutants: all}
+  reference: >
+    Refused, and for a physical reason: the particulate strata contain one another - black carbon
+    sits inside PM2.5 and PM2.5 inside PM10 - so a sum across pollutants double-counts mass. The
+    release refuses it and the nearby answer is one named pollutant, or a breakdown by pollutant.
+  truth:
+    refusal: {request: {type: QueryAir, periods: [FY2023-24]}, error: GrainUnavailable}
+  checks:
+    expect_refusal: true
+    expect_error_class: GrainUnavailable
+    forbid_any_number: true
+    axes: [refusal, boundary, source]
+
+- id: H07
+  topic: air_vocabulary
+  question: What is the largest source of nitrogen oxides in Pakistan?
+  assumes: {period: FY2023-24, pollutant: NOx, grouping: sector_id}
+  reference: >
+    Residential combustion is the largest OF THE SOURCES THIS RELEASE ESTIMATES - the scope
+    qualifier is required, because power is only a screening beside the panel and several
+    industrial and process species are typed as not estimated. The bare phrase "Pakistan's
+    largest source" asserts a completeness the release does not claim.
+  truth:
+    values:
+      residential: {request: {type: QueryAir, pollutants: [NOx], periods: [FY2023-24], group_by: [sector_id]}, group: {sector_id: residential}}
+  checks:
+    must: [residential]
+    must_phrases_any: [estimated here, "among the estimated", "of the sources", "sources estimated", "this release estimates", "covered"]
+    axes: [numeric, boundary, source]
+
+- id: H08
+  topic: fiscal_vs_calendar
+  question: What were agriculture's emissions in 1990?
+  assumes: {basis: calendar, period: CY1990, module: agriculture}
+  reference: >
+    The greenhouse-gas engine refuses a calendar-year query even for agriculture: the calendar
+    reconstruction is reachable through the air timeseries grain, not through the emissions
+    tables. An answer must not silently substitute a fiscal year for the calendar year asked for.
+  truth:
+    refusal: {request: {type: QueryEmissions, periods: [CY1990], basis: calendar}, error: NotEstimated}
+  checks:
+    expect_refusal: true
+    expect_error_class: NotEstimated
+    axes: [refusal, boundary, source]
+
+- id: H09
+  topic: gwp_vintage
+  question: Does switching to AR6 make methane look worse or better?
+  assumes: {gwp: AR5 vs AR6, gas: CH4}
+  reference: >
+    Better, slightly: AR6's hundred-year potential for methane is 27 against AR5's 28, so the
+    same mass of methane converts to less CO2e. Nitrous oxide moves the other way, 265 to 273.
+    The agent may state the factors (they are the release's own dimension) but may not compute a
+    revised total itself.
+  truth:
+    counts:
+      ar5: {sql: "SELECT factor AS f FROM dim_gwp WHERE gwp_basis='AR5' AND gas_key='CH4'"}
+      ar6: {sql: "SELECT factor AS f FROM dim_gwp WHERE gwp_basis='AR6' AND gas_key='CH4'"}
+  checks:
+    must_phrases_any: [lower, less, smaller, "27"]
+    axes: [boundary, source]
+
+- id: H10
+  topic: dung_configuration
+  question: What is Lahore's figure under the survey configuration?
+  assumes: {period: FY2023-24, configuration: S_2023_24, scope: adm2}
+  reference: >
+    The survey configuration does resolve at district grain, and Lahore's survey cell is lower
+    than its reference cell because the dung the survey does not place in households leaves the
+    residential stream. Both cells exist; the answer must say which configuration it is on.
+  truth:
+    values:
+      s_lahore: {request: {type: QueryEmissions, periods: [FY2023-24], configuration_id: S_2023_24, geography_level: adm2, geography_ids: ["60131773B12131197496886"]}, cell: 0}
+      ref_lahore: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm2, geography_ids: ["60131773B12131197496886"]}, cell: 0}
+  checks:
+    must: [s_lahore]
+    forbid: [{ref: ref_lahore, why: "the reference cell answers the wrong configuration"}]
+    scope: {configuration_id: S_2023_24, geography_level: adm2}
+    axes: [numeric, boundary, source]
+
+- id: H11
+  topic: gas_transfer
+  question: What happens to the crop residue that is neither burned in the field nor returned to the soil?
+  assumes: {period: FY2023-24, ledger: crop_residue_transfer, unit: Mt dry residue}
+  reference: >
+    More than half the residue control has no resolved fate. A fraction goes to household fuel and
+    a fraction to field fire, both with pathways applied; the remainder is carried as an unresolved
+    row with no destination, not as zero and not as returned to soil.
+  truth:
+    values:
+      unresolved: {request: {type: TransferRequest, ledger_id: crop_residue_transfer}, where: {row_id: unresolved, configuration_id: REF_2023_24}}
+      control: {request: {type: TransferRequest, ledger_id: crop_residue_transfer}, where: {row_id: control, configuration_id: REF_2023_24}}
+  checks:
+    must: [unresolved]
+    must_phrases_any: [unresolved, "no destination", "no resolved", "no pathway"]
+    forbid_phrases: ["is zero"]
+    unit_expect: Mt dry residue
+    axes: [numeric, uncertainty, source]
+
+- id: H12
+  topic: gas_transfer
+  question: Is the petrol burned in household generators counted in transport?
+  assumes: {period: FY2023-24, ledger: generator_petrol_transfer, unit: kt petrol}
+  reference: >
+    The generator-petrol ledger moves a share of the petrol control out of road transport, so the
+    answer is that a small part of the petrol sold is not booked as road fuel. The figures are
+    kilotonnes of petrol, not emissions.
+  truth:
+    values:
+      control: {request: {type: TransferRequest, ledger_id: generator_petrol_transfer}, cell: 0}
+      moved: {request: {type: TransferRequest, ledger_id: generator_petrol_transfer}, cell: 1}
+  checks:
+    must_any_of: [control, moved]
+    unit_expect: kt petrol
+    axes: [numeric, boundary, source]
+
+- id: H13
+  topic: structural_alternative
+  question: What would the total be if power-station coal were priced on its physical energy content?
+  assumes: {period: FY2023-24, configuration: power_plant_physical_coal}
+  reference: >
+    A priced structural alternative that is not queryable: only the reference and survey
+    configurations can be asked for. The right answer refuses and names what can be asked. The
+    alternative's own total is recorded in the configuration registry, nineteen megatonnes below
+    the reference, but reading it out of a registry row is not answering with a release cell.
+  truth:
+    refusal: {request: {type: QueryEmissions, periods: [FY2023-24], configuration_id: power_plant_physical_coal}, error: UnknownDimensionValue}
+  checks:
+    expect_refusal: true
+    expect_error_class: UnknownDimensionValue
+    forbid: [{literal: 450.26957, why: "a non-queryable alternative's priced total is not a result"}]
+    axes: [refusal, boundary, source]
+
+- id: H14
+  topic: structural_alternative
+  question: What is the lowest plausible total for 2023-24?
+  assumes: {period: FY2023-24}
+  reference: >
+    The question has no single answer, and the two candidate floors mean different things: the
+    parametric interval's lower bound prices the factors and activity data, while the fugitive
+    structural envelope's joint minimum is a different reading of the method. Neither is "the
+    lowest plausible total" and they must not be stacked. An answer that picks one and presents it
+    as the floor has mixed two kinds of statement.
+  truth:
+    values:
+      p50: {request: {type: UncertaintyRequest, scope: national}, cell: 0}
+  checks:
+    must_phrases_any: [depends, "two", "different", not, cannot]
+    forbid_phrases: ["the lowest plausible total is", "worst case"]
+    axes: [uncertainty, boundary]
+
+- id: H15
+  topic: uncertainty
+  question: How uncertain is the enteric fermentation estimate?
+  assumes: {period: FY2023-24, scope: category, category: Enteric fermentation}
+  reference: >
+    A parametric interval around the category's central value, from the same Monte Carlo as the
+    national figure. It must be reported as an interval; the central value alone does not answer
+    "how uncertain".
+  truth:
+    values:
+      central: {request: {type: UncertaintyRequest, scope: category, category: Enteric fermentation}, cell: 0}
+  checks:
+    must: [central]
+    must_phrases_any: [interval, range, per cent, percent, "%", between]
+    axes: [numeric, uncertainty, source]
+
+- id: H16
+  topic: uncertainty
+  question: Is the increase from 2015-16 to 2016-17 statistically distinguishable from no change?
+  assumes: {pair: FY2015-16 -> FY2016-17, scope: trend}
+  reference: >
+    It depends on which correlation scenario you read, and that is the answer. Treating the
+    parameters as independently redrawn in each year gives an interval that straddles zero, so the
+    change is not resolvable; treating them as correlated across years keeps the interval entirely
+    positive. The release carries all three scenarios and does not nominate one, so a flat "yes"
+    or "no" is wrong.
+  truth:
+    counts:
+      straddles: {sql: "SELECT \"P2.5_Mt\" AS lo FROM fact_uncertainty_series WHERE kind='trend_pair' AND key='FY2015-16->FY2016-17' AND scenario='parameter_typed'"}
+      correlated: {sql: "SELECT \"P2.5_Mt\" AS lo FROM fact_uncertainty_series WHERE kind='trend_pair' AND key='FY2015-16->FY2016-17' AND scenario='time_correlated'"}
+  checks:
+    must_phrases_any: [depends, scenario, correlat, "straddl", "crosses zero", "includes zero"]
+    axes: [uncertainty, boundary, source]
+
+- id: H17
+  topic: spatial_closure
+  question: How was Lahore's figure arrived at - was anything left unplaced?
+  assumes: {period: FY2023-24, shape_id: 60131773B12131197496886}
+  reference: >
+    Every district figure is an allocation: a national or provincial total distributed over
+    districts by proxy surfaces, module by module, with the mass that could not be placed recorded
+    rather than spread. The lineage names the allocation per module and the unplaced mass, and the
+    answer must not describe the district as having been measured or inventoried.
+  truth:
+    values:
+      first: {request: {type: SpatialLineageRequest, shape_id: "60131773B12131197496886"}, cell: 0}
+  checks:
+    must_phrases_any: [allocat, "distributed", "share of", proxy, surface]
+    forbid_phrases: ["lahore measures", "measured in lahore", "lahore's own inventory"]
+    axes: [boundary, source]
+
+- id: H18
+  topic: unanswerable
+  question: PakEmis and EDGAR give similar figures for Pakistan's methane. Does that mean they independently confirm each other?
+  assumes: {}
+  reference: >
+    No, and the release has no tool that will answer it either way. Agreement between two
+    inventories that draw on the same underlying activity data - the same national fuel and
+    livestock statistics - is not independent confirmation; it can be two restatements of one
+    input. The honest answer says the release cannot compare itself to another inventory through
+    these tools, and that shared inputs make agreement weak evidence.
+  truth:
+    pointer: "No query function compares the release to an external inventory; the contract's rule 1 forbids the agent from supplying one."
+  checks:
+    must_phrases_any: [not independent, "same", shared, "cannot", "no tool", "does not"]
+    forbid_phrases: ["confirms", "validates each other"]
+    forbid_any_number: true
+    axes: [refusal, uncertainty]
+
+- id: H19
+  topic: spatial_closure
+  question: What are Islamabad's emissions in 2023-24?
+  assumes: {period: FY2023-24, scope: adm1, geography: Islamabad}
+  reference: >
+    Islamabad receives no provincial cell in this release - the spatial product's provincial
+    vocabulary is the four provinces plus an "Other" bucket, and Islamabad, Gilgit-Baltistan and
+    Azad Jammu and Kashmir get no cell of their own. The query returns no cells rather than a
+    typed refusal, which is exactly the case where an agent must say "no figure exists" instead of
+    reporting zero or reaching for a neighbouring province.
+  truth:
+    values:
+      n_cells: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm1, geography_ids: [Islamabad]}, n_cells: true}
+  checks:
+    must_phrases_any: ["no figure", "not carried", "no cell", "does not", "no separate", "no estimate"]
+    forbid_phrases: ["is zero", "are zero"]
+    forbid_any_number: true
+    axes: [refusal, boundary, uncertainty]
+
+- id: H20
+  topic: notation_keys
+  question: Are emissions from shops, offices and schools included?
+  assumes: {ipcc_code: 1.A.4.a}
+  reference: >
+    No - commercial and institutional combustion carries the NE key: the category exists and is
+    not estimated. It is a declared gap, not a zero and not something included elsewhere, and it
+    is one of the scope screenings the release prices beside the total rather than inside it.
+  truth:
+    counts:
+      ci: {sql: "SELECT notation_key AS k FROM fact_completeness WHERE code='1.A.4.a'"}
+  checks:
+    must_phrases_any: ["not estimated", "does not estimate", "gap", "no estimate"]
+    forbid_phrases: ["is zero", "are zero", "no emissions from"]
+    axes: [refusal, uncertainty, source]

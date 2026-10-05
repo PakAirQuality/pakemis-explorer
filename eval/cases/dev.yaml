@@ -1,0 +1,598 @@
+# PakEmis agent evaluation - DEVELOPMENT split.
+#
+# Every case states the question, the scope it assumes, the reference answer in words, and a
+# TRUTH SPEC that establishes the number by execution: the typed request is run through the same
+# Service the API serves from, so no number here is transcribed by hand. Tolerances are absolute
+# unless a case says otherwise; the default (0.011 or 0.05%, whichever is larger) is what the
+# agent's own two-decimal display rounding costs.
+#
+# `axes` names which of the five scored axes a case exercises:
+#   numeric      a figure must appear, within tolerance
+#   boundary     the scope the answer was computed on must match what the question assumed
+#   source       the answer must carry at least one receipt from a tool call of this turn
+#   uncertainty  an interval or a stated absence must be reported as such, not as a point
+#   refusal      the release cannot answer; a typed refusal must be surfaced and nothing inferred
+#
+# Release under test: the version pinned in RELEASES.md (resolve_references.py records which).
+release_scope: pinned
+split: dev
+cases:
+
+# ---------------------------------------------------------------------------- ordinary and useful
+- id: D01
+  topic: ordinary
+  question: What were Pakistan's total greenhouse-gas emissions in 2023-24?
+  assumes: {period: FY2023-24, basis: fiscal, scope: national, gas: all (CO2e), configuration: reference, gwp: AR5}
+  reference: >
+    The national total of the reference configuration for fiscal year 2023-24, all three gases on
+    AR5 warming potentials, land use and forestry excluded.
+  truth:
+    values:
+      total: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
+  checks:
+    must: [total]
+    scope: {configuration_id: REF_2023_24, gwp_basis: AR5, geography_level: national, periods: [FY2023-24]}
+    axes: [numeric, boundary, source]
+
+- id: D02
+  topic: ordinary
+  question: Which sector emits the most in 2023-24, and how much?
+  assumes: {period: FY2023-24, scope: national, grouping: calculation module, configuration: reference, gwp: AR5}
+  reference: >
+    Agriculture, by a wide margin - more than three times the next module. The figure is the
+    agriculture module's own total, not an IPCC-category total.
+  truth:
+    values:
+      agriculture: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [sector_id], order_by: value desc}, group: {sector_id: agriculture}}
+      power: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [sector_id], order_by: value desc}, group: {sector_id: power}}
+  checks:
+    must: [agriculture]
+    must_phrases_any: [agricultur]
+    scope: {configuration_id: REF_2023_24, gwp_basis: AR5, geography_level: national}
+    axes: [numeric, boundary, source]
+
+- id: D03
+  topic: ordinary
+  question: Which province has the highest emissions in 2023-24?
+  assumes: {period: FY2023-24, scope: adm1, configuration: reference, gwp: AR5}
+  reference: >
+    Punjab, then Sindh. Both are modelled shares of national totals distributed by proxy
+    surfaces, not provincial measurements, and an answer that calls them measured is wrong.
+  truth:
+    values:
+      punjab: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm1, group_by: [province], order_by: value desc}, group: {province: Punjab}}
+  checks:
+    must: [punjab]
+    must_phrases_any: [punjab]
+    forbid_phrases: [measured in punjab, punjab measures]
+    scope: {geography_level: adm1, configuration_id: REF_2023_24}
+    axes: [numeric, boundary, source]
+
+- id: D04
+  topic: ordinary
+  question: How have national emissions changed from 2015-16 to 2023-24?
+  assumes: {periods: FY2015-16..FY2023-24, scope: national, configuration: reference, gwp: AR5}
+  reference: >
+    Up over the nine years, from the first fiscal year to the reference year, but not
+    monotonically - 2020-21 and 2021-22 both sit above 2022-23.
+  truth:
+    values:
+      first: {request: {type: TimeseriesRequest, query: {type: QueryEmissions}, step: annual}, group: {period_id: FY2015-16}}
+      last: {request: {type: TimeseriesRequest, query: {type: QueryEmissions}, step: annual}, group: {period_id: FY2023-24}}
+  checks:
+    must: [first, last]
+    scope: {geography_level: national, configuration_id: REF_2023_24}
+    axes: [numeric, boundary, source]
+
+- id: D05
+  topic: native_vs_co2e
+  question: How much of the 2023-24 total is methane?
+  assumes: {period: FY2023-24, gas: CH4, metric: CO2e on AR5, scope: national}
+  reference: >
+    Methane's CO2-equivalent contribution on AR5 warming potentials. This is a CO2e figure, not a
+    mass of methane: the greenhouse-gas tables carry no native CH4 tonnage at the national grain.
+  truth:
+    values:
+      ch4: {request: {type: QueryEmissions, periods: [FY2023-24], gases: [CH4]}, cell: 0}
+  checks:
+    must: [ch4]
+    unit_expect: Mt CO2e AR5
+    scope: {gwp_basis: AR5, geography_level: national}
+    axes: [numeric, boundary, source]
+
+- id: D06
+  topic: module_vs_category
+  question: How much comes from fuel combustion, IPCC category 1.A, in 2023-24?
+  assumes: {period: FY2023-24, filter: ipcc_code prefix 1.A, scope: national}
+  reference: >
+    The 1.A prefix sum - every fuel-combustion category across every module that files into it,
+    which is not the same as any one module's total.
+  truth:
+    values:
+      energy: {request: {type: QueryEmissions, periods: [FY2023-24], ipcc_codes: ["1.A"]}, cell: 0}
+  checks:
+    must: [energy]
+    scope: {geography_level: national, configuration_id: REF_2023_24}
+    axes: [numeric, boundary, source]
+
+- id: D07
+  topic: timing
+  question: What were the emissions in July 2023?
+  assumes: {month: 202307, scope: national, configuration: reference, gwp: AR5}
+  reference: >
+    The monthly cell for the first month of fiscal 2023-24. It is a modelled distribution of the
+    annual total over months for most streams, not an observed monthly measurement.
+  truth:
+    values:
+      jul: {request: {type: QueryEmissions, periods: [FY2023-24], months: ["202307"]}, cell: 0}
+  checks:
+    must: [jul]
+    scope: {geography_level: national}
+    axes: [numeric, boundary, source]
+
+- id: D08
+  topic: ordinary
+  question: What are Lahore district's emissions in 2023-24?
+  assumes: {period: FY2023-24, scope: adm2, shape_id: 60131773B12131197496886, configuration: reference, gwp: AR5}
+  reference: >
+    Lahore's district cell. It is Lahore's modelled share of national and provincial totals,
+    allocated by proxy surfaces, not a district inventory.
+  truth:
+    values:
+      lahore: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm2, geography_ids: ["60131773B12131197496886"]}, cell: 0}
+  checks:
+    must: [lahore]
+    scope: {geography_level: adm2}
+    forbid_phrases: [measured in lahore]
+    axes: [numeric, boundary, source]
+
+# ------------------------------------------------------------------- fiscal vs calendar, versions
+- id: D09
+  topic: fiscal_vs_calendar
+  question: What were Pakistan's emissions in calendar year 2020?
+  assumes: {basis: calendar, period: CY2020, scope: national}
+  reference: >
+    The release carries no national calendar-year total. The calendar basis exists for the
+    agriculture reconstruction alone, and the greenhouse-gas engine refuses a calendar-year
+    national query outright. The nearby question it can answer is fiscal 2019-20 or 2020-21.
+  truth:
+    refusal: {request: {type: QueryEmissions, periods: [CY2020], basis: calendar}, error: NotEstimated}
+  checks:
+    expect_refusal: true
+    expect_error_class: NotEstimated
+    forbid_any_number: true
+    axes: [refusal, boundary, source]
+
+- id: D10
+  topic: fiscal_vs_calendar
+  question: When does the 2023-24 fiscal year start and end?
+  assumes: {basis: fiscal}
+  reference: >
+    1 July 2023 to 30 June 2024. Every fiscal period in the release runs July to June.
+  truth:
+    pointer: "dim_period: period_id FY2023-24, period_start 2023-07-01, period_end 2024-06-30, note 'fiscal year, 1 July to 30 June'"
+  checks:
+    must_phrases_all: [july]
+    must_phrases_any: [june, "30 june"]
+    axes: [boundary]
+
+- id: D11
+  topic: release_vs_version
+  question: Which version of the data am I looking at, and is that the same as the API version?
+  assumes: {}
+  reference: >
+    A dataset release and the service that serves it are different things, and the agent is
+    forbidden from writing the release version string at all - the interface prints it. The right
+    answer says the interface shows the release it is pinned to and does not invent a number.
+  truth:
+    pointer: "prompt.py CONTRACT rule 6: 'Do not write the release's version string or its commit; the interface shows them.'"
+  checks:
+    forbid_phrases: ["1.0.0rc", "v1.0.0"]
+    axes: [boundary]
+
+# --------------------------------------------------------------------------- GWP vintage, AR5/AR6
+- id: D12
+  topic: gwp_vintage
+  question: What is the 2023-24 national total on AR6 warming potentials?
+  assumes: {period: FY2023-24, gwp: AR6, scope: national}
+  reference: >
+    The AR6 total is lower than the reported AR5 total, because AR6 lowers methane's hundred-year
+    potential from 28 to 27 and methane dominates this inventory; nitrous oxide rises from 265 to
+    273 but carries far less mass.
+  truth:
+    values:
+      ar6: {request: {type: QueryEmissions, periods: [FY2023-24], gwp_basis: AR6}, cell: 0}
+      ar5: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
+  checks:
+    must: [ar6]
+    forbid: [{ref: ar5, why: "reporting the AR5 total for an AR6 question is the vintage error"}]
+    unit_expect: Mt CO2e AR6
+    scope: {gwp_basis: AR6, geography_level: national}
+    axes: [numeric, boundary, source]
+
+- id: D13
+  topic: gwp_vintage
+  question: What is Lahore's total on AR6 warming potentials?
+  assumes: {period: FY2023-24, gwp: AR6, scope: adm2}
+  reference: >
+    AR6 CO2e is not carried at district grain. The release refuses it, and the nearby answers are
+    Lahore on AR5, or the national total on AR6.
+  truth:
+    refusal: {request: {type: QueryEmissions, periods: [FY2023-24], gwp_basis: AR6, geography_level: adm2, geography_ids: ["60131773B12131197496886"]}, error: NotEstimated}
+  checks:
+    expect_refusal: true
+    expect_error_class: NotEstimated
+    forbid_any_number: true
+    axes: [refusal, boundary, source]
+
+- id: D14
+  topic: gwp_vintage
+  question: By how much does the 2023-24 total change if you switch from AR5 to AR6?
+  assumes: {period: FY2023-24, comparison: AR5 vs AR6}
+  reference: >
+    The comparison tool refuses to cross warming-potential bases, so the difference is not a cell
+    the release will mint. Both totals can be reported, each on its own basis, and the reader can
+    see the gap; the agent may not subtract them itself.
+  truth:
+    refusal: {request: {type: CompareRequest, left: {type: QueryEmissions, periods: [FY2023-24]}, right: {type: QueryEmissions, periods: [FY2023-24], gwp_basis: AR6}}, error: MixedGwpError}
+    values:
+      ar5: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
+      ar6: {request: {type: QueryEmissions, periods: [FY2023-24], gwp_basis: AR6}, cell: 0}
+  checks:
+    forbid: [{literal: 6.905374, why: "the AR5 minus AR6 difference is arithmetic the agent is forbidden to do"}]
+    axes: [refusal, boundary, source]
+
+- id: D15
+  topic: gwp_vintage
+  question: Which global warming potential does the reported total use for methane?
+  assumes: {gwp: AR5 reported, AR6 secondary}
+  reference: >
+    The reported basis is IPCC 2013 (AR5), where methane is 28 over a hundred years and
+    fossil-origin methane carries its own factor of 30. AR6 is available as a secondary basis.
+  truth:
+    counts:
+      ar5_ch4: {sql: "SELECT factor FROM dim_gwp WHERE gwp_basis='AR5' AND gas_key='CH4'"}
+  checks:
+    must_phrases_any: [ar5, "2013"]
+    axes: [boundary, source]
+
+# -------------------------------------------------------- calculation module vs IPCC category, row_kind
+- id: D16
+  topic: module_vs_category
+  question: How much does the power sector emit in 2023-24?
+  assumes: {period: FY2023-24, scope: national, ambiguity: module `power` vs reporting_sector `power`}
+  reference: >
+    Two different right answers, and the question does not say which. The power MODULE computes
+    more than the power REPORTING SECTOR, because industrial captive self-generation is computed
+    by the power module but files under IPCC 1.A.2 and is reported as industry. A good answer
+    gives one figure and names which boundary it is.
+  truth:
+    values:
+      module: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [sector_id], order_by: value desc}, group: {sector_id: power}}
+      reporting: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [reporting_sector], order_by: value desc}, group: {reporting_sector: power}}
+  checks:
+    must_any_of: [module, reporting]
+    must_phrases_any: [captive, module, "reported as", boundary]
+    scope: {geography_level: national}
+    axes: [numeric, boundary, source]
+
+- id: D17
+  topic: module_vs_category
+  question: Where is industrial captive self-generation reported - under power or under industry?
+  assumes: {period: FY2023-24}
+  reference: >
+    Computed by the power module, reported under industry, because IPCC files industrial
+    self-generation at 1.A.2. The module that computed a stream and the category it is reported in
+    are different dimensions, and only this one pair disagrees in the release.
+  truth:
+    values:
+      module_power: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [sector_id], order_by: value desc}, group: {sector_id: power}}
+      reporting_industry: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [reporting_sector], order_by: value desc}, group: {reporting_sector: industry}}
+  checks:
+    must_phrases_all: [industry]
+    must_phrases_any: ["1.a.2", captive, "self-generation"]
+    axes: [boundary, source]
+
+- id: D18
+  topic: row_kind
+  question: If I add up every sector in 2023-24, do I get the national total?
+  assumes: {period: FY2023-24, scope: national, grouping: sector_id}
+  reference: >
+    Yes - grouping by module partitions the total exactly once, so the ten module cells sum to the
+    national figure. What must never be added is a total row to the rows it was computed from: the
+    release carries a handful of category-level rows beside the atoms for one configuration, and
+    summing both double-counts.
+  truth:
+    values:
+      total: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
+      n_sectors: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [sector_id]}, n_cells: true}
+  checks:
+    must: [total]
+    forbid: [{literal: 939.276448, why: "double counting the partition and the total"}]
+    axes: [numeric, boundary, source]
+
+- id: D19
+  topic: module_vs_category
+  question: How much does industry emit in 2023-24 as IPCC would report it?
+  assumes: {period: FY2023-24, grouping: reporting_sector, scope: national}
+  reference: >
+    The reporting-sector figure for industry, which is larger than the industry module's own total
+    because captive generation files into it.
+  truth:
+    values:
+      reporting: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [reporting_sector], order_by: value desc}, group: {reporting_sector: industry}}
+      module: {request: {type: QueryEmissions, periods: [FY2023-24], group_by: [sector_id], order_by: value desc}, group: {sector_id: industry}}
+  checks:
+    must: [reporting]
+    forbid: [{ref: module, why: "the module total answers a different question than the reporting sector"}]
+    axes: [numeric, boundary, source]
+
+# ----------------------------------------------------------------- gross vs delivered gas, transfers
+- id: D20
+  topic: gas_transfer
+  question: How much natural gas is delivered to consumers, and how much of it goes to households?
+  assumes: {period: FY2023-24, ledger: delivered_gas_combustion_fugitive_ledger, unit: million m3}
+  reference: >
+    The ledger's control is total delivered gas; the residential row is the share that reaches
+    households. Both are volumes in million cubic metres, not emissions.
+  truth:
+    values:
+      control: {request: {type: TransferRequest, ledger_id: delivered_gas_combustion_fugitive_ledger}, cell: 4}
+      residential: {request: {type: TransferRequest, ledger_id: delivered_gas_combustion_fugitive_ledger}, cell: 9}
+  checks:
+    must_any_of: [control, residential]
+    unit_expect: million m3
+    axes: [numeric, boundary, source]
+
+- id: D21
+  topic: gas_transfer
+  question: Is the gas used as fertilizer feedstock counted as a fuel?
+  assumes: {period: FY2023-24, ledger: delivered_gas_combustion_fugitive_ledger}
+  reference: >
+    No. That volume is carried in the ledger as unresolved: it leaves the delivered-gas control but
+    no combustion pathway is applied to it, because the carbon goes into ammonia and urea rather
+    than up a stack. The honest answer names it as an unresolved row of the ledger, not a zero.
+  truth:
+    values:
+      feedstock: {request: {type: TransferRequest, ledger_id: delivered_gas_combustion_fugitive_ledger}, cell: 5}
+  checks:
+    must: [feedstock]
+    must_phrases_any: [unresolved, feedstock, "not applied", "no pathway"]
+    forbid_phrases: ["is zero", "counted as zero"]
+    axes: [numeric, uncertainty, source]
+
+- id: D22
+  topic: structural_alternative
+  question: What is the total under the gross-gas accounting alternative, where the leakage transfer is restored?
+  assumes: {period: FY2023-24, configuration: gross_delivered_gas_accounting}
+  reference: >
+    That configuration is priced in the release but is not queryable: only the reference and the
+    survey configurations can be asked for. The right answer refuses the query and says which two
+    configurations can be asked, rather than reading the priced total out of a registry.
+  truth:
+    refusal: {request: {type: QueryEmissions, periods: [FY2023-24], configuration_id: gross_delivered_gas_accounting}, error: UnknownDimensionValue}
+  checks:
+    expect_refusal: true
+    expect_error_class: UnknownDimensionValue
+    forbid: [{literal: 469.92589, why: "a structural alternative's priced total is not a queryable result"}]
+    axes: [refusal, boundary, source]
+
+# ------------------------------------------------------------------------ the L and S configurations
+- id: D23
+  topic: dung_configuration
+  question: What is the 2023-24 total under the survey-based household configuration?
+  assumes: {period: FY2023-24, configuration: S_2023_24, gwp: AR5, scope: national}
+  reference: >
+    The survey-anchored estimate is lower than the reference, because the household survey finds
+    far less dung cake burned than the livestock-side accounting assigns to households.
+  truth:
+    values:
+      s_total: {request: {type: QueryEmissions, periods: [FY2023-24], configuration_id: S_2023_24}, cell: 0}
+      ref_total: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
+      delta: {request: {type: CompareRequest, left: {type: QueryEmissions, periods: [FY2023-24]}, right: {type: QueryEmissions, periods: [FY2023-24], configuration_id: S_2023_24}}, cell: 0}
+  checks:
+    must: [s_total]
+    forbid: [{ref: ref_total, why: "the reference total answers the wrong configuration"}]
+    scope: {configuration_id: S_2023_24, geography_level: national}
+    axes: [numeric, boundary, source]
+
+- id: D24
+  topic: dung_configuration
+  question: Under the survey configuration, what happens to the dung that households are no longer burning?
+  assumes: {period: FY2023-24, ledger: dung_transfer, configuration: S_2023_24, unit: Mt air-dry dung cake}
+  reference: >
+    It is unresolved. The dung ledger's control is the mass the livestock side releases to the
+    household channel; the survey configuration routes only a fraction of it to households and the
+    remainder has no destination and no greenhouse-gas pathway applied. The mass is in air-dry dung
+    cake, not CO2e, and it is not zero and not re-absorbed - it is recorded as having no resolved
+    fate.
+  truth:
+    values:
+      unresolved: {request: {type: TransferRequest, ledger_id: dung_transfer}, cell: 3}
+      control: {request: {type: TransferRequest, ledger_id: dung_transfer}, cell: 0}
+      s_households: {request: {type: TransferRequest, ledger_id: dung_transfer}, cell: 2}
+  checks:
+    must: [unresolved]
+    must_phrases_any: [unresolved, "no destination", "no pathway", "not resolved"]
+    forbid_phrases: ["is zero", "co2e"]
+    unit_expect: Mt air-dry dung cake
+    axes: [numeric, uncertainty, source]
+
+- id: D25
+  topic: dung_configuration
+  question: Show me the survey configuration over all nine years.
+  assumes: {configuration: S_2023_24, step: annual}
+  reference: >
+    The survey configuration exists for the reference year alone, so there is no nine-year series
+    of it. The release refuses the series and the nearby answer is the reference series, or the two
+    configurations compared within the reference year.
+  truth:
+    refusal: {request: {type: TimeseriesRequest, query: {type: QueryEmissions, configuration_id: S_2023_24}, step: annual}, error: GrainUnavailable}
+  checks:
+    expect_refusal: true
+    expect_error_class: GrainUnavailable
+    axes: [refusal, boundary, source]
+
+# ------------------------------------------------------- parameter intervals vs structural alternatives
+- id: D26
+  topic: uncertainty
+  question: How uncertain is the 2023-24 national total?
+  assumes: {period: FY2023-24, scope: national parametric}
+  reference: >
+    A 95 per cent parametric interval from a hundred-thousand-draw Monte Carlo, asymmetric: the
+    downside is about ten and a half per cent and the upside about sixteen. It is a PARAMETER
+    interval - it prices the factors and activity data, not the structural choices, which are
+    carried separately as configurations. An answer that reports a single number has not answered
+    the question.
+  truth:
+    values:
+      p50: {request: {type: UncertaintyRequest, scope: national}, cell: 0}
+    counts:
+      bounds: {sql: "SELECT P2_5_Mt FROM (SELECT \"P2.5_Mt\" AS P2_5_Mt FROM fact_uncertainty_series WHERE kind='parametric_reference' AND scope='national' AND scenario='cross_sector')"}
+  checks:
+    must_phrases_any: [per cent, percent, "%", interval, range]
+    require_two_numbers: true
+    axes: [numeric, uncertainty, source]
+
+- id: D27
+  topic: uncertainty
+  question: If I take the top of the uncertainty range and then add the fugitive structural alternative, is that the worst case?
+  assumes: {period: FY2023-24}
+  reference: >
+    No, and the question contains the error. The parametric interval and the structural
+    alternatives are two different kinds of statement about the same total, and an extreme endpoint
+    of the interval is not an additional allowance you may stack a structural reading on top of.
+    The right answer declines to combine them and says why.
+  truth:
+    pointer: "dim_configuration: `kind` separates `reference`/`survey` from `structural_alternative`; fact_uncertainty_series carries the parametric interval. The two are not additive."
+  checks:
+    must_phrases_any: [not, cannot, "different", "separate"]
+    forbid_phrases: ["worst case is", "add them", "combined total"]
+    axes: [uncertainty, boundary]
+
+- id: D28
+  topic: uncertainty
+  question: What is the uncertainty of a district figure?
+  assumes: {period: FY2023-24, resolution: adm2}
+  reference: >
+    The uncertainty table carries the national parametric interval; asking for it at district
+    resolution returns the same national rows rather than a district-specific interval. An answer
+    that presents a national interval as a district interval is wrong; the honest answer says the
+    release does not price district allocation separately at this grain.
+  truth:
+    values:
+      national_p50: {request: {type: UncertaintyRequest, scope: national, resolution: adm2}, cell: 0}
+  checks:
+    must_phrases_any: [national, "not", district]
+    axes: [uncertainty, boundary, source]
+
+# --------------------------------------------------------- observed timing vs modelled seasonality
+- id: D29
+  topic: timing_evidence
+  question: Which sectors have actually observed monthly data, as opposed to a modelled seasonal shape?
+  assumes: {grain: monthly, dimension: temporal_class}
+  reference: >
+    No sector in the evidence table carries the top observed class. The temporal classes the
+    release's evidence rows carry run from T2 to T4, with no T1 row anywhere in the table; T2 is
+    the strongest present - a monthly profile derived from observed data of the same kind - and
+    residential is entirely T3 while livestock and several other streams are T4, a declared flat
+    assumption. The honest answer names the strongest class actually present and does not call
+    any sector's months measured. (A separate monthly product grades a small mass as TE1 under a
+    different column; the evidence tool does not serve that column, so an answer sourced from the
+    evidence tool must not claim a top-class sector either way.)
+  truth:
+    counts:
+      t1: {sql: "SELECT count(*) AS c FROM fact_evidence WHERE temporal_class='T1'"}
+      t2: {sql: "SELECT count(*) AS c FROM fact_evidence WHERE temporal_class='T2'"}
+  checks:
+    must_phrases_any: [none, "no ", not]
+    forbid_phrases: [t1]
+    axes: [uncertainty, boundary, source]
+
+- id: D30
+  topic: timing_evidence
+  question: Is the monthly pattern of livestock methane measured?
+  assumes: {module: agriculture, grain: monthly}
+  reference: >
+    No. The livestock monthly profile is a declared flat assumption, the weakest temporal class in
+    the release, and the annual activity itself is a census enumeration in the reference year
+    projected across the other eight. Nothing about the month is observed.
+  truth:
+    counts:
+      flat: {sql: "SELECT temporal_class, count(*) AS c FROM fact_evidence WHERE module='agriculture' GROUP BY 1 ORDER BY 1", count_rows: true}
+  checks:
+    must_phrases_any: [flat, assumption, "not measured", declared, projected]
+    forbid_phrases: [measured monthly, "we measure"]
+    axes: [uncertainty, boundary, source]
+
+# ------------------------------------------------------------- boundaries, borrowed geography, unallocated
+- id: D31
+  topic: spatial_closure
+  question: Do the provinces add up to the national total, or is some emission left unplaced?
+  assumes: {period: FY2023-24, levels: adm1 and national}
+  reference: >
+    The provincial cells close against the national total by construction, with a small mass that
+    has no polygon to sit in carried as unallocated and shown in an "Other" province rather than
+    silently dropped or spread. The closure identity is that a province total equals its districts
+    plus what could not be placed.
+  truth:
+    values:
+      other: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm1, group_by: [province], order_by: value desc}, group: {province: Other}}
+      total: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
+  checks:
+    must_phrases_any: [unallocated, other, "no polygon", unplaced, close]
+    axes: [boundary, uncertainty, source]
+
+- id: D32
+  topic: spatial_closure
+  question: Are provincial figures available for 2015-16, or only for the reference year?
+  assumes: {period: FY2015-16, scope: adm1}
+  reference: >
+    Provincial figures resolve for 2015-16: the adm1 grain carries all nine fiscal years. (The
+    release's own description of the spatial grain as "reference year only" applies to the
+    district and grid products, not to adm1, and an answer that refuses adm1 for 2015-16 is
+    refusing something the engine will serve.)
+  truth:
+    values:
+      punjab_2015: {request: {type: QueryEmissions, periods: [FY2015-16], geography_level: adm1, group_by: [province], order_by: value desc}, group: {province: Punjab}}
+  checks:
+    must: [punjab_2015]
+    scope: {geography_level: adm1, periods: [FY2015-16]}
+    axes: [numeric, boundary, source]
+
+# --------------------------------------------------------------- missing categories versus zeros
+- id: D33
+  topic: notation_keys
+  question: What are Pakistan's emissions from lime production?
+  assumes: {ipcc_code: 2.A.2}
+  reference: >
+    Not estimated. Lime production carries the NE key in the completeness ledger - the inventory
+    does not price it - which is a different statement from zero, from not occurring and from
+    included elsewhere. An answer that says zero, or that implies there are no such emissions, is
+    wrong.
+  truth:
+    counts:
+      lime: {sql: "SELECT notation_key AS k FROM fact_completeness WHERE code='2.A.2' AND category LIKE 'Lime%'"}
+  checks:
+    must_phrases_any: ["not estimated", "does not estimate", "no estimate"]
+    forbid_phrases: ["is zero", "are zero", "no emissions", "none occur"]
+    forbid_any_number: true
+    axes: [refusal, uncertainty, source]
+
+- id: D34
+  topic: notation_keys
+  question: Does the inventory report nothing for electric road vehicles and nothing for nitric acid for the same reason?
+  assumes: {ipcc_codes: [1.A.3.b, 2.B.2]}
+  reference: >
+    No - the two absences are different keys. Electric road vehicles are NOT OCCURRING: zero
+    direct combustion by definition, and the electricity is counted at the power station. Nitric
+    acid is NOT ESTIMATED: the process does occur and the inventory has not priced its nitrous
+    oxide. Conflating them turns a gap into a zero.
+  truth:
+    counts:
+      ev: {sql: "SELECT notation_key AS k FROM fact_completeness WHERE code='1.A.3.b'"}
+      nitric: {sql: "SELECT notation_key AS k FROM fact_completeness WHERE code='2.B.2'"}
+  checks:
+    must_phrases_any: ["not occurring", "not estimated"]
+    must_phrases_all: [differ]
+    axes: [uncertainty, boundary, source]

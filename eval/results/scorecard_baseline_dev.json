@@ -1,0 +1,1593 @@
+{
+ "meta": {
+  "release_version": "1.0.0rc59",
+  "agent": {
+   "enabled": true,
+   "model": "gemini-3.1-pro-preview",
+   "provider": "gemini",
+   "reason": null,
+   "library": "02a469aef44acb87"
+  },
+  "run_at": "2026-10-05T03:23:59+00:00",
+  "split": "dev",
+  "label": "baseline",
+  "allow_holdout": false
+ },
+ "reference_release": "1.0.0rc59",
+ "reference_manifest": "7e7fed3f559f0c13",
+ "summary": {
+  "n_cases": 34,
+  "all_axes_pass": 25,
+  "all_axes_pass_rate": 0.735,
+  "axes": {
+   "numeric": {
+    "n": 18,
+    "pass": 15,
+    "rate": 0.833
+   },
+   "boundary": {
+    "n": 22,
+    "pass": 20,
+    "rate": 0.909
+   },
+   "source": {
+    "n": 31,
+    "pass": 29,
+    "rate": 0.935
+   },
+   "uncertainty": {
+    "n": 10,
+    "pass": 8,
+    "rate": 0.8
+   },
+   "refusal": {
+    "n": 5,
+    "pass": 3,
+    "rate": 0.6
+   }
+  },
+  "by_path": {
+   "loop": 29,
+   "none": 1,
+   "prompt_only": 4
+  },
+  "no_answer": [
+   "D19",
+   "D28"
+  ],
+  "turn_limit": [
+   "D19",
+   "D28"
+  ]
+ },
+ "cases": [
+  {
+   "id": "D01",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 469.63822389 +/- 0.2348, answer had [1.0, 0.0, 51.0, 8.0, 6.0, 255.0, 6.0, 499.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'configuration_id': 'REF_2023_24', 'gwp_basis': 'AR5', 'geography_level': 'national', 'periods': ['FY2023-24']}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Total greenhouse-gas emissions were <cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">469.64</cite> <cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D02",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:agriculture",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 223.45447146 +/- 0.1117, answer had [1.0, 0.0, 8851.0, 2.0, 1791882.0, 90.0, 7.0, 34.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'configuration_id': 'REF_2023_24', 'gwp_basis': 'AR5', 'geography_level': 'national'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=10 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['agricultur'] of ['agricultur']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Agriculture is the largest emitting sector, producing <cite k=\"1\" cell=\"0\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">223.45</cite> <cite k=\"1\" cell=\"0\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">Mt CO\u2082e</cite>. \n\nThe next largest contributors are the power sector at <cite k=\"1\" cell=\"1\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">63.37</cite> <cite k=\"1\" cell=\"1\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">Mt CO\u2082e</cite> and transport at <cite k=\"1\" cell=\"2\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">41.93</cite> <cite k=\"1\" cell=\"2\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">Mt CO\u2082e</cite>. Following these are the waste and residential sectors, which respectively emit <cite k=\"1\" cell=\"3\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">37.91</cite> <cite k=\"1\" cell=\"3\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">Mt CO\u2082e</cite> and <cite k=\"1\" cell=\"4\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">29.47</cite> <cite k=\"1\" cell=\"4\" receipt=\"c8851fa2a1791882c90da7e34f0775ff\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D03",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:punjab",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 238.097183876792 +/- 0.119, answer had [1.0, 0.0, 68.0, 51.0, 868478.0, 7839.0, 6.0, 37.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'adm1', 'configuration_id': 'REF_2023_24'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=10 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['punjab'] of ['punjab']"
+    },
+    {
+     "name": "phrase_forbid:measured in punjab",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:punjab measures",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Punjab is the highest-emitting province. In the reference year, it accounted for <cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">238.10</cite> <cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">Mt CO\u2082e</cite>, which represents <cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">nearly half</cite> (<cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">50.7</cite>) of the total. \n\nSindh is the second highest at <cite k=\"1\" cell=\"1\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">137.83</cite> <cite k=\"1\" cell=\"1\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">Mt CO\u2082e</cite>, followed by Khyber Pakhtunkhwa (<cite k=\"1\" cell=\"2\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">59.79</cite> <cite k=\"1\" cell=\"2\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">Mt CO\u2082e</cite>) and Balochistan (<cite k=\"1\" cell=\"3\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">31.79</cite> <cite k=\"1\" cell=\"3\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">Mt CO\u2082e</cite>).\n\nAs with most spatial estimates in this release, these provincial figures are typically national totals distributed downwards rather than being counted or observed directly at the local level. They are allocated using proxy maps such as livestock enumerations, population data, and road density."
+  },
+  {
+   "id": "D04",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:first",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 401.08963258 +/- 0.2005, answer had [3.0, 0.0, 7.0, 991.0, 242.0, 7.0, 15.0, 91.0]"
+    },
+    {
+     "name": "must:last",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 469.63822389 +/- 0.2348, answer had [3.0, 0.0, 7.0, 991.0, 242.0, 7.0, 15.0, 91.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national', 'configuration_id': 'REF_2023_24'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=3 citations=14 tool_results=3 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Total emissions grew by <cite k=\"3\" cell=\"0\" receipt=\"7f991d242e07db015e91af03f94501e6\">68.55</cite> <cite k=\"3\" cell=\"0\" receipt=\"7f991d242e07db015e91af03f94501e6\">Mt CO\u2082e</cite> (<cite k=\"2\" cell=\"0\" receipt=\"b1ea3bfd65bad24243537f04123bf4c2\">17.09</cite> <cite k=\"2\" cell=\"0\" receipt=\"b1ea3bfd65bad24243537f04123bf4c2\">percent</cite>) between 2015-16 and 2023-24, starting at <cite k=\"1\" cell=\"0\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">401.09</cite> <cite k=\"1\" cell=\"0\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">Mt CO\u2082e</cite> and ending the period at <cite k=\"1\" cell=\"8\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">469.64</cite> <cite k=\"1\" cell=\"8\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">Mt CO\u2082e</cite>.\n\nThe trajectory over this time was not a straight line. Emissions climbed steadily through 2017-18 to reach <cite k=\"1\" cell=\"2\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">450.74</cite> <cite k=\"1\" cell=\"2\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">Mt CO\u2082e</cite>, leveled off for the next two years, and then surged to a peak of <cite k=\"1\" cell=\"6\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">497.77</cite> <cite k=\"1\" cell=\"6\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">Mt CO\u2082e</cite> in 2021-22. The total then fell sharply to <cite k=\"1\" cell=\"7\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">456.62</cite> <cite k=\"1\" cell=\"7\" receipt=\"1bfbb4766be540e47ed66d5e6719d5ab\">Mt CO\u2082e</cite> in 2022-23 before partially recovering in the most recent year."
+  },
+  {
+   "id": "D05",
+   "topic": "native_vs_co2e",
+   "checks": [
+    {
+     "name": "must:ch4",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 248.79023268 +/- 0.1244, answer had [1.0, 0.0, 573206699.0, 9565109723.0, 8915.0, 3135.0, 1.0, 0.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'gwp_basis': 'AR5', 'geography_level': 'national'}"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'Mt CO2e AR5', tool cells carried ['Mt CO2e AR5']"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=11 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Methane accounts for <cite k=\"1\" cell=\"0\" receipt=\"c0573206699e9565109723b8915e3135\">nearly half</cite> (<cite k=\"1\" cell=\"0\" receipt=\"c0573206699e9565109723b8915e3135\">53.0</cite>) of the total greenhouse gas emissions in 2023-24, amounting to <cite k=\"1\" cell=\"0\" receipt=\"c0573206699e9565109723b8915e3135\">248.79</cite> <cite k=\"1\" cell=\"0\" receipt=\"c0573206699e9565109723b8915e3135\">Mt CO\u2082e</cite>. \n\nCarbon dioxide makes up <cite k=\"1\" cell=\"2\" receipt=\"c0573206699e9565109723b8915e3135\">about a third</cite> (<cite k=\"1\" cell=\"2\" receipt=\"c0573206699e9565109723b8915e3135\">38.0</cite>) at <cite k=\"1\" cell=\"2\" receipt=\"c0573206699e9565109723b8915e3135\">178.65</cite> <cite k=\"1\" cell=\"2\" receipt=\"c0573206699e9565109723b8915e3135\">Mt CO\u2082e</cite>, while nitrous oxide accounts for the remaining <cite k=\"1\" cell=\"1\" receipt=\"c0573206699e9565109723b8915e3135\">9.0</cite> with <cite k=\"1\" cell=\"1\" receipt=\"c0573206699e9565109723b8915e3135\">42.20</cite> <cite k=\"1\" cell=\"1\" receipt=\"c0573206699e9565109723b8915e3135\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D06",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "must:energy",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 158.03998117 +/- 0.07902, answer had [2023.0, -24.0, 1.0, 2.0, 0.0, 7135.0, 7.0, 13.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national', 'configuration_id': 'REF_2023_24'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=10 tool_results=2 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, fuel combustion (IPCC category 1.A) generated a total of <cite k=\"2\" cell=\"0\" receipt=\"c7135fe7dc13de9e9caa8bc49b8d464d\">158.04</cite> <cite k=\"2\" cell=\"0\" receipt=\"c7135fe7dc13de9e9caa8bc49b8d464d\">Mt CO\u2082e</cite>.\n\nThe largest source within this category was power generation (code 1.A.1.a) at <cite k=\"1\" cell=\"13\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">57.82</cite> <cite k=\"1\" cell=\"13\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">Mt CO\u2082e</cite>. This was followed by road transport (1.A.3.b) with <cite k=\"1\" cell=\"18\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">40.19</cite> <cite k=\"1\" cell=\"18\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">Mt CO\u2082e</cite>, residential combustion (1.A.4.b) with <cite k=\"1\" cell=\"16\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">29.47</cite> <cite k=\"1\" cell=\"16\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">Mt CO\u2082e</cite>, and manufacturing industries and construction (1.A.2) at <cite k=\"1\" cell=\"8\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">28.13</cite> <cite k=\"1\" cell=\"8\" receipt=\"b4f8fc1f51864045eb4725bf34b8bea7\">Mt CO\u2082e</cite>. Smaller combustion contributions came from off-road machinery, railways, and domestic aviation."
+  },
+  {
+   "id": "D07",
+   "topic": "timing",
+   "checks": [
+    {
+     "name": "must:jul",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 42.886929239024 +/- 0.02144, answer had [2023.0, 1.0, 0.0, 18672544.0, 9.0, 9.0, 144.0, 2277729.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The total greenhouse gas emissions in July 2023 were <cite k=\"1\" cell=\"0\" receipt=\"18672544eb9fc9a144c2277729b82b78\">42.89</cite> <cite k=\"1\" cell=\"0\" receipt=\"18672544eb9fc9a144c2277729b82b78\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D08",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:lahore",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 11.472441865664 +/- 0.011, answer had [2023.0, -24.0, 1.0, 0.0, 3612405.0, 532.0, 48.0, 3.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'adm2'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=10 tool_results=2 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_forbid:measured in lahore",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 4,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "In 2023-24, Lahore district's greenhouse gas emissions total <cite k=\"1\" cell=\"0\" receipt=\"3612405d532d048d3ef59fa6cf9b2cc1\">11.47</cite> <cite k=\"1\" cell=\"0\" receipt=\"3612405d532d048d3ef59fa6cf9b2cc1\">Mt CO\u2082e</cite>. This district figure is a modeled share of national totals, allocated using spatial proxies like livestock density, built-up area, and road networks, rather than a direct local measurement.\n\nThe largest source allocated to the district is agriculture at <cite k=\"4\" cell=\"0\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">3.05</cite> <cite k=\"4\" cell=\"0\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">Mt CO\u2082e</cite>. It is followed by residential energy use at <cite k=\"4\" cell=\"1\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">2.32</cite> <cite k=\"4\" cell=\"1\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">Mt CO\u2082e</cite>, waste at <cite k=\"4\" cell=\"2\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">2.23</cite> <cite k=\"4\" cell=\"2\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">Mt CO\u2082e</cite>, and transport at <cite k=\"4\" cell=\"3\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">1.48</cite> <cite k=\"4\" cell=\"3\" receipt=\"2f20bbd6cf774db6c7d8e8ebe55df699\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D09",
+   "topic": "fiscal_vs_calendar",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=3 citations=6 tool_results=3 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "refusal events: []"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "want NotEstimated, got []"
+    },
+    {
+     "name": "forbid_any_number",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "answer carried [2020.0, 2020.0, 1.0, 0.0, 696.0, 43.0, 136.0, 9787.0]; no refusal event"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "fail"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The full inventory is tracked by fiscal years (July to June), meaning a combined national total for the 2020 calendar year cannot be provided. Only the agriculture sector can be queried on a calendar-year basis.\n\nIn 2020, Pakistan's agriculture sector emitted <cite k=\"1\" cell=\"0\" receipt=\"c696b43c136c9787eb566b62d768299e\">193.35</cite> <cite k=\"1\" cell=\"0\" receipt=\"c696b43c136c9787eb566b62d768299e\">Mt CO\u2082e</cite>. \n\nAcross all sectors, the total national emissions for the surrounding fiscal periods were <cite k=\"2\" cell=\"0\" receipt=\"88f8a62c0219ba5465b3ed3276ef273c\">446.73</cite> <cite k=\"2\" cell=\"0\" receipt=\"88f8a62c0219ba5465b3ed3276ef273c\">Mt CO\u2082e</cite> in 2019-20 and <cite k=\"3\" cell=\"0\" receipt=\"61f9bff5f1fc6a5e87759dea329be1db\">479.51</cite> <cite k=\"3\" cell=\"0\" receipt=\"61f9bff5f1fc6a5e87759dea329be1db\">Mt CO\u2082e</cite> in 2020-21."
+  },
+  {
+   "id": "D10",
+   "topic": "fiscal_vs_calendar",
+   "checks": [
+    {
+     "name": "phrase_all:july",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['june'] of ['june', '30 june']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "n/a",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "prompt_only",
+   "n_tool_calls": 0,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The 2023-24 fiscal year starts in July 2023 and ends in June 2024."
+  },
+  {
+   "id": "D11",
+   "topic": "release_vs_version",
+   "checks": [
+    {
+     "name": "phrase_forbid:1.0.0rc",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:v1.0.0",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "n/a",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "prompt_only",
+   "n_tool_calls": 0,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The interface you are using displays the specific release version and commit string on your screen. I cannot read or recite the exact version number to you, but the interface always shows the current version of the data you are exploring.\n\nThe data and the API share the same version. PakEmis is released as a single, combined open dataset of Pakistan's greenhouse-gas emissions, rebuilt from public documents and published alongside the code that produces it. The API tools and the underlying dataset are released together under one semantic release, meaning the query functions and the numbers they return are always strictly matched and share the same version."
+  },
+  {
+   "id": "D12",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "must:ar6",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 462.73284967 +/- 0.2314, answer had [1.0, 0.0, 2.0, 78.0, 6071.0, 3.0, 0.0, 0.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'gwp_basis': 'AR6', 'geography_level': 'national'}"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'Mt CO2e AR6', tool cells carried ['Mt CO2e AR6']"
+    },
+    {
+     "name": "forbid:ar5",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "469.63822389 absent - reporting the AR5 total for an AR6 question is the vintage error"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The national total is <cite k=\"1\" cell=\"0\" receipt=\"2f78c6071b3c0c0e83243189cf88f2d9\">462.73</cite> <cite k=\"1\" cell=\"0\" receipt=\"2f78c6071b3c0c0e83243189cf88f2d9\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D13",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "refusal events: ['NotEstimated']"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "want NotEstimated, got ['NotEstimated']"
+    },
+    {
+     "name": "forbid_any_number",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "answer carried [6.0, 5.0, 6.0, 5.0, 2.0, 0.0, 35.0, 5.0]; refusal surfaced"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "The dataset does not calculate emissions using AR6 warming potentials at the district level. It can, however, provide district totals using AR5 warming potentials, or the national total on an AR6 basis. \n\nUsing AR5, Lahore's total is <cite k=\"2\" cell=\"0\" receipt=\"35ff5aca244ed0006b2f3148e67b1347\">11.47</cite> <cite k=\"2\" cell=\"0\" receipt=\"35ff5aca244ed0006b2f3148e67b1347\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D14",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "forbid:6.905374",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "6.905374 absent - the AR5 minus AR6 difference is arithmetic the agent is forbidden to do"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=4 tool_results=2 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 4,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "The system cannot directly calculate the difference between two estimates that use different global warming potential standards. However, I can provide the separate totals for the 2023-24 fiscal year so you can compare them side by side.\n\nUnder the AR5 standard, the national total is <cite k=\"2\" cell=\"0\" receipt=\"3397af769914becbe6b6e8ac787486ca\">469.64</cite> <cite k=\"2\" cell=\"0\" receipt=\"3397af769914becbe6b6e8ac787486ca\">Mt CO\u2082e</cite>. When switching to the newer AR6 standard, the total becomes <cite k=\"3\" cell=\"0\" receipt=\"da8448b97c8e7a428659adbfad324b7d\">462.73</cite> <cite k=\"3\" cell=\"0\" receipt=\"da8448b97c8e7a428659adbfad324b7d\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D15",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": false,
+     "detail": "receipts=0 citations=0 tool_results=0 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['ar5'] of ['ar5', '2013']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "fail",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "prompt_only",
+   "n_tool_calls": 0,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The reported totals in the PakEmis dataset use the global warming potentials from the IPCC Fifth Assessment Report (AR5). A secondary view using AR6 is also available at the national and provincial levels, but AR5 is the primary reported basis."
+  },
+  {
+   "id": "D16",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "must_any_of:module,reporting",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['module']; answer had [1.0, 0.0, 59.0, 464.0, 6.0, 53.0, 8220910.0, 2.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": false,
+     "detail": "matched [] of ['captive', 'module', 'reported as', 'boundary']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "fail",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The power sector emitted <cite k=\"1\" cell=\"0\" receipt=\"59e464e6c53a8220910eb2baaf283617\">63.37</cite> <cite k=\"1\" cell=\"0\" receipt=\"59e464e6c53a8220910eb2baaf283617\">Mt CO\u2082e</cite> in 2023-24."
+  },
+  {
+   "id": "D17",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=6 citations=1 tool_results=6 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_all:industry",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['1.a.2', 'captive', 'self-generation'] of ['1.a.2', 'captive', 'self-generation']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 7,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "In the PakEmis dataset, industrial captive self-generation is calculated and housed within the **power** sector module (`sector_id`). This separates it mechanically from general industrial fuel combustion. For example, in the reference year, the <cite k=\"4\" cell=\"1\" receipt=\"51a5256f641421af7a224b318ac80f56\">5.549</cite> of emissions from captive gas self-generation are located in the power module.\n\nHowever, it is still classified as an industrial activity under international guidelines. Captive generation carries the IPCC code **1.A.2** (Manufacturing Industries and Construction) and is assigned to the **industry** `reporting_sector`. If you group the inventory by reporting sector or IPCC code rather than by the underlying calculation module, it correctly rolls up under industry."
+  },
+  {
+   "id": "D18",
+   "topic": "row_kind",
+   "checks": [
+    {
+     "name": "must:total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 469.63822389 +/- 0.2348, answer had [2023.0, -24.0, 2.0, 0.0, 51.0, 8.0, 6.0, 255.0]"
+    },
+    {
+     "name": "forbid:939.276448",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "939.276448 absent - double counting the partition and the total"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=6 tool_results=2 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Yes. If you add up the ten sectors covered in this dataset for 2023-24, they sum exactly to the reported national figure of <cite k=\"2\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">469.64</cite> <cite k=\"2\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">Mt CO\u2082e</cite>.\n\nThere are no unallocated emissions or hidden adjustments kept between the sector totals and the top line. The overall figure is simply the sum of the largest sources like agriculture (<cite k=\"1\" cell=\"0\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">223.45</cite> <cite k=\"1\" cell=\"0\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">Mt CO\u2082e</cite>) and power (<cite k=\"1\" cell=\"5\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">63.37</cite> <cite k=\"1\" cell=\"5\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">Mt CO\u2082e</cite>), down through transport, waste, residential, industrial processes, fugitives, industrial combustion, railways, and aviation."
+  },
+  {
+   "id": "D19",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "must:reporting",
+     "axis": "numeric",
+     "ok": false,
+     "detail": "want 28.13113307 +/- 0.01407, answer had []"
+    },
+    {
+     "name": "forbid:module",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "22.5816456 absent - the module total answers a different question than the reporting sector"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=0 citations=0 tool_results=5 refusals=2"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: ['turn_limit']"
+    }
+   ],
+   "axes": {
+    "numeric": "fail",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 8,
+   "n_refusals": 2,
+   "errors": [
+    "turn_limit"
+   ],
+   "answer_text": ""
+  },
+  {
+   "id": "D20",
+   "topic": "gas_transfer",
+   "checks": [
+    {
+     "name": "must_any_of:control,residential",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['control', 'residential']; answer had [1.0, 4.0, 88.0, 434.0, 465.0, 8163.0, 604.0, 4.0]"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'million m3', tool cells carried ['million m3', 'million m3 (feedstock)', 'million m3 delivered gas']"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=12 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "A total of <cite k=\"1\" cell=\"4\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">35505.30</cite> <cite k=\"1\" cell=\"4\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">million m3 delivered gas</cite> of natural gas is delivered to consumers. \n\nOf this amount, <cite k=\"1\" cell=\"9\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">8485.60</cite> <cite k=\"1\" cell=\"9\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">million m3</cite> goes directly to households. \n\nThe residential sector is the second-largest destination for piped natural gas. The largest single recipient is grid power generation, which takes <cite k=\"1\" cell=\"7\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">10957.10</cite> <cite k=\"1\" cell=\"7\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">million m3</cite>. Other major deliveries include fertilizer feedstock (<cite k=\"1\" cell=\"5\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">7813.80</cite> <cite k=\"1\" cell=\"5\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">million m3 (feedstock)</cite>), general industry (<cite k=\"1\" cell=\"6\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">3007.70</cite> <cite k=\"1\" cell=\"6\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">million m3</cite>), and captive power generation (<cite k=\"1\" cell=\"0\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">2966.30</cite> <cite k=\"1\" cell=\"0\" receipt=\"88fc434f465a8163a604f4f2cde0958c\">million m3</cite>)."
+  },
+  {
+   "id": "D21",
+   "topic": "gas_transfer",
+   "checks": [
+    {
+     "name": "must:feedstock",
+     "axis": "numeric",
+     "ok": false,
+     "detail": "want 7813.8 +/- 3.907, answer had []"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=3 citations=0 tool_results=3 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['feedstock'] of ['unresolved', 'feedstock', 'not applied', 'no pathway']"
+    },
+    {
+     "name": "phrase_forbid:is zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:counted as zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "fail",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "No, the natural gas used as fertilizer feedstock is not counted as a fuel in the energy sector. Instead, it is classified under industrial processes (IPPU) and recorded in the \"Ammonia production\" category. \n\nBecause fertilizer plants use natural gas for both chemical feedstock and process heat, the inventory estimates this combined use rather than measuring the two streams separately. The calculation relies on national fertilizer production records to determine the total ammonia produced, which is then multiplied by a Pakistan-calibrated total-energy factor to estimate the initial carbon dioxide equivalent. \n\nSince some of the carbon from this gas is captured to make solid fertilizer, the arithmetic subtracts the carbon embodied in urea from the industrial plant's total. That recovered carbon dioxide is transferred to the agriculture sector and is only emitted and counted later under the \"Urea application\" category when the fertilizer is spread on fields.\n\nA limitation of using this total-energy factor is that the inventory cannot isolate the exact physical combustion emissions of the fertilizer plants apart from their chemical process emissions, leaving the actual split between fuel and feedstock unrecorded."
+  },
+  {
+   "id": "D22",
+   "topic": "structural_alternative",
+   "checks": [
+    {
+     "name": "forbid:469.92589",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "469.92589 absent - a structural alternative's priced total is not a queryable result"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "refusal events: []"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "want UnknownDimensionValue, got []"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "fail"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Under the gross-gas accounting view, which restores the transferred leakage back to the sectors that purchased the gas, the national total is <cite k=\"1\" cell=\"0\" receipt=\"19fa2c4000e4e7d0c0f0b0f1a9483ee1\">469.64</cite> <cite k=\"1\" cell=\"0\" receipt=\"19fa2c4000e4e7d0c0f0b0f1a9483ee1\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D23",
+   "topic": "dung_configuration",
+   "checks": [
+    {
+     "name": "must:s_total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 464.50542601 +/- 0.2323, answer had [1.0, 0.0, 7.0, 5.0, 0.0, 54.0, 282.0, 36.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'configuration_id': 'S_2023_24', 'geography_level': 'national'}"
+    },
+    {
+     "name": "forbid:ref_total",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "469.63822389 absent - the reference total answers the wrong configuration"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The national total under the survey-based estimate is <cite k=\"1\" cell=\"0\" receipt=\"c7dd5d0f54de282a36be821822881ec6\">464.51</cite> <cite k=\"1\" cell=\"0\" receipt=\"c7dd5d0f54de282a36be821822881ec6\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D24",
+   "topic": "dung_configuration",
+   "checks": [
+    {
+     "name": "must:unresolved",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 46.7741 +/- 0.02339, answer had [2.0, 1.0, 8.0, 1.0, 298.0, 716.0, 1.0, 5.0]"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'Mt air-dry dung cake', tool cells carried ['Mt air-dry dung cake']"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=6 tool_results=2 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['unresolved'] of ['unresolved', 'no destination', 'no pathway', 'not resolved']"
+    },
+    {
+     "name": "phrase_forbid:is zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:co2e",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Under the reference estimate, the inventory assumes the entire available supply of <cite k=\"2\" cell=\"1\" receipt=\"8f1c298d716a1fe5a23f2656bbd21584\">58.74</cite> <cite k=\"2\" cell=\"1\" receipt=\"8f1c298d716a1fe5a23f2656bbd21584\">Mt air-dry dung cake</cite> is transferred from agriculture to the residential sector to be burned.\n\nWhen switching to the survey-based estimate, measured household consumption drops to <cite k=\"1\" cell=\"0\" receipt=\"7393fc1ad1f1832c5d6be41930b90a85\">11.97</cite> <cite k=\"1\" cell=\"0\" receipt=\"7393fc1ad1f1832c5d6be41930b90a85\">Mt air-dry dung cake</cite>. The cross-sector transfer ledger leaves the remaining <cite k=\"1\" cell=\"1\" receipt=\"7393fc1ad1f1832c5d6be41930b90a85\">46.77</cite> <cite k=\"1\" cell=\"1\" receipt=\"7393fc1ad1f1832c5d6be41930b90a85\">Mt air-dry dung cake</cite> as an \"unresolved\" balance. Because the survey only measures fuel demand, the inventory removes this unburned mass from residential combustion but does not assign it a new alternative fate, such as being applied to soils as fertilizer or managed as waste."
+  },
+  {
+   "id": "D25",
+   "topic": "dung_configuration",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=0 citations=0 tool_results=0 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "refusal events: ['GrainUnavailable']"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "want GrainUnavailable, got ['GrainUnavailable']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "The survey-based estimate is not available as a historical time series across all nine years. It was calculated exclusively for the 2023-24 fiscal year to cross-check household consumption against the standard reference approach.\n\nI can show you the full nine-year time series using the reference estimate, or I can pull the survey-based results just for 2023-24. Let me know which you would prefer to see."
+  },
+  {
+   "id": "D26",
+   "topic": "uncertainty",
+   "checks": [
+    {
+     "name": "require_two_numbers",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "distinct numbers: [0.0, 1.0, 2.0, 6.0, 8.0, 51.0, 134.0, 255.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=5 citations=6 tool_results=6 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": false,
+     "detail": "matched [] of ['per cent', 'percent', '%', 'interval', 'range']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "fail",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 6,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The uncertainty is evaluated through parametric reference calculations based on different dependency assumptions. Under a scenario where factors are shared across modules, the reference evaluates to <cite k=\"6\" cell=\"0\" receipt=\"255a2e99701fa999695a8c4884b2de1a\">474.20</cite> <cite k=\"6\" cell=\"0\" receipt=\"255a2e99701fa999695a8c4884b2de1a\">Mt CO\u2082e</cite>. When factors are shared only within a module, it evaluates to <cite k=\"6\" cell=\"1\" receipt=\"255a2e99701fa999695a8c4884b2de1a\">474.20</cite> <cite k=\"6\" cell=\"1\" receipt=\"255a2e99701fa999695a8c4884b2de1a\">Mt CO\u2082e</cite>. \n\nFor comparison, the standard deterministic calculation evaluates to <cite k=\"2\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">469.64</cite> <cite k=\"2\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D27",
+   "topic": "uncertainty",
+   "checks": [
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['not', 'cannot'] of ['not', 'cannot', 'different', 'separate']"
+    },
+    {
+     "name": "phrase_forbid:worst case is",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:add them",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:combined total",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "n/a",
+    "uncertainty": "pass",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "No, for two reasons: one concerning what is in the data, and one concerning how uncertainty is measured.\n\nFirst, PakEmis does not have a structural alternative for fugitive emissions. The only structural alternative in this release (`S_2023_24`) applies strictly to the residential sector, where it replaces reference modeling with observed household survey demand. Fugitive emissions are calculated using only the reference configuration. \n\nSecond, even in the residential sector where an alternative exists, you cannot simply add the difference between two models to the top of an uncertainty range. In this dataset, statistical uncertainty (the variance in parameters like emission factors and activity data) and structural uncertainty (the choice of which model to use) are treated independently. Each configuration has its own distinct probability distribution and its own uncertainty interval. \n\nTo find the \"worst case\" under an alternative methodological assumption, you would query that specific alternative configuration and look at the top bound of its own statistical uncertainty range, rather than stacking a model's difference on top of the reference estimate's bound."
+  },
+  {
+   "id": "D28",
+   "topic": "uncertainty",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=0 citations=0 tool_results=8 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: ['turn_limit']"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": false,
+     "detail": "matched [] of ['national', 'not', 'district']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "fail",
+    "refusal": "n/a"
+   },
+   "path": "none",
+   "n_tool_calls": 8,
+   "n_refusals": 0,
+   "errors": [
+    "turn_limit"
+   ],
+   "answer_text": ""
+  },
+  {
+   "id": "D29",
+   "topic": "timing_evidence",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=10 citations=0 tool_results=10 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['not'] of ['none', 'no ', 'not']"
+    },
+    {
+     "name": "phrase_forbid:t1",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 10,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Eight of the ten sectors in this release incorporate actually observed monthly data (Temporal Class T2) for at least some of their emissions. These monthly observations are drawn from national administrative and commercial reporting rather than modelled proxies:\n\n*   **Transport**, **Railways**, and **Aviation**: Rely heavily on monthly fuel sales data from the Oil Companies Advisory Council (OCAC) for petrol, high-speed diesel, furnace oil, and jet fuel. (Note that CNG for road transport lacks a monthly metered series and uses a flat assumption).\n*   **Industry** and **Power**: Also use OCAC monthly sales for their petroleum fuels, alongside detailed monthly coal and oil consumption listings from NEPRA for grid power. (Captive power and brick-kiln coal use flat annual profiles, while industrial gas is shaped by related manufacturing indices).\n*   **IPPU (Industrial Processes)**: Uses the Pakistan Bureau of Statistics (PBS) monthly Quantum Index of Manufacturing (QIM) to track the exact monthly production of cement clinker and crude steel. \n*   **Fugitives**: Oil and gas extraction, gathering, and processing are tracked using monthly extraction statistics from PBS.\n*   **Agriculture**: Synthetic fertilizer and urea application use strictly observed monthly fertilizer offtake data from the National Fertilizer Development Centre (NFDC). (The rest of the sector is modelled, such as using satellite fire anomalies for residue burning, or assumed flat, like livestock).\n\nTwo sectors rely entirely on modelled seasonal shapes (Class T3) or flat assumptions (Class T4), as they lack recorded monthly activity data:\n\n*   **Residential**: Entirely modelled using synthetic profiles that blend a flat cooking/water-heating baseload with seasonal shapes derived from cooling and heating degree-days.\n*   **Waste**: Relies on a continuous first-order decay model (a state engine) to shape landfill methane, while wastewater and open burning are distributed evenly across the year."
+  },
+  {
+   "id": "D30",
+   "topic": "timing_evidence",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['flat', 'assumption', 'not measured', 'declared'] of ['flat', 'assumption', 'not measured', 'declared', 'projected']"
+    },
+    {
+     "name": "phrase_forbid:measured monthly",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:we measure",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "No, the monthly pattern of livestock methane is not measured. \n\nIn this dataset, the month-to-month profile for livestock emissions\u2014which covers both enteric fermentation and manure management\u2014is a flat declared assumption rather than a direct observation. This means the annual emission total for a given year is simply distributed evenly across the months, rather than being built from actual monthly counts or seasonal variation tracking."
+  },
+  {
+   "id": "D31",
+   "topic": "spatial_closure",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=10 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['other', 'unplaced'] of ['unallocated', 'other', 'no polygon', 'unplaced', 'close']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Yes, the provincial totals add up perfectly to the national total, because emissions from regions outside the four main provinces are caught in a dedicated \"Other\" category. No emission is left unplaced at the national level.\n\nIn the reference year, Punjab is the largest source at <cite k=\"1\" cell=\"0\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">238.10</cite> <cite k=\"1\" cell=\"0\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">Mt CO\u2082e</cite>, followed by Sindh (<cite k=\"1\" cell=\"1\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">137.83</cite> <cite k=\"1\" cell=\"1\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">Mt CO\u2082e</cite>), Khyber Pakhtunkhwa (<cite k=\"1\" cell=\"2\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">59.79</cite> <cite k=\"1\" cell=\"2\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">Mt CO\u2082e</cite>), and Balochistan (<cite k=\"1\" cell=\"3\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">31.79</cite> <cite k=\"1\" cell=\"3\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">Mt CO\u2082e</cite>). The remaining <cite k=\"1\" cell=\"4\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">2.13</cite> <cite k=\"1\" cell=\"4\" receipt=\"27473927bf8ec387c3ad4fb26850c433\">Mt CO\u2082e</cite> is assigned to the \"Other\" bucket. This category accounts for emissions from Gilgit-Baltistan, Azad Jammu and Kashmir, and the Islamabad Capital Territory, which do not receive individual map polygons in this dataset."
+  },
+  {
+   "id": "D32",
+   "topic": "spatial_closure",
+   "checks": [
+    {
+     "name": "must:punjab_2015",
+     "axis": "numeric",
+     "ok": false,
+     "detail": "want 220.11457361157667 +/- 0.1101, answer had [2023.0, -24.0, 2015.0, -16.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": false,
+     "detail": "geography_level: want 'adm1', got None; periods: want ['FY2015-16'], got None"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": false,
+     "detail": "receipts=0 citations=0 tool_results=0 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "fail",
+    "boundary": "fail",
+    "source": "fail",
+    "uncertainty": "n/a",
+    "refusal": "n/a"
+   },
+   "path": "prompt_only",
+   "n_tool_calls": 0,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Provincial and district figures are only available for the reference year (2023-24). For 2015-16, as well as all other historical years in the inventory, estimates are only provided at the national level."
+  },
+  {
+   "id": "D33",
+   "topic": "notation_keys",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=3 citations=0 tool_results=3 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['not estimated'] of ['not estimated', 'does not estimate', 'no estimate']"
+    },
+    {
+     "name": "phrase_forbid:is zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:are zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:no emissions",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:none occur",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "forbid_any_number",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "answer carried []; no refusal event"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Emissions from lime production are not estimated in this release. \n\nWhile earlier official national reports contained some lime activity and emissions data, an independent series covering both marketed and captive lime production by type has not been compiled here. The underlying production volumes are missing (lime is not listed in the standard quantum index of manufacturing), so both the greenhouse gases and the air pollutants (such as kiln process particulates) from lime production cannot be calculated and are marked as not estimated.\n\nYou can, however, ask about emissions from other industrial processes that are covered in this dataset, such as cement production, soda ash production, or the fuel combustion of the manufacturing sector."
+  },
+  {
+   "id": "D34",
+   "topic": "notation_keys",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=3 citations=0 tool_results=3 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_all:differ",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['not occurring', 'not estimated'] of ['not occurring', 'not estimated']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "No, the inventory reports them as empty for different reasons. \n\n**Electric road vehicles** are recorded as \"Not Occurring\" (NO). By definition, electric vehicles have zero direct combustion. The electricity they consume is already counted at the point of generation (power stations), so assigning emissions to the road transport sector would double-count them. The inventory includes the category simply to show that the boundary is closed, rather than implicitly left out. \n\n**Nitric acid production**, on the other hand, is recorded as \"Not Estimated\" (NE) because the data needed to price it is missing. While the project holds some historical abatement records for one of the country's two identified plants, it lacks matched-year production volumes and operating abatement evidence across the fiscal years. Without the actual production series, the emissions cannot be reliably estimated."
+  }
+ ]
+}

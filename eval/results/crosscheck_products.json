@@ -1,0 +1,81 @@
+{
+ "emissions_checkout": "/Users/rehanahmad/Desktop/emissions",
+ "reference_release": "1.0.0rc59",
+ "n_checked": 9,
+ "n_disagree": 0,
+ "rows": [
+  {
+   "case": "D01",
+   "value": "total",
+   "engine": 469.63822389,
+   "product": 469.63822,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=national_total#co2e_Mt_AR5",
+   "agrees": true
+  },
+  {
+   "case": "D02",
+   "value": "agriculture",
+   "engine": 223.45447146,
+   "product": 223.45447,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=sector;sector=agriculture#co2e_Mt_AR5",
+   "agrees": true
+  },
+  {
+   "case": "D02",
+   "value": "power",
+   "engine": 63.36997641,
+   "product": 63.36998,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=sector;sector=power#co2e_Mt_AR5",
+   "agrees": true
+  },
+  {
+   "case": "D12",
+   "value": "ar6",
+   "engine": 462.73284967,
+   "product": 462.73285,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=national_total#co2e_Mt_AR6",
+   "agrees": true
+  },
+  {
+   "case": "D12",
+   "value": "ar5",
+   "engine": 469.63822389,
+   "product": 469.63822,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=national_total#co2e_Mt_AR5",
+   "agrees": true
+  },
+  {
+   "case": "D16",
+   "value": "module",
+   "engine": 63.36997641,
+   "product": 63.36998,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=sector;sector=power#co2e_Mt_AR5",
+   "agrees": true
+  },
+  {
+   "case": "D18",
+   "value": "total",
+   "engine": 469.63822389,
+   "product": 469.63822,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=national_total#co2e_Mt_AR5",
+   "agrees": true
+  },
+  {
+   "case": "D19",
+   "value": "module",
+   "engine": 22.5816456,
+   "product": 22.58165,
+   "pointer": "outputs/national_all_sectors.csv#row_kind=sector;sector=industry#co2e_Mt_AR5",
+   "agrees": true
+  },
+  {
+   "case": "D23",
+   "value": "s_total",
+   "engine": 464.50542601,
+   "product": 464.50543,
+   "pointer": "outputs/national_all_sectors_survey.csv#row_kind=national_total#co2e_Mt_AR5",
+   "agrees": true
+  }
+ ],
+ "problems": []
+}
