@@ -45,7 +45,9 @@ substitutions:
   # The bot check on POST /ask (api/pakemis_api/appcheck.py): empty = off, `report` = verify and
   # log but answer regardless, `enforce` = refuse a question without a valid Firebase App Check
   # token. _APP_CHECK_PROJECT is the project NUMBER; _APP_CHECK_APPS narrows it to named app ids.
-  _APP_CHECK: report
+  # `enforce` since 2026-10-06: a question from the site's own page was logged `ok`, the same
+  # request from a script `missing`, and no other reader had yet used the assistant to be locked out.
+  _APP_CHECK: enforce
   _APP_CHECK_PROJECT: "152782825429"
   _APP_CHECK_APPS: 1:152782825429:web:4c8987e5eb65feca33bf5c
   # Addresses/CIDRs of the proxies in front of this service whose X-Forwarded-For hop is skipped
