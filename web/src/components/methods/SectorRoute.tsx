@@ -22,11 +22,13 @@ import { MotifCredit } from "@/components/shell/MotifCredit";
 import { Widget, ICON_BUTTON, WIDGET_TITLE } from "@/components/ui/Widget";
 import { EnvelopeTable } from "@/components/ui/EnvelopeTable";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
+import { RefusalError } from "@/lib/api";
+import { Pending, type Query } from "@/components/workspace/cards/DeckCard";
 import { useEnvelopeDrawer } from "@/components/ui/EnvelopeDrawer";
 import { AXIS_LABEL, evidenceClassText, plainGlance, EVIDENCE_CLASS_TEXT } from "./evidenceClassText";
 import { includedLabel, plainGap, sectorStory, sectorText, sourceWords, statusBadge } from "./sectorText";
 import { METHODS } from "./Methods";
-import { SectorPage } from "./SectorPage";
+import { SectorPage, type SourceStatus } from "./SectorPage";
 
 type StreamCell = Cell & { source_stream_id?: string; module?: string; ipcc_code?: string; ipcc_category?: string; sub_category?: string; source_id?: string; evidence_class?: string; temporal_class?: string; spatial_class_measured?: string };
 type RuleCell = Cell & { category?: string; tier?: string; equation?: string; notes?: string; method_id?: string; uncertainty_model_id?: string };
@@ -34,6 +36,23 @@ type NeCell = Cell & { code?: string; category?: string; gas?: string; justifica
 
 const ACTIVITY_SHOWN = 12;
 const TEXT_BUTTON = "inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline";
+
+/**
+ * Where a request stands, for the reader's page. `data` first: a background refetch that fails
+ * leaves the last answer standing. A typed refusal is told apart from a request that never came
+ * back, because only the first is something the release said.
+ */
+function statusOf(q: Query): SourceStatus {
+  if (q.data) return "loaded";
+  if (q.error) return q.error instanceof RefusalError ? "refused" : "failed";
+  return "loading";
+}
+
+/** A statement that needs several answers can be made only when all are in, and has failed as soon as one has. */
+function allOf(...parts: SourceStatus[]): SourceStatus {
+  if (parts.every((s) => s === "loaded")) return "loaded";
+  return parts.find((s) => s === "failed") ?? parts.find((s) => s === "refused") ?? "loading";
+}
 
 function distinct(cells: Record<string, unknown>[], key: string): string[] {
   const out: string[] = [];
@@ -71,6 +90,17 @@ export function SectorRoute({ sector }: { sector: string }) {
   const classes = (key: "evidence_class" | "temporal_class" | "spatial_class_measured") => distinct(streams, key).sort();
   const models = distinct(ruleCells, "uncertainty_model_id");
   const number = ipccSectorNumber(codes);
+  // Every list above is [] and `cell` is undefined until its request answers - and equally when it
+  // never does. The page is told which, so it prints a finding only from an answer: the gaps need
+  // the evidence (for the sector's codes) AND the completeness list, and the badge needs the total
+  // as well. Read off `ne.length` alone, a list still loading was indistinguishable from "no gaps".
+  const status = {
+    total: statusOf(result),
+    share: statusOf(shareQ),
+    evidence: statusOf(evidence),
+    gaps: allOf(statusOf(evidence), statusOf(completeness)),
+  };
+  const graded = (key: "evidence_class" | "temporal_class" | "spatial_class_measured") => (evidence.data ? classes(key) : null);
 
   return (
     <div className="relative min-h-dvh" data-testid="sector-route">
@@ -84,6 +114,7 @@ export function SectorRoute({ sector }: { sector: string }) {
         dek={story.dek}
         step1={story.step1}
         step2={story.step2}
+        status={status}
         cell={cell}
         shareCell={shareCell}
         period={state.period}
@@ -91,9 +122,9 @@ export function SectorRoute({ sector }: { sector: string }) {
         included={distinct(streams, "ipcc_category").map(includedLabel)}
         gaps={ne.map((r) => plainGap(r.category ?? "")).filter(Boolean)}
         glance={{
-          annual: plainGlance("E", classes("evidence_class")),
-          monthly: plainGlance("TE", classes("temporal_class")),
-          location: plainGlance("S", classes("spatial_class_measured")),
+          annual: plainGlance("E", graded("evidence_class")),
+          monthly: plainGlance("TE", graded("temporal_class")),
+          location: plainGlance("S", graded("spatial_class_measured")),
         }}
       >
         <Widget
@@ -111,7 +142,11 @@ export function SectorRoute({ sector }: { sector: string }) {
           sentence={
             <span className="flex flex-wrap items-center gap-2">
               <span className="text-xl font-semibold text-fg" data-testid="sector-name">{sectorLabel(labels, sector)}</span>
-              {(result.data || result.error) && (
+              {/* The badge is a verdict, so it waits for everything it is read from: the total, the
+                  evidence and the completeness list. It used to appear on the total alone - "Not
+                  estimated" when that request failed, and "Estimated" until the gaps arrived and
+                  changed it. A request that failed shows its own error where its content goes. */}
+              {status.total === "loaded" && status.gaps === "loaded" && (
                 <span className={`pill px-2 py-0.5 text-xs ${estimated ? (ne.length ? "bg-amber/15 text-amber-soft" : "bg-accent-soft text-accent") : "bg-surface-3 text-muted"}`} data-testid="status-badge">
                   {statusBadge(estimated, ne.length)}
                 </span>
@@ -161,10 +196,11 @@ export function SectorRoute({ sector }: { sector: string }) {
                 <p className="mt-1 text-fg" data-testid="step-result">
                   <span className="num text-lg font-semibold" title={`${cell.display} ${cell.unit} (contract precision) · exact ${cell.exact}`}>{shown(cell)}</span> <span className="text-xs text-muted">{cellUnit(cell)} in {periodShort(labels, state.period)}</span>
                 </p>
-              ) : result.error ? (
-                <div className="mt-1"><RefusalCard error={result.error} compact /></div>
+              ) : result.data ? (
+                // an answer with no cell: said as that, where "Querying…" used to stay for good
+                <p className="mt-1 text-micro normal-case tracking-normal text-muted" data-testid="step-result-none">The release returned no total for this sector in the selected view.</p>
               ) : (
-                <div className="mt-1"><Loading what="the sector's total" /></div>
+                <div className="mt-1"><Pending q={result} what="the sector's total" /></div>
               )}
             </Step>
           </ol>
@@ -186,13 +222,13 @@ export function SectorRoute({ sector }: { sector: string }) {
             <div data-testid="dimensions">
               <h3 className={WIDGET_TITLE}>{METHODS.dimensions}</h3>
               <dl className="mt-2 space-y-2 text-xs">
-                <Dim label={AXIS_LABEL.E} ids={classes("evidence_class")} loading={evidence.isLoading} />
-                <Dim label={AXIS_LABEL.TE} ids={classes("temporal_class")} loading={evidence.isLoading} />
-                <Dim label={AXIS_LABEL.S} ids={classes("spatial_class_measured")} loading={evidence.isLoading} />
+                <Dim label={AXIS_LABEL.E} ids={classes("evidence_class")} status={status.evidence} />
+                <Dim label={AXIS_LABEL.TE} ids={classes("temporal_class")} status={status.evidence} />
+                <Dim label={AXIS_LABEL.S} ids={classes("spatial_class_measured")} status={status.evidence} />
                 <div>
                   <dt className="font-semibold text-fg">Uncertainty</dt>
                   <dd className="text-muted" data-testid="dim-uncertainty">
-                    {models.length ? <>The rules draw from {models.length === 1 ? "one uncertainty model" : `${models.length} uncertainty models`} ({models.map((m) => m.replace(/_/g, " ")).join("; ")}); the national interval and the draws are under Explore.</> : rules.data ? "No uncertainty model is registered for this sector." : "…"}
+                    {models.length ? <>The rules draw from {models.length === 1 ? "one uncertainty model" : `${models.length} uncertainty models`} ({models.map((m) => m.replace(/_/g, " ")).join("; ")}); the national interval and the draws are under Explore.</> : rules.data ? "No uncertainty model is registered for this sector." : <Pending q={rules} what="the method registry" />}
                   </dd>
                 </div>
               </dl>
@@ -200,7 +236,10 @@ export function SectorRoute({ sector }: { sector: string }) {
             </div>
             <div data-testid="limitations">
               <h3 className={WIDGET_TITLE}>{METHODS.limitations}</h3>
-              {completeness.data ? (
+              {/* `ne` is the completeness rows that fall under this sector's codes, and the codes come
+                  from the evidence: with only the completeness list in, it is empty for every sector
+                  and "no category is marked not estimated" was printed until the evidence caught up. */}
+              {completeness.data && evidence.data ? (
                 ne.length ? (
                   <ul className="mt-2 space-y-1 text-xs">
                     {ne.map((r, i) => (
@@ -213,10 +252,8 @@ export function SectorRoute({ sector }: { sector: string }) {
                 ) : (
                   <p className="mt-2 text-xs text-muted" data-testid="ne-none">No category of this sector is marked not estimated in the completeness ledger.</p>
                 )
-              ) : completeness.error ? (
-                <div className="mt-2"><RefusalCard error={completeness.error} compact /></div>
               ) : (
-                <div className="mt-2"><Loading what="the completeness ledger" /></div>
+                <div className="mt-2"><Pending q={{ error: completeness.error ?? evidence.error }} what="the completeness ledger" /></div>
               )}
               {labels.limitations.config_S_residential_only && sector === "residential" && <p className="mt-2 text-xs text-muted">{labels.limitations.config_S_residential_only}</p>}
               {/* industry_reported_fuel_series is deliberately NOT rendered (2026-09-13). The release
@@ -245,12 +282,13 @@ function Step({ n, title, text, children }: { n: number; title: string; text: st
   );
 }
 
-function Dim({ label, ids, loading }: { label: string; ids: string[]; loading: boolean }) {
+/** One evidence axis. "not graded" is said of an answer that holds no class, never of an answer that has not come or did not come. */
+function Dim({ label, ids, status }: { label: string; ids: string[]; status: SourceStatus }) {
   return (
     <div data-testid={`dim-${label.split(" ")[0].toLowerCase()}`}>
       <dt className="font-semibold text-fg">{label}</dt>
       <dd className="text-muted">
-        {ids.length ? ids.map((id) => <span key={id} className="block" title={EVIDENCE_CLASS_TEXT[id]?.definition}>{evidenceClassText(id)}</span>) : loading ? "…" : "not graded"}
+        {ids.length ? ids.map((id) => <span key={id} className="block" title={EVIDENCE_CLASS_TEXT[id]?.definition}>{evidenceClassText(id)}</span>) : status === "loaded" ? "not graded" : status === "loading" ? "…" : "could not be loaded"}
       </dd>
     </div>
   );

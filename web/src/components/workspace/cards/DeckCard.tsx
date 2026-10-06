@@ -66,9 +66,13 @@ export function DeckCard({ id, title, env, sentence, note, caption, open, onTogg
   );
 }
 
-/** The card body while its envelope is loading, and the release's own typed refusal once it is refused. */
+/**
+ * The card body while its envelope is loading, and the release's own typed refusal once it is
+ * refused. A request that failed without a refusal names what it was for: `what` reached the
+ * loading line only, so the error read "Could not query: …" with the object left out.
+ */
 export function Pending({ q, what }: { q: Query; what: string }) {
-  if (q.error) return <RefusalCard error={q.error} compact />;
+  if (q.error) return <RefusalCard error={q.error} what={what} compact />;
   return <Loading what={what} />;
 }
 

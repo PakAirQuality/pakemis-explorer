@@ -62,8 +62,17 @@ function plainList(ids: string[]): string[] {
   return out;
 }
 
-/** One plain sentence per axis, from the classes the release assigns to the sector's sources. */
-export function plainGlance(axis: EvidenceAxis, ids: string[]): string {
+/**
+ * One plain sentence per axis, from the classes the release assigns to the sector's sources.
+ *
+ * `ids` is null until the evidence has ARRIVED, and then this says nothing. A list that had not
+ * loaded and a list that loaded empty used to be the same argument, so a page still waiting
+ * printed "Not yet graded for this sector." - a finding about the release, stated before the
+ * release had answered, and left standing for good when the request failed. Only an answered,
+ * empty list is ungraded.
+ */
+export function plainGlance(axis: EvidenceAxis, ids: string[] | null): string | null {
+  if (ids === null) return null;
   const words = plainList(ids);
   if (!words.length) return "Not yet graded for this sector.";
   if (axis === "E") return `Based mainly on ${joinWords(words)}.`;

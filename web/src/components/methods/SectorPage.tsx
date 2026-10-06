@@ -9,6 +9,13 @@
  * carries the words. "See the sources" opens a small dialog of source names; "Technical
  * method" opens an overlay drawer with the dense technical card (the caller's children),
  * mounted only when opened.
+ *
+ * EVERY SECTION KNOWS WHETHER ITS REQUEST HAS ANSWERED. The page used to take plain values, so
+ * "not loaded yet" and "loaded, and there is nothing" were the same empty prop: a reader saw
+ * "This sector carries no estimated total" and "Not yet graded for this sector" for the moment
+ * the requests were out, and for good when one failed. A sentence about the sector is now
+ * printed only from a completed answer; a request still out shows a placeholder, and one that
+ * failed says that it failed.
  */
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -17,6 +24,7 @@ import { shown, type Cell } from "@/lib/envelope";
 import { cellUnit, periodShort, sectorLabel } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
 import { ContourMotif } from "@/components/ui/ContourMotif";
+import { Loading } from "@/components/ui/RefusalCard";
 
 const PRIMARY = "inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-bright";
 const OUTLINE = "inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-card px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface-3";
@@ -40,10 +48,23 @@ function chipIcon(label: string): ReactNode {
   return <Icon size={16} aria-hidden="true" />;
 }
 
+/**
+ * Where one of the page's requests stands. "loaded" is the only state a sentence about the sector
+ * may be read from. "refused" is also a completed answer - the release declining this view by
+ * name - and "failed" is no answer at all; neither says anything about the sector.
+ */
+export type SourceStatus = "loading" | "loaded" | "refused" | "failed";
+
 export type SectorPageProps = {
   sector: string;
   number: string;
   labels: Labels;
+  /**
+   * The four things the page waits for: the sector's total, the national partition its share is
+   * read from, the evidence behind it (the eyebrow, what is included, the glance, the sources) and
+   * its gaps (which need the evidence AND the completeness list, so they stand at the slower one).
+   */
+  status: { total: SourceStatus; share: SourceStatus; evidence: SourceStatus; gaps: SourceStatus };
   /** The authored plain intro and the first two stages. */
   dek: string;
   step1: string;
@@ -56,8 +77,8 @@ export type SectorPageProps = {
   sources: string[];
   included: string[];
   gaps: string[];
-  /** The three axes as plain sentences. */
-  glance: { annual: string; monthly: string; location: string };
+  /** The three axes as plain sentences; null until the evidence has answered. */
+  glance: { annual: string | null; monthly: string | null; location: string | null };
   /** The dense technical card, mounted only inside the Technical method drawer. */
   children?: ReactNode;
 };
@@ -67,6 +88,7 @@ export function SectorPage(p: SectorPageProps) {
   const [technical, setTechnical] = useState(false);
   const name = sectorLabel(p.labels, p.sector);
   const steps = [p.step1, p.step2, STEP_3, STEP_4];
+  const st = p.status;
   return (
     <div className="mx-auto max-w-[1200px] px-5 pb-16" data-testid="sector-page" data-sector={p.sector}>
       <nav className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb" data-testid="sector-breadcrumb">
@@ -78,28 +100,46 @@ export function SectorPage(p: SectorPageProps) {
 
       <div className="mt-5 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div>
-          {p.number && <div className="micro text-accent">IPCC sector {p.number}</div>}
+          {st.evidence === "loading" ? (
+            // the line the eyebrow will take, held so the title does not jump when it arrives
+            <div className="micro" aria-hidden="true" data-testid="sector-eyebrow-loading">&nbsp;</div>
+          ) : p.number ? (
+            <div className="micro text-accent">IPCC sector {p.number}</div>
+          ) : null}
           <h1 className="mt-2 text-4xl font-semibold tracking-tight text-fg" data-testid="sector-title">{name}</h1>
           <p className="mt-3 max-w-[30em] text-lg text-muted" data-testid="sector-dek">{p.dek}</p>
         </div>
-        <div className="relative overflow-hidden rounded-2xl bg-nav p-6" data-testid="sector-result">
+        <div className="relative overflow-hidden rounded-2xl bg-nav p-6" data-testid="sector-result" data-state={st.total === "loaded" && !p.cell ? "empty" : st.total}>
           <ContourMotif corner="bottom-right" />
-          <div className="relative">
-            {p.cell ? (
+          <div className="relative min-h-[6.5rem]">
+            {st.total === "loading" ? (
+              <Placeholder what="this sector’s total" bars={["h-10 w-44", "h-5 w-52"]} />
+            ) : st.total !== "loaded" ? (
+              <Failed testId="sector-result-failed">
+                {st.total === "refused" ? "This sector’s total is not available in the selected view." : "This sector’s total could not be loaded. Reload the page to try again."}
+              </Failed>
+            ) : p.cell ? (
               <>
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <span className="num text-4xl font-semibold tracking-tight text-fg" data-testid="sector-result-display">{shown(p.cell)}</span>
                   <span className="text-md text-muted">{cellUnit(p.cell)}</span>
                 </div>
                 <div className="mt-1.5 text-md text-muted">{periodShort(p.labels, p.period)}</div>
-                {p.shareCell?.share_pct_short && (
+                {st.share === "loading" ? (
+                  <div className="mt-1.5"><Bar className="h-5 w-52" /></div>
+                ) : st.share !== "loaded" ? (
+                  <div className="mt-1 text-sm text-muted" data-testid="sector-share-failed">
+                    {st.share === "refused" ? "Its share of the national total is not available in the selected view." : "Its share of the national total could not be loaded."}
+                  </div>
+                ) : p.shareCell?.share_pct_short ? (
                   <div className="mt-1 text-md font-medium text-fg" data-testid="sector-share">
                     <span className="num">{p.shareCell.share_pct_short} %</span> of the national total
                   </div>
-                )}
+                ) : null}
               </>
             ) : (
-              <div className="text-sm text-muted">This sector carries no estimated total in the selected view.</div>
+              // said only of a completed answer that holds no total: the one case it is true of
+              <div className="text-sm text-muted" data-testid="sector-result-none">This sector carries no estimated total in the selected view.</div>
             )}
           </div>
         </div>
@@ -128,32 +168,52 @@ export function SectorPage(p: SectorPageProps) {
       </section>
 
       <div className="mt-12 grid grid-cols-1 gap-10 border-t border-line pt-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <section data-testid="sector-included">
+        <section data-testid="sector-included" data-state={st.evidence === "loaded" && !p.included.length ? "empty" : st.evidence}>
           <h2 className="text-2xl font-semibold tracking-tight text-fg">What is included</h2>
-          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-            {p.included.map((c) => (
-              <div key={c} className="flex items-center gap-2.5 rounded-lg border border-line bg-card px-3.5 py-3 text-sm font-medium text-fg" data-testid="included-chip">
-                <span className="text-accent">{chipIcon(c)}</span> {c}
-              </div>
-            ))}
-          </div>
+          {st.evidence === "loading" ? (
+            <div className="mt-4"><Placeholder what="what this sector includes" bars={["h-11 w-full", "h-11 w-full", "h-11 w-full"]} grid /></div>
+          ) : st.evidence !== "loaded" ? (
+            <div className="mt-4"><Failed testId="sector-included-failed">What this sector includes could not be loaded. Reload the page to try again.</Failed></div>
+          ) : p.included.length ? (
+            <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+              {p.included.map((c) => (
+                <div key={c} className="flex items-center gap-2.5 rounded-lg border border-line bg-card px-3.5 py-3 text-sm font-medium text-fg" data-testid="included-chip">
+                  <span className="text-accent">{chipIcon(c)}</span> {c}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted" data-testid="sector-included-none">Nothing is listed for this sector yet.</p>
+          )}
         </section>
-        <section data-testid="sector-glance">
+        <section data-testid="sector-glance" data-state={st.evidence}>
           <h2 className="text-2xl font-semibold tracking-tight text-fg">Evidence at a glance</h2>
-          <dl className="mt-4 space-y-4">
-            <GlanceRow icon={<FileText size={15} aria-hidden="true" />} title="Annual estimates" text={p.glance.annual} />
-            <GlanceRow icon={<CalendarDays size={15} aria-hidden="true" />} title="Monthly pattern" text={p.glance.monthly} />
-            <GlanceRow icon={<MapPin size={15} aria-hidden="true" />} title="Location" text={p.glance.location} />
-          </dl>
+          {st.evidence === "loading" || st.evidence === "loaded" ? (
+            <dl className="mt-4 space-y-4">
+              <GlanceRow icon={<FileText size={15} aria-hidden="true" />} title="Annual estimates" text={p.glance.annual} />
+              <GlanceRow icon={<CalendarDays size={15} aria-hidden="true" />} title="Monthly pattern" text={p.glance.monthly} />
+              <GlanceRow icon={<MapPin size={15} aria-hidden="true" />} title="Location" text={p.glance.location} />
+            </dl>
+          ) : (
+            <div className="mt-4"><Failed testId="sector-glance-failed">The evidence behind this sector could not be loaded. Reload the page to try again.</Failed></div>
+          )}
+          {st.evidence === "loading" && <div className="mt-3"><Loading what="the evidence behind this sector" /></div>}
         </section>
       </div>
 
-      {p.gaps.length > 0 && (
+      {st.gaps === "loading" ? (
+        <div className="mt-10 rounded-lg bg-surface-3 px-5 py-4" data-testid="sector-ne-loading">
+          <Loading what="what is still missing from this sector" />
+        </div>
+      ) : st.gaps !== "loaded" ? (
+        // a list that did not arrive is not an empty list: saying nothing here would read as "no gaps"
+        <div className="mt-10"><Failed testId="sector-ne-failed">The list of what is still missing from this sector could not be loaded. Reload the page to try again.</Failed></div>
+      ) : p.gaps.length > 0 ? (
         <div className="mt-10 rounded-lg bg-surface-3 px-5 py-4" data-testid="sector-ne">
           <span className="micro text-accent">Not yet estimated</span>
           <span className="ml-3 text-sm text-muted">{p.gaps.join(" · ")}</span>
         </div>
-      )}
+      ) : null}
 
       <div className="mt-8 flex flex-wrap items-center gap-3" data-testid="sector-actions">
         <Link href={`/data?sector=${encodeURIComponent(p.sector)}`} className={PRIMARY} data-testid="view-sector-data">
@@ -170,11 +230,19 @@ export function SectorPage(p: SectorPageProps) {
       {sourcesOpen && (
         <Overlay title="The sources" onClose={() => setSourcesOpen(false)} testId="sources-dialog" narrow>
           <p className="text-sm text-muted">The public records this estimate is built from.</p>
-          <ul className="mt-3 space-y-2">
-            {p.sources.map((s) => (
-              <li key={s} className="rounded-md border border-line bg-surface-3/60 px-3 py-2 text-sm text-fg" data-testid="source-name">{s}</li>
-            ))}
-          </ul>
+          {st.evidence === "loading" ? (
+            <div className="mt-3"><Loading what="the sources" /></div>
+          ) : st.evidence !== "loaded" ? (
+            <div className="mt-3"><Failed testId="sources-failed">The sources could not be loaded. Reload the page to try again.</Failed></div>
+          ) : p.sources.length ? (
+            <ul className="mt-3 space-y-2">
+              {p.sources.map((s) => (
+                <li key={s} className="rounded-md border border-line bg-surface-3/60 px-3 py-2 text-sm text-fg" data-testid="source-name">{s}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted" data-testid="sources-none">No source is listed for this sector yet.</p>
+          )}
         </Overlay>
       )}
       {technical && (
@@ -186,15 +254,42 @@ export function SectorPage(p: SectorPageProps) {
   );
 }
 
-function GlanceRow({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+/** One axis of the glance; `text` is null while the evidence is out, and the row then holds its line with a bar instead of a sentence. */
+function GlanceRow({ icon, title, text }: { icon: ReactNode; title: string; text: string | null }) {
   return (
     <div className="flex items-start gap-3.5">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-accent">{icon}</div>
-      <div>
+      <div className="min-w-0 flex-1">
         <dt className="text-md font-semibold text-fg">{title}</dt>
-      <dd className="mt-0.5 text-sm text-muted">{text}</dd>
+        <dd className="mt-0.5 text-sm text-muted">{text ?? <Bar className="mt-1.5 h-4 w-full max-w-[18em]" />}</dd>
       </div>
     </div>
+  );
+}
+
+/** A grey bar where words will be. Decoration only: the status is said in words beside it. */
+function Bar({ className }: { className: string }) {
+  return <span className={`block rounded bg-fg/10 motion-safe:animate-pulse ${className}`} aria-hidden="true" data-testid="sector-placeholder" />;
+}
+
+/** A request still out: bars the size of what will replace them, and the wait said once in words. Never a sentence about the sector. */
+function Placeholder({ what, bars, grid = false }: { what: string; bars: string[]; grid?: boolean }) {
+  return (
+    <div>
+      <div className={grid ? "grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3" : "space-y-2"}>
+        {bars.map((b, i) => <Bar key={i} className={b} />)}
+      </div>
+      <div className="mt-2"><Loading what={what} /></div>
+    </div>
+  );
+}
+
+/** A request that did not come back, said plainly: what is missing and what to do. It is a statement about the page, not about the sector. */
+function Failed({ children, testId }: { children: ReactNode; testId: string }) {
+  return (
+    <p role="alert" className="rounded-lg border border-warn/30 bg-refusal px-3.5 py-2.5 text-sm text-warn" data-testid={testId}>
+      {children}
+    </p>
   );
 }
 

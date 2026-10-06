@@ -11,8 +11,12 @@ import "@testing-library/jest-dom/vitest";
  * the record of its cell, the URL's ?claim= as the permalink, a category off the national
  * grain refused by name and shown, a permalink reopening the record); and the audits
  * (decimals are server strings, no FY, no raw id, no avoid-list phrase).
+ *
+ * The sector page and the index are also read WHILE their requests are out and after they fail
+ * (`holdRequests`): no sentence that states a finding about a sector may be on screen without a
+ * completed answer behind it, and a completed answer with nothing in it still earns its sentence.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +28,7 @@ import MethodologyPage from "@/app/methodology/page";
 import { SectorRoute } from "@/components/methods/SectorRoute";
 import { SectorsIndex } from "@/components/methods/SectorsIndex";
 import { EvidencePage } from "@/components/methods/EvidencePage";
+import { plainGlance } from "@/components/methods/evidenceClassText";
 import { RELEASE, envelope, mockFetch, refusal } from "./fixtures";
 import { CLAIM } from "./claimFixture";
 import { avoidPhrasesIn } from "./vocabulary";
@@ -204,7 +209,287 @@ describe("/methods/sectors/[sector]", () => {
   });
 });
 
+/**
+ * The sentences that state a FINDING about a sector. Each may be printed only from an answer that
+ * supports it; none may be printed of a request still out, or of one that never came back.
+ */
+const CONCLUSIONS = [
+  "This sector carries no estimated total in the selected view.",
+  "Not yet graded for this sector.",
+  "Not yet estimated",
+  "Not estimated",
+  "No category of this sector is marked not estimated",
+  "not graded",
+  "Nothing is listed for this sector yet.",
+  "No source is listed for this sector yet.",
+];
+function expectNoConclusion(el: HTMLElement) {
+  const text = el.textContent ?? "";
+  for (const sentence of CONCLUSIONS) expect(text, `"${sentence}" is stated without an answer behind it`).not.toContain(sentence);
+}
+
+/**
+ * Hold the page's data requests at a gate the test opens or breaks. The release, the contract and
+ * the boundary boxes answer at once - the shell needs them to mount - and everything else waits,
+ * which is the moment a reader on a slow connection sees and the existing tests never looked at:
+ * they assert inside `waitFor`, so whatever was on screen before the answer went unread.
+ */
+function holdRequests() {
+  const answer = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+  let open!: () => void;
+  let fail!: (reason: Error) => void;
+  const gate = new Promise<void>((resolve, reject) => { open = resolve; fail = reject; });
+  gate.catch(() => undefined);
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    const u = String(url);
+    if (!(u.endsWith("/release") || u.endsWith("/tiles/bboxes") || u.endsWith("/openapi.json"))) await gate;
+    return answer(url, init);
+  }));
+  return { open: () => act(async () => { open(); }), fail: (message: string) => act(async () => { fail(new Error(message)); }) };
+}
+/** Let the mounted page settle on whatever it shows while its requests are out. */
+const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+describe("/methods/sectors/[sector]: nothing is concluded before an answer, or without one", () => {
+  it("WHILE THE REQUESTS ARE OUT the page holds placeholders and states no finding; agriculture then loads its estimate, its grades and its gaps", async () => {
+    const gate = holdRequests();
+    mountAt(<SectorRoute sector="agriculture" />, "/methods/sectors/agriculture");
+    const page = await screen.findByTestId("sector-page");
+    await settle();
+    // the authored layer needs no request and is already there
+    expect(within(page).getByTestId("sector-title")).toHaveTextContent("Agriculture");
+    expect(within(page).getByTestId("sector-step-1")).toHaveTextContent("Animal counts, crop areas and fertiliser use.");
+    // every section that waits says it is waiting, with a placeholder in the place of its words
+    expect(within(page).getByTestId("sector-result")).toHaveAttribute("data-state", "loading");
+    expect(within(page).getByTestId("sector-included")).toHaveAttribute("data-state", "loading");
+    expect(within(page).getByTestId("sector-glance")).toHaveAttribute("data-state", "loading");
+    expect(within(page).getByTestId("sector-ne-loading")).toBeInTheDocument();
+    // two lines for the total, three chips, three glance rows
+    expect(within(page).getAllByTestId("sector-placeholder")).toHaveLength(8);
+    expect(within(page).getAllByRole("status").length).toBeGreaterThan(2);
+    expect(within(page).queryByTestId("sector-result-display")).toBeNull();
+    expect(within(page).queryByTestId("included-chip")).toBeNull();
+    expect(within(page).queryByTestId("sector-ne")).toBeNull();
+    expectNoConclusion(page);
+    assertPublicLanguage(page);
+    // the two overlays wait as well: no empty list of sources, no verdict in the technical card
+    fireEvent.click(within(page).getByTestId("see-sources"));
+    const dialog = await screen.findByTestId("sources-dialog");
+    expect(within(dialog).queryByTestId("source-name")).toBeNull();
+    expect(within(dialog).getByRole("status")).toHaveTextContent("Querying the sources");
+    fireEvent.click(screen.getByTestId("sources-dialog-close"));
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
+    const card = await screen.findByTestId("sector-card");
+    expect(within(card).queryByTestId("status-badge")).toBeNull();
+    expect(within(card).queryByTestId("ne-none")).toBeNull();
+    expect(within(card).queryByTestId("ne-row")).toBeNull();
+    expect(within(card).getByTestId("dim-annual")).toHaveTextContent("…");
+    expect(within(card).getByTestId("dim-uncertainty")).toHaveTextContent("Querying the method registry");
+    expectNoConclusion(page);
+
+    await gate.open();
+    await waitFor(() => expect(within(page).getByTestId("sector-result-display")).toHaveTextContent("223.45"));
+    await waitFor(() => expect(within(page).getByTestId("sector-share")).toHaveTextContent("49.4 % of the national total"));
+    await waitFor(() => expect(within(page).getAllByTestId("included-chip").map((c) => c.textContent?.trim())).toEqual(["Livestock digestion", "Rice cultivation"]));
+    expect(within(page).getByTestId("sector-result")).toHaveAttribute("data-state", "loaded");
+    expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Based mainly on published national statistics and figures derived from published statistics.");
+    // the one conclusion this sector's answers DO support, and only that one
+    await waitFor(() => expect(within(page).getByTestId("sector-ne")).toHaveTextContent("Not yet estimated"));
+    expect(within(page).getByTestId("sector-ne")).toHaveTextContent("Emissions from soil-carbon mineralisation · Liming");
+    await waitFor(() => expect(within(card).getByTestId("status-badge")).toHaveTextContent("Estimated with explicit gaps"));
+    expect(within(card).getAllByTestId("ne-row")).toHaveLength(2);
+    expect(within(page).queryAllByTestId("sector-placeholder")).toHaveLength(0);
+    expect(within(page).queryByTestId("sector-ne-loading")).toBeNull();
+    for (const sentence of CONCLUSIONS.filter((c) => c !== "Not yet estimated")) expect(page.textContent).not.toContain(sentence);
+  });
+
+  it("power, held the same way: no finding while waiting, and none it has not earned after - no gaps strip, an 'Estimated' badge only once the gaps are known to be none", async () => {
+    const gate = holdRequests();
+    mountAt(<SectorRoute sector="power" />, "/methods/sectors/power");
+    const page = await screen.findByTestId("sector-page");
+    await settle();
+    expect(within(page).getByTestId("sector-result")).toHaveAttribute("data-state", "loading");
+    expect(within(page).getByTestId("sector-ne-loading")).toBeInTheDocument();
+    expect(within(page).getByTestId("sector-eyebrow-loading")).toBeInTheDocument();
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
+    const card = await screen.findByTestId("sector-card");
+    expect(within(card).queryByTestId("status-badge")).toBeNull();
+    expectNoConclusion(page);
+
+    await gate.open();
+    await waitFor(() => expect(within(page).getByTestId("sector-result-display")).toHaveTextContent("63.37"));
+    await waitFor(() => expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Based mainly on measured or metered records."));
+    await waitFor(() => expect(within(card).getByTestId("status-badge")).toHaveTextContent(/^Estimated$/));
+    expect(within(page).queryByTestId("sector-ne")).toBeNull();
+    expect(within(page).queryByTestId("sector-ne-loading")).toBeNull();
+    expect(within(page).queryByTestId("sector-eyebrow-loading")).toBeNull();
+    // on the page's eyebrow and on the technical card's title
+    expect(within(page).getAllByText("IPCC sector 1")).toHaveLength(2);
+    // the technical card's one true statement about gaps, made only now that both lists are in
+    expect(within(card).getByTestId("ne-none")).toHaveTextContent("No category of this sector is marked not estimated");
+    expect(within(page).queryAllByTestId("sector-placeholder")).toHaveLength(0);
+  });
+
+  it("the gaps wait for BOTH lists: with the completeness list in and the evidence still out, the technical card does not say there are none", async () => {
+    // the order the live page hit: completeness resolved first, the codes were still empty, and
+    // "No category of this sector is marked not estimated" stood until the evidence caught up
+    let releaseEvidence!: () => void;
+    const evidenceGate = new Promise<void>((resolve) => { releaseEvidence = resolve; });
+    const answer = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).includes("/evidence/")) await evidenceGate;
+      return answer(url, init);
+    }));
+    mountAt(<SectorRoute sector="agriculture" />, "/methods/sectors/agriculture");
+    const page = await screen.findByTestId("sector-page");
+    await waitFor(() => expect(within(page).getByTestId("sector-result-display")).toHaveTextContent("223.45"));
+    await waitFor(() => expect(fetchSpy.mock.calls.some(([u]) => String(u).includes("/query/completeness"))).toBe(true));
+    await settle();
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
+    const card = await screen.findByTestId("sector-card");
+    expect(within(card).queryByTestId("ne-none")).toBeNull();
+    expect(within(card).queryByTestId("status-badge")).toBeNull();
+    expect(within(page).getByTestId("sector-ne-loading")).toBeInTheDocument();
+    expectNoConclusion(page);
+    await act(async () => { releaseEvidence(); });
+    await waitFor(() => expect(within(card).getAllByTestId("ne-row")).toHaveLength(2));
+    expect(within(card).getByTestId("status-badge")).toHaveTextContent("Estimated with explicit gaps");
+  });
+
+  it("A REQUEST THAT FAILS is said to have failed, in plain words, and leaves no finding behind", async () => {
+    const gate = holdRequests();
+    mountAt(<SectorRoute sector="agriculture" />, "/methods/sectors/agriculture");
+    const page = await screen.findByTestId("sector-page");
+    await settle();
+    await gate.fail("Failed to fetch");
+    await waitFor(() => expect(within(page).getByTestId("sector-result-failed")).toHaveTextContent("This sector’s total could not be loaded. Reload the page to try again."));
+    expect(within(page).getByTestId("sector-result")).toHaveAttribute("data-state", "failed");
+    await waitFor(() => expect(within(page).getByTestId("sector-included-failed")).toHaveTextContent("What this sector includes could not be loaded."));
+    expect(within(page).getByTestId("sector-glance-failed")).toHaveTextContent("The evidence behind this sector could not be loaded.");
+    expect(within(page).getByTestId("sector-ne-failed")).toHaveTextContent("The list of what is still missing from this sector could not be loaded.");
+    expect(within(page).getAllByRole("alert").length).toBeGreaterThanOrEqual(4);
+    // nothing is still pretending to load, and nothing is concluded from the silence
+    expect(within(page).queryAllByTestId("sector-placeholder")).toHaveLength(0);
+    expect(within(page).queryByTestId("sector-ne-loading")).toBeNull();
+    expect(within(page).queryByTestId("sector-ne")).toBeNull();
+    expectNoConclusion(page);
+    assertPublicLanguage(page);
+    fireEvent.click(within(page).getByTestId("see-sources"));
+    expect(await screen.findByTestId("sources-failed")).toHaveTextContent("The sources could not be loaded.");
+    fireEvent.click(screen.getByTestId("sources-dialog-close"));
+    // the technical card: no verdict, each axis says it did not load, and the errors are shown by name
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
+    const card = await screen.findByTestId("sector-card");
+    expect(within(card).queryByTestId("status-badge")).toBeNull();
+    expect(within(card).queryByTestId("ne-none")).toBeNull();
+    expect(within(card).getByTestId("dim-annual")).toHaveTextContent("could not be loaded");
+    expect(within(card).getByTestId("dim-uncertainty")).toHaveTextContent("Could not query the method registry: Failed to fetch");
+    expect(within(card).getByTestId("limitations")).toHaveTextContent("Could not query the completeness ledger: Failed to fetch");
+    expect(within(card).getAllByTestId("error-card").length).toBeGreaterThanOrEqual(3);
+    expectNoConclusion(page);
+  });
+
+  it("a view the release declines by name is 'not available', which is not the same sentence as 'no estimated total'", async () => {
+    const answer = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+    const declined = mockFetch(() => refusal("grain_unavailable", "GrainUnavailable", "configuration S exists for FY2023-24 only", "config_S_residential_only"));
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      return body?.reporting_sectors?.[0] === "power" ? declined(url, init) : answer(url, init);
+    }));
+    mountAt(<SectorRoute sector="power" />, "/methods/sectors/power");
+    const page = await screen.findByTestId("sector-page");
+    await waitFor(() => expect(within(page).getByTestId("sector-result-failed")).toHaveTextContent("This sector’s total is not available in the selected view."));
+    expect(within(page).getByTestId("sector-result")).toHaveAttribute("data-state", "refused");
+    // the rest of the page answered, and reads as loaded
+    await waitFor(() => expect(within(page).getByTestId("sector-glance")).toHaveTextContent("Based mainly on measured or metered records."));
+    expectNoConclusion(page);
+    // the server's own words stay in the technical card, never on the reader's page
+    assertPublicLanguage(page);
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
+    const card = await screen.findByTestId("sector-card");
+    expect(within(within(card).getByTestId("step-4")).getByTestId("refusal-card")).toHaveTextContent("Refused: GrainUnavailable");
+    expect(within(card).queryByTestId("status-badge")).toBeNull();
+  });
+
+  it("A COMPLETED ANSWER WITH NOTHING IN IT still earns its conclusions: no total, ungraded, nothing listed, 'Not estimated'", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch((url, body) => {
+        if (url.endsWith("/release")) return RELEASE;
+        if (url.endsWith("/tiles/bboxes")) return BBOXES;
+        if (url.endsWith("/openapi.json")) return { paths: {}, components: { schemas: {} } };
+        if (url.includes("/evidence/")) return envelope([], { request_type: "get_evidence" });
+        if (url.includes("/method/")) return envelope([], { request_type: "get_method" });
+        if (url.includes("/query/completeness")) return envelope(NE, { request_type: "get_completeness" });
+        if (body?.group_by?.[0] === "reporting_sector") return envelope([{ display: "223.454", display_short: "223.45", unit_short: "Mt CO₂e", group: { reporting_sector: "agriculture" }, extra: { share_pct_short: "49.4" } }]);
+        return envelope([]);
+      }),
+    );
+    mountAt(<SectorRoute sector="residential" />, "/methods/sectors/residential");
+    const page = await screen.findByTestId("sector-page");
+    await waitFor(() => expect(within(page).getByTestId("sector-result-none")).toHaveTextContent("This sector carries no estimated total in the selected view."));
+    expect(within(page).getByTestId("sector-result")).toHaveAttribute("data-state", "empty");
+    await waitFor(() => expect(within(page).getByTestId("sector-included-none")).toHaveTextContent("Nothing is listed for this sector yet."));
+    expect(within(page).getByTestId("sector-included")).toHaveAttribute("data-state", "empty");
+    expect(within(page).getByTestId("sector-glance").textContent?.match(/Not yet graded for this sector\./g)).toHaveLength(3);
+    // both lists are in and none of the gaps falls under this sector: the strip is absent because there is nothing to put in it
+    expect(within(page).queryByTestId("sector-ne")).toBeNull();
+    expect(within(page).queryByTestId("sector-ne-loading")).toBeNull();
+    expect(within(page).queryByTestId("sector-ne-failed")).toBeNull();
+    expect(within(page).queryAllByRole("alert")).toHaveLength(0);
+    expect(within(page).queryAllByTestId("sector-placeholder")).toHaveLength(0);
+    fireEvent.click(within(page).getByTestId("see-sources"));
+    expect(await screen.findByTestId("sources-none")).toHaveTextContent("No source is listed for this sector yet.");
+    fireEvent.click(screen.getByTestId("sources-dialog-close"));
+    fireEvent.click(within(page).getByTestId("technical-toggle"));
+    const card = await screen.findByTestId("sector-card");
+    expect(within(card).getByTestId("status-badge")).toHaveTextContent("Not estimated");
+    expect(within(card).getByTestId("dim-annual")).toHaveTextContent("not graded");
+    expect(within(card).getByTestId("ne-none")).toHaveTextContent("No category of this sector is marked not estimated");
+    expect(within(card).getByTestId("step-result-none")).toHaveTextContent("The release returned no total for this sector in the selected view.");
+    expect(within(card).getByTestId("dim-uncertainty")).toHaveTextContent("No uncertainty model is registered for this sector.");
+  });
+
+  it("the glance has nothing to say of evidence that has not arrived, and says 'not yet graded' only of evidence that arrived empty", () => {
+    for (const axis of ["E", "TE", "S"] as const) {
+      expect(plainGlance(axis, null)).toBeNull();
+      expect(plainGlance(axis, [])).toBe("Not yet graded for this sector.");
+    }
+    expect(plainGlance("E", ["E1"])).toBe("Based mainly on measured or metered records.");
+  });
+});
+
 describe("/methods/sectors", () => {
+  it("a search is not answered 'nothing matches' before the categories and sources it searches have arrived, nor after they failed to", async () => {
+    const gate = holdRequests();
+    mountAt(<SectorsIndex />, "/methods/sectors");
+    // the sector names come with the release, so the tiles are there at once
+    expect((await screen.findAllByTestId("sector-tile")).map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture", "power", "residential"]);
+    fireEvent.change(screen.getByTestId("search-input"), { target: { value: "rice" } });
+    await settle();
+    expect(screen.queryAllByTestId("sector-tile")).toHaveLength(0);
+    expect(screen.getByTestId("search-loading")).toHaveTextContent("Querying the sectors’ categories and sources");
+    expect(screen.queryByText("No sector, category or source matches.")).toBeNull();
+    expect(screen.getByTestId("search")).not.toHaveTextContent(/sectors?$/);
+    await gate.open();
+    await waitFor(() => expect(screen.getAllByTestId("sector-tile").map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture"]));
+    expect(screen.queryByTestId("search-loading")).toBeNull();
+    // and a search that genuinely finds nothing, in a list that did arrive, still says so
+    fireEvent.change(screen.getByTestId("search-input"), { target: { value: "zeppelin" } });
+    await waitFor(() => expect(screen.getByTestId("search-none")).toHaveTextContent("No sector, category or source matches."));
+  });
+  it("when the categories and sources cannot be loaded the search says what it could not search", async () => {
+    const gate = holdRequests();
+    mountAt(<SectorsIndex />, "/methods/sectors");
+    await screen.findAllByTestId("sector-tile");
+    fireEvent.change(screen.getByTestId("search-input"), { target: { value: "rice" } });
+    await gate.fail("Failed to fetch");
+    await waitFor(() => expect(screen.getByTestId("search-failed")).toHaveTextContent("The categories and sources could not be loaded, so they were not searched"));
+    expect(screen.queryByText("No sector, category or source matches.")).toBeNull();
+    // a sector's own name is still found: that part of the search needed no request
+    fireEvent.change(screen.getByTestId("search-input"), { target: { value: "agri" } });
+    await waitFor(() => expect(screen.getAllByTestId("sector-tile").map((t) => t.getAttribute("data-sector"))).toEqual(["agriculture"]));
+  });
   it("the index: one linking tile per sector with its plain dek, no counts; the search narrows", async () => {
     mountAt(<SectorsIndex />, "/methods/sectors");
     const tiles = await screen.findAllByTestId("sector-tile");

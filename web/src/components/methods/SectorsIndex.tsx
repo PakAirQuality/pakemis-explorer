@@ -17,6 +17,7 @@ import { sectorStory } from "./sectorText";
 import type { Cell } from "@/lib/envelope";
 import { MapMotif } from "@/components/shell/MapMotif";
 import { MotifCredit } from "@/components/shell/MotifCredit";
+import { Loading } from "@/components/ui/RefusalCard";
 
 type StreamCell = Cell & { module?: string };
 
@@ -32,6 +33,7 @@ export function SectorsIndex() {
     }
     return m;
   }, [all.data]);
+  const searchable = !!(all.data || all.error);
   const visible = dims.sectors.filter((s) => sectorMatches(query, sectorLabel(labels, s), streamsByModule.get(s) ?? []));
   return (
     <div className="relative min-h-dvh" data-testid="sectors-index">
@@ -42,7 +44,8 @@ export function SectorsIndex() {
         <label className="card mt-6 flex items-center gap-2 px-3 py-2" data-testid="search">
           <Search size={15} className="shrink-0 text-muted" aria-hidden="true" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={METHODS.search} aria-label={METHODS.search} className="w-full bg-transparent text-sm text-fg outline-none" data-testid="search-input" />
-          {query && <span className="shrink-0 text-xs text-muted">{visible.length === 1 ? "one sector" : `${visible.length} sectors`}</span>}
+          {/* a count is a result of the search, and the search is not over until the categories and sources are in */}
+          {query && searchable && <span className="shrink-0 text-xs text-muted">{visible.length === 1 ? "one sector" : `${visible.length} sectors`}</span>}
         </label>
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="browse">
           {visible.map((s) => (
@@ -51,7 +54,16 @@ export function SectorsIndex() {
               <div className="mt-1 text-xs text-muted">{sectorStory(s).dek}</div>
             </Link>
           ))}
-          {!visible.length && <p className="col-span-full text-sm text-muted">No sector, category or source matches.</p>}
+          {/* The search reads the sector names at once and their categories and sources when the
+              evidence arrives. "Nothing matches" used to be printed in between, of a list that had
+              not been searched yet, and stayed when the request failed. */}
+          {!visible.length && (all.data ? (
+            <p className="col-span-full text-sm text-muted" data-testid="search-none">No sector, category or source matches.</p>
+          ) : all.error ? (
+            <p role="alert" className="col-span-full text-sm text-warn" data-testid="search-failed">No sector name matches. The categories and sources could not be loaded, so they were not searched; reload the page to try again.</p>
+          ) : (
+            <div className="col-span-full" data-testid="search-loading"><Loading what="the sectors’ categories and sources" /></div>
+          ))}
         </div>
       <MotifCredit />
       </main>
