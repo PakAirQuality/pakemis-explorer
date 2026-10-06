@@ -596,6 +596,16 @@ Two more were added once the site was open (2026-10), both off unless a deployme
   three are Makefile variables, and the Firebase web app's browser key is read from
   `web/.env.local` (`NEXT_PUBLIC_FIREBASE_API_KEY`); `build-public` refuses to build half of it.
 
+**The map token.** A Mapbox public token ships to every browser and cannot be hidden; what
+protects it is the URL restriction set on it in the Mapbox account. The deployed site carries a
+token of its own (`emissions-explorer`, restricted to `emissions.hawanama.org` and
+`pakemis.web.app`), kept in `web/.env.production.local`, which `next build` reads ahead of
+`web/.env.local`. Mapbox refuses that token's tile requests from any other site, from
+`localhost`, and from a script that sends no referrer — so development and
+`scripts/build-map-motif.mjs` keep an unrestricted token in `web/.env.local` that is never
+deployed. Both files are untracked. The restriction is on tiles: the style document of a
+Mapbox-owned style still answers anyone.
+
 Only `/ask` is limited. Queries, tiles and `/products/complete.zip` are bounded by the service's
 four instances and nothing finer.
 
