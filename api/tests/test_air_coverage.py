@@ -128,3 +128,25 @@ def test_a_selected_place_is_answered_for_that_place_by_sector(client):
     # the place's total is less than the nation's: it is the place, not a fallback to everything
     national = numeric(air(client, pollutants=["PM2.5"], periods=[period]))[0]["value"]
     assert numeric(air(client, pollutants=["PM2.5"], periods=[period], geography_level="adm1", geography_ids=[province]))[0]["value"] < national
+
+
+@pytest.mark.parametrize("route,body", [("air", {"pollutants": ["PM2.5"], "group_by": ["category"]}), ("emissions", {"group_by": ["sector_id"]})])
+def test_a_top_n_carries_no_share_because_it_is_not_the_whole(client, route, body):
+    """`limit` returns the first N cells of a longer list. A share "of the sum of these cells" is
+    then a share of those N alone - the assistant, asking for the five largest PM2.5 categories,
+    showed residential combustion at 82.5 % beside a page that said 81.9 %. Same figure, two
+    denominators. A truncated list carries no share; a limit the result does not reach changes nothing."""
+    period = reference(client)
+    url = "/api/v1/emissions/query/%s" % route
+    scope = dict(body, periods=[period], order_by="value desc")
+    full = client.post(url, json=scope).json()
+    n = len(full["values"])
+    assert n > 3 and "partition" in full and all(c.get("share_pct_short") for c in full["values"])
+    top = client.post(url, json=dict(scope, limit=3)).json()
+    assert len(top["values"]) == 3 and "partition" not in top
+    assert not any("share_pct_short" in c or "rank" in c for c in top["values"])
+    # the cells themselves are the same three, to the string
+    assert [c["display"] for c in top["values"]] == [c["display"] for c in full["values"][:3]]
+    # a limit above the number of cells truncated nothing: the shares are the full partition's
+    roomy = client.post(url, json=dict(scope, limit=n + 5)).json()
+    assert [c.get("share_pct_short") for c in roomy["values"]] == [c.get("share_pct_short") for c in full["values"]]

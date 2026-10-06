@@ -68,8 +68,9 @@ PARTITION_RULE = (
     "0.0 prints as <0.1 (>-0.1 when negative). It is added only to a query_emissions envelope whose request "
     "groups by exactly one key and whose cells are all exact (a numeric exact, no bounded interval, no "
     "left/right, one unit) and sum to a non-zero total, so the shares are a partition of that sum; it is not "
-    "added when the request groups by no key or by two or more, to a compare, timeseries, uncertainty or "
-    "completeness envelope, or to a download."
+    "added when the request groups by no key or by two or more, when a `limit` cut the cells to the first N "
+    "(a top-N is not a partition of the total), to a compare, timeseries, uncertainty or completeness "
+    "envelope, or to a download."
 )
 
 DERIVED = {
@@ -414,6 +415,14 @@ def _group_keys(env):
         return None
     keys = req.get("group_by") or ()
     if env.get("request_type") == "query_air" and list(keys) in (["year"], ["period_id"]):
+        return None
+    # A TOP-N IS NOT A PARTITION. With `limit` the cells are the first N of a longer list, and a
+    # share "of the sum of these cells" is then a share of those N alone: asked for the five largest
+    # PM2.5 categories, this said residential combustion was 82.5 % where the full partition says
+    # 81.9 % - the same figure with two denominators, one of them nobody chose. A limit the result
+    # did not reach truncated nothing and the cells are still the whole.
+    limit = req.get("limit") or 0
+    if isinstance(limit, int) and limit > 0 and len(env.get("values") or []) >= limit:
         return None
     return list(keys) if isinstance(keys, (list, tuple)) else None
 
