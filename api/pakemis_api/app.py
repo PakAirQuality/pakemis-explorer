@@ -44,6 +44,7 @@ from pakemis_api.claim import ClaimError, ClaimStore
 from pakemis_api.auth import AuthGateMiddleware
 from pakemis_api.middleware import HeadAsGetMiddleware, ResponseHeadersMiddleware
 from pakemis_api.presentation import PRESENTATION_ROUNDING, decorate
+from pakemis_api.unallocated import OwnUnallocated
 from pakemis_api.products import ProductCatalog, router as products_router
 from pakemis_api.receipts import ReceiptStore
 from pakemis_api.settings import API_PREFIX, LEGACY_PREFIX, Settings, import_query_core
@@ -283,6 +284,7 @@ class Service:
             log.error("release %s refused by pakemis_query: %s", settings.version, exc)
             raise RuntimeError("release %s refused: %s" % (settings.version, exc)) from exc
         self.engine = Engine(self.release, threads=1)
+        self.own_unallocated = OwnUnallocated(self.engine)
         # one DuckDB connection per process, used by one request at a time: FastAPI runs sync
         # handlers on a threadpool, and a DuckDB connection is not safe under concurrent use
         self._lock = threading.Lock()
@@ -348,6 +350,11 @@ class Service:
             context = env.get("context") or {}
             context["defaults_applied"] = list(context.get("defaults_applied") or []) + ["periods"]
             env["context"] = context
+        # the unallocated block for the periods, gases and view ASKED (unallocated.py): the core
+        # attaches the reference year's, whole, to every spatial answer. Outside the result digest,
+        # so the receipt stands; done before the downloads' early return so a receipt file for
+        # another year does not carry the reference year's block either.
+        env = self.own_unallocated.apply(env)
         if not decorate_cells:
             return env
         return self.spatial_fields.decorate(decorate(env))

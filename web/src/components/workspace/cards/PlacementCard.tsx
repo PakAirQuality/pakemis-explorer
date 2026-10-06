@@ -9,7 +9,7 @@
 import type { ReactNode } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
 import type { Deck } from "@/lib/queries";
-import { cellUnit, geographyName } from "@/lib/labels";
+import { cellUnit, geographyName, periodShort } from "@/lib/labels";
 import type { Scope } from "../cards";
 import { DeckCard, Pending } from "./DeckCard";
 
@@ -23,14 +23,19 @@ export function PlacementCard({ id, scope, deck, title, open, onToggle }: { id: 
   const unit = cellUnit(cell);
   const retained = typeof (cell as Record<string, unknown> | undefined)?.unallocated_short === "string" ? String((cell as Record<string, unknown>).unallocated_short) : derived.unallocated_total_short ?? "";
   const place = scope.kind === "province" || scope.kind === "district" ? geographyName(labels, scope.geo) : "";
+  // THE YEAR IS THE BLOCK'S OWN. The API says which periods the retained mass is for
+  // (`unallocated.periods`); for most of this card's life it was the reference year's under every
+  // year's heading, and the card had no way to know. It is said from the answer, not the selection.
+  const of = (env?.unallocated as { periods?: unknown } | undefined)?.periods;
+  const year = Array.isArray(of) && of.length === 1 && typeof of[0] === "string" ? ` in ${periodShort(labels, of[0])}` : "";
   const sentence: ReactNode =
     derived.placed_short && derived.unallocated_total_short ? (
       <>
-        Of {place}&apos;s allocated total, <b className="num whitespace-nowrap">{derived.placed_short} {unit}</b> is placed at a finer grain and <b className="num whitespace-nowrap">{derived.unallocated_total_short} {unit}</b> is retained at province level, which no district receives.
+        Of {place}&apos;s allocated total{year}, <b className="num whitespace-nowrap">{derived.placed_short} {unit}</b> is placed at a finer grain and <b className="num whitespace-nowrap">{derived.unallocated_total_short} {unit}</b> is retained at province level, which no district receives.
       </>
     ) : retained ? (
       <>
-        <b className="num whitespace-nowrap">{retained} {unit}</b> of {place}&apos;s allocated total is retained at province level and placed no finer.
+        <b className="num whitespace-nowrap">{retained} {unit}</b> of {place}&apos;s allocated total{year} is retained at province level and placed no finer.
       </>
     ) : null;
   const rows = Object.entries(derived.unallocated_by_province_short ?? {});

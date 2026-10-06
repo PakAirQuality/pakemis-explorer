@@ -264,7 +264,8 @@ def tool_result_payload(k, call_id, name, env, cap):
     if len(values) > cap:
         payload["truncated"] = "showing the first %d of %d cells; narrow the request or use limit/group_by" % (cap, len(values))
     un = env.get("unallocated") or {}
-    if un.get("by_province") or un.get("by_module"):
+    # a lineage envelope keys its block `by_module_gas`; this read `by_module`, which nothing writes
+    if un.get("by_province") or un.get("by_module_gas"):
         payload["unallocated"] = un
     return payload
 

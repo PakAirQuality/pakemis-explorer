@@ -109,7 +109,8 @@ DERIVED = {
                       "(adm1 and adm2 grain); written on unallocated.total_short and derived.unallocated_total_short",
         "sentence": (
             "unallocated_total_short is the sum of exact over unallocated.by_province (the mass retained at ADM1 and "
-            "placed no finer, within the request's configuration, months and sectors), rounded half to even to two "
+            "placed no finer, within the request's configuration, periods, months, sectors, gases and spatial view; "
+            "unallocated.periods names the periods it is for), rounded half to even to two "
             "decimal places (0.25); it is added only when every province row carries a numeric exact, and never to a download."
         ),
     },
@@ -123,8 +124,10 @@ DERIVED = {
                       "and the request carries no limit, so the cells sum to the scope's total; written on "
                       "unallocated.placed_short and derived.placed_short",
         "sentence": (
-            "placed_short is the sum of exact over the cells minus the sum of exact over unallocated.by_province, rounded "
-            "half to even to two decimal places (465.67): the mass the release places at the request's grain. It is "
+            "placed_short is the mass the release places below province level, rounded half to even to two decimal "
+            "places (465.67). At province grain the cells include the retained mass, so it is the sum of exact over "
+            "the cells minus the sum of exact over unallocated.by_province; at district grain the cells already "
+            "exclude it, so it is their sum. It is "
             "added only beside unallocated_total_short, when every cell is exact and the request has no limit, and never to a download."
         ),
     },
@@ -489,6 +492,14 @@ def _exact_cells(env):
     return out
 
 
+def _geography_level(env):
+    try:
+        req = json.loads(env.get("request") or "")
+    except (TypeError, ValueError):
+        return None
+    return req.get("geography_level") if isinstance(req, dict) else None
+
+
 def decorate_unallocated(env):
     """Adds unallocated_total_short (and placed_short when the cells are all exact) to a
     query_emissions envelope whose unallocated block lists provinces with numeric exacts: on the
@@ -505,7 +516,11 @@ def decorate_unallocated(env):
     derived = {UNALLOCATED_FIELD: round_value(unallocated_total)}
     cells = _exact_cells(env)
     if cells is not None:
-        derived[PLACED_FIELD] = round_value(sum(cells) - unallocated_total)
+        # DISTRICT CELLS ARE ALREADY NET OF IT. The retained mass has no district, so it is in no
+        # district cell: subtracting it again said 469.14 placed where the districts sum to 469.39.
+        # Province cells do include it (that is what "retained at ADM1" means), so there it comes off.
+        retained_in_cells = Decimal(0) if _geography_level(env) == "adm2" else unallocated_total
+        derived[PLACED_FIELD] = round_value(sum(cells) - retained_in_cells)
     by_province = {}
     for row, x in zip(block["by_province"], exacts):
         row[PROVINCE_UNALLOCATED_FIELD] = round_value(x)

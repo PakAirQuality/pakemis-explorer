@@ -78,7 +78,7 @@ FAMILIES = (
     {"id": "spatial", "title": "Spatial inventory",
      "description": "Provincial, district and 0.05-degree allocations: annual for every fiscal year, monthly for the reference year only. "
                     "An earlier year's geography is the reference year's pattern rescaled wherever the year has none of its own - a "
-                    "reconstruction, not an observation. With the evidence classes and the reference year's unallocated-mass table.",
+                    "reconstruction, not an observation. With the evidence classes and the reference year's unallocated-mass table (each other year's unallocated mass is the same streams' rows in the province table).",
      "tables": ("fact_adm1_year", "fact_adm2_year", "fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence")
                + tuple(c.rsplit(".", 1)[0] for c in GHG_CUBES),
      "formats": ("csv", "parquet", "nc")},

@@ -113,7 +113,7 @@ export function ToolCard({ item, highlight, pending }: { item: ToolItem; highlig
                 <p className="text-muted">No rows in this scope.</p>
               )}
               {r.truncated && <p className="mt-1 text-muted">{r.truncated}</p>}
-              {r.unallocated && <p className="mt-1 text-muted">Some mass is unallocated at this grain; the envelope&apos;s Evidence tab lists it.</p>}
+              {r.unallocated && <p className="mt-1 text-muted">Some mass is unallocated at this grain; the envelope&apos;s Sources tab lists it.</p>}
             </>
           )}
           {r.limitations_hit.length > 0 && (

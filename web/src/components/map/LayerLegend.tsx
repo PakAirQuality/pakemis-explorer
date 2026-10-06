@@ -12,7 +12,7 @@ import type { Envelope } from "@/lib/envelope";
 import type { Residual } from "@/lib/geography";
 import type { ExplorerState } from "@/lib/urlState";
 import { NO_CELL, rampColor } from "@/lib/palette";
-import { cellUnit } from "@/lib/labels";
+import { cellUnit, periodShort } from "@/lib/labels";
 import { ReceiptFooter } from "@/components/ui/ReceiptFooter";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { Legend } from "./Legend";
@@ -124,10 +124,13 @@ function CategoryRows({ layer, index }: { layer: "evidence" | "method"; index: C
 }
 
 function UnallocatedRows({ env, index, error, isLoading }: LayerLegendProps["unallocated"]) {
+  const { labels } = useExplorer();
   if (error) return <div className="px-2 pb-2 pt-1"><RefusalCard error={error} compact /></div>;
   if (!env || !index) return <div className="px-3 pb-2 pt-1">{isLoading ? <Loading what="the province rows" /> : <span className="text-muted">No province rows.</span>}</div>;
   const rows = Array.from(index.byProvince.entries()).sort((a, b) => Number(b[1].exact) - Number(a[1].exact));
-  const u = env.unallocated as { note?: string };
+  const u = env.unallocated as { note?: string; periods?: unknown };
+  // the year the block is FOR, from the block (the API names it; it was once the reference year's under every heading)
+  const year = Array.isArray(u?.periods) && u.periods.length === 1 && typeof u.periods[0] === "string" ? ` in ${periodShort(labels, u.periods[0])}` : "";
   const d = env.derived as { unallocated_total_short?: string; placed_short?: string } | undefined;
   return (
     <div className="px-3 pb-2 pt-1">
@@ -140,7 +143,7 @@ function UnallocatedRows({ env, index, error, isLoading }: LayerLegendProps["una
           </li>
         ))}
       </ul>
-      <div className="mt-1 text-muted">{cellUnit(env.values[0])} retained at province level{d?.unallocated_total_short ? <>; <span className="num text-fg">{d.unallocated_total_short}</span> in all{d.placed_short ? <>, <span className="num text-fg">{d.placed_short}</span> placed</> : null}</> : null}.</div>
+      <div className="mt-1 text-muted">{cellUnit(env.values[0])} retained at province level{year}{d?.unallocated_total_short ? <>; <span className="num text-fg">{d.unallocated_total_short}</span> in all{d.placed_short ? <>, <span className="num text-fg">{d.placed_short}</span> placed</> : null}</> : null}.</div>
       {u?.note && <div className="mt-1 text-muted">{u.note}</div>}
     </div>
   );
