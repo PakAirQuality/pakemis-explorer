@@ -177,8 +177,12 @@ export interface paths {
         put?: never;
         /**
          * Air
-         * @description The air beta: native kilotonnes of a named pollutant, never CO2e; seven sectors,
-         *     agriculture's provincial, district and 1990-2024 grains, typed refusals elsewhere.
+         * @description Air-pollutant EMISSIONS: native kilotonnes of a named pollutant for a fiscal period,
+         *     never CO2e and never a concentration. The covered-sources panel: the sectors the release
+         *     estimates, nationally and by province and district for the nine fiscal years, with grid
+         *     power kept out of every total and returned beside it as a screening pair (`completeness`).
+         *     `years` asks for agriculture's 1990-2024 calendar history instead. A request that names
+         *     neither is answered for the reference fiscal period (see `context.defaults_applied`).
          */
         post: operations["air_api_v1_emissions_query_air_post"];
         delete?: never;
