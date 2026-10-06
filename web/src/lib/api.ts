@@ -3,6 +3,7 @@
  * thrown `RefusalError` carrying the typed refusal. Request bodies are the generated OpenAPI
  * types (src/types.gen.ts), so a body that diverges from the contract fails to compile.
  */
+import { mismatch, mismatchRefusal } from "./answers";
 import { EnvelopeSchema, RefusalSchema, ReleaseSchema, type Envelope, type Refusal, type ReleaseInfo } from "./envelope";
 import { authedFetch } from "./embedAuth";
 import type { components } from "@/types.gen";
@@ -91,6 +92,20 @@ async function envelope(path: string, init?: RequestInit): Promise<Envelope> {
 }
 
 /**
+ * A query: the body is posted, and the answer is returned ONLY IF IT IS THE ANSWER TO THAT BODY
+ * (lib/answers.ts reads the envelope's own account of what it answered). A response for a different
+ * pollutant, year, place or grouping - or one read from a product this site does not show - is
+ * thrown as a typed refusal, exactly as a server refusal is, so it is never cached under the
+ * selection's key and never drawn under the selection's heading.
+ */
+async function ask(path: string, body: unknown, signal?: AbortSignal): Promise<Envelope> {
+  const env = await envelope(path, post(body, signal));
+  const wrong = mismatch(path, body, env);
+  if (wrong) throw new RefusalError(mismatchRefusal(wrong));
+  return env;
+}
+
+/**
  * `signal` is TanStack Query's, handed to every query function: when a selection changes, the
  * request for the one before it is ABORTED rather than left to finish. Nothing could be shown
  * under the wrong label before this - queries are keyed by their body, so a late answer lands in
@@ -148,12 +163,12 @@ export async function fetchClaim(selector: ClaimSelector): Promise<unknown> {
 export const api = {
   release: async (): Promise<ReleaseInfo> => ReleaseSchema.parse(await call("/release")),
   claim: fetchClaim,
-  queryEmissions: (body: QueryEmissions, signal?: AbortSignal) => envelope("/query/emissions", post(body, signal)),
-  queryAir: (body: QueryAir, signal?: AbortSignal) => envelope("/query/air", post(body, signal)),
-  compare: (body: CompareRequest, signal?: AbortSignal) => envelope("/query/compare", post(body, signal)),
-  timeseries: (body: TimeseriesRequest, signal?: AbortSignal) => envelope("/query/timeseries", post(body, signal)),
-  uncertainty: (body: UncertaintyRequest, signal?: AbortSignal) => envelope("/query/uncertainty", post(body, signal)),
-  completeness: (body: CompletenessRequest, signal?: AbortSignal) => envelope("/query/completeness", post(body, signal)),
+  queryEmissions: (body: QueryEmissions, signal?: AbortSignal) => ask("/query/emissions", body, signal),
+  queryAir: (body: QueryAir, signal?: AbortSignal) => ask("/query/air", body, signal),
+  compare: (body: CompareRequest, signal?: AbortSignal) => ask("/query/compare", body, signal),
+  timeseries: (body: TimeseriesRequest, signal?: AbortSignal) => ask("/query/timeseries", body, signal),
+  uncertainty: (body: UncertaintyRequest, signal?: AbortSignal) => ask("/query/uncertainty", body, signal),
+  completeness: (body: CompletenessRequest, signal?: AbortSignal) => ask("/query/completeness", body, signal),
   evidence: (streamId: string, params: { module?: string; category?: string } = {}) =>
     envelope(`/evidence/${encodeURIComponent(streamId || "_")}?${new URLSearchParams(params as Record<string, string>)}`),
   method: (methodOrCategory: string) => envelope(`/method/${encodeURIComponent(methodOrCategory)}`),
@@ -161,7 +176,7 @@ export const api = {
     envelope(`/transfers?${new URLSearchParams({ ledger_id: ledgerId, configuration_id: configurationId })}`),
   lineage: (shapeOrProvince: string, params: { month?: string; gas?: string; configuration_id?: string } = {}) =>
     envelope(`/spatial/lineage/${encodeURIComponent(shapeOrProvince)}?${new URLSearchParams(params as Record<string, string>)}`),
-  gridCell: (body: GridCellRequest) => envelope("/spatial/grid", post(body)),
+  gridCell: (body: GridCellRequest) => ask("/spatial/grid", body),
   receipt: (receipt: string) => envelope(`/receipt/${receipt}`),
   downloadCsvUrl: (receipt: string) => `${API_BASE}/download/${receipt}.csv`,
   downloadReceiptUrl: (receipt: string) => `${API_BASE}/download/${receipt}.receipt.json`,

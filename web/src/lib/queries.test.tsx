@@ -6,7 +6,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/components/Providers";
-import { envelope } from "@/__tests__/fixtures";
+import { echoing, envelope } from "@/__tests__/fixtures";
+import { RefusalError } from "./api";
 import { useAir } from "./queries";
 
 type Pending = { body: { periods?: string[] }; signal: AbortSignal | null; resolve: (payload: unknown) => void };
@@ -14,11 +15,13 @@ type Pending = { body: { periods?: string[] }; signal: AbortSignal | null; resol
 function deferredFetch() {
   const pending: Pending[] = [];
   const fetchSpy = vi.fn(
-    (_url: string, init?: RequestInit) =>
+    (url: string, init?: RequestInit) =>
       new Promise<Response>((resolve, reject) => {
         const signal = (init?.signal as AbortSignal | undefined) ?? null;
         signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
-        pending.push({ body: JSON.parse(String(init?.body)), signal, resolve: (payload) => resolve({ ok: true, status: 200, statusText: "OK", json: async () => payload } as Response) });
+        const body = JSON.parse(String(init?.body));
+        // like the API, an answer says which request it is for - unless the test wrote its own echo
+        pending.push({ body, signal, resolve: (payload) => resolve({ ok: true, status: 200, statusText: "OK", json: async () => echoing(String(url), body, payload) } as Response) });
       }),
   );
   vi.stubGlobal("fetch", fetchSpy);
@@ -68,5 +71,36 @@ describe("out-of-order responses", () => {
     await waitFor(() => expect(pending).toHaveLength(3));
     await act(async () => pending[2].resolve(cell("600.10")));
     await waitFor(() => expect(result.current.data?.values[0].display).toBe("600.10"));
+  });
+});
+
+/**
+ * The keys above keep a late answer out of the wrong cache entry. This is the other half: an answer
+ * that arrives ON TIME, for the right request as far as the network is concerned, and is not the
+ * answer to it. It becomes an error, with no data, so there is nothing to print under the heading.
+ */
+describe("an answer that is not the answer to what was asked", () => {
+  const asked = { pollutants: ["PM2.5"], periods: ["FY2020-21"] };
+  const answering = (request: Record<string, unknown>, overrides: Record<string, unknown> = {}) =>
+    envelope([{ display: "821.18", unit: "kt PM2.5" }], { request_type: "query_air", request: JSON.stringify({ _type: "QueryAir", ...request }), ...overrides });
+
+  it("another year's answer is refused, not shown under this year", async () => {
+    const pending = deferredFetch();
+    const { result } = renderHook(() => useAir(asked), { wrapper: Providers });
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await act(async () => pending[0].resolve(answering({ pollutants: ["PM2.5"], periods: ["FY2023-24"] })));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toBeInstanceOf(RefusalError);
+    expect((result.current.error as RefusalError).refusal).toMatchObject({ error: "response_mismatch", detail: { path: "periods", asked: ["FY2020-21"], answered: ["FY2023-24"] } });
+  });
+  it("an answer read from the single-year air layer is refused whatever it echoes", async () => {
+    const pending = deferredFetch();
+    const { result } = renderHook(() => useAir(asked), { wrapper: Providers });
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await act(async () => pending[0].resolve(answering(asked, { context: { ...envelope([]).context, periods: ["FY2020-21"] }, calculation: { kind: "sum", table: "fact_air_annual" } })));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+    expect((result.current.error as RefusalError).refusal.detail).toMatchObject({ path: "calculation.table", answered: "fact_air_annual" });
   });
 });

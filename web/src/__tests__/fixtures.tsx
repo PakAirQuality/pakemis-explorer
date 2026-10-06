@@ -1,5 +1,6 @@
 /** Shared test fixtures: a /release summary and an envelope factory. Displays are arbitrary strings; nothing derives them. */
 import { vi } from "vitest";
+import { ROUTE_TYPES } from "@/lib/answers";
 
 export const RELEASE = {
   api_version: "0.1.0",
@@ -151,10 +152,26 @@ export type MockBody = { group_by?: string[]; configuration_id?: string; periods
 export function refusal(error: string, error_class: string, message: string, limitation_id: string | null = null) {
   return { __status: 422, body: { error, error_class, message, limitation_id, detail: {} } };
 }
+/**
+ * What the real API does that a canned envelope does not: say which request it answers. The client
+ * shows a response only when its `request` echoes the body posted and its `context.periods` are the
+ * periods asked for (lib/answers.ts), so a fixture built with `envelope()` - whose request is "{}" -
+ * is stamped here with the body it is being returned for. A payload that sets its own `request` is
+ * left exactly as written: that is how a test hands back the WRONG answer on purpose.
+ */
+export function echoing(url: string, body: Record<string, unknown> | undefined, payload: unknown): unknown {
+  const type = Object.entries(ROUTE_TYPES).find(([route]) => url.endsWith(route))?.[1];
+  if (!type || !body || !payload || typeof payload !== "object") return payload;
+  const p = payload as { request?: unknown; context?: Record<string, unknown> };
+  if (p.request !== "{}" || !p.context) return payload;
+  const context = Array.isArray(body.periods) && p.context.periods === undefined ? { ...p.context, periods: body.periods } : p.context;
+  return { ...p, request: JSON.stringify({ _type: type, ...body }), context };
+}
+
 export function mockFetch(route: (url: string, body: MockBody | undefined) => unknown) {
   return vi.fn(async (url: string, init?: RequestInit) => {
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
-    const payload = route(String(url), body as MockBody | undefined);
+    const payload = echoing(String(url), body, route(String(url), body as MockBody | undefined));
     if (payload && typeof payload === "object" && "__status" in payload) {
       const p = payload as { __status: number; body: unknown };
       return { ok: false, status: p.__status, statusText: "Unprocessable Entity", json: async () => p.body } as Response;
