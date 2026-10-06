@@ -6,7 +6,8 @@
  * grouped bars for the two estimates — every axis label from the envelope's `axis.ticks_short`
  * and every printed number a server string (`display_short`, `share_pct_short`). Table is the
  * EnvelopeTable with its Share column and full-precision toggle. Map is the ExplorerMap in its
- * compact variant for a province or district breakdown, and the typed reason otherwise.
+ * compact variant for a province or district breakdown - greenhouse gases or a pollutant, the
+ * map reading the canvas's own request rather than one of its own - and the typed reason otherwise.
  *
  * A map that cannot be drawn (no WebGL in this browser, or a context the browser took away) is
  * never a blank canvas: the canvas says so in the workspace's own sentence and shows the CHART
@@ -29,7 +30,7 @@ import { StackedBar, type Segment } from "@/components/charts/StackedBar";
 import { GroupedBars, type GroupedRow } from "@/components/charts/GroupedBars";
 import { EnvelopeTable } from "@/components/ui/EnvelopeTable";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
-import { ExplorerMap, type ExplorerMapProps, type MapStatus } from "@/components/map/ExplorerMap";
+import { ExplorerMap, type ExplorerMapProps, type MapRequest, type MapStatus } from "@/components/map/ExplorerMap";
 import { MAP_FAILURE } from "@/components/workspace/copy";
 import type { Action, ExploreContext, ExploreState, QueryPlan } from "@/lib/explore/query";
 import { EXPLORE } from "./copy";
@@ -58,12 +59,29 @@ export function sidesOf(cell: Cell): { left: Side; right: Side } | null {
   return left && right ? { left, right } : null;
 }
 
-const AIR_MAP_REFUSAL = { error: "representation_unavailable", error_class: "RepresentationUnavailable", message: "This page\u2019s map draws the CO\u2082e layers. Chart and Table carry the pollutant here; the Explore map shows it by province and district.", limitation_id: null, detail: { available_at: ["chart", "table"] } };
 // A SELECTION THE RELEASE HOLDS NOTHING FOR IS SAID TO BE EMPTY. An empty envelope used to fall
 // through to an empty chart under the place's name, which reads as "zero"; and the alternative -
 // quietly showing the nation or every place instead - is the bug this page had under a pollutant.
 const NO_ROWS = { error: "no_rows", error_class: "NoRows", message: "The release holds no rows for this selection. Nothing else is shown in its place: not the national figure, and not other places.", limitation_id: null, detail: {} };
 const MAP_REFUSAL = { error: EXPLORE.mapUnavailable.error, error_class: EXPLORE.mapUnavailable.error_class, message: EXPLORE.mapUnavailable.message, limitation_id: null, detail: { available_at: [...EXPLORE.mapUnavailable.available_at] } };
+
+/**
+ * The plan as the map can draw it: a breakdown by place - every province, or every district - of
+ * greenhouse gases or of one pollutant, with the level its body asks at. Anything else (one
+ * place's sectors, a series, the two estimates) has no polygon per cell, and the canvas says so.
+ *
+ * WHAT COMES BACK IS THE PLAN'S OWN BODY, and the map asks exactly that (MapRequest). The map
+ * used to build a body of its own for the same places, without the plan's `order_by`: a second
+ * request, a second receipt and a second cell order under one heading. The level is read off the
+ * body for the same reason - the request says what was asked, and nothing else is consulted.
+ */
+function mapRequestOf(plan: ActivePlan): { request: MapRequest; level: Level } | null {
+  if (plan.kind !== "emissions" && plan.kind !== "air") return null;
+  if (plan.groupBy !== "province" && plan.groupBy !== "shape_id") return null;
+  const level: Level = plan.groupBy === "shape_id" ? "adm2" : "adm1";
+  if (plan.body.geography_level !== level) return null;
+  return { request: plan.kind === "air" ? { kind: "air", body: plan.body } : { kind: "emissions", body: plan.body }, level };
+}
 
 export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, dispatch }: CanvasProps) {
   if (plan.kind === "refused") return <RefusalCard refusal={plan.refusal} />;
@@ -79,18 +97,20 @@ export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, 
     return <Figure state={state} plan={active} ctx={ctx} env={env} labels={labels} dims={dims} dispatch={dispatch} />;
   };
   if (state.rep === "map") {
-    // the map tiles carry the CO2e layers; painting a pollutant needs its own layer, which the
-    // beta does not ship yet - a typed note, never a silent CO2e map under an air title
-    if (active.kind === "air") return <RefusalCard refusal={AIR_MAP_REFUSAL} compact />;
-    const placeKey = active.kind === "emissions" && (active.groupBy === "province" || active.groupBy === "shape_id");
-    if (!placeKey) return <RefusalCard refusal={MAP_REFUSAL} compact />;
-    const level: Level = state.level === "adm2" ? "adm2" : "adm1";
+    // A pollutant is drawn as greenhouse gases are: the polygons are the same and the map shades
+    // whatever envelope it is handed. (This branch used to refuse every pollutant with a note
+    // sending the reader to another page, from when the page had no air request to hand over.)
+    const mapped = mapRequestOf(active);
+    if (!mapped) return <RefusalCard refusal={MAP_REFUSAL} compact />;
+    const { request, level } = mapped;
     const onPick = (lvl: Level, id: string) => {
       if (lvl === "adm1") dispatch({ control: "geography", value: "province", id });
       else if (lvl === "adm2") dispatch({ control: "geography", value: "district", id });
     };
     return (
-      <MapOrFallback override={{ level, geo: null, cell: null, month: null, sector: state.sector, gas: state.gas, period: state.period, config: state.config, gwp: state.gwp, view: state.view }} onPick={onPick} dispatch={dispatch}>
+      // `pol` is the page's RESOLVED pollutant, said outright: the URL's own value is not checked
+      // against the species the release carries, and the map must not take its metric from it
+      <MapOrFallback override={{ level, geo: null, cell: null, month: null, sector: state.sector, gas: state.gas, pol: state.pollutant, period: state.period, config: state.config, gwp: state.gwp, view: state.view }} request={request} onPick={onPick} dispatch={dispatch}>
         {answer("chart")}
       </MapOrFallback>
     );
@@ -106,7 +126,7 @@ const FALLBACK_ACTION = "inline-flex items-center rounded-md px-3 py-1.5 text-sm
  * is down: a lost context can only return to the instance that lost it, and when it does the
  * frame simply comes back.
  */
-function MapOrFallback({ override, onPick, dispatch, children }: { override: ExplorerMapProps["override"]; onPick: ExplorerMapProps["onPick"]; dispatch: (a: Action) => void; children: ReactNode }) {
+function MapOrFallback({ override, request, onPick, dispatch, children }: { override: ExplorerMapProps["override"]; request: ExplorerMapProps["request"]; onPick: ExplorerMapProps["onPick"]; dispatch: (a: Action) => void; children: ReactNode }) {
   const [status, setStatus] = useState<MapStatus>("loading");
   const down = status === "failed" || status === "lost";
   return (
@@ -124,7 +144,7 @@ function MapOrFallback({ override, onPick, dispatch, children }: { override: Exp
         </div>
       )}
       <div className={`map-frame relative h-[560px] w-full overflow-hidden${down ? " hidden" : ""}`} data-testid="canvas-map" aria-hidden={down ? true : undefined}>
-        <ExplorerMap variant="briefing" override={override} onPick={onPick} onStatus={setStatus} />
+        <ExplorerMap variant="briefing" override={override} request={request} onPick={onPick} onStatus={setStatus} />
       </div>
     </>
   );

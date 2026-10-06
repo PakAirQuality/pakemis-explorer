@@ -19,7 +19,9 @@
  * padding and reads `override` merged over the URL state (a hovered sector, the Provinces |
  * Districts toggle) so the briefing can steer the map without writing the URL; `onPick`
  * replaces the click's default (writing `geo` / `cell`). The shared "Other" cell keeps its
- * dotted outline; the hover tip's line explains it.
+ * dotted outline; the hover tip's line explains it. A page that has already planned its own
+ * query for the same places hands it in as `request`, and the map then asks nothing of its own:
+ * it reads that request under the page's query key (see MapRequest).
  *
  * `variant="workspace"` (components/workspace/Workspace.tsx) is the bare canvas: no chrome of
  * its own — the nav capsule, the deck, the filter panel, the legend capsule, the map buttons
@@ -55,7 +57,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Layers, Locate } from "lucide-react";
 import type { Map as MBMap } from "mapbox-gl";
 import type { ExplorerState, Level } from "@/lib/urlState";
-import { absoluteApiBase, api } from "@/lib/api";
+import { absoluteApiBase, api, type QueryAir, type QueryEmissions } from "@/lib/api";
+import { useAir, useEmissions } from "@/lib/queries";
 import { adm1Body, airMapBody, mapBody, parseCell } from "@/lib/requests";
 import { contextPill, gasLabel, monthLabel, periodShort, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
 import { metricOf } from "@/lib/selection";
@@ -128,9 +131,31 @@ const WEBGL_ERROR = /failed to initialize webgl/i;
 /** The chrome a page puts over the map, in CSS pixels: the camera keeps the country inside it. */
 export type MapPadding = { top: number; right: number; bottom: number; left: number };
 
+/**
+ * ONE SELECTION IS ONE REQUEST. A page that draws the same places as a chart or a table has
+ * already planned a query for them (lib/explore/query.ts), and the map used to build a second
+ * body of its own for the same thing: `adm1Body` / `airMapBody` carry no `order_by` and the page's
+ * plan does, which is a different canonical request - so the chart and the map under one heading
+ * held two receipts and two cell orders for what the reader sees as one result. A handed request
+ * is asked through the very hook the page asks it through (`useAir` / `useEmissions`: the same
+ * query key, the same options), so the cache answers both from one network request and one
+ * envelope, and the map's cells are the chart's cells.
+ *
+ * The body must group by place - `province` at `adm1`, `shape_id` at `adm2` - because the map
+ * indexes the envelope by the key of its level; the level it paints, indexes and hovers at is
+ * taken from the body's `geography_level`, never from a state that could disagree with it. The
+ * rest of the selection (pollutant, period, sector) still arrives as `override`, for the words
+ * and for which layers apply. The envelope itself is never handed in: a page may have filtered
+ * its copy (two provinces out of five), and a filtered envelope would grey out every other
+ * province under an explanation - no cell - that is not true of them.
+ */
+export type MapRequest = { kind: "emissions"; body: QueryEmissions } | { kind: "air"; body: QueryAir };
+
 export type ExplorerMapProps = {
   variant?: "console" | "briefing" | "workspace";
   override?: Partial<ExplorerState>;
+  /** The page's own query for the places on the map, asked once for both (MapRequest); absent, the map builds its own from the state. */
+  request?: MapRequest;
   onPick?: (level: Level, id: string) => void;
   /** The visible canvas's insets; applied to the initial framing, fitAll and every flyTo. */
   padding?: MapPadding;
@@ -173,9 +198,15 @@ export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell
   return k ? `Exception: ${k.label}` : "no known exception here";
 }
 
-export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap, onStatus }: ExplorerMapProps = {}) {
+export function ExplorerMap({ variant = "console", override, request, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap, onStatus }: ExplorerMapProps = {}) {
   const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
-  const state = useMemo(() => (override ? { ...urlState, ...override } : urlState), [urlState, override]);
+  // a handed request names its own grain: the polygons shown and the key its cells are indexed by follow the body
+  const asked = request?.body.geography_level;
+  const handedLevel: Level | null = asked === "adm1" ? "adm1" : asked === "adm2" ? "adm2" : null;
+  const state = useMemo(() => {
+    const merged = override ? { ...urlState, ...override } : urlState;
+    return handedLevel && merged.level !== handedLevel ? { ...merged, level: handedLevel } : merged;
+  }, [urlState, override, handedLevel]);
   const full = variant === "console";
   const briefing = variant === "briefing";
   // the workspace paints the URL's layer as the console does (Map settings holds its switch);
@@ -215,12 +246,18 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
 
   const airBody = useMemo(() => airMapBody(state), [state]);
   const body = useMemo(() => (state.pol ? null : mapBody(state)), [state]);
-  const mapQ = useQuery({
+  const ownQ = useQuery({
     queryKey: ["map", state.pol ? airBody : body],
     queryFn: ({ signal }) => (state.pol ? api.queryAir(airBody!, signal) : api.queryEmissions(body!, signal)),
-    enabled: state.pol ? !!airBody : !!body,
+    enabled: !request && (state.pol ? !!airBody : !!body),
     retry: false,
   });
+  // The page's request, through the page's own hooks (MapRequest): whichever of the two is not
+  // the handed kind stays disabled, and with a request in hand the map's own query above asks
+  // nothing. Not a copy of the hooks' key and options here - a copy is what drifts.
+  const handedAir = useAir(request?.kind === "air" ? request.body : null, request?.kind === "air");
+  const handedEmissions = useEmissions(request?.kind === "emissions" ? request.body : null, request?.kind === "emissions");
+  const mapQ = !request ? ownQ : request.kind === "air" ? handedAir : handedEmissions;
   // Map settings' FIXED scale: the level's all-sector, all-gas envelope for the reference year
   // under the same configuration, fetched once and reused, so choosing a sector or a gas moves
   // the colours within a domain that does not move. Its key is the map's own when the scope is

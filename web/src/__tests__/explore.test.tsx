@@ -7,7 +7,9 @@ import "@testing-library/jest-dom/vitest";
  * provinces → two bars out of the ADM1-by-province envelope, a filter not arithmetic), the two
  * estimates (Compare → compare_emissions, grouped bars with the difference cells'
  * display_short) — by controls alone; the representation switch shows the same envelope as a
- * chart, a table or a map (the typed reason off a place breakdown); exactly four actions
+ * chart, a table or a map (the typed reason off a place breakdown; under a pollutant as under
+ * greenhouse gases, the map handed the canvas's own request so one selection is one query);
+ * exactly four actions
  * under the canvas; and the four audits (every decimal a server string, ticks included; no FY;
  * no raw id; no avoid-list phrase).
  */
@@ -20,6 +22,7 @@ import Page from "@/app/data/page";
 import { resolveState } from "@/lib/urlState";
 import { buildQuery, resolveExplore, toUrl, transition, type ExploreContext, type ExploreState, type LocalKeys } from "@/lib/explore/query";
 import { MAP_FAILURE } from "@/components/workspace/copy";
+import { EXPLORE } from "@/components/explore/copy";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 import { avoidPhrasesIn } from "./vocabulary";
 
@@ -27,13 +30,15 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({ usePathname: () => "/data", useRouter: () => ({ push, replace: vi.fn() }) }));
 /**
  * The map stub can be told what status to report as it mounts (null: a map still loading, as
- * before) and keeps the live instance's `onStatus` for what the browser does afterwards.
+ * before) and keeps the live instance's `onStatus` for what the browser does afterwards. It
+ * shows what it was handed: the override's level, sector, pollutant and period, and the request
+ * (kind and body, as JSON) it is to ask instead of building one of its own.
  */
 const mapStub = vi.hoisted(() => ({ status: null as null | "ready" | "failed" | "lost", report: null as null | ((s: "loading" | "ready" | "failed" | "lost") => void) }));
 vi.mock("@/components/map/ExplorerMap", async () => {
   const { useEffect } = await import("react");
   return {
-    ExplorerMap: ({ override, onStatus }: { override?: { level?: string; sector?: string | null }; onStatus?: (s: "loading" | "ready" | "failed" | "lost") => void }) => {
+    ExplorerMap: ({ override, request, onStatus }: { override?: { level?: string; sector?: string | null; pol?: string | null; period?: string }; request?: { kind: string; body: unknown }; onStatus?: (s: "loading" | "ready" | "failed" | "lost") => void }) => {
       useEffect(() => {
         mapStub.report = (s) => onStatus?.(s);
         if (mapStub.status) onStatus?.(mapStub.status);
@@ -42,7 +47,7 @@ vi.mock("@/components/map/ExplorerMap", async () => {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
-      return <div data-testid="map-stub" data-level={override?.level ?? ""} data-sector={override?.sector ?? ""} />;
+      return <div data-testid="map-stub" data-level={override?.level ?? ""} data-sector={override?.sector ?? ""} data-pol={override?.pol ?? ""} data-period={override?.period ?? ""} data-request={request ? JSON.stringify(request) : ""} />;
     },
   };
 });
@@ -115,6 +120,8 @@ const COMPARE = [
 ];
 const AXIS_DIFF = { ticks_short: ["-20", "-10", "0", "10", "20"], min_short: "-13.58", max_short: "12.46", unit_short: "Mt CO₂e" };
 const PARTITION = { of: "the sum of these cells", n: 3, share_field: "share_pct_short", rule: "100 x exact / the sum of exact" };
+/** The one district shape the release fixture names. */
+const LAHORE = "60131773B12131197496886";
 const NE = [
   { display: "NE", unit: "notation_key", value: undefined, extra: { code: "3.D", category: "Agricultural soils - N from SOC mineralisation", gas: "N2O", notation_key: "NE" } },
   { display: "NE", unit: "notation_key", value: undefined, extra: { code: "2.A.2", category: "Lime production", gas: "CO2", notation_key: "NE" } },
@@ -142,6 +149,7 @@ beforeEach(() => {
         if (k === "period_id") return envelope([{ display: "600.100", display_short: "600.10", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { period_id: "FY2020-21" } }, { display: "771.873", display_short: "771.87", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { period_id: "FY2023-24" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
+        if (k === "shape_id") return envelope([{ display: "41.207", display_short: "41.21", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { shape_id: LAHORE }, extra: { share_pct_short: "5.3" } }], { request_type: "query_air", axis: AXIS_250 });
         return envelope([{ display: "631.915", display_short: "631.92", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "residential" }, extra: { share_pct_short: "75.7" } }, { display: "63.851", display_short: "63.85", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "waste" }, extra: { share_pct_short: "7.6" } }], { request_type: "query_air", axis: AXIS_250 });
       }
       const key = body?.group_by?.[0];
@@ -171,6 +179,8 @@ function mount(search = "", onUrlUpdate?: OnUrlUpdateFunction) {
 
 const calls = (route: string) => fetchSpy.mock.calls.filter(([u]) => String(u).includes(route)).map(([, b]) => b as Record<string, unknown>);
 const lastCall = (route: string) => calls(route).at(-1);
+/** The request the map stub was handed: the kind and the body, as the canvas passed them. */
+const handed = () => JSON.parse(screen.getByTestId("map-stub").getAttribute("data-request") || "null") as { kind: string; body: Record<string, unknown> } | null;
 
 function serverDecimals(): Set<string> {
   const out = new Set<string>();
@@ -259,6 +269,42 @@ describe("lib/explore/query: one state, one contract call", () => {
     expect(transition(punjab, { control: "period", value: "range" }, CTX).by).not.toBe("period");
     const refused = buildQuery({ ...punjab, category: "Enteric fermentation", sector: "agriculture" }, CTX);
     expect(refused).toMatchObject({ kind: "refused", refusal: { error_class: "GrainUnavailable", detail: { available_at: ["national"] } } });
+  });
+  it("Map under a pollutant moves to the places as it does under greenhouse gases: every province, every district, the sector and the year kept", () => {
+    const air = (s: ExploreState = start()) => transition(s, { control: "pollutant", value: "PM2.5" }, CTX);
+    const PLACES = { pollutants: ["PM2.5"], periods: ["FY2023-24"], geography_level: "adm1", group_by: ["province"], order_by: "value desc" };
+    // from the national sector breakdown: every province, and the URL says so
+    const national = air();
+    expect(buildQuery(national, CTX)).toMatchObject({ kind: "air", groupBy: "sector_id" });
+    const m = transition(national, { control: "rep", value: "map" }, CTX);
+    expect([m.rep, m.by, m.level, m.allPlaces, m.geos, m.pollutant]).toEqual(["map", "place", "adm1", true, [], "PM2.5"]);
+    expect(buildQuery(m, CTX)).toEqual({ kind: "air", body: PLACES, groupBy: "province", chart: "bars" });
+    expect(toUrl(m)).toMatchObject({ shared: { pol: "PM2.5", level: "adm1", geo: null }, local: { rep: "map", geos: "all", by: "place" } });
+    // the sector filter and another year ride along
+    const scoped = transition(transition(national, { control: "sector", value: "residential" }, CTX), { control: "period", value: { period: "FY2020-21" } }, CTX);
+    expect(buildQuery(transition(scoped, { control: "rep", value: "map" }, CTX), CTX)).toEqual({ kind: "air", body: { ...PLACES, periods: ["FY2020-21"], sectors: ["residential"] }, groupBy: "province", chart: "bars" });
+    // one province's sectors have no polygon per cell: the map carries the scope to every province
+    const punjab = transition(national, { control: "geography", value: "province", id: "Punjab" }, CTX);
+    expect(buildQuery(punjab, CTX)).toMatchObject({ kind: "air", groupBy: "sector_id", body: { geography_ids: ["Punjab"] } });
+    const fromPunjab = transition(punjab, { control: "rep", value: "map" }, CTX);
+    expect(buildQuery(fromPunjab, CTX)).toEqual({ kind: "air", body: PLACES, groupBy: "province", chart: "bars" });
+    // a district's sectors move to every district, at district grain
+    const lahore = transition(national, { control: "geography", value: "district", id: LAHORE }, CTX);
+    const fromLahore = transition(lahore, { control: "rep", value: "map" }, CTX);
+    expect([fromLahore.rep, fromLahore.level, fromLahore.allPlaces]).toEqual(["map", "adm2", true]);
+    expect(buildQuery(fromLahore, CTX)).toEqual({ kind: "air", body: { ...PLACES, geography_level: "adm2", group_by: ["shape_id"] }, groupBy: "shape_id", chart: "bars" });
+    // the nine-year series is not a map either: the year in hand is kept and the places are asked for it
+    const series = transition(national, { control: "period", value: "range" }, CTX);
+    expect(buildQuery(series, CTX)).toMatchObject({ kind: "air", groupBy: "period_id" });
+    expect(buildQuery(transition(series, { control: "rep", value: "map" }, CTX), CTX)).toEqual({ kind: "air", body: PLACES, groupBy: "province", chart: "bars" });
+    // a place breakdown already on screen is left exactly as it is - two chosen provinces stay two
+    const two = transition(punjab, { control: "geography", value: "second", id: "Sindh" }, CTX);
+    const twoMap = transition(two, { control: "rep", value: "map" }, CTX);
+    expect({ ...twoMap, rep: two.rep }).toEqual(two);
+    expect(buildQuery(twoMap, CTX)).toEqual({ kind: "air", body: PLACES, groupBy: "province", chart: "bars", filterTo: { key: "province", ids: ["Punjab", "Sindh"] } });
+    // and leaving the map changes the representation alone
+    const back = transition(m, { control: "rep", value: "chart" }, CTX);
+    expect({ ...back, rep: m.rep }).toEqual(m);
   });
 });
 
@@ -509,13 +555,121 @@ describe("/data (the Grapher)", () => {
     await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("600.10 kt PM₂.₅ in 2020–21, 771.87 kt PM₂.₅ in 2023–24"));
     fireEvent.change(screen.getByTestId("period-select"), { target: { value: "FY2023-24" } });
 
-    // the page's own map still draws CO₂e, and says so truthfully
+    // the page's own map draws the pollutant: no refusal, and every request it caused still names its year
     fireEvent.click(screen.getByTestId("rep-tabs-map"));
-    expect(await screen.findByTestId("refusal-card")).toHaveTextContent("the Explore map shows it by province and district");
+    expect(await screen.findByTestId("map-stub")).toHaveAttribute("data-pol", "PM2.5");
+    expect(screen.queryByTestId("refusal-card")).toBeNull();
+    for (const body of calls("/query/air")) expect(body).toHaveProperty("periods");
     fireEvent.click(screen.getByTestId("rep-tabs-chart"));
     // choosing a gas returns to CO2e
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByTestId("canvas-title")).not.toHaveTextContent("PM₂.₅"));
+  });
+  it("Map under a pollutant draws the pollutant by place, and the map is handed the canvas's own request: one selection, one query", async () => {
+    // The canvas used to refuse every pollutant here and send the reader to another page. And
+    // where it did draw a map (greenhouse gases) the map built a body of its own without the
+    // plan's order_by: a second request and a second receipt for the one result on screen.
+    const updates: string[] = [];
+    mount("?pol=PM2.5", ({ queryString }) => updates.push(queryString));
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    const PROVINCES_BODY = { pollutants: ["PM2.5"], periods: ["FY2023-24"], geography_level: "adm1", group_by: ["province"], order_by: "value desc" };
+    // the view moved to every province, as it does for greenhouse gases
+    const stub = await screen.findByTestId("map-stub");
+    for (const part of ["rep=map", "geos=all", "pol=PM2.5"]) expect(updates.at(-1), part).toContain(part);
+    expect(lastCall("/query/air")).toEqual(PROVINCES_BODY);
+    expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by province");
+    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("the provinces' PM₂.₅ emissions in kilotonnes, grouped by province, 2023–24");
+    expect(screen.queryByTestId("refusal-card")).toBeNull();
+    // the map is told the metric, the level and the year, and is handed that very body to ask
+    expect(stub).toHaveAttribute("data-pol", "PM2.5");
+    expect(stub).toHaveAttribute("data-level", "adm1");
+    expect(stub).toHaveAttribute("data-period", "FY2023-24");
+    expect(handed()).toEqual({ kind: "air", body: PROVINCES_BODY });
+    // ... and the page asked it once
+    expect(calls("/query/air").filter((b) => JSON.stringify(b) === JSON.stringify(PROVINCES_BODY))).toHaveLength(1);
+
+    // A SECTOR AND ANOTHER YEAR ride along, in the request and in what the map is handed
+    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "residential" } });
+    fireEvent.change(screen.getByTestId("period-select"), { target: { value: "FY2020-21" } });
+    const scoped = { pollutants: ["PM2.5"], sectors: ["residential"], periods: ["FY2020-21"], geography_level: "adm1", group_by: ["province"], order_by: "value desc" };
+    await waitFor(() => expect(lastCall("/query/air")).toEqual(scoped));
+    await waitFor(() => expect(handed()).toEqual({ kind: "air", body: scoped }));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "residential");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-period", "FY2020-21");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-pol", "PM2.5");
+
+    // EVERY DISTRICT: the district grain, keyed by the shape, and the map at that level
+    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "districts" } });
+    const districts = { ...scoped, geography_level: "adm2", group_by: ["shape_id"] };
+    await waitFor(() => expect(lastCall("/query/air")).toEqual(districts));
+    await waitFor(() => expect(handed()).toEqual({ kind: "air", body: districts }));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-level", "adm2");
+    expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by district");
+    for (const part of ["rep=map", "geos=all", "level=adm2", "pol=PM2.5", "sector=residential", "period=FY2020-21"]) expect(updates.at(-1), part).toContain(part);
+    // no request on the way was an air request without a period, and none was a greenhouse one for the map
+    for (const body of calls("/query/air")) expect(body).toHaveProperty("periods");
+    expect(calls("/query/emissions").filter((b) => (b.group_by as string[] | undefined)?.some((k) => k === "province" || k === "shape_id"))).toEqual([]);
+  });
+  it("the greenhouse map is handed the canvas's request too, order and all; a pollutant the release does not carry is not passed on as one", async () => {
+    const first = mount("?sector=agriculture&geos=all&rep=map");
+    const body = { periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", reporting_sectors: ["agriculture"], geography_level: "adm1", spatial_view: "all", group_by: ["province"], order_by: "value desc" };
+    await waitFor(() => expect(handed()).toEqual({ kind: "emissions", body }));
+    expect(lastCall("/query/emissions")).toEqual(body);
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-pol", "");
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-sector", "agriculture");
+    // two chosen provinces: the canvas keeps two, the map is handed the request for all of them
+    // (never the canvas's filtered envelope, which would grey the others out as having no cell)
+    first.unmount();
+    const second = mount("?geos=Punjab,Sindh&rep=map");
+    const all = { periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", geography_level: "adm1", spatial_view: "all", group_by: ["province"], order_by: "value desc" };
+    await waitFor(() => expect(handed()).toEqual({ kind: "emissions", body: all }));
+    // a `pol` the release has no such species for resolves to greenhouse gases, and the map is told so outright
+    second.unmount();
+    fetchSpy.mockClear();
+    mount("?pol=Unobtainium&geos=all&rep=map");
+    await waitFor(() => expect(handed()).toEqual({ kind: "emissions", body: all }));
+    expect(screen.getByTestId("map-stub")).toHaveAttribute("data-pol", "");
+    expect(calls("/query/air")).toEqual([]);
+  });
+  it("one place's sources under a pollutant are not a map: a crafted link gets the page's typed reason, as it does for greenhouse gases", async () => {
+    const air = mount("?pol=PM2.5&geo=Punjab&rep=map");
+    const card = await screen.findByTestId("refusal-card");
+    expect(card).toHaveTextContent(EXPLORE.mapUnavailable.message);
+    expect(screen.queryByTestId("map-stub")).toBeNull();
+    // the selection is still the one asked for: Punjab's own sources
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2023-24"], geography_level: "adm1", geography_ids: ["Punjab"], group_by: ["sector_id"], order_by: "value desc" }));
+    expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by sector");
+    air.unmount();
+    // the greenhouse page it mirrors
+    mount("?geo=Punjab&rep=map");
+    expect(await screen.findByTestId("refusal-card")).toHaveTextContent(EXPLORE.mapUnavailable.message);
+    expect(screen.queryByTestId("map-stub")).toBeNull();
+  });
+  it("a map that cannot be drawn under a pollutant shows the pollutant's chart in its place, never a greenhouse one", async () => {
+    mapStub.status = "failed";
+    const updates: string[] = [];
+    mount("?pol=NH3", ({ queryString }) => updates.push(queryString));
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    const fallback = await screen.findByTestId("canvas-map-fallback");
+    expect(fallback).toHaveAttribute("data-status", "failed");
+    expect(within(fallback).getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE.explanation);
+    expect(screen.getByTestId("canvas-map")).toHaveClass("hidden");
+    // the same envelope as bars: the provinces the map would have shaded, in kilotonnes of the pollutant
+    const body = { pollutants: ["NH3"], periods: ["FY2023-24"], geography_level: "adm1", group_by: ["province"], order_by: "value desc" };
+    expect(lastCall("/query/air")).toEqual(body);
+    const bars = await within(fallback).findByTestId("bars-with-axis");
+    expect(within(bars).getAllByTestId("bar-item").map((b) => b.textContent)).toEqual(["Punjab 1534.06 · 57.4 %"]);
+    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("Punjab emitted the most, at 1534.06 kt NH₃ (57.4 % of the places shown)."));
+    expect(document.body.textContent).not.toContain("Mt CO₂e");
+    for (const part of ["rep=map", "pol=NH3", "geos=all"]) expect(updates.at(-1), part).toContain(part);
+    // one click makes Table the representation: the pollutant, the places and the request unchanged
+    fireEvent.click(within(fallback).getByTestId("map-unavailable-table"));
+    expect(await screen.findAllByTestId("envelope-row")).toHaveLength(1);
+    for (const part of ["rep=table", "pol=NH3", "geos=all"]) expect(updates.at(-1), part).toContain(part);
+    expect(lastCall("/query/air")).toEqual(body);
+    expect(calls("/query/air").filter((b) => JSON.stringify(b) === JSON.stringify(body))).toHaveLength(1);
   });
   it("one selected place is THAT place by sector; comparing places is its own, explicit mode", async () => {
     // Lahore selected used to promise "Lahore's … grouped by sector" over a chart of every
@@ -540,7 +694,7 @@ describe("/data (the Grapher)", () => {
     await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ sectors: ["residential"], geography_level: "adm1", group_by: ["province"] }));
   });
   it("a district is asked for at district grain, and a province stays a province while its districts are on the map", async () => {
-    const lahore = "60131773B12131197496886";
+    const lahore = LAHORE;
     const { unmount } = mount(`?pol=PM2.5&level=adm2&geo=${lahore}`);
     await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2023-24"], geography_level: "adm2", geography_ids: [lahore], group_by: ["sector_id"], order_by: "value desc" }));
     expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by sector");

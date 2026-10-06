@@ -347,12 +347,13 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
       n.rep = a.value;
       if (a.value !== "map") return n;
       // the map draws places: chosen from any other breakdown, it carries the scope to every
-      // province (every district at district grain) instead of refusing - the sector and gas
-      // filters survive the move. A crafted URL can still resolve to an unmappable state, and
-      // the canvas keeps its typed refusal for that.
+      // province (every district at district grain) instead of refusing - the sector filter and
+      // the metric survive the move, a gas or a pollutant alike. (A pollutant used to stop here,
+      // left on its sector breakdown for the canvas to refuse; its place breakdown is one the map
+      // draws like any other.) A crafted URL can still resolve to an unmappable state, and the
+      // canvas keeps its typed refusal for that.
       const q = buildQuery(n, ctx);
-      if (n.pollutant) return n; // the air beta has no map layer; the canvas says so in place
-      if (q.kind === "emissions" && (q.groupBy === "province" || q.groupBy === "shape_id")) return n;
+      if ((q.kind === "emissions" || q.kind === "air") && (q.groupBy === "province" || q.groupBy === "shape_id")) return n;
       const moved = transition(n, { control: "geography", value: n.level === "adm2" ? "districts" : "provinces" }, ctx);
       moved.rep = "map";
       return moved;
