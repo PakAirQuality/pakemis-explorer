@@ -65,8 +65,10 @@ export function scopeOf(s: Pick<ExplorerState, "level" | "geo" | "sector" | "gas
  *   own province, then the two cards the map drawer used to carry: the spatial evidence of the
  *   allocation and its sources.
  *
- * Off the reference year nothing here changes: the cards are asked as usual and each card the
- * release cannot answer carries its own typed refusal instead of a figure.
+ * Off the reference year nothing here changes: the cards are asked as usual, the annual ones are
+ * answered at every grain (provinces and districts carry all the fiscal years), and each card the
+ * release cannot answer - a month of an earlier year below national level - carries its own typed
+ * refusal instead of a figure.
  */
 const CARDS: Record<ScopeKind, readonly CardId[]> = {
   national: ["overview", "sectors", "places"],

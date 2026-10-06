@@ -71,9 +71,16 @@ FAMILIES = (
     {"id": "monthly", "title": "Monthly inventory",
      "description": "All 108 months with annual closure, temporal profiles and evidence classifications.",
      "tables": ("fact_monthly",), "formats": ("csv", "parquet")},
+    # This family said "Reference-year" and listed the monthly tables alone, while the release
+    # carried the annual province and district tables for every fiscal year and the page beside it
+    # advertised them. The years are stated per resolution now, with what an earlier year's
+    # geography rests on, and the two annual tables are in the family they belong to.
     {"id": "spatial", "title": "Spatial inventory",
-     "description": "Reference-year administrative and 0.05-degree allocations with fallback, lineage and unallocated-mass tables.",
-     "tables": ("fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence") + tuple(c.rsplit(".", 1)[0] for c in GHG_CUBES),
+     "description": "Provincial, district and 0.05-degree allocations: annual for every fiscal year, monthly for the reference year only. "
+                    "An earlier year's geography is the reference year's pattern rescaled wherever the year has none of its own - a "
+                    "reconstruction, not an observation. With the evidence classes and the reference year's unallocated-mass table.",
+     "tables": ("fact_adm1_year", "fact_adm2_year", "fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence")
+               + tuple(c.rsplit(".", 1)[0] for c in GHG_CUBES),
      "formats": ("csv", "parquet", "nc")},
     {"id": "uncertainty", "title": "Uncertainty and scenarios",
      "description": "Common correlated draws, uncertainty summaries, completeness ledgers, transfers and the named structural configurations.",
@@ -84,10 +91,12 @@ FAMILIES = (
                     "claim record joins: emission factors, parameters, source documents, temporal profiles, spatial registries, validation rows, benchmarks, data gaps.",
      "tables": ("fact_evidence", "dim_evidence_class", "dim_stream", "fact_completeness", "fact_completeness_mass", "registries"), "formats": ("csv", "parquet")},
     {"id": "air", "title": "Air quality (beta)",
-     "description": "The companion air-pollutant layer: seven sectors' NOx, SO2, CO, NMVOC, PM\u2082.\u2085, BC and NH3 in native kilotonnes - "
-                    "the nine-fiscal-year covered-sources panel, its provincial and district allocations for every year and both "
-                    "configurations, the two 0.05-degree annual cubes, the single-year all-sector layers and agriculture's "
-                    "1990-2024 national series. A beta of uneven assurance, outside every greenhouse-gas total.",
+     "description": "The companion air-pollutant layer: NOx, SO2, CO, NMVOC, PM\u2082.\u2085, BC and NH3 in native kilotonnes - "
+                    "the nine-fiscal-year covered-sources panel of nine sectors (residential, agriculture, waste, railways, transport, "
+                    "aviation, industry, IPPU and fugitives; grid power is a screening scenario kept outside it), its provincial and "
+                    "district allocations for every year and both configurations, the two 0.05-degree annual cubes, the single-year "
+                    "all-sector layers and agriculture's 1990-2024 national series. A beta of uneven assurance, outside every "
+                    "greenhouse-gas total.",
      "tables": ("fact_air_annual", "fact_air_timeseries", "fact_air_panel", "fact_air_adm1", "fact_air_adm2",
                 "fact_air_adm1_year", "fact_air_adm2_year", "fact_air_absence_screening", "dim_pollutant",
                 "pakemis_air_grid_0p05_annual_fy2015_16_fy2023_24",

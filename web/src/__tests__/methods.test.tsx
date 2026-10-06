@@ -57,13 +57,16 @@ const NE = [
 ];
 
 const fetchSpy = vi.fn();
+/** A test that needs the release to say something the shared fixture does not sets this; it is cleared before each test. */
+let releaseOverride: unknown = null;
 beforeEach(() => {
   fetchSpy.mockReset();
+  releaseOverride = null;
   vi.stubGlobal(
     "fetch",
     mockFetch((url, body) => {
       fetchSpy(url, body);
-      if (url.endsWith("/release")) return RELEASE;
+      if (url.endsWith("/release")) return releaseOverride ?? RELEASE;
       if (url.endsWith("/tiles/bboxes")) return BBOXES;
       if (url.endsWith("/openapi.json")) return { paths: {}, components: { schemas: {} } };
       if (url.includes("/evidence/")) {
@@ -237,6 +240,35 @@ describe("/methodology", () => {
     expect(screen.getByTestId("about-licences")).toHaveTextContent("Code MIT; data and text CC-BY-4.0");
     expect(screen.getByTestId("about-licences")).toHaveTextContent("data/gis/rail/pak_rail_network.geojson");
     expect(screen.getByTestId("about-links").querySelector('a[href="/downloads"]')).not.toBeNull();
+  });
+  it("says which years exist at which resolution from the release's own periods, and quotes the release on what an earlier year's geography rests on", async () => {
+    // The sentence this replaced said the spatial products were the reference year's alone. The
+    // years are the fixture's two, so a count typed into the page would show up here as a third.
+    const HISTORY = "their within-province geography is also the reference year's rescaled for 1,102 of 1,672 live stream-years, and a district value for an earlier year is a reconstruction of where that mass most likely sat, not an observation";
+    const FRAME = "every period is published on one fixed district frame";
+    releaseOverride = { ...RELEASE, labels: { ...RELEASE.labels, limitations: { ...RELEASE.labels.limitations, adm2_history_annual_only: HISTORY, adm2_frame_is_fixed: FRAME } } };
+    mountAt(<MethodologyPage />, "/methodology");
+    const block = await screen.findByTestId("about-coverage");
+    await waitFor(() => expect(within(block).getByTestId("coverage-annual")).toHaveTextContent("Annual products cover every fiscal year (2020–21 to 2023–24) at four resolutions: national, province, district and the 0.05° grid"));
+    expect(within(block).getByTestId("coverage-monthly")).toHaveTextContent("Monthly products cover every month of every fiscal year (2020–21 to 2023–24) at national level only. Below it, the months of provinces, districts and the grid are 2023–24's alone.");
+    const evidence = within(block).getByTestId("coverage-evidence");
+    expect(evidence).toHaveTextContent("A map for every year is not an observation of every year.");
+    expect(evidence).toHaveTextContent(`In its words: ${HISTORY}.`);
+    expect(evidence).toHaveTextContent(`And of the boundaries: ${FRAME}.`);
+    expect(within(block).getByTestId("coverage-national-only")).toHaveTextContent("the months of every year but 2023–24");
+    expect(within(block).getByTestId("coverage-refused")).toHaveTextContent("that table of unallocated mass is published for 2023–24 only");
+    expect(screen.getByTestId("about-map")).not.toHaveTextContent(/exist for the reference year only/i);
+    // every digit in the block is the release's: its period labels, its limitation text, its warming-potential label, and the grid's name
+    const rest = [HISTORY, FRAME, "2020–21", "2023–24", RELEASE.labels.gwp.AR5.label, "0.05°"].reduce((t, known) => t.split(known).join(""), block.textContent ?? "");
+    expect(rest).not.toMatch(/\d/);
+  });
+  it("a release that states no such limitation is not given one: the block quotes nothing it was not sent", async () => {
+    mountAt(<MethodologyPage />, "/methodology");
+    const evidence = await screen.findByTestId("coverage-evidence");
+    await waitFor(() => expect(screen.getByTestId("coverage-annual")).toHaveTextContent("2020–21 to 2023–24"));
+    expect(evidence).toHaveTextContent("the release states it as a limitation.");
+    expect(evidence).not.toHaveTextContent("In its words");
+    expect(evidence).not.toHaveTextContent("adm2_history_annual_only");
   });
 });
 

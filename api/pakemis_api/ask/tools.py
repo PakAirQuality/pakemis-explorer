@@ -254,7 +254,7 @@ def map_view_tool(dims):
             "properties": {
                 "level": {"type": "string", "enum": ["adm1", "adm2", "grid"], "description": "map level: provinces, districts, or the 0.05-degree grid"},
                 "geo": {"type": "string", "description": "a province name (%s) or an ADM2 shape_id" % ", ".join(dims.adm1_with_polygon or dims.adm1_names)},
-                "period": {"type": "string", "enum": dims.fiscal_periods, "description": "fiscal year; the map paints %s only and shows a refusal for other years" % dims.reference_period},
+                "period": {"type": "string", "enum": dims.fiscal_periods, "description": "fiscal year; provinces and districts are painted for every fiscal year, the grid raster and any month for %s only" % dims.reference_period},
                 "month": {"type": "string", "description": "YYYYMM within %s..%s, or 'annual'" % ((dims.spatial_months[0], dims.spatial_months[-1]) if dims.spatial_months else ("", ""))},
                 "sector": {"type": "string", "enum": dims.sectors},
                 "gas": {"type": "string", "enum": dims.gases},

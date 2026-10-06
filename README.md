@@ -111,9 +111,12 @@ Pakistan stays centred in what is actually visible.
   domain to the reference year's all-sector envelope so a sector change does not rescale;
   **Absolute** restores the server's break strings. A categorical layer shows its own name and
   opens its panel; a refused request shows the release's own message.
-- **Off the reference year** the map greys ("Not mapped · spatial products exist for 2023–24
-  only", the API's own words) while the deck keeps answering nationally; the slider's
-  non-reference ticks are hollow.
+- **Off the reference year** provinces and districts still paint: the release carries both
+  annually for all nine fiscal years. What is the reference year's alone is the grid raster and
+  every month below national level, so there the map greys ("Not mapped", then the API's own
+  words) while the deck keeps answering. An earlier year's district and grid geography is the
+  reference year's pattern rescaled wherever that year has none of its own — a reconstruction,
+  not an observation; the release says so in its `adm2_history_annual_only` limitation.
 
 **`/data` — the Grapher** (`components/explore/*`, formerly `/explore`): one control row
 (Geography · Period · Sector · Gas · Measure · More), one canvas with Chart · Table · Map over

@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { api, API_BASE } from "@/lib/api";
 import { releaseAgent, releaseDims, releaseFacts, releaseLabels, useRelease } from "@/lib/release";
-import { configLabel, gasLabel, gwpLabel, gwpTooltip, limitationText, periodLabel, periodShort } from "@/lib/labels";
+import { configLabel, gasLabel, gwpLabel, gwpTooltip, limitationText, periodLabel, periodRange, periodShort } from "@/lib/labels";
 import { joinNames, residualUnit } from "@/lib/geography";
 import { useBboxes } from "@/components/map/tiles";
 import { ASK_SENTENCES, SHORT_SUMMARY } from "@/components/overview/copy";
@@ -35,6 +35,13 @@ export function Methodology() {
   const rpShort = rp ? periodShort(labels, rp.label) : "";
   const rpLong = rp ? periodLabel(labels, rp.label) : "";
   const unitName = residual?.label ?? "the residual unit";
+  // Which years exist at which resolution, read off the release and never typed: the fiscal
+  // years the annual products span, the years that carry months at all, and the one year the
+  // release flags as its reference - the only one whose months are held below national level.
+  const referenceId = dims.fiscalPeriods.find((p) => labels.periods[p]?.is_reference);
+  const refYear = referenceId ? periodShort(labels, referenceId) : "the reference year";
+  const annualYears = periodRange(dims, labels);
+  const monthlyYears = periodRange({ fiscalPeriods: dims.fiscalPeriods.filter((p) => (dims.monthsByPeriod[p] ?? []).length > 0) }, labels);
   return (
     <div id="methodology" className="scroll-mt-20" data-testid="methodology">
       <div className="max-w-3xl">
@@ -106,7 +113,33 @@ export function Methodology() {
         <section className="card mb-5 p-4 text-sm" data-testid="about-map">
           <h2 className="text-md font-semibold">How to read the map</h2>
           <p className="mt-2 leading-relaxed">Three levels: provinces, districts and a grid. At the province and district levels the map paints one envelope per view; a polygon&apos;s colour follows its cell&apos;s value, the hover shows that cell&apos;s display string verbatim, and the legend&apos;s labels are the display strings of real cells at fixed ranks, never client-computed breaks. A click opens the detail card with the unit&apos;s sectors, gases, months and lineage.</p>
-          <p className="mt-2 leading-relaxed">The rail at the bottom steps through the fiscal years and, within a year, the months. Spatial products exist for the reference year only: other years are tagged &ldquo;national only&rdquo;, the map shows outlines with the API&apos;s refusal in the legend&apos;s place, and the panels keep their national numbers.</p>
+          <p className="mt-2 leading-relaxed">The rail at the bottom steps through the fiscal years and, within a year, the months. Provinces and districts are painted for every fiscal year; the grid raster is drawn for {refYear} alone. Where the release refuses a view, the map shows outlines with the API&apos;s refusal in the legend&apos;s place and the panels keep their national numbers.</p>
+          {/* This block replaced one sentence that said the spatial products existed for the
+              reference year alone, while Downloads listed them for every year. Both cannot be
+              right, so the years are read from the release here and the evidence caveat is the
+              release's own limitation, quoted: a year on the map is not a year observed. */}
+          <div className="mt-3" data-testid="about-coverage">
+            <h3 className="text-sm font-semibold">Which years exist at which resolution</h3>
+            <ul className="mt-1 list-disc space-y-1 pl-5 leading-relaxed">
+              <li data-testid="coverage-annual">
+                <b>Annual products</b> cover every fiscal year{annualYears ? <> ({annualYears})</> : null} at four resolutions: national, province, district and the 0.05° grid, for the greenhouse gases and for the air pollutants alike. The greenhouse-gas district rows are published for the reference estimate only{facts.gwp.reported ? <>, in CO₂-equivalent on {gwpLabel(labels, facts.gwp.reported)} only</> : null}.
+              </li>
+              <li data-testid="coverage-monthly">
+                <b>Monthly products</b> cover every month of every fiscal year{monthlyYears ? <> ({monthlyYears})</> : null} at national level only. Below it, the months of provinces, districts and the grid are {refYear}&apos;s alone.
+              </li>
+              <li data-testid="coverage-evidence">
+                <b>Own-year evidence or a back-cast.</b> A map for every year is not an observation of every year. Each year has its own national estimate; where that mass sits inside the country follows the year&apos;s own geography only where a source published one. Otherwise it is the reference year&apos;s pattern rescaled to the earlier year&apos;s total: a back-cast, which says where the mass most likely sat and not where it was recorded. No table marks the difference row by row; the release states it as a limitation.
+                {lim("adm2_history_annual_only") ? <> In its words: {lim("adm2_history_annual_only")}.</> : null}
+                {lim("adm2_frame_is_fixed") ? <> And of the boundaries: {lim("adm2_frame_is_fixed")}.</> : null}
+              </li>
+              <li data-testid="coverage-national-only">
+                <b>National only.</b> Some results stop at the national level: the months of every year but {refYear}, and anything filtered by IPCC category. For these the panels answer nationally and the map has nothing to paint.
+              </li>
+              <li data-testid="coverage-refused">
+                <b>Refused, and unallocated.</b> A combination the release does not hold is refused by name and never filled in; a month of an earlier year at province, district or grid level is one. Mass the allocation could not place in a district is kept as a row of its own, and that table of unallocated mass is published for {refYear} only.
+              </li>
+            </ul>
+          </div>
           <p className="mt-2 leading-relaxed">
             <b>Hatch</b> marks a bounded interval: the cell prints &ldquo;[low, high]&rdquo; and is never collapsed to a midpoint.{lim("adm2_co2e_bounded_power_residential") ? <> {lim("adm2_co2e_bounded_power_residential")}.</> : null}
           </p>

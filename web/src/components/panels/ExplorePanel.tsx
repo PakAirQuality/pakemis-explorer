@@ -33,7 +33,7 @@ export function ExplorePanel() {
       <Field label="Fiscal year" hint={periodLabel(labels, state.period)}>
         <select className={SEL} value={state.period} onChange={(e) => setState({ period: e.target.value })} title={periodBasisNote(labels, state.period)}>
           {dims.fiscalPeriods.map((p) => (
-            <option key={p} value={p}>{periodShort(labels, p)}{labels.periods[p]?.is_reference ? "" : " · national only"}</option>
+            <option key={p} value={p}>{periodShort(labels, p)}</option>
           ))}
         </select>
       </Field>

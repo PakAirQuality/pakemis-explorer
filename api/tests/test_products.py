@@ -112,7 +112,7 @@ def test_families(listing):
     assert {"fact_annual", "fact_annual_calendar", "dim_gas", "dim_period", "dim_configuration"} <= set(fam["annual"]["tables"])
     assert all(t.startswith("dim_") for t in fam["annual"]["tables"] if t not in ("fact_annual", "fact_annual_calendar"))
     assert fam["monthly"]["tables"] == ["fact_monthly"]
-    assert fam["spatial"]["tables"] == ["fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence",
+    assert fam["spatial"]["tables"] == ["fact_adm1_year", "fact_adm2_year", "fact_adm1_month", "fact_adm2_month", "fact_unallocated", "fact_evidence",
                                         "pakemis_grid_0p05_monthly", "pakemis_grid_0p05_monthly_survey",
                                         "pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24", "pakemis_grid_0p1_edgar_aligned"]
     assert fam["spatial"]["formats"] == ["csv", "parquet", "nc"]

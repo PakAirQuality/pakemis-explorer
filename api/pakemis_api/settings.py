@@ -37,6 +37,9 @@ DEFAULT_ASK_MODELS = {"anthropic": DEFAULT_ASK_MODEL, "gemini": "gemini-3.1-pro-
 GEMINI_FALLBACKS = ("gemini-2.5-pro", "gemini-2.5-flash")
 ASK_PROVIDERS = ("auto", "anthropic", "gemini")
 KEY_VARS = {"anthropic": ("ANTHROPIC_API_KEY",), "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
+# the query core's key for the nine-period annual grid cube (pakemis_query.functions.get_grid_cell);
+# it sits in cube_paths beside the configurations and is not one
+ANNUAL_CUBE = "ANNUAL"
 
 
 def _key_present(provider):
@@ -179,8 +182,21 @@ class Settings:
 
     @property
     def cube_paths(self):
+        """The grid products get_grid_cell reads, under the keys the query core looks them up by.
+
+        Two are configurations (the reference year's monthly cubes). The third is not: ANNUAL is
+        the core's own key for the nine-period annual cube, which it opens for any period_id other
+        than the reference year. It was missing here, so a historical annual cell - a product the
+        release ships and Downloads lists - died on a KeyError and left as an untyped 500.
+        """
         return {"REF_2023_24": os.path.join(self.release_dir, "outputs", "pakemis_grid_0p05_monthly.nc"),
-                "S_2023_24": os.path.join(self.release_dir, "outputs", "pakemis_grid_0p05_monthly_survey.nc")}
+                "S_2023_24": os.path.join(self.release_dir, "outputs", "pakemis_grid_0p05_monthly_survey.nc"),
+                ANNUAL_CUBE: os.path.join(self.release_dir, "outputs", "pakemis_grid_0p05_annual_ref_fy2015_16_fy2023_24.nc")}
+
+    @property
+    def cube_configurations(self):
+        """The configurations a grid request may name: every cube key that IS a configuration."""
+        return tuple(k for k in self.cube_paths if k != ANNUAL_CUBE)
 
 
 def import_query_core(query_path=None):

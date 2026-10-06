@@ -516,7 +516,9 @@ class Service:
         elif name == "TransferRequest":
             env = F.get_cross_sector_transfer(self.engine, request)
         elif name == "GridCellRequest":
-            if request.configuration_id and request.configuration_id not in self.cube_paths:
+            # cube_paths also holds the annual cube under the core's own key, which is not a
+            # configuration: naming it as one is still refused, never read as the monthly cube
+            if request.configuration_id and request.configuration_id not in self.settings.cube_configurations:
                 raise E.UnknownDimensionValue("%r has no grid cube (REF_2023_24, S_2023_24)" % request.configuration_id,
                                               dimension="configuration_id")
             env = F.get_grid_cell(self.engine, request, self.cube_paths)

@@ -11,8 +11,9 @@
  *   asked for. The browser never ranks by value itself, and where the release attaches no rank
  *   (an ADM2 partition of bounded intervals) the card names no position.
  *
- * Off the reference year the release answers no spatial product, and the card carries its typed
- * refusal by name instead of an empty chart.
+ * The release answers provinces and districts annually for every fiscal year, so off the reference
+ * year the card still ranks; only what the release refuses (a month of an earlier year, say) is
+ * carried as its typed refusal by name instead of an empty chart.
  */
 import type { ReactNode } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
