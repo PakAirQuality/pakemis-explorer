@@ -22,7 +22,7 @@ import { shown } from "@/lib/envelope";
 import { cellUnit, periodShort, reportingSectorLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
 import { useAir, useEmissions } from "@/lib/queries";
-import { POLLUTANT_LABELS, type ExploreState } from "@/lib/explore/query";
+import type { ExploreState } from "@/lib/explore/query";
 import { airDeckBodies } from "@/lib/requests";
 import { AIR_NOT_AMBIENT } from "@/lib/selection";
 import { sectorLabel } from "@/lib/labels";
@@ -60,7 +60,7 @@ export function OverviewCard({ state }: { state: ExploreState }) {
 
   const sentence = !cell ? null : pol ? (
     <>
-      In <b>{period}</b>, the sources this release estimates emitted <Figure cell={cell} unit={cellUnit(cell)} /> of {POLLUTANT_LABELS[pol] ?? pol} in Pakistan.
+      In <b>{period}</b>, the sources this release estimates emitted <Figure cell={cell} unit={cellUnit(cell)} /> in Pakistan.
       {top ? (
         <>
           {" "}

@@ -32,16 +32,20 @@ export function screeningRanges(env: Pick<Envelope, "completeness"> | null | und
   return out;
 }
 
-export function AirScreeningNote({ env, labels }: { env: Pick<Envelope, "completeness"> | null | undefined; labels: Labels }) {
+export function AirScreeningNote({ env, labels }: { env: Pick<Envelope, "completeness" | "context"> | null | undefined; labels: Labels }) {
   const ranges = screeningRanges(env);
   if (!ranges.length) return null;
+  // THE PAIR IS THE NATION'S, whatever place the result is for: the release prices grid power for
+  // the country and places none of it. Beside a province's or a district's total it is said to be
+  // national, so the range is not read as that place's.
+  const placed = ((env?.context as { geography_ids?: unknown[] } | undefined)?.geography_ids ?? []).length > 0;
   return (
     <div className="mt-3 rounded-md border border-line bg-surface-2 px-3 py-2 text-xs leading-relaxed text-muted" data-testid="air-screening-note">
       {ranges.map((r) => (
         <p key={r.sector} data-sector={r.sector}>
-          <b className="text-fg">{sectorLabel(labels, r.sector)} is not in this total.</b> The release prices grid generation only as a screening range, from{" "}
+          <b className="text-fg">{sectorLabel(labels, r.sector)} is not in this total.</b> The release prices grid generation only as a {placed ? "national " : ""}screening range, from{" "}
           <b className="num whitespace-nowrap">{r.controlled} kt</b> with emission controls to <b className="num whitespace-nowrap">{r.uncontrolled} kt</b> without. Neither end is an estimate, so it is not
-          added to the total, ranked or given a share.
+          added to the total, ranked or given a share{placed ? ", and none of it is placed in a province or district" : ""}.
         </p>
       ))}
     </div>

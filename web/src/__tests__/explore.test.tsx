@@ -569,7 +569,7 @@ describe("/data (the Grapher)", () => {
     await screen.findByTestId("canvas-sentence");
     // the anchor card is the pollutant's covered total, not the national CO₂e figure it used to keep
     const overview = await screen.findByTestId("overview-card");
-    await waitFor(() => expect(overview).toHaveTextContent("of PM₂.₅ in Pakistan"));
+    await waitFor(() => expect(overview).toHaveTextContent("the sources this release estimates emitted 631.92 kt PM₂.₅ in Pakistan"));
     expect(overview).toHaveTextContent("not a measurement of the air people breathe");
     expect(overview).not.toHaveTextContent("CO₂e");
     expect(calls("/query/emissions")).toHaveLength(0);
