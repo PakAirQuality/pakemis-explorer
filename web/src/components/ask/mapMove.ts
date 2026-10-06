@@ -21,7 +21,7 @@ import type { ExplorerState } from "@/lib/urlState";
  * the map at a place, a period or a sector; it may not quietly re-configure the estimate underneath
  * the reader. `c` is chrome and is not here either.
  */
-export const MAP_KEYS = ["level", "geo", "period", "month", "sector", "gas"] as const;
+export const MAP_KEYS = ["level", "geo", "period", "month", "sector", "gas", "pol"] as const;
 export type MapKey = (typeof MAP_KEYS)[number];
 
 /**
@@ -29,7 +29,7 @@ export type MapKey = (typeof MAP_KEYS)[number];
  * in those words - "Provinces" was another of the chips - so the line reads "Agriculture · 2023–24"
  * rather than "Provinces · Agriculture · 2023–24".
  */
-export const WORD_KEYS = ["geo", "sector", "gas", "month", "period"] as const;
+export const WORD_KEYS = ["geo", "sector", "gas", "pol", "month", "period"] as const;
 
 const first = (v: unknown): string => (Array.isArray(v) && typeof v[0] === "string" ? v[0] : "");
 
@@ -44,7 +44,35 @@ const first = (v: unknown): string => (Array.isArray(v) && typeof v[0] === "stri
  * rc54; reading `sectors` alone silently drops it and the map opens on every sector. Same trap, same
  * fallback order as requests.ts.
  */
-export function mapPatchFromInput(input: Record<string, unknown>): Partial<ExplorerState> {
+/**
+ * The tools whose input IS a selection: a query over the inventory. For these the patch is the
+ * WHOLE scope of the answer - the metric, the place, the sector and the month are each named,
+ * null when the query did not filter on them.
+ *
+ * ⚠ A PATCH THAT ONLY ADDS IS NOT THE ANSWER'S SCOPE. It used to carry the keys the query set and
+ * nothing else, merged over whatever the reader had selected since. So a national PM₂.₅ answer
+ * "shown on the map" from a greenhouse view painted CO₂e; a greenhouse answer shown from a PM₂.₅
+ * view stayed PM₂.₅; and an answer about the whole country, shown while Lahore was selected,
+ * stayed on Lahore. Each looked like the answer and was not. Other tools (completeness, evidence)
+ * name a sector or a place in passing and keep the additive patch.
+ */
+const SCOPED_TOOLS = new Set(["query_emissions", "query_air"]);
+
+export function mapPatchFromInput(input: Record<string, unknown>, tool?: string): Partial<ExplorerState> {
+  if (tool && SCOPED_TOOLS.has(tool)) {
+    const level = typeof input.geography_level === "string" ? input.geography_level : "";
+    const whole: Record<string, string | null> = {
+      geo: first(input.geography_ids) || null,
+      sector: first(input.reporting_sectors) || first(input.sectors) || null,
+      gas: tool === "query_air" ? null : first(input.gases) || null,
+      pol: tool === "query_air" ? first(input.pollutants) || null : null,
+      month: tool === "query_air" ? null : first(input.months) || null,
+    };
+    if (level === "adm1" || level === "adm2") whole.level = level;
+    const period = first(input.periods);
+    if (period) whole.period = period;
+    return whole as Partial<ExplorerState>;
+  }
   const out: Record<string, string> = {};
   const level = typeof input.geography_level === "string" ? input.geography_level : "";
   if (level === "adm1" || level === "adm2") out.level = level;
@@ -71,6 +99,11 @@ export function movePatch(source: Record<string, unknown>): Partial<ExplorerStat
     if (typeof v === "string" && v) (patch as Record<string, unknown>)[k] = v;
   }
   return patch;
+}
+
+/** Whether applying a patch would change anything the reader can see: an offer to move nowhere is not offered. */
+export function movesMap(state: ExplorerState, patch: Partial<ExplorerState>): boolean {
+  return Object.entries(patch).some(([k, v]) => ((state as unknown as Record<string, unknown>)[k] ?? null) !== (v ?? null));
 }
 
 /**

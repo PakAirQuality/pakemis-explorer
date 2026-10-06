@@ -130,6 +130,21 @@ def _compact_context(context):
     return out
 
 
+def _metric_of(env):
+    """The pollutant an air envelope answered for, off its canonical request.
+
+    An air envelope's `context` names no pollutant at all - it is in the request and in the cells'
+    unit - so an answer's scope used to say WHERE and WHEN and not WHAT, and the page had no way to
+    tell a PM2.5 answer from a greenhouse one when it rebuilt a view from it."""
+    if env.get("request_type") != "query_air":
+        return {}
+    try:
+        pollutants = json.loads(env.get("request") or "{}").get("pollutants") or []
+    except (TypeError, ValueError):
+        return {}
+    return {"pollutants": list(pollutants)} if pollutants else {}
+
+
 _CELL_SKIP = {"exact", "value", "display", "display_short", "unit", "unit_words", "unit_short", "quantiles_short",
               "share_pct_short", "interval_short",       # derived figures no placeholder can print
               "result_row_ids", "formula", "group"}
@@ -386,7 +401,7 @@ class Turn:
         self.receipts.append(env["receipt"])
         self.conv.receipts.add(env["receipt"])
         result = tool_result_payload(k, call.id, name, env, self.limits.max_cells_for_model)
-        self.scope = dict(result["context"], k=k, request_type=env.get("request_type"), receipt=env.get("receipt"), name=name)
+        self.scope = dict(result["context"], k=k, request_type=env.get("request_type"), receipt=env.get("receipt"), name=name, **_metric_of(env))
         return json.dumps(result, sort_keys=True), False, [("tool_result", event_payload(result, env, self.limits.max_cells_for_model, getattr(self.service, "claims", None)))]
 
     def _download(self, k, call, body):

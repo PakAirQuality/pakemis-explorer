@@ -33,9 +33,14 @@ DOWNLOAD_TOOL = "download_query_result"
 ENGINE_TOOLS = tuple(n for n in FUNCTION_MODEL if n != DOWNLOAD_TOOL)
 
 WHEN_TO_CALL = {
-    "query_air": "the AIR POLLUTANT beta (NOx, SO2, CO, NMVOC, PM2.5, BC, NH3) in native kilotonnes - never CO2e "
-                 "and never summed across pollutants; seven sectors nationally, agriculture's provinces, "
-                 "districts and 1990-2024 series; anything else is a typed refusal",
+    "query_air": "AIR POLLUTANT EMISSIONS (NOx, SO2, CO, NMVOC, PM2.5, BC, NH3) in native kilotonnes for a fiscal "
+                 "period - never CO2e, never a concentration or a measure of air quality, never summed across "
+                 "pollutants. ALWAYS give `periods` (the fiscal year in question): that selects the covered-sources "
+                 "panel, the sectors the release estimates, nationally and by province and district for all nine "
+                 "fiscal years. Grid power is NOT in that panel: it comes back beside the result as a screening "
+                 "range (`completeness`: a controlled and an uncontrolled scenario) and must never be added to the "
+                 "total, ranked or given a share - say it is outside the total. `years` (1990-2024) asks for "
+                 "agriculture's calendar-year history instead; anything else is a typed refusal",
     "query_emissions": "Call this for any emissions figure: a national, provincial (adm1) or district (adm2) total, "
                        "a breakdown by sector, category, gas, month, IPCC code or stream, a filtered sum, or the top-N "
                        "of a grouping. It is the default tool; one call returns one envelope of cells.",
@@ -253,6 +258,7 @@ def map_view_tool(dims):
                 "month": {"type": "string", "description": "YYYYMM within %s..%s, or 'annual'" % ((dims.spatial_months[0], dims.spatial_months[-1]) if dims.spatial_months else ("", ""))},
                 "sector": {"type": "string", "enum": dims.sectors},
                 "gas": {"type": "string", "enum": dims.gases},
+                "pol": {"type": "string", "enum": dims.pollutants, "description": "an air pollutant: the map shows its emissions (kt) instead of greenhouse gases; give it INSTEAD OF gas, never with it"},
                 "config": {"type": "string", "enum": dims.configurations},
                 "gwp": {"type": "string", "enum": dims.gwp_bases},
                 "view": {"type": "string", "enum": dims.views},
@@ -270,8 +276,8 @@ def validate_map_view(payload, dims):
     """-> the map_action dict (only the fields given), or ToolInputError naming the bad field."""
     if not isinstance(payload, dict):
         raise ToolInputError("set_map_view takes an object")
-    allowed = {"level": ("adm1", "adm2", "grid"), "sector": dims.sectors, "gas": dims.gases, "config": dims.configurations,
-               "gwp": dims.gwp_bases, "view": dims.views, "period": dims.fiscal_periods}
+    allowed = {"level": ("adm1", "adm2", "grid"), "sector": dims.sectors, "gas": dims.gases, "pol": dims.pollutants,
+               "config": dims.configurations, "gwp": dims.gwp_bases, "view": dims.views, "period": dims.fiscal_periods}
     action = {}
     for key, value in payload.items():
         if value in (None, ""):
@@ -298,6 +304,13 @@ def validate_map_view(payload, dims):
                 raise ToolInputError("geo=%r is neither a province (%s) nor an ADM2 shape_id" % (value, ", ".join(dims.adm1_names)))
         else:
             raise ToolInputError("set_map_view has no field %r" % key)
+    # one metric: a pollutant and a gas are different quantities, and a pollutant has no grid layer or month
+    if "pol" in action:
+        for key in ("gas", "month"):
+            if key in action:
+                raise ToolInputError("set_map_view takes pol OR %s, not both: an air pollutant is not a greenhouse gas and has no monthly layer" % key)
+        if action.get("level") == "grid":
+            raise ToolInputError("level='grid' has no air-pollutant layer; use adm1 or adm2 with pol")
     if action.get("level") == "grid" and "gas" not in action:
         action["gas"] = dims.gases[0] if "CO2" not in dims.gases else "CO2"
     return action

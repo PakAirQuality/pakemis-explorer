@@ -136,7 +136,19 @@ HOW THE DATA IS SHAPED
 - Sectors are the modules listed below; categories and IPCC codes filter within them; group_by
   splits a result into cells (sector_id, gas or pollutant, month, province, shape_id, category, ...).
 - The user's interface state is given at the top of each message as [ui_state]; use it to resolve
-  "here", "this year", "this sector" and to default the map action.
+  "here", "this year", "this sector", "the number shown" and to default the map action. Its keys:
+  `metric` (greenhouse_gases | air_pollutant); `pol` (the selected air pollutant); `gas`; `period`;
+  `geo` with `place_level` (adm1 = a province name, adm2 = a district shape_id - pass both as
+  geography_level and geography_ids); `sector`; `month`; `config`; `gwp`; `view`.
+- WHEN [ui_state] CARRIES `pol`, THE VIEW IS THAT POLLUTANT'S EMISSIONS, NOT GREENHOUSE GASES.
+  "The current view", "the number shown" and "here" then mean query_air with pollutants=[pol],
+  periods=[period], and the place and sector if given. Do not answer such a question with
+  query_emissions or a CO2e figure. An air result is an emissions estimate in kilotonnes for the
+  fiscal year - never call it air quality, a concentration, or what people breathe - and it covers
+  the estimated sources only: say that grid power is outside the total, and never add its
+  screening range to it.
+- The scope of an answer is the scope it was ASKED under ([ui_state] of that message). Name it:
+  the place, the period and the metric.
 """
 
 

@@ -13,7 +13,9 @@
 import { useState } from "react";
 import { ArrowLeft, Laptop, MoreVertical, Plus } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
-import { gasLabel, periodShort } from "@/lib/labels";
+import { districtName, gasLabel, geographyName, periodShort, sectorLabel } from "@/lib/labels";
+import { geoGrain } from "@/lib/geography";
+import { POLLUTANT_LABELS } from "@/lib/explore/query";
 import type { HistoryEntry } from "./history";
 
 const ROW = "flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent-soft";
@@ -68,10 +70,12 @@ export function HistoryList({
   /** The filters a conversation was opened under, in the release's own words. Never a raw id. */
   const scopeWords = (ui: Record<string, unknown>): string[] => {
     const out: string[] = [];
+    // every part a release label: this printed the sector's raw id, a district's shape id, and
+    // "All gases" for a conversation that had been about a pollutant
     const geo = typeof ui.geo === "string" ? ui.geo : null;
-    out.push(geo ? (dims.adm1.find((r) => r.name === geo)?.name ?? geo) : "Pakistan");
-    if (typeof ui.sector === "string") out.push(ui.sector);
-    out.push(gasLabel(labels, typeof ui.gas === "string" ? ui.gas : null));
+    out.push(!geo ? "Pakistan" : geoGrain(geo) === "adm2" ? districtName(dims, geo) : geographyName(labels, geo));
+    if (typeof ui.sector === "string") out.push(sectorLabel(labels, ui.sector));
+    out.push(typeof ui.pol === "string" ? `${POLLUTANT_LABELS[ui.pol] ?? ui.pol} emissions` : gasLabel(labels, typeof ui.gas === "string" ? ui.gas : null));
     if (typeof ui.period === "string") out.push(periodShort(labels, ui.period));
     return out;
   };

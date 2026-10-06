@@ -25,12 +25,12 @@ import type { Envelope } from "@/lib/envelope";
 import { cellUnit, columnLabel, geographyName, inputChips, limitationText, periodShort, gwpLabel } from "@/lib/labels";
 import { gasColor, rampByRank } from "@/lib/palette";
 import { stateFromRequest } from "@/lib/requests";
-import { applyPatch, hrefForState } from "@/lib/urlState";
+import { applyPatch, hrefForState, resolveState } from "@/lib/urlState";
 import { renderAnswer } from "./answerText";
 import { barLabel, cellName, chartKind, downloadTool, exactnessWords, groupKeyOf, principalTool, rowsOf, scopeRows, sizeOf, uncertaintyTool } from "./answerParts";
 import { useReceiptDrawer } from "./receiptDrawer";
 import { MapMovedLine, ProvenanceLine } from "./Provenance";
-import { WORD_KEYS, mapPatchFromInput, previousOf, undoPatch, type MapMove } from "./mapMove";
+import { WORD_KEYS, mapPatchFromInput, movesMap, previousOf, undoPatch, type MapMove } from "./mapMove";
 import { attachmentOf, attachmentTitle, disclosureOf, followUps, isModelled, methodDisclosure, methodTool, periodSpan, scopeNote } from "./attachment";
 import { allocationSurfaceWords } from "@/components/methods/evidenceClassText";
 import type { Highlight } from "./ToolCard";
@@ -212,7 +212,11 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
     ...(r.unallocated ? ["some mass is unallocated at this grain"] : []),
   ].filter(Boolean);
   const patch = principal.name === "set_map_view" ? {} : stateFromRequest({ name: principal.name, body: principal.input });
-  const exploreHref = Object.keys(patch).length ? hrefForState(applyPatch({ ...state, c: null }, patch), defaults, "/data") : null;
+  // THE LINK OPENS THE ANSWER'S SCOPE, NOT THE READER'S LATEST. It was the request's fields patched
+  // over the current state, so anything selected since the question rode along: an answer about
+  // the whole country opened on the province now on screen, and a greenhouse answer opened as a
+  // PM₂.₅ page if a pollutant had been chosen meanwhile. The base is the release's defaults.
+  const exploreHref = Object.keys(patch).length ? hrefForState(applyPatch(resolveState({}, defaults), patch, defaults), defaults, "/data") : null;
   // A CSV ONLY WHEN ONE WAS ASKED FOR. The fallback that used to sit here - `api.downloadCsvUrl(r.receipt)`
   // - put an export under every answer, and what it exported was the QUERY, not the answer: a
   // question about three agriculture categories offered a 33-cell national completeness ledger
@@ -313,7 +317,8 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
   // SHOW ON MAP IS AN OFFER, NOT AN ACT. It is derived here from the call's own input, so it is
   // available whether or not the agent chose to move the map - and nothing moves until it is
   // clicked. `stateFromRequest` is the same mapping the "Open in Explore" link already uses.
-  const mapPatch = mapPatchFromInput(principal.input);
+  const mapPatch = mapPatchFromInput(principal.input, principal.name);
+  const mapWouldMove = movesMap(state, mapPatch);
   const showOnMap = () => {
     setClicked({ patch: mapPatch, previous: previousOf(state, mapPatch) });
     setState(mapPatch);
@@ -324,7 +329,7 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
       open={evidenceOpen}
       onToggle={() => setEvidenceOpen((o) => !o)}
       extra={
-        Object.keys(mapPatch).length > 0 && !move ? (
+        mapWouldMove && !move ? (
           <button type="button" onClick={showOnMap}
                   className="shrink-0 font-medium text-accent underline underline-offset-2 hover:text-accent-bright"
                   data-testid="show-on-map">

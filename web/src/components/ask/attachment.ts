@@ -227,7 +227,8 @@ export function followUps(principal: ToolItem | null, answer: AnswerEvent, turnH
   const r = principal.result;
   const out: string[] = [];
   if (chartKind(r.cells) === "columns") out.push(CHANGE_FOLLOW_UP);
-  if (!turnHasUncertainty) out.push(UNCERTAINTY_FOLLOW_UP);
+  // the interval function is the greenhouse inventory's: offering it under an air answer asked for something the release cannot give
+  if (!turnHasUncertainty && principal.name !== "query_air") out.push(UNCERTAINTY_FOLLOW_UP);
   if (out.length < 2 && r.context?.geography_level === "adm1") {
     const ids = r.context?.geography_ids;
     if (Array.isArray(ids) && ids.length === 1 && (dims?.adm1?.length ?? 0) > 1) out.push(COMPARE_FOLLOW_UP);

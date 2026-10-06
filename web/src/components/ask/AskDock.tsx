@@ -13,16 +13,18 @@
  * with `seedScope` applied to the URL state and to the ui_state of that send; `onSeeded` is
  * then called.
  */
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { BarChart3, ChevronRight, Download, Eraser, FileText, History, LineChart, MoreVertical, Plus, ShieldCheck, Trash2, Waves, X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { shown } from "@/lib/envelope";
 import { cellUnit } from "@/lib/labels";
-import { useDeck } from "@/lib/queries";
+import { useAir, useDeck } from "@/lib/queries";
 import { BrandBadge, BrandTile } from "@/components/shell/BrandLogo";
 import { ASK_MOTIF, AskMotif } from "./AskMotif";
 import { applyPatch, type ExplorerState } from "@/lib/urlState";
+import { sameSelection, selectionPatch, uiStateOf } from "@/lib/selection";
+import { airScopeBody } from "@/lib/requests";
 import { Composer } from "./Composer";
 import { DisabledCard } from "./DisabledCard";
 import { ReasoningTimeline } from "./ReasoningTimeline";
@@ -94,12 +96,9 @@ export function motifBox(badge = BADGE_PX, badgeTop = HERO_PT, panel = ASK_PANEL
  */
 export const ASK_CONTRACT = "Responses cite their sources and preserve the selected map context.";
 
-/** The URL state the agent is told about: the scope keys, not the chrome (tab, layer, cam, raster, c). */
-export function uiStateOf(s: ExplorerState): Record<string, unknown> {
-  const out: Record<string, unknown> = { level: s.level, period: s.period, config: s.config, gwp: s.gwp, view: s.view };
-  for (const k of ["month", "sector", "gas", "geo", "cell"] as const) if (s[k]) out[k] = s[k];
-  return out;
-}
+// The selection the agent is told about lives in lib/selection.ts (uiStateOf), with the pollutant
+// it used to leave out; re-exported because this is where callers have always found it.
+export { uiStateOf };
 
 export type AskDockProps = {
   seed?: string | null;
@@ -165,7 +164,12 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
     scopeOverride.current = null;
     return uiStateOf(s);
   }, []);
-  const ask = useAskStream({ conversationId: state.c, uiState, onMapAction, onConversationId });
+  const stream = useAskStream({ conversationId: state.c, uiState, onMapAction, onConversationId });
+  // A MOVE BELONGS TO THE TURN THAT MADE IT. It was never cleared, so "Map updated to…" and its
+  // Undo attached themselves to the next answer too - one that had moved nothing.
+  const streamSend = stream.send;
+  const send = useCallback((text: string) => { setAgentMove(null); return streamSend(text); }, [streamSend]);
+  const ask = useMemo(() => ({ ...stream, send }), [stream, send]);
   const docked = useAskDocked();
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -187,8 +191,13 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
   // Asked for only while the empty state is on screen and visible - it decorates one suggested
   // question and nothing else, and the answer is not worth a request nobody will read.
   const wantsTotal = active && disabled === null && ask.turns.length === 0;
-  const deck = useDeck(state, { total: wantsTotal, breakdown: false, ranked: false, provinces: false, peers: false, series: false, gases: false });
-  const total = deck.total.data?.values.find((c) => typeof c.value === "number") ?? null;
+  // UNDER A POLLUTANT THE FIGURE IS THE POLLUTANT'S, and no greenhouse total is asked for at all.
+  // The deck's body carries no pollutant, so this used to fetch the CO₂e total and splice it into
+  // a question shown over a PM₂.₅ view. (The air questions carry no figure; the request is the
+  // workspace cards' own, so on the workspace it is a cache hit.)
+  const deck = useDeck(state, { total: wantsTotal && !state.pol, breakdown: false, ranked: false, provinces: false, peers: false, series: false, gases: false });
+  const airTotal = useAir(state.pol ? airScopeBody(state) : null, wantsTotal);
+  const total = (state.pol ? airTotal.data : deck.total.data)?.values.find((c) => typeof c.value === "number") ?? null;
   // the seeded question: sent once per seedKey, on the first render that can send it
   const sentKey = useRef<number | null>(null);
   const sendRef = useRef(ask.send);
@@ -304,17 +313,14 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
     if (historyOpen || empty) return null;
     const saved = ask.turns.find((t) => t.message.trim())?.ui_state;
     if (!saved) return null;
-    const now = uiStateOf(state);
-    const keys = new Set([...Object.keys(saved), ...Object.keys(now)]);
-    if ([...keys].every((k) => saved[k] === now[k])) return null;
+    if (sameSelection(saved, uiStateOf(state), defaults)) return null;
     // A SAVED SCOPE IS A WHOLE SCOPE, NOT A PATCH. `uiStateOf` omits the optional keys when they
     // are unset, so merging it over the current state cannot UNSET anything: a conversation asked
     // with no sector, read while a sector is selected, would both describe itself as having one
-    // and fail to clear it on restore. Every optional key is therefore named, null included.
-    const patch = { ...(saved as Partial<ExplorerState>) } as Partial<ExplorerState>;
-    for (const k of ["month", "sector", "gas", "geo", "cell"] as const) {
-      if (!(k in saved)) (patch as Record<string, unknown>)[k] = null;
-    }
+    // and fail to clear it on restore. Every optional key is therefore named, null included -
+    // the pollutant among them, which the hand-written list here used to leave out, so a PM₂.₅
+    // conversation was indistinguishable from a greenhouse one and restoring it changed nothing.
+    const patch = selectionPatch(saved, defaults);
     const words = scopeChips(labels, dims, applyPatch(state, patch), defaults)
       .filter((c) => c.primary)
       .map((c) => c.label)

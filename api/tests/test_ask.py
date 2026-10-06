@@ -1015,3 +1015,54 @@ def test_the_budget_store_is_chosen_by_the_deployment(monkeypatch):
     monkeypatch.setenv("PAKEMIS_ASK_BUDGET_STORE", "redis")
     with pytest.raises(ValueError):                                    # a typo must not run on the wrong budget in silence
         build_budget(Limits())
+
+
+# --- the selection the assistant is told, and the scope its answer carries ---------------------
+
+def test_a_pollutant_view_reaches_the_model_as_a_pollutant_view(ask_client, fake):
+    """The page used to send no `pol` at all, so a PM2.5 view arrived as greenhouse defaults and was
+    answered in CO2e. The key is in the message, and the prompt says what it means."""
+    ui = {"level": "adm1", "period": "FY2023-24", "config": "REF_2023_24", "pol": "PM2.5", "metric": "air_pollutant", "unit": "kt"}
+    fake.load([tool_use("query_air", {"pollutants": ["PM2.5"], "periods": ["FY2023-24"]}), stop("tool_use")],
+              [text("Covered sources emitted {{result_1_cell_0}} {{result_1_cell_0.unit}}."), stop()])
+    events = ask(ask_client, "Explain the number currently shown.", ui_state=ui)
+    sent = fake.calls[0]["messages"][-1]["content"]
+    assert sent.startswith("[ui_state] {") and '"pol":"PM2.5"' in sent and '"metric":"air_pollutant"' in sent
+    system = fake.calls[0]["system"]
+    system = system if isinstance(system, str) else json.dumps(system)
+    assert "WHEN [ui_state] CARRIES `pol`" in system and "never call it air quality" in system
+    # the answer's scope says WHAT it is about, not only where and when
+    scope = only(events, "answer")[0]["scope"]
+    assert scope["name"] == "query_air" and scope["pollutants"] == ["PM2.5"] and scope["periods"] == ["FY2023-24"]
+    assert only(events, "tool_result")[0]["cells"][0]["unit"].startswith("kt")
+
+
+def test_a_greenhouse_answer_scope_names_no_pollutant(ask_client, fake):
+    fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
+              [text("The total is {{result_1_cell_0}} {{result_1_cell_0.unit}}."), stop()])
+    events = ask(ask_client, "Explain the number currently shown.", ui_state={"level": "adm1", "period": "FY2023-24", "metric": "greenhouse_gases"})
+    assert "pollutants" not in only(events, "answer")[0]["scope"]
+
+
+def test_the_assistant_tool_without_a_period_reads_the_covered_panel(ask_client, fake):
+    """The assistant's query goes through the same chokepoint as the HTTP route: a query_air call
+    that names no period is answered for the reference year on the panel, never on the single-year
+    layers where power is a row."""
+    fake.load([tool_use("query_air", {"pollutants": ["SO2"], "group_by": ["sector_id"], "order_by": "value desc"}), stop("tool_use")],
+              [text("The largest estimated source emitted {{result_1_cell_0}} {{result_1_cell_0.unit}}."), stop()])
+    events = ask(ask_client, "What are the largest sources of SO2?", ui_state={"pol": "SO2", "period": "FY2023-24"})
+    result = only(events, "tool_result")[0]
+    assert "power" not in {c.get("group", {}).get("sector_id") for c in result["cells"]}
+    assert result["context"]["periods"] == ["FY2023-24"] and "periods" in result["context"]["defaults_applied"]
+
+
+def test_set_map_view_takes_a_pollutant_instead_of_a_gas(ask_client, fake):
+    dims = ask_client.app.state.ask.dims
+    from pakemis_api.ask.tools import ToolInputError, validate_map_view
+    assert validate_map_view({"pol": "PM2.5", "level": "adm1", "period": "FY2023-24"}, dims) == {"pol": "PM2.5", "level": "adm1", "period": "FY2023-24"}
+    for bad in ({"pol": "PM2.5", "gas": "CH4"}, {"pol": "PM2.5", "level": "grid"}, {"pol": "ozone"}):
+        with pytest.raises(ToolInputError):
+            validate_map_view(bad, dims)
+    fake.load([tool_use("set_map_view", {"pol": "SO2", "level": "adm2"}), stop("tool_use")], [text("done"), stop()])
+    events = ask(ask_client, "show SO2 by district on the map")
+    assert only(events, "map_action") == [{"pol": "SO2", "level": "adm2"}]

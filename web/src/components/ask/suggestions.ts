@@ -13,6 +13,8 @@
 import type { Labels } from "@/lib/release";
 import type { ExplorerState, StateDefaults } from "@/lib/urlState";
 import { configWords, districtName, gasLabel, geographyName, gwpIsDefault, gwpLabel, monthLabel, periodShort, sectorLabel, type Dims } from "@/lib/labels";
+import { geoGrain } from "@/lib/geography";
+import { metricOf } from "@/lib/selection";
 
 export type ScopeDims = Dims & { fiscalPeriods: string[] };
 
@@ -36,8 +38,10 @@ function lowerInitial(text: string): string {
 
 /** "Punjab", "Lahore" or "Pakistan": the place the scope names. */
 export function placeName(labels: Labels, dims: Dims, s: Pick<ExplorerState, "geo" | "level">): string {
+  // by the id's own grain, not the map's level: a province stays selected while its districts
+  // are on screen, and reading `level` there named a province as though it were a district
   if (!s.geo) return "Pakistan";
-  return s.level === "adm2" ? districtName(dims, s.geo) : geographyName(labels, s.geo);
+  return geoGrain(s.geo) === "adm2" ? districtName(dims, s.geo) : geographyName(labels, s.geo);
 }
 
 /**
@@ -60,11 +64,14 @@ export type ScopePart = { id: string; label: string; primary: boolean };
 export function scopeChips(labels: Labels, dims: Dims, s: ExplorerState, defaults?: Pick<StateDefaults, "gwp_basis">): ScopePart[] {
   const parts: ScopePart[] = [{ id: "place", label: placeName(labels, dims, s), primary: true }];
   if (s.sector) parts.push({ id: "sector", label: lowerInitial(sectorLabel(labels, s.sector)), primary: true });
-  parts.push({ id: "gas", label: gasLabel(labels, s.gas), primary: true });
+  // THE METRIC CHIP IS THE METRIC. It printed gasLabel(s.gas) whatever was selected, so a PM₂.₅
+  // view read "All gases" here - and the same omission, one function away, told the model so.
+  const metric = metricOf(s, labels);
+  parts.push({ id: "gas", label: metric.family === "air" ? `${metric.label} emissions` : gasLabel(labels, s.gas), primary: true });
   parts.push({ id: "period", label: periodShort(labels, s.period), primary: true });
   if (s.month) parts.push({ id: "month", label: monthLabel(labels, s.month), primary: true });
   parts.push({ id: "config", label: configWords(labels, s.config), primary: false });
-  if (!gwpIsDefault(labels, s.gwp, defaults?.gwp_basis)) parts.push({ id: "gwp", label: gwpLabel(labels, s.gwp), primary: false });
+  if (metric.family !== "air" && !gwpIsDefault(labels, s.gwp, defaults?.gwp_basis)) parts.push({ id: "gwp", label: gwpLabel(labels, s.gwp), primary: false });
   return parts;
 }
 
@@ -72,7 +79,7 @@ export function scopeChips(labels: Labels, dims: Dims, s: ExplorerState, default
 export function scopeLine(labels: Labels, dims: Dims, s: ExplorerState, defaults?: Pick<StateDefaults, "gwp_basis">): string {
   // the gas part is unconditional in the chips (a pill reading "All gases (CO₂e)" is informative);
   // in running prose an unset gas is better left unsaid, which is what this line always did
-  return scopeChips(labels, dims, s, defaults).filter((p) => p.id !== "gas" || s.gas).map((p) => p.label).join(" · ");
+  return scopeChips(labels, dims, s, defaults).filter((p) => p.id !== "gas" || s.gas || s.pol).map((p) => p.label).join(" · ");
 }
 
 /** The province after `place` in the release's ADM1 list (cyclic, polygons only): Punjab → Sindh. */
@@ -84,7 +91,30 @@ export function comparisonProvince(dims: Dims, place: string): string | null {
   return names[(i + 1) % names.length];
 }
 
+/**
+ * The questions for a pollutant view. They are about THAT pollutant's emissions and they stay
+ * inside what the air tables can answer: no uncertainty question (the interval function is the
+ * greenhouse inventory's), no month, and nothing that splices in a CO₂e figure - the certainty
+ * question on a PM₂.₅ view used to quote the national greenhouse total.
+ */
+function airQuestions(labels: Labels, dims: ScopeDims, s: ExplorerState, pollutant: string): string[] {
+  const place = placeName(labels, dims, s);
+  const sector = s.sector ? lowerInitial(sectorLabel(labels, s.sector)) : null;
+  const firstPeriod = dims.fiscalPeriods[0] ? periodShort(labels, dims.fiscalPeriods[0]) : null;
+  const out: string[] = [];
+  out.push(s.geo ? `What are ${place}'s largest sources of ${pollutant}?` : `What are Pakistan's largest sources of ${pollutant}?`);
+  if (sector) out.push(`How much ${pollutant} does ${sector} emit${s.geo ? ` in ${place}` : ""}?`);
+  else if (!s.geo) out.push(`Which provinces emit the most ${pollutant}?`);
+  out.push(`Which sources of ${pollutant} are not estimated?`);
+  if (firstPeriod && firstPeriod !== periodShort(labels, s.period)) out.push(`How have ${pollutant} emissions changed since ${firstPeriod}?`);
+  else out.push(`How have ${pollutant} emissions changed over the nine years?`);
+  out.push("Is this a measure of air quality?");
+  return out.slice(0, 5);
+}
+
 export function suggestedQuestions(labels: Labels, dims: ScopeDims, s: ExplorerState): string[] {
+  const metric = metricOf(s, labels);
+  if (metric.family === "air") return airQuestions(labels, dims, s, metric.label);
   const place = placeName(labels, dims, s);
   const sector = s.sector ? lowerInitial(sectorLabel(labels, s.sector)) : null;
   const focus = s.sector ? SECTOR_FOCUS[s.sector] : null;
@@ -96,9 +126,10 @@ export function suggestedQuestions(labels: Labels, dims: ScopeDims, s: ExplorerS
     else if (s.gas) out.push(`Where does ${place}'s ${gasLabel(labels, s.gas)} come from?`);
     else out.push(`What is ${place}'s largest source?`);
     out.push("Which parts are proxy-allocated?");
-    const other = s.level === "adm1" ? comparisonProvince(dims, place) : null;
+    const grain = geoGrain(s.geo);
+    const other = grain === "adm1" ? comparisonProvince(dims, place) : null;
     if (other) out.push(`Compare ${place} with ${other}`);
-    else if (s.level === "adm2") out.push("How was this district's share allocated?");
+    else if (grain === "adm2") out.push("How was this district's share allocated?");
     out.push("Download the rows used here.");
     return out.slice(0, 5);
   }

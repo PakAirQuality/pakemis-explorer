@@ -160,6 +160,41 @@ describe("SSE parser", () => {
 });
 
 describe("AskDock", () => {
+  it("a pollutant view is shown, suggested and SENT as a pollutant view, and the answer keeps the scope it was asked under", async () => {
+    // The panel said "All gases" over a PM₂.₅ view, offered "How certain is the 469.64 Mt CO₂e
+    // estimate?", and sent a ui_state with no pollutant in it - so the model answered in CO₂e.
+    const fetchSpy = vi.fn(async (url: string) => (String(url).endsWith("/ask") ? sseResponse(sseBody(EVENTS)) : ({ ok: true, status: 200, statusText: "OK", json: async () => ({}) } as Response)));
+    vi.stubGlobal("fetch", fetchSpy);
+    const pm25 = resolveState({ pol: "PM2.5" }, DEFAULTS);
+    const view = mount(ctx(vi.fn(), undefined, pm25));
+    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent)).toEqual(["Pakistan", "PM₂.₅ emissions", "2023–24"]);
+    const offered = screen.getAllByTestId("suggestion").map((s) => s.textContent ?? "");
+    expect(offered[0]).toBe("What are Pakistan's largest sources of PM₂.₅?");
+    for (const q of offered) {
+      expect(q).not.toContain("CO₂e");
+      expect(q).not.toMatch(/How certain/);
+      expect(q).not.toMatch(/\d+\.\d+/);
+    }
+    // no greenhouse total is fetched to decorate a question on a pollutant view
+    expect((fetchSpy.mock.calls as unknown as [string][]).some((c) => String(c[0]).includes("/query/emissions"))).toBe(false);
+    await askQuestion("Explain the number currently shown.");
+    await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
+    const ask = (fetchSpy.mock.calls as unknown as [string, RequestInit][]).find((c) => String(c[0]).endsWith("/ask"))!;
+    const body = JSON.parse(String(ask[1].body));
+    expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", pol: "PM2.5", metric: "air_pollutant", unit: "kt", coverage: "covered sources only; grid power is a screening scenario outside the total" });
+    expect(screen.getByTestId("turn-scope")).toHaveTextContent("Asked about Pakistan · PM₂.₅ emissions · 2023–24");
+    // THE READER CHANGES THE FILTERS. The context row follows them - it is the next question's -
+    // and the answer already given keeps saying what IT was about.
+    view.rerender(
+      <Providers>
+        <ExplorerContext.Provider value={ctx(vi.fn(), undefined, resolveState({ period: "FY2020-21", geo: "Punjab" }, DEFAULTS))}>
+          <AskDock />
+        </ExplorerContext.Provider>
+      </Providers>,
+    );
+    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent)).toEqual(["Punjab", "All gases", "2020–21"]);
+    expect(screen.getByTestId("turn-scope")).toHaveTextContent("Asked about Pakistan · PM₂.₅ emissions · 2023–24");
+  });
   it("streams a turn: thinking, tool call, result, map action, refusal, answer with cites, usage", async () => {
     const fetchSpy = vi.fn(async () => sseResponse(sseBody(EVENTS)));
     vi.stubGlobal("fetch", fetchSpy);
@@ -181,8 +216,10 @@ describe("AskDock", () => {
     const ask = calls.find((c) => String(c[0]).endsWith("/ask"));
     expect(ask).toBeTruthy();
     const body = JSON.parse(String(ask![1].body));
-    expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all" });
+    expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all", metric: "greenhouse_gases" });
     expect(body.client_history).toEqual([]);
+    // the answer names the scope it was asked under
+    expect(screen.getByTestId("turn-scope")).toHaveTextContent("Asked about Pakistan · All gases · 2023–24");
     // THE TURN IS A CHAT MESSAGE NOW: the bubble, the answer, and the notices that concern the
     // reader. The model's reasoning, the per-call tool cards, the "How this was answered" fold and
     // the token line are all gone from the screen.

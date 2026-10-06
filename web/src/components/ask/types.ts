@@ -36,7 +36,7 @@ export type ToolResultEvent = {
   download?: { csv: string; receipt_json: string };
 };
 export type RefusalEvent = { k: number; id: string; name: string; error: string; error_class: string; limitation_id: string | null; message: string; message_worded?: string; detail: Record<string, unknown> };
-export type MapActionKey = "level" | "geo" | "period" | "month" | "sector" | "gas" | "config" | "gwp" | "view";
+export type MapActionKey = "level" | "geo" | "period" | "month" | "sector" | "gas" | "pol" | "config" | "gwp" | "view";
 export type MapActionEvent = Partial<Record<MapActionKey, string>>;
 export type Citation = { k: number; cell: number; attr: string; receipt: string; text: string };
 /** The last tool result's compact context with the call it came from (k, request_type, receipt, name); null or absent on older streams. */

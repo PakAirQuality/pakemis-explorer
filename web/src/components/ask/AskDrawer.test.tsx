@@ -87,6 +87,19 @@ describe("suggestions", () => {
     expect(suggestedQuestions(labels, dims, { ...national, sector: "power" })).toEqual(["How much comes from coal-fired generation?", "How certain is the power estimate?", "How has power changed since 2020–21?", "Which parts of power are not estimated?", "Download the rows used here."]);
     expect(suggestedQuestions(labels, dims, resolveState({ level: "adm2", geo: "60131773B12131197496886" }, DEFAULTS))).toEqual(["Why is Lahore's estimate high?", "What is Lahore's largest source?", "Which parts are proxy-allocated?", "How was this district's share allocated?", "Download the rows used here."]);
     expect(comparisonProvince(dims, "Sindh")).toBe("Balochistan"); // cyclic, polygons only (Other is skipped)
+    // A POLLUTANT VIEW IS WORDED AS ONE: the metric part names it, and the questions are about its
+    // emissions - none about a CO₂e figure, none the air tables cannot answer
+    const pm25 = resolveState({ pol: "PM2.5" }, DEFAULTS);
+    expect(scopeLine(labels, dims, pm25, DEFAULTS)).toBe("Pakistan · PM₂.₅ emissions · 2023–24 · reference estimate");
+    expect(suggestedQuestions(labels, dims, pm25)).toEqual(["What are Pakistan's largest sources of PM₂.₅?", "Which provinces emit the most PM₂.₅?", "Which sources of PM₂.₅ are not estimated?", "How have PM₂.₅ emissions changed since 2020–21?", "Is this a measure of air quality?"]);
+    expect(suggestedQuestions(labels, dims, resolveState({ pol: "SO2", level: "adm2", geo: "60131773B12131197496886" }, DEFAULTS))[0]).toBe("What are Lahore's largest sources of SO₂?");
+    // a pollutant view carries no warming-potential basis to mention, even a non-default one
+    expect(scopeLine(labels, dims, { ...pm25, gwp: "AR6" }, DEFAULTS)).not.toContain("AR6");
+    // THE PLACE IS READ AT ITS OWN GRAIN: a province with its districts on the map is still a province
+    const drilled = resolveState({ level: "adm2", geo: "Punjab" }, DEFAULTS);
+    expect(scopeLine(labels, dims, drilled, DEFAULTS)).toBe("Punjab · 2023–24 · reference estimate");
+    expect(suggestedQuestions(labels, dims, drilled)).toContain("Compare Punjab with Sindh");
+    expect(suggestedQuestions(labels, dims, drilled)).not.toContain("How was this district's share allocated?");
     for (const q of [...suggestedQuestions(labels, dims, punjabAg), ...suggestedQuestions(labels, dims, national)]) {
       expect(q).not.toContain("FY");
       expect(q).not.toMatch(/\d+\.\d+/);
@@ -154,7 +167,7 @@ describe("AskDrawer", () => {
     expect(askCalls(fetchSpy)).toHaveLength(1);
     const body = askBody(fetchSpy);
     expect(body.message).toBe("Compare Punjab with Sindh");
-    expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all", sector: "agriculture", geo: "Sindh" });
+    expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all", metric: "greenhouse_gases", sector: "agriculture", geo: "Sindh", place_level: "adm1" });
     expect(setState).toHaveBeenCalledWith({ geo: "Sindh" });
     expect(screen.getByTestId("user-message")).toHaveTextContent("Compare Punjab with Sindh");
     // a second request is a second send; a bare openAsk only opens
