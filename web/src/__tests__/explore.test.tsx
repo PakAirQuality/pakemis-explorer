@@ -11,7 +11,7 @@ import "@testing-library/jest-dom/vitest";
  * under the canvas; and the four audits (every decimal a server string, ticks included; no FY;
  * no raw id; no avoid-list phrase).
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/testing";
 import { Providers } from "@/components/Providers";
@@ -19,14 +19,33 @@ import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import Page from "@/app/data/page";
 import { resolveState } from "@/lib/urlState";
 import { buildQuery, resolveExplore, toUrl, transition, type ExploreContext, type ExploreState, type LocalKeys } from "@/lib/explore/query";
+import { MAP_FAILURE } from "@/components/workspace/copy";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 import { avoidPhrasesIn } from "./vocabulary";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ usePathname: () => "/data", useRouter: () => ({ push, replace: vi.fn() }) }));
-vi.mock("@/components/map/ExplorerMap", () => ({
-  ExplorerMap: ({ override }: { override?: { level?: string; sector?: string | null } }) => <div data-testid="map-stub" data-level={override?.level ?? ""} data-sector={override?.sector ?? ""} />,
-}));
+/**
+ * The map stub can be told what status to report as it mounts (null: a map still loading, as
+ * before) and keeps the live instance's `onStatus` for what the browser does afterwards.
+ */
+const mapStub = vi.hoisted(() => ({ status: null as null | "ready" | "failed" | "lost", report: null as null | ((s: "loading" | "ready" | "failed" | "lost") => void) }));
+vi.mock("@/components/map/ExplorerMap", async () => {
+  const { useEffect } = await import("react");
+  return {
+    ExplorerMap: ({ override, onStatus }: { override?: { level?: string; sector?: string | null }; onStatus?: (s: "loading" | "ready" | "failed" | "lost") => void }) => {
+      useEffect(() => {
+        mapStub.report = (s) => onStatus?.(s);
+        if (mapStub.status) onStatus?.(mapStub.status);
+        return () => {
+          mapStub.report = null;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return <div data-testid="map-stub" data-level={override?.level ?? ""} data-sector={override?.sector ?? ""} />;
+    },
+  };
+});
 type Item = { id: string; name: string; label: string };
 vi.mock("@/components/charts/BarsWithAxis", () => ({
   BarsWithAxis: ({ items, ticks, onSelect, testId = "bars-with-axis" }: { items: Item[]; ticks?: string[] | null; onSelect?: (id: string) => void; testId?: string }) => (
@@ -105,6 +124,8 @@ const fetchSpy = vi.fn();
 beforeEach(() => {
   fetchSpy.mockReset();
   push.mockReset();
+  mapStub.status = null;
+  mapStub.report = null;
   vi.stubGlobal(
     "fetch",
     mockFetch((url, body) => {
@@ -292,6 +313,61 @@ describe("/data (the Grapher)", () => {
     expect(lastCall("/query/emissions")).toEqual({ periods: ["FY2023-24"], configuration_id: "REF_2023_24", gwp_basis: "AR5", geography_level: "adm1", spatial_view: "all", group_by: ["province"], order_by: "value desc" });
     expect(screen.getByTestId("canvas-title")).toHaveTextContent("Allocated emissions by province");
     expect(updates.at(-1)).toContain("geos=all");
+  });
+  it("a map that cannot be drawn is never a blank canvas: the sentence, the chart of the same envelope in its place, and one click to Chart or Table with the selection intact", async () => {
+    mapStub.status = "failed";
+    const updates: string[] = [];
+    mount("?sector=agriculture&period=FY2020-21", ({ queryString }) => updates.push(queryString));
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    const fallback = await screen.findByTestId("canvas-map-fallback");
+    expect(fallback).toHaveAttribute("data-status", "failed");
+    const notice = within(fallback).getByTestId("map-unavailable");
+    expect(notice).toHaveAttribute("role", "status");
+    expect(within(notice).getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE.explanation);
+    // the frame the map would have filled is out of sight, not a 560 px blank
+    const frame = screen.getByTestId("canvas-map");
+    expect(frame).toHaveClass("hidden");
+    expect(frame).toHaveAttribute("aria-hidden", "true");
+    // the same envelope, as bars: the provinces the map would have shaded, for the sector and year asked
+    const body = { periods: ["FY2020-21"], configuration_id: "REF_2023_24", gwp_basis: "AR5", geography_level: "adm1", spatial_view: "all", reporting_sectors: ["agriculture"], group_by: ["province"], order_by: "value desc" };
+    expect(lastCall("/query/emissions")).toEqual(body);
+    const bars = await within(fallback).findByTestId("bars-with-axis");
+    expect(within(bars).getAllByTestId("bar-item").map((b) => b.textContent)).toEqual(PROVINCES.map((c) => `${c.group.province} ${c.display_short} · ${c.extra.share_pct_short} %`));
+    // nothing was rewritten behind the reader's back: the map is still what the URL asks for
+    for (const part of ["rep=map", "sector=agriculture", "period=FY2020-21", "geos=all"]) expect(updates.at(-1), part).toContain(part);
+    // one click makes Table the page's representation, the selection and the request unchanged
+    fireEvent.click(within(notice).getByTestId("map-unavailable-table"));
+    expect(await screen.findAllByTestId("envelope-row")).toHaveLength(PROVINCES.length);
+    for (const part of ["rep=table", "sector=agriculture", "period=FY2020-21", "geos=all"]) expect(updates.at(-1), part).toContain(part);
+    expect(lastCall("/query/emissions")).toEqual(body);
+    expect(screen.queryByTestId("map-unavailable")).toBeNull();
+    expect(screen.queryByTestId("canvas-map")).toBeNull();
+    // and the other click, from the map again, makes it Chart
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    fireEvent.click(await screen.findByTestId("map-unavailable-chart"));
+    await waitFor(() => expect(updates.at(-1)).not.toContain("rep="));
+    expect(updates.at(-1)).toContain("sector=agriculture");
+    expect(screen.queryByTestId("map-unavailable")).toBeNull();
+    expect(screen.getByTestId("bars-with-axis")).toBeInTheDocument();
+  });
+  it("a context lost on the data page's map shows the chart until the browser gives it back, and then the map again", async () => {
+    mapStub.status = "ready";
+    mount();
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    const stub = await screen.findByTestId("map-stub");
+    expect(screen.getByTestId("canvas-map")).not.toHaveClass("hidden");
+    expect(screen.queryByTestId("canvas-map-fallback")).toBeNull();
+    act(() => mapStub.report?.("lost"));
+    expect(screen.getByTestId("canvas-map-fallback")).toHaveAttribute("data-status", "lost");
+    expect(screen.getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE.explanation);
+    expect(screen.getByTestId("canvas-map")).toHaveClass("hidden");
+    expect(screen.getByTestId("map-stub")).toBe(stub); // the same instance, kept for the context's return
+    act(() => mapStub.report?.("ready"));
+    expect(screen.queryByTestId("canvas-map-fallback")).toBeNull();
+    expect(screen.getByTestId("canvas-map")).not.toHaveClass("hidden");
+    expect(screen.getByTestId("map-stub")).toBe(stub);
   });
   it("nine-year change: All years asks the annual series and the canvas reads the server's change sentence over a line on the series' ticks", async () => {
     const updates: string[] = [];

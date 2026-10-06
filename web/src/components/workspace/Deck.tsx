@@ -75,9 +75,20 @@ export type DeckProps = {
   full?: boolean;
   /** Open the filters sheet — the deck's own header carries the button when it is the pane. */
   onFilters?: () => void;
+  /**
+   * A card of the workspace's own above every other one: what it says when the map cannot be
+   * drawn and the deck is all there is. It scrolls with the cards rather than floating over them.
+   */
+  notice?: ReactNode;
+  /**
+   * What the full-width column keeps clear of, in px. A narrow window has nothing beside the
+   * deck; a wide one whose map has failed still has the floating nav above and the docked
+   * assistant on the right, and the column is centred in what they leave.
+   */
+  clear?: { top: number; right: number };
 };
 
-export function Deck({ onReset, onSector, onCollapse, onFilters, showReset = false, full = false }: DeckProps) {
+export function Deck({ onReset, onSector, onCollapse, onFilters, showReset = false, full = false, notice, clear }: DeckProps) {
   const { state, labels, dims } = useExplorer();
   const [collapsed, setCollapsed] = useState<Partial<Record<string, boolean>>>({});
   const [picked, setPicked] = useState<string | null>(null);
@@ -107,6 +118,7 @@ export function Deck({ onReset, onSector, onCollapse, onFilters, showReset = fal
 
   const cards = (
     <>
+      {notice}
       <HeaderBlock title={scope.kind === "province" || scope.kind === "district" ? place : HEADER.title} onReset={onReset} showReset={showReset} />
       <header className={`${DECK_CARD} flex items-center justify-between gap-3 px-5 py-3`} data-testid="deck-header">
         <h2 className="widget-title min-w-0 truncate">{DECK_TITLE}</h2>
@@ -132,7 +144,7 @@ export function Deck({ onReset, onSector, onCollapse, onFilters, showReset = fal
   );
 
   return (
-    <div className={full ? DECK_FULL_CLASS : DECK_CLASS} data-testid="deck" data-scope={scope.kind} data-full={full ? "1" : "0"}>
+    <div className={full ? DECK_FULL_CLASS : DECK_CLASS} style={full && clear ? { top: clear.top, right: clear.right } : undefined} data-testid="deck" data-scope={scope.kind} data-full={full ? "1" : "0"}>
       {cards}
     </div>
   );

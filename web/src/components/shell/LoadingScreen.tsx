@@ -7,7 +7,9 @@
  *
  * THE BAR IS REAL, not a timer: it reads the bootstrap store (shell/bootstrap.ts) — the release
  * resolved, the labels applied, the page's first envelope answered, the map loaded on the pages
- * that carry one (stagesFor) — and finishes when the page's last stage is reached.
+ * that carry one (stagesFor) — and finishes when the page's last stage is reached. A map that
+ * cannot start (no WebGL) is a stage that FAILED: the page stops waiting for it and finishes at
+ * the envelope, onto a workspace that says so, rather than holding the screen to its ceiling.
  *
  * TWO CEILINGS, because there are two different waits. Once the release has answered, a slow tile
  * must not trap anyone: six seconds later the screen leaves regardless. But BEFORE it answers
@@ -69,7 +71,7 @@ function seenThisSession(): boolean {
 
 export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | null } = {}) {
   const pathname = usePathname();
-  const { reached } = useBootstrap();
+  const { reached, failed } = useBootstrap();
   const [phase, setPhase] = useState<"shown" | "fading" | "gone">("shown");
   const [pinned, setPinned] = useState<Stage | null>(pin ?? null);
   const [ceiling, setCeiling] = useState(false);
@@ -125,7 +127,7 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
   }, [phase === "gone"]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stages = stagesFor(pathname);
-  const finished = finishedFor(reached, stages) || ceiling;
+  const finished = finishedFor(reached, stages, failed) || ceiling;
   const progress = pinned ? STAGE_PERCENT[pinned] : ceiling ? 100 : answered ? progressFor(reached, stages) : Math.round(creep);
 
   // finish: fade, then unmount (two effects: the fade's own phase change must not clear its timer)

@@ -108,3 +108,18 @@ export const MAP_BUTTONS = {
   fullscreen: "Full screen",
   exitFullscreen: "Leave full screen",
 } as const;
+
+/**
+ * What stands in the map's place when the browser cannot draw it (no WebGL, or a context the
+ * browser took away): one sentence saying so and where the same estimates are, the link that
+ * carries the selection there, and a retry that is offered a bounded number of times. The /data
+ * canvas says the same sentence over its own chart and offers its two other representations.
+ */
+export const MAP_FAILURE = {
+  explanation: "The map could not load in this browser. You can explore the same estimates in the table or chart.",
+  alternative: "Open the table and chart",
+  retry: "Try again",
+  retrying: "Trying again…",
+  chart: "Show the chart",
+  table: "Show the table",
+} as const;

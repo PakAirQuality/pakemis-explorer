@@ -7,7 +7,14 @@
  * and every printed number a server string (`display_short`, `share_pct_short`). Table is the
  * EnvelopeTable with its Share column and full-precision toggle. Map is the ExplorerMap in its
  * compact variant for a province or district breakdown, and the typed reason otherwise.
+ *
+ * A map that cannot be drawn (no WebGL in this browser, or a context the browser took away) is
+ * never a blank canvas: the canvas says so in the workspace's own sentence and shows the CHART
+ * of the same envelope in the map's place, with one click to make Chart or Table the page's
+ * representation. The URL is not rewritten behind the reader's back, so a context that comes
+ * back finds the map still asked for.
  */
+import { useState, type ReactNode } from "react";
 import type { Level } from "@/lib/urlState";
 import type { Cell, Envelope } from "@/lib/envelope";
 import { shown } from "@/lib/envelope";
@@ -22,7 +29,8 @@ import { StackedBar, type Segment } from "@/components/charts/StackedBar";
 import { GroupedBars, type GroupedRow } from "@/components/charts/GroupedBars";
 import { EnvelopeTable } from "@/components/ui/EnvelopeTable";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
-import { ExplorerMap } from "@/components/map/ExplorerMap";
+import { ExplorerMap, type ExplorerMapProps, type MapStatus } from "@/components/map/ExplorerMap";
+import { MAP_FAILURE } from "@/components/workspace/copy";
 import type { Action, ExploreContext, ExploreState, QueryPlan } from "@/lib/explore/query";
 import { EXPLORE } from "./copy";
 
@@ -60,6 +68,16 @@ const MAP_REFUSAL = { error: EXPLORE.mapUnavailable.error, error_class: EXPLORE.
 export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, dispatch }: CanvasProps) {
   if (plan.kind === "refused") return <RefusalCard refusal={plan.refusal} />;
   const active: ActivePlan = plan;
+  /** The envelope as a figure or a table: the canvas's own answer, and what stands in for a map that cannot be drawn. */
+  const answer = (rep: "chart" | "table"): ReactNode => {
+    if (!env) {
+      if (error) return <RefusalCard error={error} compact />;
+      return isLoading ? <Loading what="the inventory" /> : null;
+    }
+    if (env.values.length === 0) return <RefusalCard refusal={NO_ROWS} compact />;
+    if (rep === "table") return <EnvelopeTable env={env} labels={labels} dims={dims} dense onRowClick={(cell) => select(cell, active.groupBy, dispatch)} />;
+    return <Figure state={state} plan={active} ctx={ctx} env={env} labels={labels} dims={dims} dispatch={dispatch} />;
+  };
   if (state.rep === "map") {
     // the map tiles carry the CO2e layers; painting a pollutant needs its own layer, which the
     // beta does not ship yet - a typed note, never a silent CO2e map under an air title
@@ -72,18 +90,44 @@ export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, 
       else if (lvl === "adm2") dispatch({ control: "geography", value: "district", id });
     };
     return (
-      <div className="map-frame relative h-[560px] w-full overflow-hidden" data-testid="canvas-map">
-        <ExplorerMap variant="briefing" override={{ level, geo: null, cell: null, month: null, sector: state.sector, gas: state.gas, period: state.period, config: state.config, gwp: state.gwp, view: state.view }} onPick={onPick} />
-      </div>
+      <MapOrFallback override={{ level, geo: null, cell: null, month: null, sector: state.sector, gas: state.gas, period: state.period, config: state.config, gwp: state.gwp, view: state.view }} onPick={onPick} dispatch={dispatch}>
+        {answer("chart")}
+      </MapOrFallback>
     );
   }
-  if (!env) {
-    if (error) return <RefusalCard error={error} compact />;
-    return isLoading ? <Loading what="the inventory" /> : null;
-  }
-  if (env.values.length === 0) return <RefusalCard refusal={NO_ROWS} compact />;
-  if (state.rep === "table") return <EnvelopeTable env={env} labels={labels} dims={dims} dense onRowClick={(cell) => select(cell, active.groupBy, dispatch)} />;
-  return <Figure state={state} plan={active} ctx={ctx} env={env} labels={labels} dims={dims} dispatch={dispatch} />;
+  return answer(state.rep);
+}
+
+const FALLBACK_ACTION = "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent-soft";
+
+/**
+ * The map, or — while it reports `failed` or `lost` — the sentence, the two one-click
+ * representations and the chart handed in as children. The map stays MOUNTED and hidden while it
+ * is down: a lost context can only return to the instance that lost it, and when it does the
+ * frame simply comes back.
+ */
+function MapOrFallback({ override, onPick, dispatch, children }: { override: ExplorerMapProps["override"]; onPick: ExplorerMapProps["onPick"]; dispatch: (a: Action) => void; children: ReactNode }) {
+  const [status, setStatus] = useState<MapStatus>("loading");
+  const down = status === "failed" || status === "lost";
+  return (
+    <>
+      {down && (
+        <div data-testid="canvas-map-fallback" data-status={status}>
+          <div className="mb-3 rounded-card border-l-4 border-warn bg-refusal px-3 py-2" role="status" data-testid="map-unavailable">
+            <p className="text-sm text-fg" data-testid="map-unavailable-text">{MAP_FAILURE.explanation}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <button type="button" onClick={() => dispatch({ control: "rep", value: "chart" })} className={FALLBACK_ACTION} data-testid="map-unavailable-chart">{MAP_FAILURE.chart}</button>
+              <button type="button" onClick={() => dispatch({ control: "rep", value: "table" })} className={FALLBACK_ACTION} data-testid="map-unavailable-table">{MAP_FAILURE.table}</button>
+            </div>
+          </div>
+          {children}
+        </div>
+      )}
+      <div className={`map-frame relative h-[560px] w-full overflow-hidden${down ? " hidden" : ""}`} data-testid="canvas-map" aria-hidden={down ? true : undefined}>
+        <ExplorerMap variant="briefing" override={override} onPick={onPick} onStatus={setStatus} />
+      </div>
+    </>
+  );
 }
 
 /** A row or bar click narrows the controls to what was clicked (the same transition the control would make). */

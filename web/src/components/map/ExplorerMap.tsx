@@ -40,6 +40,15 @@
  * stays centred in the VISIBLE canvas rather than under a panel, and the bottom-left slot is
  * offset by it instead of by a hard-coded deck width. `onMap` hands the map instance to the
  * page, which drives its zoom buttons and re-applies the padding when a panel toggles.
+ *
+ * THE MAP CAN FAIL, and the page has to hear about it. Mapbox GL needs a WebGL 2 context; a
+ * browser that will not give one (blocked, blocklisted driver, a headless or remote session)
+ * makes `new mapboxgl.Map` THROW after it has already put its canvas in the container, and a
+ * context can also be taken away later. Neither used to reach anyone: the throw was an unhandled
+ * rejection inside the construction effect and the page kept a blank canvas under live-looking
+ * buttons. `onStatus` now publishes the one fact a page needs (MapStatus) and the page decides
+ * what stands in the map's place; this component only reports, and clears up what a half-built
+ * map left behind.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -68,7 +77,7 @@ export const OPENING_MAX_ZOOM = 3.8;
 import { residualUnit, unionOf } from "@/lib/geography";
 import { useMapInteractions } from "./useMapInteractions";
 import { emitMapPick } from "@/components/ask/mentions";
-import { markStage } from "@/components/shell/bootstrap";
+import { markFailed, markStage } from "@/components/shell/bootstrap";
 import { View3dToggle } from "./View3dToggle";
 import { HoverTip } from "./HoverTip";
 import { LayerLegend } from "./LayerLegend";
@@ -103,6 +112,19 @@ function BriefingOpacity({ value, onChange }: { value: number; onChange: (pct: n
   );
 }
 
+/**
+ * Whether there is a map to look at. `loading` is where every map starts and is published only
+ * when a lost context comes back before the first `load`; `ready` is the `load` event, and a
+ * context restored after it; `failed` is a map that could not be built (no WebGL 2, the
+ * constructor's throw, the library's chunk not arriving) or whose context could not be re-made;
+ * `lost` is a built map whose context the browser took away, which it may yet give back. On
+ * `failed` and `lost` there is nothing on the canvas and the page must say so.
+ */
+export type MapStatus = "loading" | "ready" | "failed" | "lost";
+
+/** The one `error` event that is the map's own death rather than a tile's or a style's. */
+const WEBGL_ERROR = /failed to initialize webgl/i;
+
 /** The chrome a page puts over the map, in CSS pixels: the camera keeps the country inside it. */
 export type MapPadding = { top: number; right: number; bottom: number; left: number };
 
@@ -120,6 +142,8 @@ export type ExplorerMapProps = {
   boundaries?: boolean;
   /** The map instance as it loads, and null as it is torn down. */
   onMap?: (map: MBMap | null) => void;
+  /** Every change of MapStatus after the initial `loading`; a page that mounts a map handles `failed` and `lost`. */
+  onStatus?: (status: MapStatus) => void;
 };
 
 /** The hover tip's line for the current layer: the feature's class, status, retained mass or exception kind, in words. */
@@ -149,7 +173,7 @@ export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell
   return k ? `Exception: ${k.label}` : "no known exception here";
 }
 
-export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap }: ExplorerMapProps = {}) {
+export function ExplorerMap({ variant = "console", override, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap, onStatus }: ExplorerMapProps = {}) {
   const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
   const state = useMemo(() => (override ? { ...urlState, ...override } : urlState), [urlState, override]);
   const full = variant === "console";
@@ -163,6 +187,9 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   onPickRef.current = onPick;
   const onMapRef = useRef(onMap);
   onMapRef.current = onMap;
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
+  const [status, setStatus] = useState<MapStatus>("loading");
   // the page's chrome, read through a ref so a panel toggling does not re-run the framing effects
   const padRef = useRef<MapPadding | undefined>(padding);
   padRef.current = padding;
@@ -230,8 +257,23 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   // --- the map itself
   useEffect(() => {
     let cancelled = false;
+    let loaded = false;
+    let dead = false; // failed for good: a later `webglcontextrestored` must not call it ready
+    const publish = (next: MapStatus) => {
+      if (cancelled) return;
+      setStatus(next);
+      onStatusRef.current?.(next);
+    };
+    const fail = () => {
+      if (dead || cancelled) return;
+      dead = true;
+      markFailed("map"); // the loading screen stops waiting for a `load` that will not come
+      publish("failed");
+    };
     (async () => {
-      const mapboxgl = (await import("mapbox-gl")).default;
+      // the library is a chunk of its own: one that never arrives is a map that cannot be built
+      const mapboxgl = await import("mapbox-gl").then((mod) => mod.default, () => null);
+      if (!mapboxgl) return fail();
       // Development aid: a hidden document never fires requestAnimationFrame, so Mapbox GL
       // neither loads tiles nor paints there (browser automation windows are hidden). With
       // `?hidden=render` the frame callback runs on a timer instead; nothing else changes.
@@ -244,13 +286,18 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
         Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
       }
       if (cancelled || !containerRef.current || !bm.token) return; // no token: no map (basemap.ts)
+      const container = containerRef.current;
+      // The library's own probe, asked first where it exists: it also catches the browsers that
+      // hand out a context and then refuse to compile a shader, which the constructor does not.
+      // It answers from a cache, so a "no" stands for the life of the page.
+      if (typeof mapboxgl.supported === "function" && !mapboxgl.supported()) return fail();
       // The token is assigned here and nowhere else; it leaves the page only as the query
       // parameter of Mapbox's own requests.
       mapboxgl.accessToken = bm.token;
       const apiOrigin = absoluteApiBase();
       const initial = stateRef.current.cam?.split(",").map(Number);
-      const m = new mapboxgl.Map({
-        container: containerRef.current,
+      const build = () => new mapboxgl.Map({
+        container,
         style: bm.style,
         center: initial && initial.length === 3 && initial.every(Number.isFinite) ? [initial[0], initial[1]] : [69.5, 30.2],
         zoom: initial && initial.length === 3 && Number.isFinite(initial[2]) ? initial[2] : 4.8,
@@ -274,13 +321,40 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
           return { url, headers: { Authorization: `Bearer ${bearer}` } };
         },
       });
+      // The constructor throws "Failed to initialize WebGL." AFTER it has built its DOM: it gets
+      // the canvas, the control corners and its class into the container and only then asks for
+      // the context. No listener can be attached before it returns, so the throw is the only
+      // signal, and what it left behind is taken out again rather than left as a dead canvas.
+      let m: MBMap;
+      try {
+        m = build();
+      } catch {
+        container.replaceChildren();
+        container.classList.remove("mapboxgl-map");
+        return fail();
+      }
       mapRef.current = m;
       (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = m; // inspection aid: the map holds no numbers
       // Mapbox's own control (their terms want the attribution and wordmark), plus ours.
       m.addControl(new mapboxgl.AttributionControl({ compact: true, customAttribution: bm.attribution }), "bottom-right");
       m.on("error", (e) => {
         const msg = (e as { error?: { message?: string } }).error?.message ?? "";
+        // a context that came back and could not be set up again is reported here, not thrown;
+        // the map object is left for the teardown below, since this fires inside the library's
+        // own restore handler and removing it there would pull the map from under that handler
+        if (WEBGL_ERROR.test(msg)) return fail();
         if (msg) setMapError(msg);
+      });
+      // The browser can take a context away (the GPU process restarts, the tab is discarded, too
+      // many contexts are open). The library asks for it back by itself and rebuilds when it
+      // arrives; until then the canvas shows nothing, and the page is told both times.
+      m.on("webglcontextlost", () => {
+        if (dead) return;
+        if (!loaded) markFailed("map"); // lost before the first frame: nothing for the loading screen to wait on
+        publish("lost");
+      });
+      m.on("webglcontextrestored", () => {
+        if (!dead) publish(loaded ? "ready" : "loading");
       });
       // every style load — the first, and each Map settings basemap change — re-inserts our
       // sources and layers below the new style's labels; the epoch makes the paint effects re-run
@@ -293,9 +367,11 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
         setStyleEpoch((e) => e + 1);
       });
       m.on("load", () => {
+        loaded = true;
         markStage("map"); // the loading screen's last stage on the pages with a map
         setMap(m);
         onMapRef.current?.(m);
+        if (!dead) publish("ready");
       });
       m.on("moveend", () => {
         const c = m.getCenter();
@@ -308,7 +384,13 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
     return () => {
       cancelled = true;
       ro?.disconnect();
-      mapRef.current?.remove();
+      // a map whose context is gone can throw from its own teardown, and nothing above this
+      // effect would catch it: the cleanup of a dead map must not take the page with it
+      try {
+        mapRef.current?.remove();
+      } catch {
+        /* already unusable; the container goes with the unmount */
+      }
       mapRef.current = null;
       setMap(null);
       onMapRef.current?.(null);
@@ -433,7 +515,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   };
 
   return (
-    <div className="absolute inset-0" data-testid="explorer-map" data-layer={layer}>
+    <div className="absolute inset-0" data-testid="explorer-map" data-layer={layer} data-status={status}>
       {/* mapbox-gl.css (imported after Tailwind) sets .mapboxgl-map { position: relative },
           which beats `absolute`; the explicit height keeps the container full-size either way. */}
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />

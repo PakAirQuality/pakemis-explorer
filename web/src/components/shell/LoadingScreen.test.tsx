@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { avoidPhrasesIn } from "@/__tests__/vocabulary";
-import { markStage, resetBootstrap } from "./bootstrap";
+import { markFailed, markStage, resetBootstrap } from "./bootstrap";
 import { CEILING_MS, CREEP_MS, FADE_MS, HARD_CAP_MS, LINE_MS, LoadingScreen, MIN_SHOW_MS, readLoadingQuery, SESSION_KEY } from "./LoadingScreen";
 import { FACTS_RELEASE, LOADING_FACTS } from "./loadingFacts.gen";
 import { reducedMotion } from "./PlumeCanvas";
@@ -123,6 +123,40 @@ describe("LoadingScreen", () => {
     expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "fading");
     act(() => vi.advanceTimersByTime(FADE_MS));
     expect(screen.queryByTestId("loading-screen")).toBeNull();
+  });
+  it("a map that cannot start does not hold the screen to its ceiling: the bar finishes at the envelope, as it does on a page with no map", () => {
+    vi.useFakeTimers();
+    render(<LoadingScreen force />);
+    const el = () => screen.getByTestId("loading-screen");
+    act(() => {
+      markStage("release");
+      markStage("labels");
+      markStage("envelope");
+      markFailed("map");
+    });
+    // the minimum display still stands, and then the screen leaves — well inside the six seconds
+    expect(el()).toHaveAttribute("data-phase", "shown");
+    act(() => vi.advanceTimersByTime(MIN_SHOW_MS));
+    expect(MIN_SHOW_MS).toBeLessThan(CEILING_MS);
+    expect(el()).toHaveAttribute("data-phase", "fading");
+    // a failed stage is not a reached one: the bar is where the real stages put it
+    expect(el()).toHaveAttribute("data-progress", "85");
+    act(() => vi.advanceTimersByTime(FADE_MS));
+    expect(screen.queryByTestId("loading-screen")).toBeNull();
+  });
+  it("a map that fails first still waits for the deck's envelope, and a map that fails late ends the wait at once", () => {
+    vi.useFakeTimers();
+    render(<LoadingScreen force />);
+    const el = () => screen.getByTestId("loading-screen");
+    act(() => {
+      markStage("release");
+      markStage("labels");
+      markFailed("map");
+    });
+    act(() => vi.advanceTimersByTime(MIN_SHOW_MS + 100));
+    expect(el()).toHaveAttribute("data-phase", "shown"); // nothing to show underneath yet
+    act(() => markStage("envelope"));
+    expect(el()).toHaveAttribute("data-phase", "fading");
   });
   it("a cold start is waited for: before the release answers the six-second ceiling does not apply, and the bar eases toward its first stage", () => {
     fakeClock();

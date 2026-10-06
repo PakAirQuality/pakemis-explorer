@@ -31,27 +31,38 @@
  * sheet; the dashboard pane is the deck as one full-width column with the map hidden behind it,
  * the filters reachable from the deck's own header. At 1280 px and above both panes are on
  * screen exactly as before and no switch is offered.
+ *
+ * WHEN THE MAP CANNOT BE DRAWN (no WebGL in this browser, or a context the browser took away;
+ * `ExplorerMap` reports it as its status) the workspace is the deck alone, at every width: the
+ * map's legend and buttons come off rather than sit live-looking over a blank canvas, the deck
+ * takes the full-width layout it has under 1280 px with one card above the others saying what
+ * happened, and that card links to /data with the whole selection and offers a retry that
+ * remounts the map — twice at most, after which it is the sentence and the link. The filters,
+ * the cards, the evidence and the downloads never depended on the canvas and all stay; a
+ * context the browser gives back restores the map by itself and spends no retry.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { Map as MBMap } from "mapbox-gl";
 import { Locate, Maximize2, Minimize2, Minus, Plus, SlidersHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { geographyName } from "@/lib/labels";
 import { placeWords } from "@/lib/selection";
+import { hrefForState } from "@/lib/urlState";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { ASK_PANEL_GAP, ASK_PANEL_WIDTH, WIDE_QUERY, subscribeOpenFilters, useAskDocked } from "@/components/ask/docked";
 import { NavCapsule } from "@/components/shell/NavCapsule";
-import { ExplorerMap, OPENING_MAX_ZOOM, type MapPadding } from "@/components/map/ExplorerMap";
+import { ExplorerMap, OPENING_MAX_ZOOM, type MapPadding, type MapStatus } from "@/components/map/ExplorerMap";
 import { unionBbox, useBboxes } from "@/components/map/tiles";
 import { OPACITY_DEFAULT } from "@/components/map/layers";
 import { BASEMAP_DEFAULT, type BasemapChoice } from "@/components/map/basemap";
-import { DECK_INSET_PX, DECK_PX } from "@/components/overview/deck";
+import { DECK_CARD, DECK_INSET_PX, DECK_PX } from "@/components/overview/deck";
 import { HEADER } from "@/components/overview/copy";
 import { Deck, DeckRail } from "./Deck";
 import { PaneSwitch } from "./PaneSwitch";
 import { FILTER_GAP_PX, FILTER_INSET_PX, FilterPanel, RAIL_WIDTH } from "./FilterPanel";
 import { LegendCapsule } from "./LegendCapsule";
-import { FILTERS, MAP_BUTTONS } from "./copy";
+import { FILTERS, MAP_BUTTONS, MAP_FAILURE } from "./copy";
 import type { Pane } from "@/lib/urlState";
 
 /** The gap the deck keeps from the map's own chrome, and the chrome above and below it. */
@@ -90,13 +101,42 @@ export function chromePadding({ deck, docked, wide }: { deck: boolean; docked: b
 
 const MAP_BUTTON = "glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-fg";
 
+/**
+ * How many times "Try again" may remount a map that failed. Bounded on purpose: a browser with
+ * no WebGL fails the same way every time, and a control that can be pressed for ever over a
+ * blank panel is the defect this replaces. The count is the page's and only a reload resets it.
+ */
+export const MAP_RETRY_LIMIT = 2;
+
+const NOTICE_ACTION = "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-semibold";
+
 export function Workspace() {
-  const { state, setState, labels, dims } = useExplorer();
+  const { state, setState, labels, dims, defaults } = useExplorer();
   const wide = useMediaQuery(WIDE_QUERY);
   // the assistant is this page's right column at this width; the map's own chrome clears it
   const docked = useAskDocked();
   const rightInset = docked ? ASK_PANEL_WIDTH + ASK_PANEL_GAP : FILTER_INSET_PX;
   const [map, setMap] = useState<MBMap | null>(null);
+  // whether there is a map to look at, as the map itself reports it; `loading` until it says otherwise
+  const [mapStatus, setMapStatus] = useState<MapStatus>("loading");
+  const [retries, setRetries] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  /**
+   * A map that is down stays down until it has DRAWN. The `loading` a context restored before
+   * the first load reports is not yet a map, so the deck keeps the screen rather than the layout
+   * flipping to an empty canvas and back; a retry's fresh instance reports nothing until it
+   * loads or fails, which holds the same line.
+   */
+  const onMapStatus = useCallback((next: MapStatus) => {
+    if (next !== "loading") setRetrying(false);
+    setMapStatus((was) => (next === "loading" && (was === "failed" || was === "lost") ? was : next));
+  }, []);
+  const mapDown = mapStatus === "failed" || mapStatus === "lost";
+  const retryMap = useCallback(() => {
+    if (retrying || retries >= MAP_RETRY_LIMIT) return;
+    setRetrying(true);
+    setRetries(retries + 1); // the map's key: a new one is a new map
+  }, [retries, retrying]);
   // "Reset map" appears only once there is something to reset: a user-driven move, or a picked place or level
   const [moved, setMoved] = useState(false);
   const [deckOpen, setDeckOpen] = useState(true);
@@ -120,9 +160,12 @@ export function Workspace() {
   const [fullscreen, setFullscreen] = useState(false);
   // the map follows a hovered or picked sector without writing the URL (the URL wins; hover stays local)
   const [sector, setSector] = useState<string | null>(null);
-  // narrow: exactly one pane is on screen; wide: both, and the deck's own collapse decides its column
-  const showDeck = wide ? deckOpen : pane === "dashboard";
-  const showMap = wide || pane === "map";
+  // narrow: exactly one pane is on screen; wide: both, and the deck's own collapse decides its column.
+  // With no map there is one pane at any width, and it is the deck whatever the URL's `pane` says
+  // (the key is left alone, so a map that comes back returns the window to the pane it was on).
+  const showDeck = mapDown || (wide ? deckOpen : pane === "dashboard");
+  const showMap = !mapDown && (wide || pane === "map");
+  const deckFull = !wide || mapDown;
 
   // the deck's scope is a province name (an ADM1 row); any other `geo` reads as Pakistan
   const geo = state.geo && dims.adm1.some((r) => r.name === state.geo) ? state.geo : null;
@@ -188,11 +231,33 @@ export function Workspace() {
     else void document.documentElement.requestFullscreen?.();
   };
   const override = useMemo(() => (sector ? { sector } : undefined), [sector]);
+  // the card over the map when both panes are on screen, the sheet when one is. The map's button
+  // stack is the way in while there is a map; the deck's own header is wherever the deck is the pane.
+  const openFilters = () => (wide ? setFiltersOpen(true) : setSheetOpen(true));
+  // The whole selection goes with the reader: level, place, year, sector, gas or pollutant,
+  // estimate, warming potentials and spatial view are the URL's own keys, written as this page
+  // writes them, so /data opens on the same question rather than on its defaults.
+  const mapNotice = mapDown ? (
+    <section className={DECK_CARD} role="status" data-testid="map-unavailable" data-status={mapStatus}>
+      <p className="text-sm text-fg" data-testid="map-unavailable-text">{MAP_FAILURE.explanation}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Link href={hrefForState(state, defaults, "/data")} className={`${NOTICE_ACTION} bg-accent-soft text-accent hover:underline`} data-testid="map-unavailable-link">{MAP_FAILURE.alternative}</Link>
+        {retries < MAP_RETRY_LIMIT || retrying ? (
+          <button type="button" onClick={retryMap} disabled={retrying} className={`${NOTICE_ACTION} text-muted hover:bg-surface-3 hover:text-fg disabled:opacity-60`} data-testid="map-retry">
+            {retrying ? MAP_FAILURE.retrying : MAP_FAILURE.retry}
+          </button>
+        ) : null}
+      </div>
+    </section>
+  ) : undefined;
 
   return (
     <div className="relative h-dvh overflow-hidden bg-surface text-fg" data-testid="workspace" data-scope={geo ?? "PK"}>
-      <div className="absolute inset-0" data-testid="map-pane" aria-hidden={showMap ? undefined : true}>
-        <ExplorerMap variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} override={override} />
+      {/* A map that is down stays MOUNTED and out of sight: a lost context can only come back to
+          the instance that lost it. `invisible` rather than `hidden`, so the container keeps its
+          size and the map that returns is already the right one. */}
+      <div className={`absolute inset-0${mapDown ? " invisible" : ""}`} data-testid="map-pane" data-map-status={mapStatus} aria-hidden={showMap ? undefined : true}>
+        <ExplorerMap key={retries} variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} onStatus={onMapStatus} override={override} />
       </div>
 
       {/* The pane switch is its OWN pill (the atlas pattern): top-left on a narrow
@@ -202,9 +267,12 @@ export function Workspace() {
         <NavCapsule floating />
       ) : (
         <>
-          <div className="glass pill absolute left-5 top-5 z-30 p-1" data-testid="pane-switch-pill">
-            <PaneSwitch pane={pane} onPane={choosePane} />
-          </div>
+          {/* no map, nothing to switch to: the switch returns with it */}
+          {!mapDown && (
+            <div className="glass pill absolute left-5 top-5 z-30 p-1" data-testid="pane-switch-pill">
+              <PaneSwitch pane={pane} onPane={choosePane} />
+            </div>
+          )}
           <NavCapsule docked />
         </>
       )}
@@ -217,9 +285,11 @@ export function Workspace() {
           onReset={onReset}
           showReset={showReset}
           onSector={setSector}
-          onCollapse={wide ? () => setDeckOpen(false) : undefined}
-          onFilters={wide ? undefined : () => setSheetOpen(true)}
-          full={!wide}
+          onCollapse={deckFull ? undefined : () => setDeckOpen(false)}
+          onFilters={deckFull ? openFilters : undefined}
+          full={deckFull}
+          notice={mapNotice}
+          clear={wide ? { top: TOP_CHROME_PX, right: docked ? ASK_PANEL_WIDTH : 0 } : undefined}
         />
       ) : wide ? (
         <DeckRail onExpand={() => setDeckOpen(true)} />
@@ -241,7 +311,7 @@ export function Workspace() {
           {/* The way into the filters at EVERY width since the assistant took the right column:
               it opens the floating card over the map when both panes are on screen, and the
               full-height sheet when only one is. */}
-          <button type="button" title={FILTERS.open} aria-label={FILTERS.open} onClick={() => (wide ? setFiltersOpen(true) : setSheetOpen(true))} className={MAP_BUTTON} data-testid="filters-button">
+          <button type="button" title={FILTERS.open} aria-label={FILTERS.open} onClick={openFilters} className={MAP_BUTTON} data-testid="filters-button">
             <SlidersHorizontal size={16} aria-hidden="true" />
           </button>
           <button type="button" title={MAP_BUTTONS.zoomIn} aria-label={MAP_BUTTONS.zoomIn} onClick={() => map?.zoomIn()} className={MAP_BUTTON} data-testid="map-zoom-in">
