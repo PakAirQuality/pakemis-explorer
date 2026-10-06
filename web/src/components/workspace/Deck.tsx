@@ -99,9 +99,14 @@ export function Deck({ onReset, onSector, onCollapse, onFilters, showReset = fal
   // the ids Collapse all reaches: the air deck's own keys when a pollutant is the metric
   const activeIds: readonly string[] = state.pol ? AIR_OPEN_IDS : ids;
   const allCollapsed = activeIds.every((id) => !isOpen(id));
-  const wants = useMemo(() => wantsFor(ids, (id) => !collapsed[id]), [ids, collapsed]);
+  // UNDER A POLLUTANT THE GREENHOUSE DECK ASKS FOR NOTHING. Its cards are not rendered (the air
+  // cards take their place and ask their own questions), but the hook still ran with every card
+  // "wanted", so each pollutant view also fetched the greenhouse total, breakdown, provinces and
+  // series and threw them away. `wantsFor` over no ids is every flag false.
+  const wants = useMemo(() => wantsFor(state.pol ? [] : ids, (id) => !collapsed[id]), [state.pol, ids, collapsed]);
   const deck = useDeck(state, wants);
-  // the loading screen's third stage: the deck's first envelope answered (or was refused)
+  // the loading screen's third stage: the deck's first envelope answered (or was refused). Under
+  // a pollutant that envelope is the air deck's, which marks the stage itself (AirCards).
   useEffect(() => {
     if (deck.total.data || deck.total.isError) markStage("envelope");
   }, [deck.total.data, deck.total.isError]);

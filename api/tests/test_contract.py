@@ -91,6 +91,11 @@ def test_grid_cell_reads_the_cube(client):
     assert r.status_code == 200
     v = r.json()["values"][0]
     assert v["unit"] == "Gg" and v["display"] and r.json()["limitations_hit"][0]["id"] == "grid_not_tabular"
+    # the cube it read is named WITH its digest: the manifest's, the one /release publishes. The
+    # core looks it up in the semantic contract, which lists no NetCDF file, and answered null.
+    (cube,) = r.json()["provenance"]["tables"]
+    digests = client.get("/api/v1/emissions/release").json()["digests"]["products"]
+    assert cube["sha256"] and cube["sha256"] == digests[cube["path"]]
 
 
 def test_envelope_is_not_reshaped(client):

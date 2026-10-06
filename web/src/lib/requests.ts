@@ -288,7 +288,7 @@ export type DeckBodies = {
   total: QueryEmissions;
   /**
    * The partition the snapshot quotes its share and rank from — the national sectors, the
-   * national gases, the five provinces or the district's peers. Never a browser subtraction:
+   * national gases, the provinces or the district's peers. Never a browser subtraction:
    * when the server attaches no `share_pct_short` or `rank` to those cells (an ADM2 partition
    * whose cells are bounded intervals), the snapshot prints neither.
    */

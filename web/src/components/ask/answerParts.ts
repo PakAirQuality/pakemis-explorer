@@ -42,7 +42,7 @@ export function receiptChips(labels: Labels, dims: Dims, input: Record<string, u
 
 export type ScopeRow = { name: string; value: string; id?: string; muted?: boolean };
 
-const CONTEXT_KEYS = new Set(["basis", "periods", "configuration_id", "gwp_basis", "geography_level", "geography_ids", "spatial_view", "defaults_applied", "reporting_period", "k", "request_type", "receipt", "name"]);
+const CONTEXT_KEYS = new Set(["basis", "periods", "years", "configuration_id", "gwp_basis", "geography_level", "geography_ids", "spatial_view", "defaults_applied", "reporting_period", "k", "request_type", "receipt", "name"]);
 const LEVEL_WORDS: Record<string, string> = { adm1: "province", adm2: "district", national: "national", grid: "grid cell" };
 
 function strs(v: unknown): string[] {
@@ -64,6 +64,10 @@ export function scopeRows(labels: Labels, dims: Dims, context: Record<string, un
   const rows: ScopeRow[] = [];
   const periods = strs(c.periods);
   if (periods.length) rows.push({ name: periods.length === 1 ? "Period" : "Periods", value: periods.map((p) => periodShort(labels, p)).join(", "), id: periods.join(", ") });
+  // AN ANSWER OVER CALENDAR YEARS HAS NO PERIOD, and the context's `reporting_period` is the
+  // RELEASE's (its reference year), not the answer's: falling back to it captioned a 1990-2024
+  // ammonia trend "Period: 2023-24". The years are the request's own, so they are said from it.
+  else if (strs(input?.years).length) rows.push({ name: "Years", value: yearSpan(strs(input?.years)), id: strs(input?.years).join(", ") });
   else if (str(c.reporting_period)) rows.push({ name: "Period", value: periodShort(labels, str(c.reporting_period)), id: str(c.reporting_period) });
   const level = str(c.geography_level);
   const ids = strs(c.geography_ids);
@@ -84,6 +88,13 @@ export function scopeRows(labels: Labels, dims: Dims, context: Record<string, un
   const defaults = strs(c.defaults_applied);
   if (defaults.length) rows.push({ name: "Filled by default", value: defaults.map((d) => d.replace(/_/g, " ")).join(", "), muted: true });
   return rows;
+}
+
+/** "1990–2024" for a run of consecutive calendar years, else the years as listed. */
+function yearSpan(years: string[]): string {
+  const n = years.map(Number);
+  const run = n.length > 2 && n.every((y, i) => Number.isInteger(y) && (i === 0 || y === n[i - 1] + 1));
+  return run ? `${years[0]}–${years[years.length - 1]}` : years.join(", ");
 }
 
 const NUMERIC = /^[-+]?\d+(\.\d+)?$/;

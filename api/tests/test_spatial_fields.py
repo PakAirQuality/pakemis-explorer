@@ -144,3 +144,15 @@ def test_a_national_envelope_is_still_untouched(client):
     env = r.json()
     assert "spatial_fields" not in env
     assert all(f not in env["values"][0] for f in FIELDS)
+
+
+def test_an_earlier_years_cell_says_why_it_has_no_class(client):
+    """The class registry is the reference year's. A district cell of another year that names no one
+    sector has nothing to read a dominant stream from, and says that - not that reading one failed -
+    and is given no class rather than the reference year's."""
+    env = client.post("/api/v1/emissions/query/emissions", json={"geography_level": "adm2", "periods": ["FY2015-16"], "group_by": ["shape_id"], "limit": 3}).json()
+    assert env["calculation"]["table"] == "fact_adm2_year" and env["values"]
+    for c in env["values"]:
+        assert c[SPATIAL_CLASS_FIELD] is None and c["dominant_stream"] is None
+        assert "classes placement for the reference year (FY2023-24)" in c["spatial_class_basis"]
+        assert "no dominant stream could be read" not in c["spatial_class_basis"]

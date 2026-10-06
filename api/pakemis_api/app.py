@@ -298,6 +298,7 @@ class Service:
                 "allocation_surface LIKE '%%%s%%'" % m for m in ODBL_SURFACE_MARKERS))}
         with open(settings.manifest_path, encoding="utf-8") as handle:
             self.manifest = json.load(handle)
+        self.manifest_digests = {p["path"]: p["sha256"] for p in self.manifest.get("products", []) if p.get("path") and p.get("sha256")}
         with open(os.path.join(settings.release_dir, "FETCH.json"), encoding="utf-8") as handle:
             self.fetch = json.load(handle)
         # the downloadable products: an allowlist built from the contract, the manifest and the verification
@@ -355,9 +356,25 @@ class Service:
         # so the receipt stands; done before the downloads' early return so a receipt file for
         # another year does not carry the reference year's block either.
         env = self.own_unallocated.apply(env)
+        self.product_digests(env)
         if not decorate_cells:
             return env
         return self.spatial_fields.decorate(decorate(env))
+
+    def product_digests(self, env):
+        """A provenance entry for a release PRODUCT (a grid cube) carries the product's digest.
+
+        The core looks a product's digest up in the semantic contract, whose product list holds no
+        NetCDF file, so a grid-cell answer named its cube with `sha256: null` - the one provenance
+        entry in the API a reader could not check. The release manifest hashes every cube, and this
+        service already publishes those digests under /release; the same value is written here.
+        Only a null is filled, and only from the manifest: a digest the core did find stands."""
+        tables = (env.get("provenance") or {}).get("tables")
+        if not isinstance(tables, list):
+            return
+        for entry in tables:
+            if isinstance(entry, dict) and entry.get("sha256") is None and entry.get("path") in self.manifest_digests:
+                entry["sha256"] = self.manifest_digests[entry["path"]]
 
     def air_period_default(self, request):
         """An air request that names neither a period nor calendar years is answered for the

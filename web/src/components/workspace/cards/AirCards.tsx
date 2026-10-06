@@ -10,7 +10,9 @@
  * the three cannot name different products. The 1990-2024 series remains the agriculture layer
  * alone, national, and says so.
  */
+import { useEffect } from "react";
 import { useExplorer } from "@/components/ExplorerContext";
+import { markStage } from "@/components/shell/bootstrap";
 import { geoGrain } from "@/lib/geography";
 import { airDeckBodies } from "@/lib/requests";
 import { AirScreeningNote } from "@/components/ui/AirScreeningNote";
@@ -50,6 +52,11 @@ export function AirCards({ pol, isOpen, toggle }: { pol: string; isOpen: (id: st
   const provinces = useAir(bodies?.places ?? null);
   const series = useAir(bodies?.series ?? null);
   const trend = useAir(bodies?.trend ?? null);
+  // the loading screen's third stage, for a visit that opens on a pollutant: this deck's first
+  // envelope answered or was refused (the greenhouse deck asks for nothing here, so it cannot)
+  useEffect(() => {
+    if (total.data || total.isError) markStage("envelope");
+  }, [total.data, total.isError]);
 
   const cell = total.data?.values.find((c) => typeof c.value === "number") ?? null;
   const top = sources.data?.values.find((c) => typeof c.value === "number") ?? null;

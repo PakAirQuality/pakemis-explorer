@@ -560,6 +560,10 @@ describe("the workspace's audits", () => {
       const b = body as { periods?: string[]; years?: string[] };
       expect(!!b.periods?.length !== !!b.years?.length, JSON.stringify(b)).toBe(true);
     }
+    // AND NOTHING GREENHOUSE IS ASKED FOR. The greenhouse deck's cards are not on screen under a
+    // pollutant, but its hook used to fetch their total, breakdown, provinces and series anyway.
+    const asked = fetchSpy.mock.calls.map(([u]) => String(u));
+    expect(asked.filter((u) => u.includes("/query/emissions") || u.includes("/query/timeseries"))).toEqual([]);
     expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("Beta emissions estimate · covered sources only");
     // ONE combined line under the chart: current figure, endpoint, percent - and no
     // second "covered sources" sentence in the header, no "nationwide"

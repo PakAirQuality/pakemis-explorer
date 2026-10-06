@@ -119,6 +119,14 @@ class SpatialFields:
             if ev:
                 cell["spatial_class_basis"] = ("%s of %s, the %s stream with the largest reference-year mass in %s (%s)"
                                                % (ev["spatial_class_measured"], stream, gas or "any-gas", module, how))
+            elif not rows and not module and env.get("calculation", {}).get("table") in ("fact_adm1_year", "fact_adm2_year"):
+                # an earlier year's cell with no one sector named: the class registry is the
+                # reference year's and its rows are keyed to the reference year's tables, so there
+                # is nothing to read a dominant stream FROM - which is not the same as failing to
+                # read one, and the sentence used to say the latter
+                cell["spatial_class_basis"] = ("the release classes placement for the reference year (%s); this cell is another year's "
+                                               "and names no single sector, so no class is given rather than the reference year's borrowed"
+                                               % self.period)
             else:
                 cell["spatial_class_basis"] = "no dominant stream could be read for this cell" + (" (module %s)" % module if module else "")
         env["spatial_fields"] = {"rule": SPATIAL_CLASS_RULE, "reference": {"period_id": self.period, "configuration_id": self.configuration},

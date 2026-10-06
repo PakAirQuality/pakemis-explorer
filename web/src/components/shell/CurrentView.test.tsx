@@ -45,6 +45,26 @@ describe("CurrentView", () => {
     const district = currentViewWords(c.labels, c.dims, { ...base, level: "adm2", geo: "60131773B12131197496886" }, defaults);
     expect(district.words).toContain("· Lahore ·");
   });
+  it("offers months only for the reference year: the panel's levels have no monthly table for another", () => {
+    const months = (state: ExplorerState) => {
+      const { unmount } = render(
+        <ExplorerContext.Provider value={ctx(state)}>
+          <CurrentView />
+        </ExplorerContext.Provider>,
+      );
+      fireEvent.click(screen.getByTestId("change-view"));
+      const select = Array.from(screen.getByTestId("explore-panel").querySelectorAll("select")).find((el) => Array.from(el.options).some((o) => o.textContent === "Annual"))!;
+      const options = Array.from(select.options).map((o) => o.value);
+      unmount();
+      return options;
+    };
+    const c = ctx();
+    // the release holds months for both years nationally...
+    expect(c.dims.monthsByPeriod["FY2020-21"]?.length ?? 0).toBeGreaterThan(0);
+    expect(months(base).length).toBeGreaterThan(1);
+    // ...and the panel, whose levels are provinces, districts and the grid, offers only "Annual" for the other
+    expect(months({ ...base, period: "FY2020-21" })).toEqual([""]);
+  });
   it("Change view opens the ExplorePanel's controls and Escape closes them", () => {
     render(
       <ExplorerContext.Provider value={ctx()}>

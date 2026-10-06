@@ -17,7 +17,11 @@ const SEL = "w-full rounded border border-line bg-surface-2 px-2 py-1.5 text-sm"
 
 export function ExplorePanel() {
   const { state, setState, labels, dims, contract } = useExplorer();
-  const months = dims.monthsByPeriod[state.period] ?? [];
+  // MONTHS ARE THE REFERENCE YEAR'S AT EVERY LEVEL THIS PANEL OFFERS. The national table has all
+  // 108 months, and this list was read from it - but the panel's levels are provinces, districts
+  // and the grid, whose monthly tables hold the reference year alone, so a month picked for any
+  // other year was a refusal waiting to be read. The same rule as the map's settings.
+  const months = (labels.periods[state.period]?.is_reference ?? true) ? (dims.monthsByPeriod[state.period] ?? []) : [];
   const gwps = contract?.gwp?.length ? contract.gwp : [state.gwp];
   const views = Object.keys(labels.views).length ? Object.keys(labels.views) : [state.view];
   const configs = dims.configurations.length ? dims.configurations : [state.config];

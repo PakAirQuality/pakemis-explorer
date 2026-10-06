@@ -5,7 +5,7 @@
  * · **Where it is placed** (Pakistan, or a chosen sector): every province ordered by the server,
  *   with the envelope's `derived` placed / unallocated sentence beneath, so the reader sees at
  *   once how much of the total the release places at all.
- * · **How it compares** (a province, a district): the same bars for the five provinces, or the
+ * · **How it compares** (a province, a district): the same bars for the provinces (four and the combined remainder), or the
  *   districts of the selected district's own province, with the selection marked. The order is
  *   the server's — its `rank` where it attaches one, else the `order_by: "value desc"` it was
  *   asked for. The browser never ranks by value itself, and where the release attaches no rank

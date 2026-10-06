@@ -174,6 +174,11 @@ describe("answerParts", () => {
     expect(chartKind([{ i: 0, display: "452.347", unit: UNIT }])).toBe("figure");
     expect(chartKind([{ i: 0, display: "[1.20, 1.29]", unit: UNIT, group: { shape_id: "x" }, exactness: "bounded" }])).toBe("table");
     expect(chartKind([])).toBe("none");
+    // an answer over calendar years has no period: it is captioned with its own years, never with
+    // the release's reporting period (which read "Period: 2023–24" over a 1990-2024 trend)
+    const trend = scopeRows(labels, dims, { periods: [], reporting_period: "FY2023-24", geography_level: "national" }, { pollutants: ["NH3"], years: ["1990", "1991", "1992", "1993"], group_by: ["year"] });
+    expect(trend.map((r) => `${r.name}: ${r.value}`).filter((r) => /^(Period|Years)/.test(r))).toEqual(["Years: 1990–1993"]);
+    expect(scopeRows(labels, dims, { periods: [], reporting_period: "FY2023-24" }, { years: ["1990", "2024"] })[0]).toMatchObject({ name: "Years", value: "1990, 2024" });
     const rows = scopeRows(labels, dims, CONTEXT, INPUT, { basis: "fiscal", label: "July–June years" });
     expect(rows.map((r) => `${r.name}: ${r.value}`)).toEqual(["Period: 2023–24", "Geography: Pakistan (national)", "Estimate: Reference estimate", "Warming potentials: IPCC 2013 (AR5)", "Basis: July–June years", "Sectors: Agriculture", "Group by: Category", "Filled by default: basis, configuration id, gwp basis"]);
   });

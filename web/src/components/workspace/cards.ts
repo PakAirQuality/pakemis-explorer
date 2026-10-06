@@ -60,7 +60,7 @@ export function scopeOf(s: Pick<ExplorerState, "level" | "geo" | "sector" | "gas
  * · A gas — the panel against the gas partition, which sectors emit it. No placement card: the
  *   release's placed / unallocated strings are a property of the geography, not of the gas.
  * · A province — the panel with its share and rank from the province partition, what it is made
- *   of, the five provinces ranked, and what the province retains unplaced.
+ *   of, the provinces ranked (four and the combined remainder), and what the province retains unplaced.
  * · A district — the panel (a bounded total, no share), what it is made of, its peers within its
  *   own province, then the two cards the map drawer used to carry: the spatial evidence of the
  *   allocation and its sources.
