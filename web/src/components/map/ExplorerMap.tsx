@@ -345,6 +345,7 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
     let loaded = false;
     let dead = false; // failed: nothing more is reported, and a later `webglcontextrestored` must not call it ready
     let provisional = false; // ...unless it was a failure a `load` would disprove: see the `load` handler
+    let wait = 0; // the load timer (armed below, and only while the document is visible)
     const publish = (next: MapStatus) => {
       if (cancelled) return;
       setStatus(next);
@@ -374,7 +375,20 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
     // THE ONE TIMER, started with the effect so that it covers everything that can hang — the
     // chunk, the style, the first frame — on the first mount and on every remount a page's retry
     // makes, in this one place. It is cleared by `load`, by any failure and by the teardown.
-    const wait = window.setTimeout(() => fail("timeout"), MAP_LOAD_TIMEOUT_MS);
+    //
+    // IT COUNTS ONLY WHILE THE PAGE CAN BE SEEN. A hidden document gets no animation frames, so a
+    // map opened in a background tab cannot load however long it is given - and the first version
+    // of this timer called that a failure: the page opened behind another tab greeted its reader
+    // with "the map is taking too long". Nothing is slow there; nothing has been asked to draw.
+    // So the clock stops when the document is hidden and starts afresh, whole, when it is shown.
+    const arm = () => {
+      window.clearTimeout(wait);
+      if (cancelled || loaded || dead) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      wait = window.setTimeout(() => fail("timeout"), MAP_LOAD_TIMEOUT_MS);
+    };
+    arm();
+    document.addEventListener("visibilitychange", arm);
     (async () => {
       // the library is a chunk of its own: one that never arrives is a map that cannot be built
       const mapboxgl = await import("mapbox-gl").then((mod) => mod.default, () => null);
@@ -528,6 +542,7 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
     return () => {
       cancelled = true;
       window.clearTimeout(wait);
+      document.removeEventListener("visibilitychange", arm);
       ro?.disconnect();
       // a map whose context is gone can throw from its own teardown, and nothing above this
       // effect would catch it: the cleanup of a dead map must not take the page with it

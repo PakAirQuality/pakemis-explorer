@@ -507,6 +507,45 @@ describe("a map that never says anything", () => {
     expect(onStatus.mock.calls).toEqual([["failed"]]);
     expect(onFailure.mock.calls).toEqual([["timeout"]]);
   });
+  it("a page that cannot be seen is not timed: the clock stops while the document is hidden and starts whole when it is shown", async () => {
+    // FOUND LIVE, the day the timer shipped: a hidden document gets no animation frames, so a map
+    // in a background tab cannot load, and twenty seconds later the page had declared it too slow.
+    fakeClock();
+    let visibility: DocumentVisibilityState = "hidden";
+    const spy = vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    const show = (next: DocumentVisibilityState) => {
+      visibility = next;
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    };
+    try {
+      const fake = fakeMap();
+      gl.construct = () => fake.map;
+      const onFailure = vi.fn();
+      mount({ onFailure });
+      await waitFor(() => expect(fake.listens("load")).toBe(true));
+      // opened behind another tab: no verdict, however long it stays there
+      pass(5 * MAP_LOAD_TIMEOUT_MS);
+      expect(status()).toBe("loading");
+      expect(onFailure).not.toHaveBeenCalled();
+      // shown, then hidden again before the time is up: the count does not carry over
+      show("visible");
+      pass(MAP_LOAD_TIMEOUT_MS - MARGIN);
+      show("hidden");
+      pass(5 * MAP_LOAD_TIMEOUT_MS);
+      expect(status()).toBe("loading");
+      // shown and silent for the whole of it: that is a map taking too long
+      show("visible");
+      pass(MAP_LOAD_TIMEOUT_MS - MARGIN);
+      expect(status()).toBe("loading");
+      pass(MARGIN);
+      expect(status()).toBe("failed");
+      expect(onFailure.mock.calls).toEqual([["timeout"]]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
   it("a map given up on that loads after all is shown: the timeout is undone by the load it was waiting for", async () => {
     fakeClock();
     const fake = fakeMap();
