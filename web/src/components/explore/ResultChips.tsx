@@ -23,11 +23,11 @@ export function ResultChips({ state, ctx, dispatch, labels, place }: { state: Ex
   const chips: Chip[] = [
     { id: "sector", label: sectorLabel(labels, state.sector), what: D.chipSector, onClear: state.sector ? () => dispatch({ control: "sector", value: null }) : null },
     state.pollutant
-      ? { id: "gas", label: `${POLLUTANT_LABELS[state.pollutant] ?? state.pollutant} (air beta)`, what: D.chipGas, onClear: () => dispatch({ control: "pollutant", value: null }) }
+      ? { id: "gas", label: `${POLLUTANT_LABELS[state.pollutant] ?? state.pollutant} emissions (beta)`, what: D.chipGas, onClear: () => dispatch({ control: "pollutant", value: null }) }
       : { id: "gas", label: gasLabel(labels, state.gas), what: D.chipGas, onClear: state.gas ? () => dispatch({ control: "gas", value: null }) : null },
-    state.pollutant
-      ? { id: "period", label: "2024 layer", what: D.chipPeriod, onClear: null }
-      : { id: "period", label: periodShort(labels, state.period), what: D.chipPeriod, onClear: state.period !== ctx.referencePeriod ? () => dispatch({ control: "period", value: { period: ctx.referencePeriod } }) : null },
+    // the year is the reader's under either metric: the air panel carries every fiscal year, and
+    // the "2024 layer" this chip used to say named a product the page no longer reads
+    { id: "period", label: periodShort(labels, state.period), what: D.chipPeriod, onClear: state.period !== ctx.referencePeriod ? () => dispatch({ control: "period", value: { period: ctx.referencePeriod } }) : null },
   ];
   return (
     <section className="card p-4" data-testid="result-chips">

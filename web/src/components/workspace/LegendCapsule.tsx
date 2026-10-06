@@ -22,7 +22,8 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { refusalWords } from "@/lib/envelope";
 import { RAMP } from "@/lib/palette";
 import { LayerLegend } from "@/components/map/LayerLegend";
-import { LAYERS, mapsPeriod } from "@/components/map/layerModes";
+import { LAYERS, layerSentence, mapsPeriod } from "@/components/map/layerModes";
+import { metricOf } from "@/lib/selection";
 import { useLayerLegendData } from "@/components/map/legendData";
 import { legendRanks } from "@/components/map/Legend";
 import { RefusalCard, refusalOf } from "@/components/ui/RefusalCard";
@@ -59,13 +60,15 @@ export function LegendCapsule({ className = "" }: { className?: string }) {
   const face = legendFace({ layer: state.layer, scale: state.scale, mapped, refused: !!refusal });
   const breaks = data.env ? legendRanks(data.env.values).length : 0;
   const note = face === "fixed" ? LEGEND.fixedNote : face === "absolute" ? LEGEND.absoluteNote : LEGEND.relativeNote;
+  // the magnitude sentence for what is on the map now: its metric, level and scale (layerModes.ts)
+  const sentence = layerSentence("magnitude", metricOf(state, labels), state.level, state.scale);
 
   const line =
     face === "refused" ? (
       <>
         <span className="shrink-0 font-semibold text-warn">{LEGEND.notMapped}</span>
         <span className="h-3 w-px shrink-0 bg-line-strong" aria-hidden="true" />
-        <span className="truncate" data-testid="legend-refusal">{refusal ? refusalWords(refusal) : LEGEND.asking}</span>
+        <span className="truncate" data-testid="legend-refusal">{refusal ? refusalWords(refusal) : data.isLoading ? LEGEND.asking : LEGEND.gridReferenceOnly}</span>
       </>
     ) : face === "categorical" ? (
       <span className="truncate font-semibold text-fg" data-testid="legend-layer">{LAYERS[state.layer].label}</span>
@@ -100,8 +103,8 @@ export function LegendCapsule({ className = "" }: { className?: string }) {
         <div className="max-h-[60vh] overflow-y-auto" role="dialog" aria-label={LEGEND.label} data-testid="legend-panel">
           {face === "refused" ? (
             <div className="glass w-[300px] rounded-card p-2" data-testid="legend-panel-refusal">
-              {refusal ? <RefusalCard refusal={refusal} compact /> : <p className="px-1 py-2 text-xs text-muted">{LEGEND.asking}</p>}
-              <p className="px-1 pt-2 text-micro normal-case tracking-normal text-muted">{LAYERS.magnitude.sentence}</p>
+              {refusal ? <RefusalCard refusal={refusal} compact /> : <p className="px-1 py-2 text-xs text-muted">{data.isLoading ? LEGEND.asking : LEGEND.gridReferenceOnly}</p>}
+              <p className="px-1 pt-2 text-micro normal-case tracking-normal text-muted">{sentence}</p>
             </div>
           ) : face === "absolute" || face === "categorical" ? (
             <LayerLegend {...data} />
@@ -109,7 +112,7 @@ export function LegendCapsule({ className = "" }: { className?: string }) {
             <div className="glass w-[300px] rounded-card px-3 py-2 text-xs" data-testid="legend-panel-note">
               <div className="micro mb-1">{face === "fixed" ? LEGEND.fixed : LEGEND.relative}</div>
               <p className="text-muted">{note}</p>
-              <p className="mt-1.5 border-t border-line/70 pt-1.5 text-micro normal-case tracking-normal text-muted">{LAYERS.magnitude.sentence}</p>
+              <p className="mt-1.5 border-t border-line/70 pt-1.5 text-micro normal-case tracking-normal text-muted">{sentence}</p>
             </div>
           )}
         </div>

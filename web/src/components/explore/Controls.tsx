@@ -17,6 +17,7 @@ import { ChevronsLeft, ChevronsRight, Factory, MapPin, RotateCcw, Wind } from "l
 import { Select, type SelectOption } from "@/components/ui/ControlsCard";
 import { configLabel, gasLabel, gwpIsDefault, gwpLabel, gwpTooltip, periodShort, reportingSectorLabel, sectorLabel, type Dims as GeoDims, viewLabel } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
+import { AIR_NOT_AMBIENT } from "@/lib/selection";
 import { placeWords, unavailableReason, POLLUTANTS, POLLUTANT_LABELS, type Action, type ExploreContext, type ExploreState } from "@/lib/explore/query";
 import { EXPLORE } from "./copy";
 
@@ -95,8 +96,10 @@ export function geographyControl(state: ExploreState, labels: Labels, dims: GeoD
 
 /** "Pakistan · All sectors · CO₂e · 2023–24": the active view in one line, every part a release label. */
 export function summaryLine(state: ExploreState, labels: Labels, dims: GeoDims, defaultGwp: string): string {
-  const parts = [placeWords(state, dims), sectorLabel(labels, state.sector), state.gas ? gasLabel(labels, state.gas) : "CO₂e", periodShort(labels, state.period)];
-  if (!gwpIsDefault(labels, state.gwp, defaultGwp)) parts.push(gwpLabel(labels, state.gwp));
+  // the metric is the pollutant when there is one: this line said "CO₂e" over a PM₂.₅ chart
+  const metric = state.pollutant ? `${POLLUTANT_LABELS[state.pollutant] ?? state.pollutant} emissions (kt)` : state.gas ? gasLabel(labels, state.gas) : "CO₂e";
+  const parts = [placeWords(state, dims), sectorLabel(labels, state.sector), metric, periodShort(labels, state.period)];
+  if (!state.pollutant && !gwpIsDefault(labels, state.gwp, defaultGwp)) parts.push(gwpLabel(labels, state.gwp));
   return parts.join(" · ");
 }
 
@@ -111,18 +114,14 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
   const geo = geographyControl(state, labels, dims, dispatch, pickingDistrict, setPickingDistrict);
 
   // --- Period
-  const AIR_YEAR = "The air-quality layers are single-year (calendar 2024; power and aviation on the 2023\u201324 fiscal year). The year control returns with the CO\u2082e metric.";
-  const periodValue = state.range ? "range" : state.by === "month" ? "months" : state.pollutant ? "air-year" : state.period;
-  const periodOptions: SelectOption[] = state.pollutant ? [
-    { value: "air-year", label: "2024 \u00b7 single-year layer", title: AIR_YEAR, disabled: false },
-    { value: "range", label: `${W.range} (1990 to 2024, the agriculture series)` },
-  ] : [
+  // the same nine fiscal years under either metric: the air panel is annual for all of them
+  const periodValue = state.range ? "range" : state.by === "month" ? "months" : state.period;
+  const periodOptions: SelectOption[] = [
     ...ctx.periods.map((p) => ({ value: p, label: periodShort(labels, p), title: labels.periods[p]?.label })),
     { value: "range", label: `${W.range} (${periodShort(labels, ctx.periods[0])} to ${periodShort(labels, ctx.periods[ctx.periods.length - 1])})`, disabled: !!reason("period"), title: reason("period") },
     { value: "months", label: `${W.months} ${periodShort(labels, ctx.referencePeriod)}`, disabled: !!unavailableReason({ ...state, period: ctx.referencePeriod }, ctx, "month", labels), title: unavailableReason({ ...state, period: ctx.referencePeriod }, ctx, "month", labels) ?? undefined },
   ];
   const onPeriod = (v: string) => {
-    if (v === "air-year") return;
     dispatch({ control: "period", value: v === "range" ? "range" : v === "months" ? "months" : { period: v } });
   };
 
@@ -137,17 +136,26 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
     { value: "by", label: W.byGas },
     ...Object.keys(labels.gases).map((g) => ({ value: g, label: gasLabel(labels, g) })),
     { value: "sep", label: "— Air pollutants (beta) —", disabled: true },
-    ...POLLUTANTS.map((pl) => ({ value: `pol:${pl}`, label: POLLUTANT_LABELS[pl] ?? pl, title: "The air-quality beta: native kilotonnes, outside the CO\u2082e totals" })),
+    ...POLLUTANTS.map((pl) => ({ value: `pol:${pl}`, label: POLLUTANT_LABELS[pl] ?? pl, title: "Emissions of this pollutant in kilotonnes (beta): what was emitted, not air quality, and outside the CO\u2082e totals" })),
   ];
 
   // --- Measure
-  const measureValue = state.share ? "share" : state.gwp;
+  const AIR_MEASURE = "kt";
+  const measureValue = state.pollutant ? AIR_MEASURE : state.share ? "share" : state.gwp;
   const shareReason = partitions ? undefined : "Share of total applies to a breakdown that partitions a total: not to a series or a comparison.";
-  const measureOptions: SelectOption[] = [...gwps.map((g) => ({ value: g, label: `${W.co2e} · ${gwpLabel(labels, g)}`, title: gwpTooltip(labels, g) })), { value: "share", label: W.share, disabled: !!shareReason, title: shareReason }];
+  // A POLLUTANT HAS ONE MEASURE, AND IT IS NOT CO₂e. This list was the warming-potential bases
+  // whatever the metric, so a PM₂.₅ view offered "CO₂e · AR5" - and choosing it left air mode
+  // without saying so. Emission mass in kilotonnes is the only measure the air tables carry.
+  const measureOptions: SelectOption[] = state.pollutant
+    ? [{ value: AIR_MEASURE, label: "Emission mass · kilotonnes", title: AIR_NOT_AMBIENT }]
+    : [...gwps.map((g) => ({ value: g, label: `${W.co2e} · ${gwpLabel(labels, g)}`, title: gwpTooltip(labels, g) })), { value: "share", label: W.share, disabled: !!shareReason, title: shareReason }];
 
   // --- Estimate
   const estimateValue = state.by === "estimate" ? "compare" : state.config;
-  const estimateOptions: SelectOption[] = [...configs.map((c) => ({ value: c, label: configLabel(labels, c), title: labels.configurations[c]?.tooltip })), { value: "compare", label: W.compare, disabled: !!reason("estimate"), title: reason("estimate") }];
+  // under a pollutant only the reference estimate is offered: the survey-based one is a greenhouse
+  // configuration, and the air endpoint would refuse it
+  const offered = state.pollutant ? configs.filter((c) => c === ctx.reference) : configs;
+  const estimateOptions: SelectOption[] = [...offered.map((c) => ({ value: c, label: configLabel(labels, c), title: labels.configurations[c]?.tooltip })), { value: "compare", label: W.compare, disabled: !!reason("estimate"), title: reason("estimate") }];
 
   if (!open) {
     return (
@@ -194,16 +202,22 @@ export function Controls({ state, ctx, dispatch, labels, dims, categories, gwps,
         <Select value={gasValue} onChange={(v) => (v.startsWith("pol:") ? dispatch({ control: "pollutant", value: v.slice(4) }) : dispatch({ control: "gas", value: v === "by" ? "by" : v || null }))} options={gasOptions} ariaLabel={W.gas} testId="gas-select" />
       </Ctl>
       <Ctl label={W.measure}>
-        <Select value={measureValue} onChange={(v) => dispatch({ control: "measure", value: v === "share" ? "share" : { gwp: v } })} options={measureOptions} ariaLabel={W.measure} testId="measure-select" />
+        <Select value={measureValue} onChange={(v) => (state.pollutant ? undefined : dispatch({ control: "measure", value: v === "share" ? "share" : { gwp: v } }))} options={measureOptions} ariaLabel={W.measure} testId="measure-select" />
       </Ctl>
       <div className="flex flex-col gap-4 border-t border-line pt-4">
         <Ctl label={W.estimate}>
           <Select value={estimateValue} onChange={(v) => dispatch({ control: "estimate", value: v === "compare" ? "compare" : { config: v } })} options={estimateOptions} ariaLabel={W.estimate} testId="config-select" />
         </Ctl>
-        <Ctl label={W.view}>
-          <Select value={state.view} onChange={(v) => dispatch({ control: "view", value: v })} options={views.map((v) => ({ value: v, label: viewLabel(labels, v) }))} ariaLabel={W.view} testId="view-select" />
-        </Ctl>
-        <p className="caption">The spatial view applies to province and district results; a national total is the same under every view.</p>
+        {state.pollutant ? (
+          <p className="caption" data-testid="view-not-for-air">The spatial view (where emissions occur, originate or are accounted) is a greenhouse-gas setting; pollutant results are placed where they are emitted.</p>
+        ) : (
+          <>
+            <Ctl label={W.view}>
+              <Select value={state.view} onChange={(v) => dispatch({ control: "view", value: v })} options={views.map((v) => ({ value: v, label: viewLabel(labels, v) }))} ariaLabel={W.view} testId="view-select" />
+            </Ctl>
+            <p className="caption">The spatial view applies to province and district results; a national total is the same under every view.</p>
+          </>
+        )}
       </div>
       <p className="mt-auto border-t border-line pt-3 text-xs text-muted" data-testid="active-view">
         <span className="micro mr-1.5">{D.showing}</span>

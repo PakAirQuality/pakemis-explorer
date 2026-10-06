@@ -4,12 +4,16 @@
  * a server string in native kilotonnes. Since the rc49 spatial family the cards are PLACE-
  * and PERIOD-aware: they follow the map selection (a clicked district shows that district,
  * not its province) and the year slider, on the covered-sources scope the nine-year family
- * carries (six sectors; power's screening bound ships beside the panel and is reachable on
- * the Data page, never silently inside these cards). The 1990-2024 series remains the
- * agriculture layer alone, national, and says so.
+ * carries: the sectors the release estimates, with grid power kept OUT of every total, ranking
+ * and share and stated beside the total as the screening range it is (AirScreeningNote). The
+ * bodies are lib/requests.ts airDeckBodies - the same ones the data page and the map send, so
+ * the three cannot name different products. The 1990-2024 series remains the agriculture layer
+ * alone, national, and says so.
  */
 import { useExplorer } from "@/components/ExplorerContext";
 import { geoGrain } from "@/lib/geography";
+import { airDeckBodies } from "@/lib/requests";
+import { AirScreeningNote } from "@/components/ui/AirScreeningNote";
 import { shown, type Cell } from "@/lib/envelope";
 import { cellUnit, districtName, periodShort, sectorLabel } from "@/lib/labels";
 import { magnitudeOf } from "@/lib/uncertainty";
@@ -23,8 +27,7 @@ import { DeckCard, Pending, Figure } from "./DeckCard";
 import { GasRail } from "../GasRail";
 import { YearRail } from "../YearRail";
 
-const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
-const BETA = "Beta estimate · covered sectors only";
+const BETA = "Beta emissions estimate · covered sources only";
 
 
 /** The air deck's collapse keys, owned by the Deck's one collapsed map so Collapse all
@@ -37,28 +40,16 @@ export function AirCards({ pol, isOpen, toggle }: { pol: string; isOpen: (id: st
   const period = state.period ?? defaults.period_id;
   const placeLevel = state.geo && state.level !== "grid" ? geoGrain(state.geo) : null;
   const placeName = !state.geo ? null : placeLevel === "adm2" ? districtName(dims, state.geo) : state.geo;
-  const place = state.geo && placeLevel
-    ? { geography_level: placeLevel, geography_ids: [state.geo] }
-    : {};
-  const scope = {
-    pollutants: [pol],
-    periods: [period],
-    ...place,
-    ...(state.sector ? { sectors: [state.sector] } : {}),
-  };
-  const total = useAir(scope);
-  const sources = useAir({ ...scope, group_by: ["sector_id"], order_by: "value desc" });
   // the ranking beside the selection: provinces nationally, the province's own
   // districts once one is on screen (the district rows carry their province, so the
   // slice is the envelope's own grouping, not a second geography)
   const province = placeLevel === "adm2" ? null : placeLevel === "adm1" ? state.geo : null;
-  const provinces = useAir(
-    province
-      ? { pollutants: [pol], periods: [period], geography_level: "adm2", group_by: ["province", "shape_id"], order_by: "value desc" }
-      : { pollutants: [pol], periods: [period], geography_level: "adm1", group_by: ["province"], order_by: "value desc" }
-  );
-  const series = useAir({ pollutants: [pol], periods: dims.fiscalPeriods, ...place, group_by: ["period_id"] });
-  const trend = useAir({ pollutants: [pol], years: AIR_YEARS, group_by: ["year"] });
+  const bodies = airDeckBodies({ pol, period, sector: state.sector, geo: state.level === "grid" ? null : state.geo }, dims.fiscalPeriods);
+  const total = useAir(bodies?.total ?? null);
+  const sources = useAir(bodies?.sources ?? null);
+  const provinces = useAir(bodies?.places ?? null);
+  const series = useAir(bodies?.series ?? null);
+  const trend = useAir(bodies?.trend ?? null);
 
   const cell = total.data?.values.find((c) => typeof c.value === "number") ?? null;
   const top = sources.data?.values.find((c) => typeof c.value === "number") ?? null;
@@ -110,7 +101,7 @@ export function AirCards({ pol, isOpen, toggle }: { pol: string; isOpen: (id: st
     <>
       <DeckCard
         id="air-snapshot"
-        title={`${p} · ${placeName ?? "air quality beta"}`}
+        title={`${p} emissions · ${placeName ?? "Pakistan"}`}
         env={total.data}
         open={isOpen("snap")}
         onToggle={toggle("snap")}
@@ -127,6 +118,7 @@ export function AirCards({ pol, isOpen, toggle }: { pol: string; isOpen: (id: st
         ) : (
           <Pending q={total} what={`the ${p} total`} />
         )}
+        <AirScreeningNote env={total.data} labels={labels} />
 
         <YearRail periods={dims.fiscalPeriods} current={period} onPick={(pd) => setState({ period: pd })} labels={labels} />
 
@@ -157,7 +149,7 @@ export function AirCards({ pol, isOpen, toggle }: { pol: string; isOpen: (id: st
         env={sources.data}
         open={isOpen("sources")}
         onToggle={toggle("sources")}
-        sentence={top ? <><b>{sectorLabel(labels, top.group?.sector_id)}</b> is the largest estimated source {here}, at <Figure cell={top} unit={cellUnit(top)} />{top.share_pct_short ? <> (<b className="num">{top.share_pct_short} %</b>)</> : null}.</> : null}
+        sentence={top ? <><b>{sectorLabel(labels, top.group?.sector_id)}</b> is the largest estimated source {here}, at <Figure cell={top} unit={cellUnit(top)} />{top.share_pct_short ? <> (<b className="num">{top.share_pct_short} %</b> of the sources estimated here)</> : null}.</> : null}
       >
         {bars.length ? <BarsWithAxis items={bars} ticks={sources.data?.axis?.ticks_short} testId="air-sources-bars" /> : <Pending q={sources} what="the sector layers" />}
       </DeckCard>

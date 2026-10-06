@@ -11,18 +11,18 @@ import { useExplorer } from "@/components/ExplorerContext";
 const opts = { retry: false as const, staleTime: 5 * 60 * 1000 };
 
 export function useEmissions(body: QueryEmissions | null | undefined, enabled = true) {
-  return useQuery({ queryKey: ["emissions", body], queryFn: () => api.queryEmissions(body!), enabled: enabled && !!body, ...opts });
+  return useQuery({ queryKey: ["emissions", body], queryFn: ({ signal }) => api.queryEmissions(body!, signal), enabled: enabled && !!body, ...opts });
 }
 
 /** The air beta: native kilotonnes of a named pollutant (query_air). */
 export function useAir(body: QueryAir | null | undefined, enabled = true) {
-  return useQuery({ queryKey: ["air", body], queryFn: () => api.queryAir(body!), enabled: enabled && !!body, ...opts });
+  return useQuery({ queryKey: ["air", body], queryFn: ({ signal }) => api.queryAir(body!, signal), enabled: enabled && !!body, ...opts });
 }
 export function useCompare(body: CompareRequest | null | undefined, enabled = true) {
-  return useQuery({ queryKey: ["compare", body], queryFn: () => api.compare(body!), enabled: enabled && !!body, ...opts });
+  return useQuery({ queryKey: ["compare", body], queryFn: ({ signal }) => api.compare(body!, signal), enabled: enabled && !!body, ...opts });
 }
 export function useTimeseries(body: TimeseriesRequest | null | undefined, enabled = true) {
-  return useQuery({ queryKey: ["timeseries", body], queryFn: () => api.timeseries(body!), enabled: enabled && !!body, ...opts });
+  return useQuery({ queryKey: ["timeseries", body], queryFn: ({ signal }) => api.timeseries(body!, signal), enabled: enabled && !!body, ...opts });
 }
 export function useLineage(req: LineageRequest | null | undefined, enabled = true) {
   return useQuery({ queryKey: ["lineage", req], queryFn: () => api.lineage(req!.id, req!.params), enabled: enabled && !!req, ...opts });
@@ -31,10 +31,10 @@ export function useGridCell(body: GridCellRequest | null | undefined, enabled = 
   return useQuery({ queryKey: ["grid-cell", body], queryFn: () => api.gridCell(body!), enabled: enabled && !!body, ...opts });
 }
 export function useUncertainty(body: UncertaintyRequest | null | undefined, enabled = true) {
-  return useQuery({ queryKey: ["uncertainty", body], queryFn: () => api.uncertainty(body!), enabled: enabled && !!body, ...opts });
+  return useQuery({ queryKey: ["uncertainty", body], queryFn: ({ signal }) => api.uncertainty(body!, signal), enabled: enabled && !!body, ...opts });
 }
 export function useCompleteness(body: CompletenessRequest | null | undefined, enabled = true) {
-  return useQuery({ queryKey: ["completeness", body], queryFn: () => api.completeness(body!), enabled: enabled && !!body, ...opts });
+  return useQuery({ queryKey: ["completeness", body], queryFn: ({ signal }) => api.completeness(body!, signal), enabled: enabled && !!body, ...opts });
 }
 export function useEvidence(streamId: string, params: { module?: string; category?: string } = {}, enabled = true) {
   return useQuery({ queryKey: ["evidence", streamId, params], queryFn: () => api.evidence(streamId, params), enabled, ...opts });

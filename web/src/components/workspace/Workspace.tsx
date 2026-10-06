@@ -37,6 +37,7 @@ import type { Map as MBMap } from "mapbox-gl";
 import { Locate, Maximize2, Minimize2, Minus, Plus, SlidersHorizontal } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { geographyName } from "@/lib/labels";
+import { placeWords } from "@/lib/selection";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { ASK_PANEL_GAP, ASK_PANEL_WIDTH, WIDE_QUERY, subscribeOpenFilters, useAskDocked } from "@/components/ask/docked";
 import { NavCapsule } from "@/components/shell/NavCapsule";
@@ -126,6 +127,9 @@ export function Workspace() {
   // the deck's scope is a province name (an ADM1 row); any other `geo` reads as Pakistan
   const geo = state.geo && dims.adm1.some((r) => r.name === state.geo) ? state.geo : null;
   const place = geo ? geographyName(labels, geo) : HEADER.country;
+  // the filter summary names the place that is selected, at its own grain: with a district picked
+  // it used to read "Pakistan", because only province names were looked up
+  const summaryPlace = placeWords(labels, dims, state);
 
   const padding = useMemo(() => chromePadding({ deck: deckOpen, docked, wide }), [deckOpen, docked, wide]);
   // Pakistan stays centred in what is visible: the camera is re-padded whenever a panel toggles.
@@ -222,9 +226,9 @@ export function Workspace() {
       ) : null}
 
       {wide ? (
-        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={place} onResetView={resetCamera} rail={!docked} rightInset={rightInset} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
+        <FilterPanel open={filtersOpen} onToggle={setFiltersOpen} place={summaryPlace} onResetView={resetCamera} rail={!docked} rightInset={rightInset} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
       ) : (
-        <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={place} mobile onResetView={resetCamera} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
+        <FilterPanel open={sheetOpen} onToggle={setSheetOpen} place={summaryPlace} mobile onResetView={resetCamera} display={{ opacity, onOpacity: setOpacity, basemap: basemapChoice, onBasemap: setBasemapChoice, boundaries, onBoundaries: setBoundaries }} />
       )}
 
       {showMap && <LegendCapsule />}

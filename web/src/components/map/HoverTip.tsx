@@ -15,7 +15,7 @@ import type { Dims } from "@/components/ExplorerContext";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import type { Hover } from "./useMapInteractions";
 
-export function HoverTip({ hover, cell, labels, dims, refused, container, residual = null, extra = null }: { hover: Hover; cell: Cell | null; labels: Labels; dims: Dims; refused: boolean; container: { width: number; height: number }; residual?: Residual | null; /** The current layer's reading of the feature (its class, status or retained mass), under the value. */ extra?: string | null }) {
+export function HoverTip({ hover, cell, labels, dims, refused, loading = false, container, residual = null, extra = null }: { hover: Hover; cell: Cell | null; labels: Labels; dims: Dims; refused: boolean; /** The map's query is asked and not yet answered: no cell is known, which is not the same as none existing. */ loading?: boolean; container: { width: number; height: number }; residual?: Residual | null; /** The current layer's reading of the feature (its class, status or retained mass), under the value. */ extra?: string | null }) {
   if (!hover) return null;
   const shared = hover.level === "adm1" && !!residual && residual.members.includes(hover.id) && !!cell;
   const left = Math.min(hover.x + 14, Math.max(0, container.width - 300));
@@ -42,6 +42,8 @@ export function HoverTip({ hover, cell, labels, dims, refused, container, residu
         <div className="mt-1 text-muted">Click to read this cell from the cube (get_grid_cell).</div>
       ) : refused ? (
         <div className="mt-1 text-warn">Refused for this scope: see the legend.</div>
+      ) : loading ? (
+        <div className="mt-1 text-muted" data-testid="hover-loading">Loading this selection…</div>
       ) : cell ? (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
           <span className="num text-md font-semibold text-fg" data-testid="hover-display" title={`${cell.display} (contract precision)`}>{shown(cell)}</span>

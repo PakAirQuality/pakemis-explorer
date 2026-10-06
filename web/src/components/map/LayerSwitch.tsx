@@ -18,7 +18,8 @@ export function LayerSwitch({ compact = false, wrap = false }: { compact?: boole
   };
   return (
     <div className={wrap ? "flex max-w-full flex-wrap gap-1" : "glass pill flex max-w-full overflow-x-auto p-0.5 scrollbar-none"} role="tablist" aria-label="Map layer" data-testid="layer-switch">
-      {LAYER_ORDER.map((id) => {
+      {/* a pollutant paints magnitude alone: the other four layers describe the greenhouse inventory's evidence */}
+      {(state.pol ? LAYER_ORDER.filter((id) => id === "magnitude") : LAYER_ORDER).map((id) => {
         const on = state.layer === id;
         const l = LAYERS[id];
         return (

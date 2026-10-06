@@ -18,8 +18,9 @@ import { useExplorer } from "@/components/ExplorerContext";
 import type { Cell, Envelope } from "@/lib/envelope";
 import { shown } from "@/lib/envelope";
 import { residualUnit } from "@/lib/geography";
-import { adm1Body, mapBody } from "@/lib/requests";
-import { gasLabel, monthLabel, scopeWords, sectorWords, viewLabel } from "@/lib/labels";
+import { adm1Body, airMapBody, mapBody } from "@/lib/requests";
+import { gasLabel, monthLabel, periodShort, scopeWords, sectorWords, viewLabel } from "@/lib/labels";
+import { metricOf } from "@/lib/selection";
 import { exceptionIndex, exceptionItems } from "./exceptions";
 import type { LayerLegendProps } from "./LayerLegend";
 import { anyWithoutCell, exceptionKindsPresent, indexCells, indexUnallocated } from "./paint";
@@ -45,17 +46,27 @@ export function useLayerLegendData(): LegendData {
   const bboxes = useBboxes();
   const tiles = useTilesInfo();
 
-  const body = useMemo(() => mapBody(state), [state]);
-  const mapQ = useQuery({ queryKey: ["map", body], queryFn: () => api.queryEmissions(body!), enabled: !!body, retry: false });
+  // THE MAP'S OWN QUERY, KEY FOR KEY (ExplorerMap.tsx). The legend used to ask the greenhouse
+  // body whatever was painted, so under a pollutant the map showed PM₂.₅ and the legend's
+  // swatches, unit and receipt were the CO₂e envelope's - and a greenhouse refusal could print
+  // "Not mapped" over a painted air map. Same key means the same cache entry: one request.
+  const airBody = useMemo(() => airMapBody(state), [state]);
+  const body = useMemo(() => (state.pol ? null : mapBody(state)), [state]);
+  const mapQ = useQuery({
+    queryKey: ["map", state.pol ? airBody : body],
+    queryFn: ({ signal }) => (state.pol ? api.queryAir(airBody!, signal) : api.queryEmissions(body!, signal)),
+    enabled: state.pol ? !!airBody : !!body,
+    retry: false,
+  });
   const index = useMemo(() => (mapQ.data && state.level !== "grid" ? indexCells(mapQ.data, state.level) : null), [mapQ.data, state.level]);
 
   const provinceBody = useMemo(() => adm1Body(state), [state]);
-  const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: state.layer === "unallocated", retry: false });
+  const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: ({ signal }) => api.queryEmissions(provinceBody, signal), enabled: !state.pol && state.layer === "unallocated", retry: false });
   const unallocIdx = useMemo(() => (state.layer === "unallocated" ? indexUnallocated(provinceQ.data) : null), [state.layer, provinceQ.data]);
 
   const referencePeriod = useMemo(() => dims.periods.find((r) => String(r.is_reference).toLowerCase() === "true")?.period_id ?? state.period, [dims.periods, state.period]);
-  const fixedBody = useMemo(() => (state.scale === "fixed" ? mapBody({ ...state, sector: null, gas: null, month: null, period: referencePeriod }) : null), [state, referencePeriod]);
-  const fixedQ = useQuery({ queryKey: ["map", fixedBody], queryFn: () => api.queryEmissions(fixedBody!), enabled: !!fixedBody, retry: false });
+  const fixedBody = useMemo(() => (!state.pol && state.scale === "fixed" ? mapBody({ ...state, sector: null, gas: null, month: null, period: referencePeriod }) : null), [state, referencePeriod]);
+  const fixedQ = useQuery({ queryKey: ["map", fixedBody], queryFn: ({ signal }) => api.queryEmissions(fixedBody!, signal), enabled: !!fixedBody, retry: false });
 
   const residual = useMemo(() => residualUnit(dims, bboxes.data, labels), [dims, bboxes.data, labels]);
   const exIdx = useMemo(() => exceptionIndex(dims, residual?.name ?? null), [dims, residual]);
@@ -64,7 +75,12 @@ export function useLayerLegendData(): LegendData {
   const exPresent = useMemo(() => (state.layer === "exceptions" ? exceptionKindsPresent(state.level, index, ids, residual, exIdx) : new Set<string>()), [state.layer, state.level, index, ids, residual, exIdx]);
 
   const sharedCell = index && residual && state.level === "adm1" ? index.byId.get(residual.name) : undefined;
-  const scope = [LEVEL_WORD[state.level], scopeWords(labels, state, defaults.gwp_basis, sectorWords(labels, state.sector), state.gas ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null)].join(" · ");
+  const metric = metricOf(state, labels);
+  // a pollutant's scope names the pollutant and the year, and none of the greenhouse qualifiers
+  // (warming potential, month, accounting view) that do not apply to it
+  const scope = metric.family === "air"
+    ? [LEVEL_WORD[state.level], `${metric.label} emissions`, periodShort(labels, state.period), sectorWords(labels, state.sector)].filter(Boolean).join(" · ")
+    : [LEVEL_WORD[state.level], scopeWords(labels, state, defaults.gwp_basis, sectorWords(labels, state.sector), state.gas ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null)].join(" · ");
 
   return {
     state,

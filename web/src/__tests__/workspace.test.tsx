@@ -544,11 +544,23 @@ describe("the workspace's audits", () => {
     expect(screen.getByTestId("active-view")).toHaveTextContent("NH₃ (air beta, kt)");
     expect(screen.getByTestId("card-air-sources")).toHaveTextContent("Agriculture is the largest estimated source");
     expect(screen.getByTestId("card-air-trend")).toHaveTextContent("the agriculture layer alone");
-    // the snapshot stays the three lines the briefing specifies: sentence, figure,
-    // "Beta estimate · covered sectors only" - the absence screening lives in the
-    // engine's completeness block and on Downloads, not on the card
-    expect(screen.queryByTestId("air-absence-note")).toBeNull();
-    expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("Beta estimate · covered sectors only");
+    // GRID POWER IS SAID BESIDE THE TOTAL, NOT LEFT IN THE DRAWER. The engine keeps power out of
+    // the panel and serves its screening pair in `completeness`; with no note here a reader had
+    // nothing to say the total was not a national inventory - and the data page, reading another
+    // product, showed power as a sector. The two strings are the server's own.
+    const note = await screen.findByTestId("air-screening-note");
+    expect(note).toHaveTextContent("Power is not in this total.");
+    expect(note).toHaveTextContent("from 0.6800 kt with emission controls to 0.6800 kt without");
+    expect(note).toHaveTextContent("Neither end is an estimate");
+    // the share is of the sources estimated, and no bar is power's
+    expect(screen.getByTestId("card-air-sources")).toHaveTextContent("of the sources estimated here");
+    expect(screen.getByTestId("air-sources-bars")).not.toHaveTextContent("Power");
+    // every air request the workspace makes names its fiscal period, except agriculture's calendar history
+    for (const [, body] of fetchSpy.mock.calls.filter(([u]) => String(u).includes("/query/air"))) {
+      const b = body as { periods?: string[]; years?: string[] };
+      expect(!!b.periods?.length !== !!b.years?.length, JSON.stringify(b)).toBe(true);
+    }
+    expect(screen.getByTestId("card-air-snapshot")).toHaveTextContent("Beta emissions estimate · covered sources only");
     // ONE combined line under the chart: current figure, endpoint, percent - and no
     // second "covered sources" sentence in the header, no "nationwide"
     expect(screen.getByTestId("card-air-snapshot")).not.toHaveTextContent("nationwide");
@@ -579,6 +591,35 @@ describe("the workspace's audits", () => {
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByTestId("gas-select")).toHaveValue(""));
     expect(screen.getByTestId("year-slider")).toBeInTheDocument();
+  });
+  it("a pollutant's chrome is the pollutant's: no warming potential, month, spatial view or evidence layers; the legend describes its emissions", async () => {
+    stubWideViewport();
+    mount("?pol=SO2&gwp=AR6&layer=evidence&scale=fixed");
+    await screen.findByTestId("deck");
+    openFilters();
+    const panel = screen.getByTestId("map-settings-panel");
+    // what does not apply is not offered, and the panel says why
+    for (const id of ["gwp-select", "month-select", "view-select", "layer-switch"]) expect(within(panel).queryByTestId(id), id).toBeNull();
+    expect(within(panel).getByTestId("settings-not-for-air")).toHaveTextContent("greenhouse-gas settings");
+    expect(within(panel).getByTestId("scale-fixed")).toBeDisabled();
+    expect(within(panel).getByTestId("scale-relative")).toHaveAttribute("aria-checked", "true");
+    expect(Array.from(within(panel).getByTestId("config-select").querySelectorAll("option")).map((o) => o.getAttribute("value"))).toEqual(["REF_2023_24"]);
+    // the summary names the pollutant and no warming-potential basis, though the link carried AR6
+    expect(screen.getByTestId("active-view")).toHaveTextContent("SO₂ (air beta, kt)");
+    expect(screen.getByTestId("active-view")).not.toHaveTextContent("AR6");
+    // the legend's sentence is about this pollutant's emissions, not allocated CO₂e
+    fireEvent.click(screen.getByTestId("legend-note"));
+    const legend = await screen.findByTestId("legend-panel");
+    expect(legend).toHaveTextContent("estimated SO₂ emissions");
+    expect(legend).toHaveTextContent("not a measure of air quality");
+    expect(legend).not.toHaveTextContent("CO₂e");
+    // BACK TO GREENHOUSE GASES: the controls return, with the basis the link asked for intact
+    fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
+    await waitFor(() => expect(within(screen.getByTestId("map-settings-panel")).getByTestId("gwp-select")).toBeInTheDocument());
+    expect(within(screen.getByTestId("map-settings-panel")).getByTestId("view-select")).toBeInTheDocument();
+    expect(within(screen.getByTestId("map-settings-panel")).getByTestId("layer-switch")).toBeInTheDocument();
+    expect(screen.getByTestId("active-view")).toHaveTextContent("CO₂e");
+    expect(screen.getByTestId("active-view")).toHaveTextContent("AR6");
   });
   it("every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase; and the chrome never names the dataset", async () => {
     mount();

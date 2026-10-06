@@ -23,6 +23,7 @@ core's GrainUnavailable, HTTP 422, naming the grains that carry the key).
 import csv
 import datetime
 import json
+import dataclasses
 import logging
 import os
 import re
@@ -335,14 +336,55 @@ class Service:
         get_method a pre-filtered registry (/method/{sector}); such an envelope's receipt is the
         core's for the unfiltered request and is not stored for replay."""
         self.category_grain_guard(request)
+        request, defaulted = self.air_period_default(request)
         with self._lock:
             try:
                 env = self._run(request, method_rows)
             except (duckdb.BinderException, duckdb.CatalogException) as exc:
                 raise self.grain_refusal(exc, request) from exc
+        if defaulted:
+            # said in the envelope, beside the defaults the core applied itself (the core rewrites
+            # the request's own defaults_applied, so it cannot be carried in on the request)
+            context = env.get("context") or {}
+            context["defaults_applied"] = list(context.get("defaults_applied") or []) + ["periods"]
+            env["context"] = context
         if not decorate_cells:
             return env
         return self.spatial_fields.decorate(decorate(env))
+
+    def air_period_default(self, request):
+        """An air request that names neither a period nor calendar years is answered for the
+        reference fiscal period - and says so in the envelope's `defaults_applied`.
+
+        THE CORE HAS NO DEFAULT HERE, AND WHAT IT DOES INSTEAD IS CHOOSE A DIFFERENT PRODUCT.
+        `engine.query_air` routes on the presence of `periods`: with it, the nine-year
+        covered-sources panel (fact_air_panel and its province and district marginals), in which
+        grid power is deliberately absent and travels beside the result as a screening pair;
+        without it, the pre-rc48 single-year layers (fact_air_annual, fact_air_adm1/2), in which
+        power's UNCONTROLLED SCREENING BOUND is an ordinary row. The envelope does not say which
+        answered - `context.periods` is simply empty - and this service then computes
+        share_pct_short over whatever cells came back. So a caller who left the period out was
+        told power is 85 % of national SO2, on a number the engine's own documentation calls
+        "not an estimate" and forbids summing with the covered total. The web's data page did
+        exactly that for a month.
+
+        The fall-through is the core's and the core is vendored, so it is closed here, at the one
+        chokepoint both the HTTP route and the assistant's tool pass through. A request for the
+        calendar-year agriculture history (`years`) is untouched; the single-year layers remain
+        what they are in the release's downloads. To be removed when the core defaults for itself.
+        Returns the request and whether a period was supplied for it."""
+        if type(request).__name__ != "QueryAir" or request.periods or request.years:
+            return request, False
+        # A SERIES IS NOT DEFAULTED TO ONE YEAR. Grouping by period (or by calendar year) with no
+        # periods named is a request for a trend; the core refuses it and says how to ask ("name
+        # the fiscal periods"). Supplying the reference year here would answer a question about
+        # nine years with one of them and no refusal to say so.
+        if {"period_id", "year"} & set(request.group_by or ()):
+            return request, False
+        reference = self.release.defaults.get("period_id")
+        if not reference:
+            return request, False
+        return dataclasses.replace(request, periods=(reference,)), True
 
     @staticmethod
     def category_grain_guard(request):
@@ -805,8 +847,12 @@ def create_app(settings=None, model_client=None):
 
     @api.post("/query/air", tags=["query"])
     def air(body: G.QueryAirModel):
-        """The air beta: native kilotonnes of a named pollutant, never CO2e; seven sectors,
-        agriculture's provincial, district and 1990-2024 grains, typed refusals elsewhere."""
+        """Air-pollutant EMISSIONS: native kilotonnes of a named pollutant for a fiscal period,
+        never CO2e and never a concentration. The covered-sources panel: the sectors the release
+        estimates, nationally and by province and district for the nine fiscal years, with grid
+        power kept out of every total and returned beside it as a screening pair (`completeness`).
+        `years` asks for agriculture's 1990-2024 calendar history instead. A request that names
+        neither is answered for the reference fiscal period (see `context.defaults_applied`)."""
         return svc().run(G.to_request(body))
 
     @api.post("/query/compare", tags=["query"])

@@ -18,7 +18,9 @@ import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
 import { Legend } from "./Legend";
 import type { CellIndex, UnallocatedIndex } from "./paint";
 import type { RasterInfo } from "./tiles";
-import { ALLOCATION_STATUSES, categoriesOf, categoryOf, diffusePlacement, EXCEPTION_KINDS, LAYERS, NOT_SERVED, SPATIAL_CLASSES, statusWords } from "./layerModes";
+import { ALLOCATION_STATUSES, categoriesOf, categoryOf, diffusePlacement, EXCEPTION_KINDS, LAYERS, layerSentence, NOT_SERVED, SPATIAL_CLASSES, statusWords } from "./layerModes";
+import { useExplorer } from "@/components/ExplorerContext";
+import { metricOf } from "@/lib/selection";
 import type { ExceptionItem } from "./exceptions";
 
 export type LayerLegendProps = {
@@ -35,8 +37,9 @@ export type LayerLegendProps = {
   exceptions: { present: Set<string>; items: ExceptionItem[] };
 };
 
-function Sentence({ layer }: { layer: ExplorerState["layer"] }) {
-  return <p className="border-t border-line/70 px-3 py-1.5 text-micro normal-case tracking-normal text-muted" data-testid="layer-sentence">{LAYERS[layer].sentence}</p>;
+function Sentence({ layer, state }: { layer: ExplorerState["layer"]; state: ExplorerState }) {
+  const { labels } = useExplorer();
+  return <p className="border-t border-line/70 px-3 py-1.5 text-micro normal-case tracking-normal text-muted" data-testid="layer-sentence">{layerSentence(layer, metricOf(state, labels), state.level, state.scale)}</p>;
 }
 
 export function LayerLegend(p: LayerLegendProps) {
@@ -46,7 +49,7 @@ export function LayerLegend(p: LayerLegendProps) {
     return (
       <div data-testid="layer-legend" data-layer={layer} className="w-[272px]">
         <Legend state={state} scope={p.scope} env={env} index={index} error={error} isLoading={isLoading} raster={p.raster} rasterOn={state.raster} hasCells={p.hasCells} shared={p.shared} />
-        <div className="glass mt-1 rounded-card"><Sentence layer={layer} /></div>
+        <div className="glass mt-1 rounded-card"><Sentence layer={layer} state={state} /></div>
       </div>
     );
   }
@@ -69,7 +72,7 @@ export function LayerLegend(p: LayerLegendProps) {
       ) : null}
       {env && layer !== "unallocated" && <ReceiptFooter env={env} className="border-t border-line/70 px-3 py-1" />}
       {layer === "unallocated" && p.unallocated.env && <ReceiptFooter env={p.unallocated.env} className="border-t border-line/70 px-3 py-1" />}
-      <Sentence layer={layer} />
+      <Sentence layer={layer} state={state} />
     </div>
   );
 }

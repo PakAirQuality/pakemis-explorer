@@ -48,7 +48,8 @@ import type { Map as MBMap } from "mapbox-gl";
 import type { ExplorerState, Level } from "@/lib/urlState";
 import { absoluteApiBase, api } from "@/lib/api";
 import { adm1Body, airMapBody, mapBody, parseCell } from "@/lib/requests";
-import { contextPill, gasLabel, monthLabel, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
+import { contextPill, gasLabel, monthLabel, periodShort, scopeWords, sectorWords, streamLabel, viewLabel } from "@/lib/labels";
+import { metricOf } from "@/lib/selection";
 import { useExplorer } from "@/components/ExplorerContext";
 import { basemap as buildBasemap, styleFor, type BasemapChoice } from "./basemap";
 import { addLayers, addSources, applyLevel, ensureAtmosphere, ensureRaster, firstSymbolLayerId, OPACITY_DEFAULT, RASTER_OPACITY, setFillOpacity, setSelected, setView3d } from "./layers";
@@ -189,7 +190,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   const body = useMemo(() => (state.pol ? null : mapBody(state)), [state]);
   const mapQ = useQuery({
     queryKey: ["map", state.pol ? airBody : body],
-    queryFn: () => (state.pol ? api.queryAir(airBody!) : api.queryEmissions(body!)),
+    queryFn: ({ signal }) => (state.pol ? api.queryAir(airBody!, signal) : api.queryEmissions(body!, signal)),
     enabled: state.pol ? !!airBody : !!body,
     retry: false,
   });
@@ -208,6 +209,8 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   // since the air spatial lane the district air envelopes carry shape_id natively - the
   // same canonical frame every other district product speaks; no re-keying
   const index = useMemo(() => (mapQ.data && state.level !== "grid" ? indexCells(mapQ.data, state.level) : null), [mapQ.data, state.level]);
+  // asked, not yet answered: no cell is known for any polygon, which is different from "no cell"
+  const waiting = mapQ.isFetching && !index;
   // the unallocated layer reads the province envelope at either level (the map's own ADM1 request, so the key is shared)
   const provinceBody = useMemo(() => adm1Body(state), [state]);
   const provinceQ = useQuery({ queryKey: ["map", provinceBody], queryFn: () => api.queryEmissions(provinceBody), enabled: layered && layer === "unallocated", retry: false });
@@ -355,7 +358,12 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
       return;
     }
     if (index || mapQ.error || layer === "unallocated") paintLayer(map, state.level, { layer, index, ids, residual, exceptions: exIdx, unallocated: unallocIdx, adm1Ids, scale });
-  }, [map, index, state.level, layer, mapped, mapQ.error, ids, residual, exIdx, unallocIdx, adm1Ids, scale, styleEpoch]);
+    // WAITING IS NOT THE LAST ANSWER. With a new year, sector or metric asked for and nothing back
+    // yet, this effect used to do nothing, so the previous selection's colours stayed on the map
+    // under the new selection's labels - CO₂e fills beneath a PM₂.₅ legend, for as long as the
+    // request took. The polygons go to outlines until the answer that belongs to them arrives.
+    else if (waiting) clearPaint(map, state.level);
+  }, [map, index, state.level, layer, mapped, mapQ.error, waiting, ids, residual, exIdx, unallocIdx, adm1Ids, scale, styleEpoch]);
 
   // --- selection outline and flyTo
   useEffect(() => {
@@ -410,7 +418,10 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
   const anyNoCell = !!index && anyWithoutCell(index, state.level, ids, residual);
   const exPresent = useMemo(() => (layer === "exceptions" ? exceptionKindsPresent(state.level, index, ids, residual, exIdx) : new Set<string>()), [layer, state.level, index, ids, residual, exIdx]);
 
-  const scope = [LEVEL_WORD[state.level], scopeWords(labels, state, defaults.gwp_basis, sectorWords(labels, state.sector), state.gas || state.level === "grid" ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null)].join(" · ");
+  const metric = metricOf(state, labels);
+  const scope = metric.family === "air"
+    ? [LEVEL_WORD[state.level], `${metric.label} emissions`, periodShort(labels, state.period), sectorWords(labels, state.sector)].filter(Boolean).join(" · ")
+    : [LEVEL_WORD[state.level], scopeWords(labels, state, defaults.gwp_basis, sectorWords(labels, state.sector), state.gas || state.level === "grid" ? gasLabel(labels, state.gas) : null, state.month ? monthLabel(labels, state.month) : null, state.view !== "all" ? viewLabel(labels, state.view).split(":")[0] : null)].join(" · ");
   // the context pill: the year basis, the configuration, the GWP basis and the LULUCF status as words; no version (the release identity lives on /data)
   const pill = contextPill(labels, release.context_bar, state);
   const workspace = variant === "workspace";
@@ -428,7 +439,7 @@ export function ExplorerMap({ variant = "console", override, onPick, padding, op
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
       {bm.notice && <div className="absolute inset-x-0 top-0 z-20 bg-refusal px-3 py-1 text-center text-micro normal-case tracking-normal text-warn" data-testid="basemap-notice">{bm.notice}</div>}
       {mapError && <div className="absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded bg-refusal px-3 py-1 text-xs text-warn" data-testid="map-error">Map: {mapError}</div>}
-      <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} container={size} residual={residual} extra={hoverExtra} />
+      <HoverTip hover={hover} cell={hoverCell} labels={labels} dims={dims} refused={!!mapQ.error} loading={waiting} container={size} residual={residual} extra={hoverExtra} />
 
       {full && (
         <div className={`absolute left-3 z-20 max-w-[calc(100%-140px)] ${bm.notice ? "top-8" : "top-3"}`}>

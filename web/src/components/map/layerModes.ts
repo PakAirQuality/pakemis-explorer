@@ -10,7 +10,8 @@
  */
 import type { Cell } from "@/lib/envelope";
 import type { Labels } from "@/lib/release";
-import type { Level, MapLayer } from "@/lib/urlState";
+import type { Level, MapLayer, ScaleMode } from "@/lib/urlState";
+import type { Metric } from "@/lib/selection";
 import { NO_CELL, RAMP } from "@/lib/palette";
 import { EVIDENCE_CLASS_TEXT } from "@/components/methods/evidenceClassText";
 
@@ -25,6 +26,40 @@ export const LAYERS: Record<MapLayer, LayerDef> = {
   unallocated: { id: "unallocated", label: "Unallocated mass", short: "Unallocated", sentence: `Colour shows the mass each province retains at province level because the release placed it no finer, districts greyed beneath; ${NOT_OBSERVATION}.`, levels: ["adm1", "adm2"], needs: "a province-level layer" },
   exceptions: { id: "exceptions", label: "Known spatial exceptions", short: "Exceptions", sentence: `Outlines and hatching mark where the release's rows and the map's polygons do not match one to one (the shared 'Other' cell, shapes shared by several census units, units without a polygon, bounded CH₄ modules); ${NOT_OBSERVATION}.`, levels: ["adm1", "adm2"] },
 };
+
+const UNIT_WORD: Record<Level, string> = { adm1: "province", adm2: "district", grid: "grid cell" };
+
+/**
+ * The magnitude layer's sentence, written from what is actually on the map: the metric, the level
+ * and the scale mode.
+ *
+ * It was one fixed string - "each province's or district's allocated CO₂e on the release's own
+ * scale" - printed whatever the reader had chosen, so a PM₂.₅ map carried a legend describing
+ * CO₂e. It also never said how the colours are assigned, and that matters: on the default RELATIVE
+ * scale a colour is a rank among the places on screen, so the same shade in another year or sector
+ * is a different amount. A reader comparing two maps by eye needs to be told that.
+ *
+ * A pollutant is described as an emissions estimate - mass released over the year - and
+ * explicitly not as air quality: a dark district emitted more, which is not a statement about
+ * what people there breathe.
+ */
+export function magnitudeSentence(metric: Metric, level: Level, scale: ScaleMode): string {
+  const unit = UNIT_WORD[level];
+  const what = metric.family === "air" ? `estimated ${metric.label} emissions` : `allocated ${metric.label}`;
+  const how =
+    scale === "fixed"
+      ? `on one scale fixed to the reference year's all-sector range, so a colour is the same amount whichever sector or gas is chosen`
+      : scale === "absolute"
+        ? `in proportion to its value, between the smallest and the largest ${unit} on screen`
+        : `by its rank among the ${unit}s on screen: darker is larger than the others in this view, and the same colour in another year or sector is not the same amount`;
+  const tail = metric.family === "air" ? `an estimate of what was emitted, placed by the inventory's allocation - not an observation, and not a measure of air quality` : NOT_OBSERVATION;
+  return `Colour shows each ${unit}'s ${what} ${how}; ${tail}.`;
+}
+
+/** The sentence a layer's legend states for the selection on screen. */
+export function layerSentence(layer: MapLayer, metric: Metric, level: Level, scale: ScaleMode): string {
+  return layer === "magnitude" ? magnitudeSentence(metric, level, scale) : LAYERS[layer].sentence;
+}
 
 export const LAYER_ORDER: MapLayer[] = ["magnitude", "evidence", "method", "unallocated", "exceptions"];
 

@@ -12,24 +12,30 @@ import { X } from "lucide-react";
 import { useExplorer } from "@/components/ExplorerContext";
 import { configLabel, configTooltip, districtName, gasLabel, geographyName, gwpIsDefault, gwpLabel, gwpTooltip, monthLabel, periodLabel, periodShort, sectorLabel } from "@/lib/labels";
 import type { Labels } from "@/lib/release";
+import { geoGrain } from "@/lib/geography";
+import { AIR_NOT_AMBIENT, metricOf } from "@/lib/selection";
 import type { ExplorerState, StateDefaults } from "@/lib/urlState";
 import type { Dims } from "@/components/ExplorerContext";
 import { ExplorePanel } from "@/components/panels/ExplorePanel";
 
 /** The place of the view: the selected district or province by its name, else Pakistan. */
 export function viewPlace(labels: Labels, dims: Dims, s: Pick<ExplorerState, "level" | "geo">): string {
+  // by the id's own grain: a province stays selected while its districts are on screen
   if (!s.geo) return "Pakistan";
-  return s.level === "adm2" ? districtName(dims, s.geo) : geographyName(labels, s.geo);
+  return geoGrain(s.geo) === "adm2" ? districtName(dims, s.geo) : geographyName(labels, s.geo);
 }
 
 /** The words of the line and their tooltip. */
 export function currentViewWords(labels: Labels, dims: Dims, s: ExplorerState, d: StateDefaults): { words: string; title: string } {
+  const metric = metricOf(s, labels);
   const parts = [periodShort(labels, s.period), viewPlace(labels, dims, s), configLabel(labels, s.config)];
-  if (!gwpIsDefault(labels, s.gwp, d.gwp_basis)) parts.push(gwpLabel(labels, s.gwp));
+  // a pollutant is named, and carries no warming-potential basis or month
+  if (metric.family === "air") parts.push(`${metric.label} emissions`);
+  else if (!gwpIsDefault(labels, s.gwp, d.gwp_basis)) parts.push(gwpLabel(labels, s.gwp));
   if (s.sector) parts.push(sectorLabel(labels, s.sector));
   if (s.gas) parts.push(gasLabel(labels, s.gas));
   if (s.month) parts.push(monthLabel(labels, s.month));
-  const basis = gwpTooltip(labels, s.gwp) ? `${gwpLabel(labels, s.gwp)}: ${gwpTooltip(labels, s.gwp)}` : gwpLabel(labels, s.gwp);
+  const basis = metric.family === "air" ? AIR_NOT_AMBIENT : gwpTooltip(labels, s.gwp) ? `${gwpLabel(labels, s.gwp)}: ${gwpTooltip(labels, s.gwp)}` : gwpLabel(labels, s.gwp);
   const title = [periodLabel(labels, s.period), configTooltip(labels, s.config), basis].filter(Boolean).join(" · ");
   return { words: parts.filter(Boolean).join(" · "), title };
 }

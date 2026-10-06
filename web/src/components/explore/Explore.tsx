@@ -28,6 +28,8 @@ import { Controls } from "./Controls";
 import { HeaderCard } from "./HeaderCard";
 import { ResultChips } from "./ResultChips";
 import { OverviewCard } from "./OverviewCard";
+import { AirScreeningNote } from "@/components/ui/AirScreeningNote";
+import { AIR_NOT_AMBIENT } from "@/lib/selection";
 import { Canvas, sidesOf } from "./Canvas";
 import { EXPLORE } from "./copy";
 
@@ -36,7 +38,9 @@ const ACTION = "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm 
 /** The envelope the canvas shows: the plan's filter applied (several provinces out of the ADM1 envelope), never a changed value. */
 export function visibleEnvelope(env: Envelope | null | undefined, plan: QueryPlan): Envelope | null {
   if (!env) return null;
-  if (plan.kind !== "emissions" || !plan.filterTo) return env;
+  // an air plan carries the same filter (several provinces out of the provincial envelope); it was
+  // dropped for air, which is half of why choosing Punjab under a pollutant listed every province
+  if ((plan.kind !== "emissions" && plan.kind !== "air") || !plan.filterTo) return env;
   const { key, ids } = plan.filterTo;
   return { ...env, values: env.values.filter((c) => ids.includes(c.group?.[key] ?? "")) };
 }
@@ -110,8 +114,9 @@ export function Explore() {
           </header>
           {result && <p className="mt-4 text-md text-fg" data-testid="canvas-sentence">{result}</p>}
           {env && state.rep !== "map" && (
-            <div className="mt-3 text-xs text-muted" data-testid="frame-unit" title={gwpTooltip(labels, state.gwp)}>{envelopeUnitLine(env)}</div>
+            <div className="mt-3 text-xs text-muted" data-testid="frame-unit" title={state.pollutant ? AIR_NOT_AMBIENT : gwpTooltip(labels, state.gwp)}>{envelopeUnitLine(env)}</div>
           )}
+          {plan.kind === "air" && <AirScreeningNote env={env} labels={labels} />}
           <div className="mt-2">
             <Canvas state={state} plan={plan} ctx={ctx} env={env} error={plan.kind === "refused" ? null : active.error} isLoading={plan.kind !== "refused" && active.isLoading} labels={labels} dims={dims} dispatch={dispatch} />
           </div>
@@ -173,13 +178,14 @@ function Row({ label, children, testId }: { label: string; children: ReactNode; 
 function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | null, labels: Parameters<typeof configWords>[0], dims: Parameters<typeof groupValueLabel>[1], place: string, owner: string): ReactNode {
   if (!env || plan.kind === "refused") return null;
   if (plan.kind === "air") {
-    if (plan.groupBy === "year") {
+    const p = POLLUTANT_LABELS[state.pollutant ?? ""] ?? state.pollutant;
+    if (plan.groupBy === "period_id") {
       const first = env.values.find((c) => typeof c.value === "number");
       const last = topCell({ ...env, values: [...env.values].reverse() });
       if (!first || !last) return null;
       return (
         <>
-          {POLLUTANT_LABELS[state.pollutant ?? ""] ?? state.pollutant} emissions: <B>{shown(first)} {cellUnit(first)}</B> in {String(first.group?.year ?? "")}, <B>{shown(last)} {cellUnit(last)}</B> in {String(last.group?.year ?? "")} — the 1990–2024 series is the agriculture layer, on the air-quality beta.
+          {owner} covered {p} emissions: <B>{shown(first)} {cellUnit(first)}</B> in {periodShort(labels, String(first.group?.period_id ?? ""))}, <B>{shown(last)} {cellUnit(last)}</B> in {periodShort(labels, String(last.group?.period_id ?? ""))}.
         </>
       );
     }
@@ -187,10 +193,14 @@ function resultSentence(state: ExploreState, plan: QueryPlan, env: Envelope | nu
     if (!top) return null;
     const id = top.group?.[plan.groupBy] ?? "";
     const name = groupValueLabel(labels, dims, plan.groupBy, id) || id;
+    // WHAT THE SHARE IS A SHARE OF. The server's share is over the cells it returned: the sources
+    // the release estimates, or the places listed. It is never "of the total" - grid power is not
+    // in it, and saying otherwise is how a covered total gets read as a national inventory.
+    const of = plan.groupBy === "sector_id" ? "of the sources estimated here" : "of the places shown";
     return (
       <>
-        <b>{name}</b> contributed <B>{shown(top)} {cellUnit(top)}</B>
-        {top.share_pct_short ? <> (<B>{top.share_pct_short} %</B> of the total)</> : null} — the air-quality beta, outside the CO₂e inventory.
+        <b>{name}</b> {plan.groupBy === "sector_id" ? `is the largest estimated source${place !== "Pakistan" ? ` in ${place}` : ""}` : "emitted the most"}, at <B>{shown(top)} {cellUnit(top)}</B>
+        {top.share_pct_short ? <> (<B>{top.share_pct_short} %</B> {of})</> : null}.
       </>
     );
   }

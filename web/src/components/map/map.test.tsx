@@ -120,7 +120,9 @@ describe("the layer legends", () => {
     for (const layer of ["magnitude", "evidence", "method", "unallocated", "exceptions"] as const) {
       const { unmount } = mountLegend(layer);
       expect(screen.getByTestId("layer-legend")).toHaveAttribute("data-layer", layer);
-      expect(screen.getByTestId("layer-sentence")).toHaveTextContent(LAYERS[layer].sentence);
+      // the four evidence layers keep their fixed sentence; magnitude's is written from the metric,
+      // level and scale on screen (layerModes.ts magnitudeSentence), asserted on its own below
+      if (layer !== "magnitude") expect(screen.getByTestId("layer-sentence")).toHaveTextContent(LAYERS[layer].sentence);
       expect(screen.getByTestId("layer-sentence")).toHaveTextContent("not an observation");
       unmount();
     }

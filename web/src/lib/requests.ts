@@ -59,18 +59,73 @@ export function mapBody(s: ExplorerState): QueryEmissions | null {
 }
 
 /**
- * The air choropleth request: one pollutant on the nine-year spatial family (rc49) - the
- * year slider's period rides the request, and provinces/districts answer for any of the
- * nine fiscal years on the covered-sources scope (six sectors; power's screening bound
- * ships beside the panel, never silently inside a map). No month or GWP: the air tables
- * are native kilotonnes.
+ * THE AIR REQUESTS, IN ONE PLACE.
+ *
+ * ⚠ EVERY ONE OF THEM NAMES ITS PERIOD. The air endpoint serves two products and chooses between
+ * them by whether `periods` is present: with it, the nine-year covered-sources panel (nine sectors
+ * for one fiscal year, grid power kept OUT and reported beside the result as a screening range);
+ * without it, the older single-year sector layers, in which power's uncontrolled screening bound
+ * sits as an ordinary row. The workspace cards sent the period and the data page did not, so the
+ * same "national PM₂.₅" read 771.87 kt with residential at 81.9 % on one page and 77.0 % with
+ * power as the third-largest source on the other - a share computed over a row the engine itself
+ * says is not an estimate. Nothing in the envelope's context said which product had answered.
+ * There is no helper here that can build an air body without a period.
+ *
+ * No month, warming-potential basis or accounting view: the air tables are annual and in native
+ * kilotonnes. `sectors` takes the module ids the air tables are keyed on (the same ten ids the
+ * greenhouse reporting axis uses).
  */
-export function airMapBody(s: Pick<ExplorerState, "level" | "pol" | "period">): QueryAir | null {
+type AirScope = Pick<ExplorerState, "pol" | "period" | "sector" | "geo">;
+
+/** The place filter at the id's own grain (a province stays selected while its districts are on screen). */
+export function airPlace(s: Pick<ExplorerState, "geo">): Pick<QueryAir, "geography_level" | "geography_ids"> {
+  return s.geo ? { geography_level: geoGrain(s.geo), geography_ids: [s.geo] } : {};
+}
+
+/** The selection's own total: one pollutant, one fiscal year, the place and sector if any. */
+export function airScopeBody(s: AirScope): QueryAir | null {
   if (!s.pol) return null;
-  const period = s.period ? { periods: [s.period] } : {};
-  if (s.level === "adm1") return { pollutants: [s.pol], geography_level: "adm1", ...period, group_by: ["province"] };
-  if (s.level === "adm2") return { pollutants: [s.pol], geography_level: "adm2", ...period, group_by: ["shape_id"] };
+  return { pollutants: [s.pol], periods: [s.period], ...airPlace(s), ...(s.sector ? { sectors: [s.sector] } : {}) };
+}
+
+/** The choropleth: every province or district for that pollutant, year and sector. */
+export function airMapBody(s: Pick<ExplorerState, "level" | "pol" | "period" | "sector">): QueryAir | null {
+  if (!s.pol) return null;
+  const scope = { pollutants: [s.pol], periods: [s.period], ...(s.sector ? { sectors: [s.sector] } : {}) };
+  if (s.level === "adm1") return { ...scope, geography_level: "adm1", group_by: ["province"] };
+  if (s.level === "adm2") return { ...scope, geography_level: "adm2", group_by: ["shape_id"] };
   return null;
+}
+
+/** The calendar years of the agriculture-only air history (national; the one request that names years, not a period). */
+export const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
+
+export type AirDeckBodies = {
+  /** The selection's total. */
+  total: QueryAir;
+  /** Its sources: the covered sectors, ranked, each with the server's share of the cells returned. */
+  sources: QueryAir;
+  /** The ranking beside it: provinces nationally, districts once a province is selected. */
+  places: QueryAir;
+  /** The nine fiscal years of the same selection. */
+  series: QueryAir;
+  /** Agriculture's calendar-year history, national only. */
+  trend: QueryAir;
+};
+
+export function airDeckBodies(s: AirScope, fiscalPeriods: string[]): AirDeckBodies | null {
+  const total = airScopeBody(s);
+  if (!total || !s.pol) return null;
+  const province = s.geo && geoGrain(s.geo) === "adm1";
+  return {
+    total,
+    sources: { ...total, group_by: ["sector_id"], order_by: "value desc" },
+    places: province
+      ? { pollutants: [s.pol], periods: [s.period], geography_level: "adm2", group_by: ["province", "shape_id"], order_by: "value desc" }
+      : { pollutants: [s.pol], periods: [s.period], geography_level: "adm1", group_by: ["province"], order_by: "value desc" },
+    series: { pollutants: [s.pol], periods: fiscalPeriods, ...airPlace(s), group_by: ["period_id"] },
+    trend: { pollutants: [s.pol], years: AIR_YEARS, group_by: ["year"] },
+  };
 }
 
 export function parseCell(cell: string | null): { lat: number; lon: number } | null {
@@ -327,6 +382,7 @@ export function requestFromState(s: ExplorerState): NamedRequest {
 
 const TYPE_TO_NAME: Record<string, string> = {
   QueryEmissions: "query_emissions",
+  QueryAir: "query_air",
   GridCellRequest: "get_grid_cell",
   SpatialLineageRequest: "get_spatial_lineage",
   CompareRequest: "compare_emissions",
@@ -371,6 +427,23 @@ export function stateFromRequest(req: NamedRequest): Partial<ExplorerState> {
     const geo = first(b.geography_ids);
     if (geo) out.geo = geo;
     if (level === "adm1" || level === "adm2") out.cell = null;
+    return out;
+  }
+  if (name === "query_air") {
+    // AN AIR REQUEST PINS THE METRIC. Without this branch an answer about a pollutant read back
+    // as no state at all, so its "show on map" and its Explore link opened whatever the reader
+    // happened to have selected - a PM₂.₅ answer painted as CO₂e. The pollutant is named, and with
+    // it everything a pollutant view cannot carry (urlState.applyPatch clears the gas and month).
+    const pol = first(b.pollutants);
+    if (!pol) return out;
+    out.pol = pol;
+    const level = str(b.geography_level);
+    if (level === "adm1" || level === "adm2") out.level = level;
+    const period = first(b.periods);
+    if (period) out.period = period;
+    out.sector = first(b.sectors);
+    const geo = first(b.geography_ids);
+    out.geo = geo;
     return out;
   }
   if (name === "get_grid_cell") {

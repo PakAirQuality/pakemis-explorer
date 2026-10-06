@@ -50,7 +50,11 @@ export function sidesOf(cell: Cell): { left: Side; right: Side } | null {
   return left && right ? { left, right } : null;
 }
 
-const AIR_MAP_REFUSAL = { error: "representation_unavailable", error_class: "RepresentationUnavailable", message: "The map paints the CO\u2082e layers; the air-quality beta has no map layer yet. Chart and Table carry the pollutant.", limitation_id: null, detail: { available_at: ["chart", "table"] } };
+const AIR_MAP_REFUSAL = { error: "representation_unavailable", error_class: "RepresentationUnavailable", message: "This page\u2019s map draws the CO\u2082e layers. Chart and Table carry the pollutant here; the Explore map shows it by province and district.", limitation_id: null, detail: { available_at: ["chart", "table"] } };
+// A SELECTION THE RELEASE HOLDS NOTHING FOR IS SAID TO BE EMPTY. An empty envelope used to fall
+// through to an empty chart under the place's name, which reads as "zero"; and the alternative -
+// quietly showing the nation or every place instead - is the bug this page had under a pollutant.
+const NO_ROWS = { error: "no_rows", error_class: "NoRows", message: "The release holds no rows for this selection. Nothing else is shown in its place: not the national figure, and not other places.", limitation_id: null, detail: {} };
 const MAP_REFUSAL = { error: EXPLORE.mapUnavailable.error, error_class: EXPLORE.mapUnavailable.error_class, message: EXPLORE.mapUnavailable.message, limitation_id: null, detail: { available_at: [...EXPLORE.mapUnavailable.available_at] } };
 
 export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, dispatch }: CanvasProps) {
@@ -77,6 +81,7 @@ export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, 
     if (error) return <RefusalCard error={error} compact />;
     return isLoading ? <Loading what="the inventory" /> : null;
   }
+  if (env.values.length === 0) return <RefusalCard refusal={NO_ROWS} compact />;
   if (state.rep === "table") return <EnvelopeTable env={env} labels={labels} dims={dims} dense onRowClick={(cell) => select(cell, active.groupBy, dispatch)} />;
   return <Figure state={state} plan={active} ctx={ctx} env={env} labels={labels} dims={dims} dispatch={dispatch} />;
 }

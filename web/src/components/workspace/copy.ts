@@ -68,6 +68,9 @@ export const LEGEND = {
   absoluteNote: "The scale follows the places now in view; the breaks are the release's own printed values.",
   notMapped: "Not mapped",
   asking: "asking the release about this year…",
+  // said when NOTHING is being asked: at grid level off the reference year no request exists, and
+  // "asking the release…" stood there for good
+  gridReferenceOnly: "The grid layer is drawn for the reference year only; provinces and districts are mapped for every year.",
   open: "What the colours mean",
   close: "Close the legend",
 } as const;

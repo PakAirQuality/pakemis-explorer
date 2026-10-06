@@ -13,6 +13,7 @@
 import type { CompareRequest, QueryAir, QueryEmissions, TimeseriesRequest } from "../api";
 import type { Refusal } from "../envelope";
 import { estimateNoun, gwpWords } from "../breakdown";
+import { geoGrain } from "../geography";
 import { configLabel, districtName, periodShort, sectorLabel, type Dims as GeoDims } from "../labels";
 import type { Labels } from "../release";
 import type { ExplorerState, Level } from "../urlState";
@@ -32,7 +33,6 @@ export const POLLUTANTS = ["NOx", "SO2", "CO", "NMVOC", "PM2.5", "BC", "NH3"] as
 export const POLLUTANT_LABELS: Record<string, string> = {
   NOx: "NOx", SO2: "SO\u2082", CO: "CO", NMVOC: "NMVOC", "PM2.5": "PM\u2082.\u2085", BC: "Black carbon", NH3: "NH\u2083",
 };
-const AIR_YEARS = Array.from({ length: 35 }, (_, i) => String(1990 + i));
 
 export type ExploreState = {
   /** The grain the query asks at: national, or the level of the places. */
@@ -104,7 +104,7 @@ function isRep(v: string | null | undefined): v is Rep {
  */
 export function unavailableReason(s: ExploreState, ctx: ExploreContext, by: Breakdown, labels?: Labels): string | null {
   if (s.pollutant && (by === "month" || by === "gas" || by === "category" || by === "estimate")) {
-    if (by === "month") return "The air-quality beta has no monthly product; the annual layers and the 1990-2024 series are what the release carries.";
+    if (by === "month") return "Air-pollutant emissions are published by fiscal year; the release carries no monthly product for them.";
     if (by === "estimate") return "The air-quality beta carries a single estimate; there is no survey-based alternative to compare.";
     return "A pollutant replaces the CO2e metric; the gas and category breakdowns belong to the greenhouse-gas inventory.";
   }
@@ -152,8 +152,12 @@ export function resolveExplore(shared: ExplorerState, local: LocalKeys, ctx: Exp
   const geosRaw = local.geos ? local.geos.split(",").map((g) => g.trim()).filter(Boolean) : [];
   const allPlaces = geosRaw.length === 1 && geosRaw[0] === ALL_PLACES;
   const geos = allPlaces ? [] : geosRaw.length ? geosRaw : shared.geo ? [shared.geo] : [];
+  // THE GRAIN OF A CHOSEN PLACE IS THE PLACE'S OWN. The map's `level` says what the reader is
+  // looking at, and a province stays selected while its districts are on screen (level=adm2,
+  // geo=Punjab). Trusting `level` asked the district table for a shape called "Punjab" and drew
+  // an empty chart under the province's name. Only "every place" has no id to read it from.
   const urlLevel: Level = shared.level;
-  const level: Grain = geos.length || allPlaces ? (urlLevel === "adm2" ? "adm2" : "adm1") : "national";
+  const level: Grain = geos.length ? geoGrain(geos[0]) : allPlaces ? (urlLevel === "adm2" ? "adm2" : "adm1") : "national";
   const range = !!local.range && ctx.periods.length > 1;
   const s: ExploreState = {
     level,
@@ -173,13 +177,12 @@ export function resolveExplore(shared: ExplorerState, local: LocalKeys, ctx: Exp
     pollutant: (POLLUTANTS as readonly string[]).includes(shared.pol ?? "") ? shared.pol : null,
   };
   if (s.pollutant) {
-    // the pollutant replaces the CO2e metric: the gas, category and share controls stand
-    // down, and the PERIOD PINS to the reference - the air layers are single-year, and a
-    // slider year relabeling the same numbers would be the lie the doctrine forbids
+    // the pollutant replaces the CO2e metric: the gas, category and share controls stand down.
+    // The period is the reader's: the air panel carries the nine fiscal years. (It was pinned to
+    // the reference here while the page read the older single-year layers; see buildAir.)
     s.gas = null;
     s.category = null;
     s.share = false;
-    s.period = ctx.referencePeriod;
   }
   if (range) {
     s.by = "period";
@@ -191,7 +194,10 @@ export function resolveExplore(shared: ExplorerState, local: LocalKeys, ctx: Exp
   }
   const asked = isBreakdown(local.by) ? local.by : null;
   s.by = asked && asked !== "period" && !unavailableReason(s, ctx, asked) ? asked : fallbackBreakdown(s, ctx);
-  if (s.pollutant && !["sector", "place", "period"].includes(s.by)) s.by = s.level === "national" ? "sector" : "place";
+  // one chosen place is read as ITS composition; comparing places is asked for (several places,
+  // "every place", or By place), never fallen into
+  if (s.pollutant && !["sector", "place", "period"].includes(s.by)) s.by = s.level === "national" || s.geos.length === 1 ? "sector" : "place";
+  if (s.pollutant && s.by === "place" && s.level === "national") s.by = "sector";
   return s;
 }
 
@@ -310,7 +316,6 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
       return settle();
     case "measure":
       n.pollutant = null;
-      n.pollutant = null;
       if (a.value === "share") n.share = true;
       else {
         n.gwp = a.value.gwp;
@@ -331,8 +336,10 @@ export function transition(s: ExploreState, a: Action, ctx: ExploreContext): Exp
         n.gas = null;
         n.category = null;
         n.share = false;
-        n.period = ctx.referencePeriod;
-        if (!["sector", "place", "period"].includes(n.by)) n.by = n.level === "national" ? "sector" : "place";
+        // the estimate returns to the reference one (the survey-based estimate is a greenhouse
+        // configuration); the year is kept - the air panel has all nine
+        n.config = ctx.reference;
+        if (!["sector", "place", "period"].includes(n.by)) n.by = n.level === "national" || n.geos.length === 1 ? "sector" : "place";
       }
       return n;
     }
@@ -394,7 +401,7 @@ export const CATEGORY_GRAIN_REFUSAL: Refusal = {
 /** The one contract call of a state; see the module note. */
 export function buildQuery(s: ExploreState, ctx: ExploreContext): QueryPlan {
   if (s.category && s.level !== "national") return { kind: "refused", refusal: { ...CATEGORY_GRAIN_REFUSAL, detail: { ...CATEGORY_GRAIN_REFUSAL.detail, grain: s.level } } };
-  if (s.pollutant) return buildAir(s);
+  if (s.pollutant) return buildAir(s, ctx);
   const scope = scopeOf(s);
   switch (s.by) {
     case "period": {
@@ -464,40 +471,53 @@ export function possessive(place: string): string {
 }
 
 /**
- * The one query_air call of a pollutant state: kilotonnes of the named species. All years is
- * the agriculture 1990-2024 series (national); a place grain groups the agriculture
- * allocation's provinces or districts; national groups the seven sector layers. A sector
- * filter rides along - off agriculture at a place grain the SERVER refuses, and the canvas
- * shows that refusal verbatim.
+ * The one query_air call of a pollutant state: kilotonnes of the named species on the
+ * covered-sources panel, FOR A NAMED FISCAL YEAR.
+ *
+ * ⚠ THIS BUILDER USED TO SEND NO PERIOD, AND THE PLACE NEVER REACHED IT. The air endpoint picks
+ * its product by whether `periods` is present, so the page was reading the older single-year
+ * sector layers - where grid power's uncontrolled screening bound is an ordinary row - while the
+ * workspace read the nine-year panel. Same question, 771.87 kt with residential at 81.9 % there
+ * and 77.0 % with power third here. And the grouping ignored both `by` and the chosen place: with
+ * Lahore selected the sentence promised Lahore's sectors and the chart listed every district.
+ *
+ *   one place (or the nation), by sector   the place's own sources: `geography_ids` + sector_id
+ *   by place                               every province or district, or the several chosen
+ *   all years                              the nine fiscal years of the same selection
+ *
+ * The air lane stays module-keyed (fact_air_* carries no reporting_sector; grouping on the
+ * reporting axis is refused), and the sector filter rides along at every grain.
  */
-function buildAir(s: ExploreState): QueryPlan {
-  const base: QueryAir = { pollutants: [s.pollutant!] };
-  if (s.sector) base.sectors = [s.sector];
-  if (s.range) return { kind: "air", body: { ...base, years: AIR_YEARS, group_by: ["year"] }, groupBy: "year", chart: "line" };
-  // THE AIR LANE STAYS MODULE-KEYED, and the contract says so: fact_air_* carries no
-  // reporting_sector. Grouping it on the reporting axis would 400, and pretending otherwise
-  // would put a module number under a reporting label.
-  if (s.level === "national") return { kind: "air", body: { ...base, group_by: ["sector_id"], order_by: "value desc" }, groupBy: "sector_id", chart: "bars" };
-  const key = s.level === "adm2" ? "shape_id" : "province";
-  return {
-    kind: "air",
-    body: { ...base, geography_level: s.level, group_by: [key], order_by: "value desc" },
-    groupBy: key,
-    chart: "bars",
-    // province names match the envelope's group values; district state carries shape ids, which do not
-    ...(s.level === "adm1" && s.geos.length ? { filterTo: { key, ids: s.geos } } : {}),
-  };
+function buildAir(s: ExploreState, ctx: ExploreContext): QueryPlan {
+  const scope: QueryAir = { pollutants: [s.pollutant!], ...(s.sector ? { sectors: [s.sector] } : {}) };
+  const grain = s.level === "adm2" ? "adm2" : "adm1";
+  const one: Pick<QueryAir, "geography_level" | "geography_ids"> = s.level !== "national" && s.geos.length === 1 ? { geography_level: grain, geography_ids: s.geos } : {};
+  if (s.by === "period") return { kind: "air", body: { ...scope, periods: ctx.periods, ...one, group_by: ["period_id"] }, groupBy: "period_id", chart: "line" };
+  const year = { ...scope, periods: [s.period] };
+  if (s.by === "place" && s.level !== "national") {
+    const key = s.level === "adm2" ? "shape_id" : "province";
+    return {
+      kind: "air",
+      body: { ...year, geography_level: grain, group_by: [key], order_by: "value desc" },
+      groupBy: key,
+      chart: "bars",
+      // several chosen provinces are read out of the one provincial envelope: a filter, never arithmetic
+      ...(s.geos.length > 1 ? { filterTo: { key, ids: s.geos } } : {}),
+    };
+  }
+  return { kind: "air", body: { ...year, ...one, group_by: ["sector_id"], order_by: "value desc" }, groupBy: "sector_id", chart: "bars" };
 }
 
 export function showingWords(s: ExploreState, ctx: ExploreContext, labels: Labels, dims: GeoDims): string {
   const place = placeWords(s, dims);
   const owner = possessive(place);
   if (s.pollutant) {
-    const when = s.by === "period"
-      ? "1990 to 2024 (the agriculture series)"
-      : "the layers\u2019 single year (calendar 2024; power and aviation on the 2023\u201324 fiscal year)";
+    const first = ctx.periods[0];
+    const last = ctx.periods[ctx.periods.length - 1];
+    // "by year, 2015–16 to 2023–24" already names the span; a single year is named here
+    const when = s.by === "period" && first && last ? "" : `, ${periodShort(labels, s.period)}`;
     const what = s.sector ? `${sectorLabel(labels, s.sector).toLowerCase()} ` : "";
-    return `${owner} ${what}${POLLUTANT_LABELS[s.pollutant] ?? s.pollutant} emissions in kilotonnes, ${groupedWords(s, ctx, labels)}, ${when} — the air-quality beta, a companion product of uneven assurance, outside the CO\u2082e totals.`;
+    return `${owner} ${what}${POLLUTANT_LABELS[s.pollutant] ?? s.pollutant} emissions in kilotonnes, ${groupedWords(s, ctx, labels)}${when} — an estimate of what the covered sources emitted, not a measure of air quality, and outside the CO\u2082e totals.`;
   }
   const when = s.by === "period" ? "" : `${periodShort(labels, s.period)} `;
   const allocated = s.level === "national" ? "" : "allocated ";
@@ -512,9 +532,10 @@ export function showingWords(s: ExploreState, ctx: ExploreContext, labels: Label
 export function canvasTitle(s: ExploreState): string {
   if (s.pollutant) {
     const p = POLLUTANT_LABELS[s.pollutant] ?? s.pollutant;
+    // from the grouping the query actually asks for, never from the level alone: Lahore selected
+    // is Lahore's sectors, and "by district" is said only when districts are what comes back
     if (s.by === "period") return `${p} emissions over time`;
-    if (s.level === "adm2") return `${p} emissions by district`;
-    if (s.level === "adm1") return `${p} emissions by province`;
+    if (s.by === "place") return `${p} emissions by ${s.level === "adm2" ? "district" : "province"}`;
     return `${p} emissions by sector`;
   }
   const noun = s.level === "national" ? "Emissions" : "Allocated emissions";

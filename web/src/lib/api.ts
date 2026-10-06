@@ -90,8 +90,15 @@ async function envelope(path: string, init?: RequestInit): Promise<Envelope> {
   return EnvelopeSchema.parse(await call(path, init));
 }
 
-function post(body: unknown): RequestInit {
-  return { method: "POST", body: JSON.stringify(body) };
+/**
+ * `signal` is TanStack Query's, handed to every query function: when a selection changes, the
+ * request for the one before it is ABORTED rather than left to finish. Nothing could be shown
+ * under the wrong label before this - queries are keyed by their body, so a late answer lands in
+ * its own cache entry - but every superseded request still ran to the end on a service that
+ * serves twenty at a time, and a reader dragging the year slider queued nine of them.
+ */
+function post(body: unknown, signal?: AbortSignal): RequestInit {
+  return signal ? { method: "POST", body: JSON.stringify(body), signal } : { method: "POST", body: JSON.stringify(body) };
 }
 
 /** The URL of a receipt: the /downloads page replays it (static export has no dynamic /r/<receipt> route; /data redirects there). */
@@ -141,12 +148,12 @@ export async function fetchClaim(selector: ClaimSelector): Promise<unknown> {
 export const api = {
   release: async (): Promise<ReleaseInfo> => ReleaseSchema.parse(await call("/release")),
   claim: fetchClaim,
-  queryEmissions: (body: QueryEmissions) => envelope("/query/emissions", post(body)),
-  queryAir: (body: QueryAir) => envelope("/query/air", post(body)),
-  compare: (body: CompareRequest) => envelope("/query/compare", post(body)),
-  timeseries: (body: TimeseriesRequest) => envelope("/query/timeseries", post(body)),
-  uncertainty: (body: UncertaintyRequest) => envelope("/query/uncertainty", post(body)),
-  completeness: (body: CompletenessRequest) => envelope("/query/completeness", post(body)),
+  queryEmissions: (body: QueryEmissions, signal?: AbortSignal) => envelope("/query/emissions", post(body, signal)),
+  queryAir: (body: QueryAir, signal?: AbortSignal) => envelope("/query/air", post(body, signal)),
+  compare: (body: CompareRequest, signal?: AbortSignal) => envelope("/query/compare", post(body, signal)),
+  timeseries: (body: TimeseriesRequest, signal?: AbortSignal) => envelope("/query/timeseries", post(body, signal)),
+  uncertainty: (body: UncertaintyRequest, signal?: AbortSignal) => envelope("/query/uncertainty", post(body, signal)),
+  completeness: (body: CompletenessRequest, signal?: AbortSignal) => envelope("/query/completeness", post(body, signal)),
   evidence: (streamId: string, params: { module?: string; category?: string } = {}) =>
     envelope(`/evidence/${encodeURIComponent(streamId || "_")}?${new URLSearchParams(params as Record<string, string>)}`),
   method: (methodOrCategory: string) => envelope(`/method/${encodeURIComponent(methodOrCategory)}`),

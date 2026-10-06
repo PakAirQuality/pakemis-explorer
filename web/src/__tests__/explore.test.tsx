@@ -116,6 +116,9 @@ beforeEach(() => {
       if (url.includes("/query/compare")) return envelope(COMPARE, { request_type: "compare_emissions", axis: AXIS_DIFF, context: { release: "PakEmis 1.0.0rc42", version: "1.0.0rc42", commit: "bc1716d6", configuration_id: "REF_2023_24 vs S_2023_24", gwp_basis: "AR5", lulucf: { status: "excluded", notation_key: "NE", note: "" }, defaults_applied: [] } });
       if (url.includes("/query/air")) {
         const k = body?.group_by?.[0];
+        // a place the release holds nothing for: an EMPTY envelope, which the page must call empty
+        if ((body?.geography_ids as string[] | undefined)?.[0] === "Sindh") return envelope([], { request_type: "query_air" });
+        if (k === "period_id") return envelope([{ display: "600.100", display_short: "600.10", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { period_id: "FY2020-21" } }, { display: "771.873", display_short: "771.87", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { period_id: "FY2023-24" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "year") return envelope([{ display: "782.446", display_short: "782.45", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "1990" } }, { display: "2674.532", display_short: "2674.53", unit: "kt NH3", unit_short: "kt NH₃", group: { year: "2024" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
         return envelope([{ display: "631.915", display_short: "631.92", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "residential" }, extra: { share_pct_short: "75.7" } }, { display: "63.851", display_short: "63.85", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "waste" }, extra: { share_pct_short: "7.6" } }], { request_type: "query_air", axis: AXIS_250 });
@@ -398,55 +401,118 @@ describe("/data (the Grapher)", () => {
     fireEvent.click(screen.getByTestId("filters-expand"));
     expect(screen.getByTestId("filter-rail")).toHaveAttribute("data-open", "1");
   });
-  it("the air beta: a pollutant in the metric select routes to query_air - sectors, provinces, the 1990-2024 series, the map's typed note, and a sector filter at provinces", async () => {
+  it("a pollutant is read from ONE product: the covered panel for the selected fiscal year, on every request the page makes", async () => {
+    // The page used to send no `periods`, and the API picks its air product by whether they are
+    // there: without them it served the older single-year layers, where grid power's screening
+    // bound is an ordinary row. Same question as the workspace, a different total and a different
+    // largest source. Every assertion below is on the REQUEST, because that is where it went wrong.
     const updates: string[] = [];
     mount("", ({ queryString }) => updates.push(queryString));
     await screen.findByTestId("canvas-sentence");
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "pol:PM2.5" } });
-    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], group_by: ["sector_id"], order_by: "value desc" }));
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2023-24"], group_by: ["sector_id"], order_by: "value desc" }));
     expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by sector");
-    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("Residential contributed 631.92 kt PM₂.₅ (75.7 % of the total)"));
-    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("air-quality beta");
+    // the share says what it is a share of: the sources estimated, never "the total"
+    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("Residential is the largest estimated source, at 631.92 kt PM₂.₅ (75.7 % of the sources estimated here)."));
+    expect(screen.getByTestId("canvas-sentence")).not.toHaveTextContent("of the total");
+    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("not a measure of air quality");
+    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("2023–24");
     expect(updates.at(-1)).toContain("pol=PM2.5");
-    // the map is a typed note, not a silent CO2e map
-    fireEvent.click(screen.getByTestId("rep-tabs-map"));
-    expect(await screen.findByTestId("refusal-card")).toHaveTextContent("the air-quality beta has no map layer yet");
-    fireEvent.click(screen.getByTestId("rep-tabs-chart"));
-    // provinces: the agriculture allocation
-    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
-    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["PM2.5"], geography_level: "adm1", group_by: ["province"] }));
-    // the series
-    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "national" } });
-    fireEvent.change(screen.getByTestId("period-select"), { target: { value: "range" } });
-    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["PM2.5"], group_by: ["year"] }));
-    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("782.45 kt NH₃ in 1990"));
-    // since the air spatial lane every sector rides its own streams' geography: a sector
-    // filter at provinces is answered, not refused - the filter reaches the request
+    // no request on this page is an air request without a period
+    for (const body of calls("/query/air")) expect(body).toHaveProperty("periods");
+
+    // ANOTHER YEAR is asked for, not pinned away: the panel carries every fiscal year
+    fireEvent.change(screen.getByTestId("period-select"), { target: { value: "FY2020-21" } });
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2020-21"], group_by: ["sector_id"], order_by: "value desc" }));
+    expect(screen.getByTestId("result-chip-period")).toHaveTextContent("2020–21");
     fireEvent.change(screen.getByTestId("period-select"), { target: { value: "FY2023-24" } });
-    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
-    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "power" } });
-    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["PM2.5"], sectors: ["power"], geography_level: "adm1", group_by: ["province"] }));
+
+    // ALL YEARS is the nine-year fiscal series of the same selection, not agriculture's calendar history
+    fireEvent.change(screen.getByTestId("period-select"), { target: { value: "range" } });
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2020-21", "FY2023-24"], group_by: ["period_id"] }));
+    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("600.10 kt PM₂.₅ in 2020–21, 771.87 kt PM₂.₅ in 2023–24"));
+    fireEvent.change(screen.getByTestId("period-select"), { target: { value: "FY2023-24" } });
+
+    // the page's own map still draws CO₂e, and says so truthfully
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    expect(await screen.findByTestId("refusal-card")).toHaveTextContent("the Explore map shows it by province and district");
+    fireEvent.click(screen.getByTestId("rep-tabs-chart"));
     // choosing a gas returns to CO2e
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
     await waitFor(() => expect(screen.getByTestId("canvas-title")).not.toHaveTextContent("PM₂.₅"));
   });
-  it("the air layers are single-year: a URL year cannot relabel them - the period pins, the select stands down with the reason, and the showing line names the layers' own year", async () => {
-    // a stale 2015-16 URL under a pollutant: the layer holds one year, so the state pins to
-    // the reference and no request carries a period - the year label must never be a lie
-    mount("?period=FY2015-16&pol=SO2");
+  it("one selected place is THAT place by sector; comparing places is its own, explicit mode", async () => {
+    // Lahore selected used to promise "Lahore's … grouped by sector" over a chart of every
+    // district, and Punjab a table of every province: the place set the heading and never reached
+    // the query. The request and the title are asserted together, because the bug was that they
+    // disagreed.
+    mount("?pol=PM2.5");
     await screen.findByTestId("canvas-sentence");
-    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["SO2"], group_by: ["sector_id"], order_by: "value desc" }));
-    expect(screen.getByTestId("period-select")).toHaveValue("air-year");
-    expect(screen.getByTestId("result-chip-period")).toHaveTextContent("2024 layer");
-    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("single year (calendar 2024; power and aviation on the 2023–24 fiscal year)");
-    expect(screen.getByTestId("showing-line-text")).not.toHaveTextContent("2015");
-    // districts: still no period on the wire
-    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "districts" } });
-    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ pollutants: ["SO2"], geography_level: "adm2", group_by: ["shape_id"] }));
-    expect(lastCall("/query/air")).not.toHaveProperty("periods");
-    // back to CO2e: the year control returns
+    // PUNJAB: its id is in the request, and the rows asked for are its sectors
+    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "province:Punjab" } });
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2023-24"], geography_level: "adm1", geography_ids: ["Punjab"], group_by: ["sector_id"], order_by: "value desc" }));
+    expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by sector");
+    expect(screen.getByTestId("showing-line-text")).toHaveTextContent("Punjab's PM₂.₅ emissions in kilotonnes, grouped by sector");
+    await waitFor(() => expect(screen.getByTestId("canvas-sentence")).toHaveTextContent("Residential is the largest estimated source in Punjab"));
+    // EVERY PROVINCE is asked for by name - the comparison mode - and titled as what comes back
+    fireEvent.change(screen.getByTestId("geography-select"), { target: { value: "provinces" } });
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2023-24"], geography_level: "adm1", group_by: ["province"], order_by: "value desc" }));
+    expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by province");
+    expect(lastCall("/query/air")).not.toHaveProperty("geography_ids");
+    // a sector filter rides along at the place grain
+    fireEvent.change(screen.getByTestId("sector-select"), { target: { value: "residential" } });
+    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ sectors: ["residential"], geography_level: "adm1", group_by: ["province"] }));
+  });
+  it("a district is asked for at district grain, and a province stays a province while its districts are on the map", async () => {
+    const lahore = "60131773B12131197496886";
+    const { unmount } = mount(`?pol=PM2.5&level=adm2&geo=${lahore}`);
+    await waitFor(() => expect(lastCall("/query/air")).toEqual({ pollutants: ["PM2.5"], periods: ["FY2023-24"], geography_level: "adm2", geography_ids: [lahore], group_by: ["sector_id"], order_by: "value desc" }));
+    expect(screen.getByTestId("canvas-title")).toHaveTextContent("PM₂.₅ emissions by sector");
+    unmount();
+    // the workspace writes level=adm2 with geo=Punjab when a province is drilled into: the grain
+    // is the id's, and reading `level` asked the district table for a shape called "Punjab"
+    fetchSpy.mockClear();
+    const air = mount("?pol=PM2.5&level=adm2&geo=Punjab");
+    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ geography_level: "adm1", geography_ids: ["Punjab"], group_by: ["sector_id"] }));
+    air.unmount();
+    // and the same link under greenhouse gases, which drew an empty chart under the province's name
+    fetchSpy.mockClear();
+    mount("?level=adm2&geo=Punjab");
+    await waitFor(() => expect(lastCall("/query/emissions")).toMatchObject({ geography_level: "adm1", geography_ids: ["Punjab"] }));
+  });
+  it("a place the release holds nothing for is said to be empty: no national fallback, no other places", async () => {
+    mount("?pol=PM2.5&geo=Sindh");
+    await waitFor(() => expect(lastCall("/query/air")).toMatchObject({ geography_level: "adm1", geography_ids: ["Sindh"] }));
+    expect(await screen.findByTestId("refusal-card")).toHaveTextContent("The release holds no rows for this selection");
+    expect(screen.queryByTestId("canvas-sentence")).toBeNull();
+    // nothing was asked in its place
+    for (const body of calls("/query/air").filter((b) => (b.group_by as string[] | undefined)?.[0] === "sector_id" && b.geography_ids)) expect(body.geography_ids).toEqual(["Sindh"]);
+  });
+  it("under a pollutant the page's own chrome is the pollutant's: overview, measure, estimate, view, summary", async () => {
+    mount("?pol=PM2.5");
+    await screen.findByTestId("canvas-sentence");
+    // the anchor card is the pollutant's covered total, not the national CO₂e figure it used to keep
+    const overview = await screen.findByTestId("overview-card");
+    await waitFor(() => expect(overview).toHaveTextContent("of PM₂.₅ in Pakistan"));
+    expect(overview).toHaveTextContent("not a measurement of the air people breathe");
+    expect(overview).not.toHaveTextContent("CO₂e");
+    expect(calls("/query/emissions")).toHaveLength(0);
+    // the measure is emission mass; no warming-potential basis is offered
+    const measure = screen.getByTestId("measure-select") as HTMLSelectElement;
+    expect([...measure.options].map((o) => o.textContent)).toEqual(["Emission mass · kilotonnes"]);
+    // only the reference estimate (and the disabled compare) is offered; the accounting view is not a pollutant setting
+    const config = screen.getByTestId("config-select") as HTMLSelectElement;
+    expect([...config.options].filter((o) => !o.disabled).map((o) => o.value)).toEqual(["REF_2023_24"]);
+    expect(screen.queryByTestId("view-select")).toBeNull();
+    expect(screen.getByTestId("view-not-for-air")).toBeInTheDocument();
+    expect(screen.getByTestId("active-view")).toHaveTextContent("PM₂.₅ emissions (kt)");
+    expect(screen.getByTestId("active-view")).not.toHaveTextContent("CO₂e");
+    // back to greenhouse gases: the greenhouse controls return, and the overview asks its own query again
     fireEvent.change(screen.getByTestId("gas-select"), { target: { value: "" } });
-    await waitFor(() => expect(screen.getByTestId("period-select")).not.toHaveValue("air-year"));
+    await waitFor(() => expect(screen.getByTestId("view-select")).toBeInTheDocument());
+    expect([...(screen.getByTestId("measure-select") as HTMLSelectElement).options].length).toBeGreaterThan(1);
+    await waitFor(() => expect(calls("/query/emissions").length).toBeGreaterThan(0));
+    expect(screen.getByTestId("active-view")).toHaveTextContent("CO₂e");
   });
   it("audits: every decimal is a server string (ticks included); no FY; no raw id; no avoid-list phrase", async () => {
     mount();

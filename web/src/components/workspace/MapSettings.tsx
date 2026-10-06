@@ -22,6 +22,7 @@ import { useExplorer } from "@/components/ExplorerContext";
 import { configLabel, configTooltip, gwpLabel, gwpTooltip, monthLabel, periodLabel, viewLabel } from "@/lib/labels";
 import { SELECT_CLASS } from "@/components/ui/ControlsCard";
 import { LayerSwitch } from "@/components/map/LayerSwitch";
+import { controlsFor, metricOf, NOT_FOR_AIR } from "@/lib/selection";
 import { BASEMAP_CHOICES, type BasemapChoice } from "@/components/map/basemap";
 import { SCALE_MODES, type ScaleMode } from "@/lib/urlState";
 import { SCALE_NOTES, SETTINGS } from "./copy";
@@ -39,19 +40,28 @@ const GROUP = "pill flex overflow-hidden border border-line bg-surface p-0.5";
 const SEGMENT = (on: boolean) => `pill flex-1 py-1 text-xs ${on ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`;
 
 export function MapSettingsControls({ opacity, onOpacity, basemap, onBasemap, boundaries, onBoundaries }: MapSettingsProps) {
-  const { state, setState, labels, dims, contract } = useExplorer();
+  const { state, setState, labels, dims, contract, defaults } = useExplorer();
+  // WHAT APPLIES TO THE METRIC ON THE MAP. Every control below was offered whatever was painted,
+  // so a PM₂.₅ map came with a warming-potential switch, a month, an accounting view and four
+  // evidence layers that describe the greenhouse inventory - none of which the air request
+  // carries. A control that changes nothing is worse than a missing one: it invites a reading.
+  const controls = controlsFor(metricOf(state, labels));
   const gwps = contract?.gwp?.length ? contract.gwp : Object.keys(labels.gwp).length ? Object.keys(labels.gwp) : [state.gwp];
   const views = Object.keys(labels.views).length ? Object.keys(labels.views) : [state.view];
-  const configs = dims.configurations.length ? dims.configurations : [state.config];
+  const allConfigs = dims.configurations.length ? dims.configurations : [state.config];
+  // the survey-based estimate is a greenhouse configuration; a pollutant is offered the reference one
+  const configs = controls.survey ? allConfigs : allConfigs.filter((c) => c === defaults.configuration_id);
   // months are genuinely reference-only (the monthly grain refusal), whatever the level -
   // this is the release's monthly-evidence fact, not the retired reference-only map rule
   const months = (labels.periods[state.period]?.is_reference ?? true) ? (dims.monthsByPeriod[state.period] ?? []) : [];
   return (
     <div className="flex flex-col gap-3.5" data-testid="map-settings-panel">
-            <div>
-              <div className="micro mb-1.5">{SETTINGS.layer}</div>
-              <LayerSwitch compact wrap />
-            </div>
+            {controls.layers && (
+              <div>
+                <div className="micro mb-1.5">{SETTINGS.layer}</div>
+                <LayerSwitch compact wrap />
+              </div>
+            )}
             <div>
               <div className="micro mb-1.5">{SETTINGS.scale}</div>
               <div className="flex flex-col gap-1" role="radiogroup" aria-label={SETTINGS.scale} data-testid="scale-select">
@@ -62,8 +72,9 @@ export function MapSettingsControls({ opacity, onOpacity, basemap, onBasemap, bo
                     role="radio"
                     aria-checked={state.scale === mode}
                     onClick={() => setState({ scale: mode })}
-                    title={SCALE_NOTES[mode].note}
-                    className={`rounded-xl border px-2.5 py-1.5 text-left transition-colors ${state.scale === mode ? "border-accent bg-accent-soft" : "border-line hover:bg-surface-3"}`}
+                    disabled={mode === "fixed" && !controls.fixedScale}
+                    title={mode === "fixed" && !controls.fixedScale ? `${NOT_FOR_AIR}: the fixed scale is the greenhouse inventory's range.` : SCALE_NOTES[mode].note}
+                    className={`rounded-xl border px-2.5 py-1.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${state.scale === mode ? "border-accent bg-accent-soft" : "border-line hover:bg-surface-3"}`}
                     data-testid={`scale-${mode}`}
                   >
                     <span className={`block text-xs font-semibold ${state.scale === mode ? "text-fg" : "text-muted"}`}>{SCALE_NOTES[mode].label}</span>
@@ -95,7 +106,7 @@ export function MapSettingsControls({ opacity, onOpacity, basemap, onBasemap, bo
             <label className="flex items-center gap-2 text-xs text-muted" title={SETTINGS.boundariesNote}>
               <input type="checkbox" checked={boundaries} onChange={(e) => onBoundaries(e.target.checked)} data-testid="boundaries-toggle" /> {SETTINGS.boundaries}
             </label>
-            {months.length > 0 && (
+            {controls.month && months.length > 0 && (
               <div>
                 <div className="micro mb-1.5">{SETTINGS.month}</div>
                 <select className={SELECT_CLASS} value={state.month ?? ""} onChange={(e) => setState({ month: e.target.value || null })} aria-label={SETTINGS.month} title={periodLabel(labels, state.period)} data-testid="month-select">
@@ -114,7 +125,12 @@ export function MapSettingsControls({ opacity, onOpacity, basemap, onBasemap, bo
                 ))}
               </select>
             </div>
-            <div>
+            {!controls.gwp && (
+              <p className="text-xs text-muted" data-testid="settings-not-for-air">
+                Warming potential, month and spatial view are greenhouse-gas settings. A pollutant is shown as the mass emitted in the fiscal year, where it is emitted.
+              </p>
+            )}
+            {controls.gwp && <div>
               <div className="micro mb-1.5">{SETTINGS.gwp}</div>
               <div className={GROUP} role="tablist" aria-label={SETTINGS.gwp} data-testid="gwp-select">
                 {gwps.map((g) => (
@@ -124,15 +140,15 @@ export function MapSettingsControls({ opacity, onOpacity, basemap, onBasemap, bo
                 ))}
               </div>
               {state.level === "adm2" && labels.limitations.ar6_adm2_ne && <p className="mt-1 text-xs text-muted">{labels.limitations.ar6_adm2_ne}</p>}
-            </div>
-            <div>
+            </div>}
+            {controls.view && <div>
               <div className="micro mb-1.5">{SETTINGS.view}</div>
               <select className={SELECT_CLASS} value={state.view} onChange={(e) => setState({ view: e.target.value })} aria-label={SETTINGS.view} data-testid="view-select">
                 {views.map((v) => (
                   <option key={v} value={v}>{viewLabel(labels, v)}</option>
                 ))}
               </select>
-            </div>
+            </div>}
     </div>
   );
 }

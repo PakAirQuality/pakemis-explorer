@@ -94,23 +94,36 @@ export const parsers = {
 
 export type RawState = { [K in keyof typeof parsers]: ReturnType<(typeof parsers)[K]["parse"]> | null };
 
+/**
+ * ONE METRIC AT A TIME. A view is either greenhouse gases (all of them as CO₂e, or one gas) or one
+ * air pollutant, never both: the two are different quantities in different units from different
+ * tables. Until 2026-10 nothing held that - `gas` and `pol` were two independent keys that each
+ * call site was trusted to clear, and the ones that forgot produced a view whose cards were one
+ * metric and whose legend, summary and assistant were the other. The rule lives here, where a
+ * URL is read and where a patch is applied, so no call site can produce the mixed state.
+ *
+ * A pollutant also has no month and no grid query (its grid is a download, not a map layer), and
+ * the layers other than magnitude describe the greenhouse inventory's evidence; a link that
+ * carries them beside a pollutant is read without them.
+ */
 export function resolveState(raw: Partial<RawState>, d: StateDefaults): ExplorerState {
-  const level: Level = raw.level ?? "adm1";
+  const pol = raw.pol ?? null;
+  const level: Level = pol && raw.level === "grid" ? "adm1" : raw.level ?? "adm1";
   return {
     level,
     period: raw.period ?? d.period_id,
-    month: raw.month ?? null,
+    month: pol ? null : raw.month ?? null,
     sector: raw.sector ?? null,
-    gas: raw.gas ?? (level === "grid" ? d.grid_gas : null),
-    pol: raw.pol ?? null,
+    gas: pol ? null : raw.gas ?? (level === "grid" ? d.grid_gas : null),
+    pol,
     config: raw.config ?? d.configuration_id,
     gwp: raw.gwp ?? d.gwp_basis,
     view: raw.view ?? d.spatial_view,
     geo: raw.geo ?? null,
-    cell: raw.cell ?? null,
+    cell: pol ? null : raw.cell ?? null,
     tab: raw.tab ?? "summary",
-    layer: raw.layer ?? "magnitude",
-    scale: raw.scale ?? "relative",
+    layer: pol ? "magnitude" : raw.layer ?? "magnitude",
+    scale: pol && raw.scale === "fixed" ? "relative" : raw.scale ?? "relative",
     pane: raw.pane ?? "map",
     c: raw.c ?? null,
     cam: raw.cam ?? null,
@@ -144,9 +157,19 @@ export function rawFromState(s: ExplorerState, d: StateDefaults): RawState {
   };
 }
 
-/** Apply a patch with the dependent clean-ups: a new level drops the selection, a new period its month. */
-export function applyPatch(s: ExplorerState, patch: Partial<ExplorerState>): ExplorerState {
+/**
+ * Apply a patch with the dependent clean-ups: a new level drops the selection, a new period its
+ * month, and a new metric drops the other metric with the settings that only it understood (see
+ * resolveState). With the release's defaults in hand, entering a pollutant also returns the
+ * estimate to the reference one - the greenhouse survey configuration is not an air configuration,
+ * and a scope line that kept saying it would describe an estimate the air tables never made.
+ * Leaving a pollutant needs no undoing: the warming-potential basis and the spatial view were
+ * never touched, so the greenhouse view comes back as it was left.
+ */
+export function applyPatch(s: ExplorerState, patch: Partial<ExplorerState>, d?: StateDefaults): ExplorerState {
   const next = { ...s, ...patch };
+  // naming a gas - one of them, or "all of them" - is choosing the greenhouse metric
+  if (patch.gas !== undefined && patch.pol === undefined) next.pol = null;
   if (patch.level !== undefined && patch.level !== s.level) {
     if (patch.geo === undefined) next.geo = null;
     if (patch.cell === undefined) next.cell = null;
@@ -156,6 +179,19 @@ export function applyPatch(s: ExplorerState, patch: Partial<ExplorerState>): Exp
   if (patch.period !== undefined && patch.period !== s.period && patch.month === undefined) next.month = null;
   if (patch.geo !== undefined && patch.geo !== null && patch.cell === undefined) next.cell = null;
   if (patch.cell !== undefined && patch.cell !== null && patch.geo === undefined) next.geo = null;
+  // last, so nothing above can hand a pollutant view its old gas, month or grid back
+  if (next.pol) {
+    next.gas = null;
+    next.month = null;
+    next.cell = null;
+    next.layer = "magnitude";
+    if (next.scale === "fixed") next.scale = "relative";
+    if (next.level === "grid") {
+      next.level = "adm1";
+      next.raster = false;
+    }
+    if (d && patch.pol != null && patch.config === undefined) next.config = d.configuration_id;
+  }
   return next;
 }
 
@@ -163,13 +199,16 @@ export function useExplorerState(defaults: StateDefaults) {
   const [raw, setRaw] = useQueryStates(parsers);
   const state = useMemo(() => resolveState(raw, defaults), [raw, defaults]);
   const setState = useCallback(
-    (patch: Partial<ExplorerState>, options?: { history?: "push" | "replace" }) => {
-      const next = applyPatch(resolveState(raw, defaults), patch);
-      const gasDefault = next.level === "grid" ? defaults.grid_gas : null;
-      if (next.level === "grid" && !next.gas) next.gas = gasDefault;
-      return setRaw(rawFromState(next, defaults), options);
-    },
-    [raw, defaults, setRaw],
+    (patch: Partial<ExplorerState>, options?: { history?: "push" | "replace" }) =>
+      // FROM THE URL AS IT IS WHEN THE UPDATE RUNS, not as it was at the last render. Two patches in
+      // one tick (the assistant's map move and its conversation id arrive in one chunk) were both
+      // computed from the same stale `raw` and each wrote every key, so the second undid the first.
+      setRaw((current) => {
+        const next = applyPatch(resolveState(current, defaults), patch, defaults);
+        if (next.level === "grid" && !next.gas && !next.pol) next.gas = defaults.grid_gas;
+        return rawFromState(next, defaults);
+      }, options),
+    [defaults, setRaw],
   );
   return { state, setState } as const;
 }
