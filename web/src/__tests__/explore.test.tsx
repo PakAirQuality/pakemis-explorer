@@ -21,26 +21,43 @@ import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import Page from "@/app/data/page";
 import { resolveState } from "@/lib/urlState";
 import { buildQuery, resolveExplore, toUrl, transition, type ExploreContext, type ExploreState, type LocalKeys } from "@/lib/explore/query";
-import { MAP_FAILURE } from "@/components/workspace/copy";
+import { MAP_FAILURE, MAP_FAILURE_EXPLANATION } from "@/components/workspace/copy";
+import { MAP_RETRY_LIMIT } from "@/components/map/useMapRecovery";
 import { EXPLORE } from "@/components/explore/copy";
 import { RELEASE, envelope, mockFetch } from "./fixtures";
 import { avoidPhrasesIn } from "./vocabulary";
+
+/**
+ * The air mock answers from a handful of canned cells, some written in PM₂.₅ and some in NH₃. The
+ * real API answers in the pollutant asked for, and the client now refuses an answer that is not
+ * (lib/answers.ts) - so the canned cells are put in the unit of the request they are returned for.
+ */
+const POLLUTANT_SHORT: Record<string, string> = { "PM2.5": "PM₂.₅", NH3: "NH₃", SO2: "SO₂", NOx: "NOₓ" };
+function inPollutantAsked<T extends { values: { unit: string; unit_short?: string }[] }>(body: Record<string, unknown> | undefined, env: T): T {
+  const pol = Array.isArray(body?.pollutants) && typeof body.pollutants[0] === "string" ? body.pollutants[0] : null;
+  if (!pol) return env;
+  return { ...env, values: env.values.map((c) => (c.unit.startsWith("kt ") ? { ...c, unit: `kt ${pol}`, unit_short: `kt ${POLLUTANT_SHORT[pol] ?? pol}` } : c)) };
+}
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ usePathname: () => "/data", useRouter: () => ({ push, replace: vi.fn() }) }));
 /**
  * The map stub can be told what status to report as it mounts (null: a map still loading, as
- * before) and keeps the live instance's `onStatus` for what the browser does afterwards. It
- * shows what it was handed: the override's level, sector, pollutant and period, and the request
- * (kind and body, as JSON) it is to ask instead of building one of its own.
+ * before) and keeps the live instance's `onStatus` for what the browser does afterwards. With a
+ * `reason` it reports a failure as the map does — `onFailure(reason)`, then the status — and
+ * `mounts` counts the instances, so a retry's remount is countable. It shows what it was handed:
+ * the override's level, sector, pollutant and period, and the request (kind and body, as JSON) it
+ * is to ask instead of building one of its own.
  */
-const mapStub = vi.hoisted(() => ({ status: null as null | "ready" | "failed" | "lost", report: null as null | ((s: "loading" | "ready" | "failed" | "lost") => void) }));
+const mapStub = vi.hoisted(() => ({ status: null as null | "ready" | "failed" | "lost", reason: null as null | "unsupported" | "webgl" | "library" | "token" | "style" | "timeout", mounts: 0, report: null as null | ((s: "loading" | "ready" | "failed" | "lost") => void) }));
 vi.mock("@/components/map/ExplorerMap", async () => {
   const { useEffect } = await import("react");
   return {
-    ExplorerMap: ({ override, request, onStatus }: { override?: { level?: string; sector?: string | null; pol?: string | null; period?: string }; request?: { kind: string; body: unknown }; onStatus?: (s: "loading" | "ready" | "failed" | "lost") => void }) => {
+    ExplorerMap: ({ override, request, onStatus, onFailure }: { override?: { level?: string; sector?: string | null; pol?: string | null; period?: string }; request?: { kind: string; body: unknown }; onStatus?: (s: "loading" | "ready" | "failed" | "lost") => void; onFailure?: (r: NonNullable<typeof mapStub.reason>) => void }) => {
       useEffect(() => {
+        mapStub.mounts += 1;
         mapStub.report = (s) => onStatus?.(s);
+        if (mapStub.status === "failed" && mapStub.reason) onFailure?.(mapStub.reason);
         if (mapStub.status) onStatus?.(mapStub.status);
         return () => {
           mapStub.report = null;
@@ -132,6 +149,8 @@ beforeEach(() => {
   fetchSpy.mockReset();
   push.mockReset();
   mapStub.status = null;
+  mapStub.reason = null;
+  mapStub.mounts = 0;
   mapStub.report = null;
   vi.stubGlobal(
     "fetch",
@@ -142,7 +161,7 @@ beforeEach(() => {
       if (url.includes("/query/completeness")) return envelope(NE, { request_type: "get_completeness" });
       if (url.includes("/query/timeseries")) return envelope(SERIES, { request_type: "get_timeseries", axis: AXIS_500, change: CHANGE });
       if (url.includes("/query/compare")) return envelope(COMPARE, { request_type: "compare_emissions", axis: AXIS_DIFF, context: { release: "PakEmis 1.0.0rc42", version: "1.0.0rc42", commit: "bc1716d6", configuration_id: "REF_2023_24 vs S_2023_24", gwp_basis: "AR5", lulucf: { status: "excluded", notation_key: "NE", note: "" }, defaults_applied: [] } });
-      if (url.includes("/query/air")) {
+      if (url.includes("/query/air")) return inPollutantAsked(body, (() => {
         const k = body?.group_by?.[0];
         // a place the release holds nothing for: an EMPTY envelope, which the page must call empty
         if ((body?.geography_ids as string[] | undefined)?.[0] === "Sindh") return envelope([], { request_type: "query_air" });
@@ -151,7 +170,7 @@ beforeEach(() => {
         if (k === "province") return envelope([{ display: "1534.055", display_short: "1534.06", unit: "kt NH3", unit_short: "kt NH₃", group: { province: "Punjab" }, extra: { share_pct_short: "57.4" } }], { request_type: "query_air", axis: AXIS_250 });
         if (k === "shape_id") return envelope([{ display: "41.207", display_short: "41.21", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { shape_id: LAHORE }, extra: { share_pct_short: "5.3" } }], { request_type: "query_air", axis: AXIS_250 });
         return envelope([{ display: "631.915", display_short: "631.92", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "residential" }, extra: { share_pct_short: "75.7" } }, { display: "63.851", display_short: "63.85", unit: "kt PM2.5", unit_short: "kt PM₂.₅", group: { sector_id: "waste" }, extra: { share_pct_short: "7.6" } }], { request_type: "query_air", axis: AXIS_250 });
-      }
+      })());
       const key = body?.group_by?.[0];
       if (key === "reporting_sector") return envelope(SECTORS, { partition: PARTITION, axis: AXIS_250 });
       if (key === "module") return envelope(MODULES, { partition: PARTITION, axis: AXIS_250 });
@@ -396,6 +415,69 @@ describe("/data (the Grapher)", () => {
     expect(updates.at(-1)).toContain("sector=agriculture");
     expect(screen.queryByTestId("map-unavailable")).toBeNull();
     expect(screen.getByTestId("bars-with-axis")).toBeInTheDocument();
+  });
+  it("the canvas fallback offers the workspace's own bounded retry for a failure another attempt could cure, and none for a token that is not accepted here", async () => {
+    // a map that did not finish loading: its own sentence, the two representations, and Try again
+    mapStub.status = "failed";
+    mapStub.reason = "timeout";
+    const first = mount();
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    const fallback = await screen.findByTestId("canvas-map-fallback");
+    const notice = within(fallback).getByTestId("map-unavailable");
+    expect(notice).toHaveAttribute("data-reason", "timeout");
+    expect(within(notice).getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE_EXPLANATION.timeout);
+    expect(MAP_FAILURE_EXPLANATION.timeout).toBe("The map is taking too long to load. You can explore the same estimates in the table or chart.");
+    expect(within(notice).getByTestId("map-unavailable-chart")).toBeInTheDocument();
+    expect(within(notice).getByTestId("map-unavailable-table")).toBeInTheDocument();
+    expect(mapStub.mounts).toBe(1);
+    // each press is a new map, the chart stays in its place meanwhile, and after the cap the control is gone
+    for (let attempt = 1; attempt <= MAP_RETRY_LIMIT; attempt += 1) {
+      const retry = screen.getByTestId("map-retry");
+      expect(retry).toBeEnabled();
+      expect(retry).toHaveTextContent(MAP_FAILURE.retry);
+      fireEvent.click(retry);
+      await waitFor(() => expect(mapStub.mounts).toBe(1 + attempt));
+      expect(screen.getByTestId("canvas-map")).toHaveClass("hidden");
+      expect(await within(screen.getByTestId("canvas-map-fallback")).findByTestId("bars-with-axis")).toBeInTheDocument();
+    }
+    await waitFor(() => expect(screen.queryByTestId("map-retry")).toBeNull());
+    expect(mapStub.mounts).toBe(1 + MAP_RETRY_LIMIT);
+    expect(screen.getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE_EXPLANATION.timeout);
+    expect(screen.getByTestId("map-unavailable-chart")).toBeInTheDocument();
+    first.unmount();
+    // a token not accepted on this address, or absent from the build: the sentence that is true of it, and no retry at all
+    mapStub.reason = "token";
+    mapStub.mounts = 0;
+    mount();
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    const refused = within(await screen.findByTestId("canvas-map-fallback")).getByTestId("map-unavailable");
+    expect(refused).toHaveAttribute("data-reason", "token");
+    expect(within(refused).getByTestId("map-unavailable-text")).toHaveTextContent("The map is not available on this address. You can explore the same estimates in the table or chart.");
+    expect(within(refused).queryByTestId("map-retry")).toBeNull();
+    expect(within(refused).getAllByRole("button").map((b) => b.getAttribute("data-testid"))).toEqual(["map-unavailable-chart", "map-unavailable-table"]);
+    expect(await within(screen.getByTestId("canvas-map-fallback")).findByTestId("bars-with-axis")).toBeInTheDocument();
+    expect(mapStub.mounts).toBe(1);
+  });
+  it("a retry on the data page that works brings the map back in the chart's place", async () => {
+    mapStub.status = "failed";
+    mapStub.reason = "style";
+    mount();
+    await screen.findByTestId("canvas-sentence");
+    fireEvent.click(screen.getByTestId("rep-tabs-map"));
+    await screen.findByTestId("canvas-map-fallback");
+    mapStub.status = null; // the next map says nothing as it mounts: still loading
+    fireEvent.click(screen.getByTestId("map-retry"));
+    await waitFor(() => expect(mapStub.mounts).toBe(2));
+    // in flight: said so, not pressable twice, and the chart still standing in
+    expect(screen.getByTestId("map-retry")).toBeDisabled();
+    expect(screen.getByTestId("map-retry")).toHaveTextContent(MAP_FAILURE.retrying);
+    expect(screen.getByTestId("canvas-map")).toHaveClass("hidden");
+    act(() => mapStub.report?.("ready"));
+    expect(screen.queryByTestId("canvas-map-fallback")).toBeNull();
+    expect(screen.getByTestId("canvas-map")).not.toHaveClass("hidden");
+    expect(screen.getByTestId("canvas-map")).not.toHaveAttribute("aria-hidden");
   });
   it("a context lost on the data page's map shows the chart until the browser gives it back, and then the map again", async () => {
     mapStub.status = "ready";

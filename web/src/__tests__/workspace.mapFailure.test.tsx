@@ -12,6 +12,12 @@ import "@testing-library/jest-dom/vitest";
  *    the province and the year go with the reader;
  *  · "Try again" remounting the map twice at most and then gone, with the sentence left standing;
  *  · a context the browser gives back restoring the map by itself, no retry spent.
+ *
+ * And to what the REASON for the failure changes: the sentence is that failure's own, the retry
+ * is offered only where another attempt could help (never for a browser that cannot draw the map
+ * or a token that is not accepted on this address), a retry that never answers is ended by the
+ * map's own `timeout` rather than left saying "Trying again…", and "Reset map" is not offered
+ * while there is no map to reset.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,32 +25,40 @@ import { withNuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/
 import { Providers } from "@/components/Providers";
 import { ExplorerProvider } from "@/components/shell/ExplorerProvider";
 import { resetAskChrome } from "@/components/ask/docked";
-import { MAP_RETRY_LIMIT } from "@/components/workspace/Workspace";
-import { MAP_FAILURE } from "@/components/workspace/copy";
+import { MAP_RETRY_LIMIT } from "@/components/map/useMapRecovery";
+import { MAP_FAILURE, MAP_FAILURE_EXPLANATION } from "@/components/workspace/copy";
 import { hrefForState, resolveState, type StateDefaults } from "@/lib/urlState";
 import Page from "@/app/page";
 import { RELEASE, envelope, mockFetch, stubNarrowViewport, stubWideViewport } from "./fixtures";
 
 type Status = "loading" | "ready" | "failed" | "lost";
+type Failure = "unsupported" | "webgl" | "library" | "token" | "style" | "timeout";
 
 /**
- * The stub's script: the status each successive MOUNT reports as it mounts (null: nothing yet, a
- * map still loading), how many mounts there have been, and the live instance's own `onStatus` for
- * what the browser does later (a context lost, a context restored).
+ * The stub's script: what each successive MOUNT reports as it mounts (null: nothing yet, a map
+ * still loading), how many mounts there have been, and the live instance's own voice for what
+ * happens later (a context lost, a context restored, a wait given up on). A status is reported as
+ * it is; a FAILURE REASON is reported as the map reports one — `onFailure(reason)` and then
+ * `onStatus("failed")`. A bare "failed" is a map that gives no reason, as before.
  */
-const mapStub = vi.hoisted(() => ({ script: [] as (Status | null)[], mounts: 0, report: null as null | ((s: Status) => void) }));
+const mapStub = vi.hoisted(() => ({ script: [] as (Status | Failure | null)[], mounts: 0, report: null as null | ((s: Status | Failure) => void) }));
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("@/components/map/ExplorerMap", async () => {
   const { useEffect } = await import("react");
   return {
     OPENING_MAX_ZOOM: 3.8,
-    ExplorerMap: ({ onStatus }: { onStatus?: (s: Status) => void }) => {
+    ExplorerMap: ({ onStatus, onFailure }: { onStatus?: (s: Status) => void; onFailure?: (r: Failure) => void }) => {
       useEffect(() => {
         mapStub.mounts += 1;
-        mapStub.report = (s) => onStatus?.(s);
+        const say = (s: Status | Failure) => {
+          if (s === "loading" || s === "ready" || s === "failed" || s === "lost") return onStatus?.(s);
+          onFailure?.(s);
+          onStatus?.("failed");
+        };
+        mapStub.report = say;
         const first = mapStub.script.shift();
-        if (first) onStatus?.(first);
+        if (first) say(first);
         return () => {
           mapStub.report = null;
         };
@@ -282,6 +296,133 @@ describe("the workspace with no map", () => {
     expect(screen.queryByTestId("map-unavailable")).toBeNull();
     expect(screen.getByTestId("map-buttons")).toBeInTheDocument();
     expect(mapStub.mounts).toBe(1);
+  });
+
+  it("a browser that cannot draw the map, and an address the token is not accepted on: each says its own sentence and offers no retry, because none could work", async () => {
+    expect(MAP_FAILURE_EXPLANATION.unsupported).toBe("The map could not load in this browser. You can explore the same estimates in the table or chart.");
+    expect(MAP_FAILURE_EXPLANATION.token).toBe("The map is not available on this address. You can explore the same estimates in the table or chart.");
+    for (const reason of ["unsupported", "token"] as const) {
+      mapStub.script = [reason];
+      mapStub.mounts = 0;
+      const { unmount } = mount("?geo=Punjab");
+      const card = await notice();
+      expect(card, reason).toHaveAttribute("data-status", "failed");
+      expect(card, reason).toHaveAttribute("data-reason", reason);
+      expect(within(card).getByTestId("map-unavailable-text"), reason).toHaveTextContent(MAP_FAILURE_EXPLANATION[reason]);
+      expect(within(card).queryByTestId("map-retry"), reason).toBeNull();
+      // the way to the same figures is the whole of what is offered, and it still carries the selection
+      expect(within(card).getByTestId("map-unavailable-link").getAttribute("href"), reason).toBe("/data?geo=Punjab");
+      expect(within(card).queryAllByRole("button"), reason).toHaveLength(0);
+      expect(mapStub.mounts, reason).toBe(1);
+      // everything else about a workspace with no map holds
+      expect(screen.queryByTestId("map-buttons"), reason).toBeNull();
+      expect(screen.getByTestId("deck"), reason).toHaveAttribute("data-full", "1");
+      unmount();
+    }
+    // the token's sentence does not send the reader off to mend a browser that is not broken
+    expect(MAP_FAILURE_EXPLANATION.token).not.toContain("browser");
+  });
+
+  it("a map that did not finish loading says so in its own words, and those failures do get the retry", async () => {
+    expect(MAP_FAILURE_EXPLANATION.library).toBe("The map did not finish loading. You can explore the same estimates in the table or chart.");
+    expect(MAP_FAILURE_EXPLANATION.style).toBe("The map did not finish loading. You can explore the same estimates in the table or chart.");
+    expect(MAP_FAILURE_EXPLANATION.timeout).toBe("The map is taking too long to load. You can explore the same estimates in the table or chart.");
+    expect(MAP_FAILURE_EXPLANATION.webgl).toBe(MAP_FAILURE.explanation);
+    for (const reason of ["library", "style", "timeout", "webgl"] as const) {
+      mapStub.script = [reason];
+      const { unmount } = mount();
+      const card = await notice();
+      expect(card, reason).toHaveAttribute("data-reason", reason);
+      expect(within(card).getByTestId("map-unavailable-text"), reason).toHaveTextContent(MAP_FAILURE_EXPLANATION[reason]);
+      expect(within(card).getByTestId("map-retry"), reason).toBeEnabled();
+      expect(within(card).getByTestId("map-unavailable-link"), reason).toHaveAttribute("href", "/data");
+      unmount();
+    }
+  });
+
+  it("a retry that never answers does not hang: the map's own timeout ends it, the control comes back, and at the cap it is gone", async () => {
+    // the first map fails for a reason a retry can cure; neither retry ever loads or fails by itself
+    mapStub.script = ["style", null, null];
+    mount();
+    await notice();
+    for (let attempt = 1; attempt <= MAP_RETRY_LIMIT; attempt += 1) {
+      fireEvent.click(screen.getByTestId("map-retry"));
+      await waitFor(() => expect(mapStub.mounts).toBe(1 + attempt));
+      expect(screen.getByTestId("map-retry")).toBeDisabled();
+      expect(screen.getByTestId("map-retry")).toHaveTextContent(MAP_FAILURE.retrying);
+      // silence, until the map gives up on itself: a status like any other
+      act(() => mapStub.report?.("timeout"));
+      expect(screen.getByTestId("map-unavailable")).toHaveAttribute("data-reason", "timeout");
+      expect(screen.getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE_EXPLANATION.timeout);
+      if (attempt < MAP_RETRY_LIMIT) {
+        expect(screen.getByTestId("map-retry")).toBeEnabled();
+        expect(screen.getByTestId("map-retry")).toHaveTextContent(MAP_FAILURE.retry);
+      }
+    }
+    // both spent: no control left saying "Trying again…", and none to press
+    expect(screen.queryByTestId("map-retry")).toBeNull();
+    expect(mapStub.mounts).toBe(1 + MAP_RETRY_LIMIT);
+    expect(screen.getByTestId("map-unavailable-link")).toHaveAttribute("href", "/data");
+    // a map given up on that loads after all is shown, as a restored context is
+    act(() => mapStub.report?.("ready"));
+    expect(screen.queryByTestId("map-unavailable")).toBeNull();
+    expect(screen.getByTestId("map-buttons")).toBeInTheDocument();
+  });
+
+  it("a retry that meets a refusal offers no more of them, though one is left: the reason is the latest map's", async () => {
+    mapStub.script = ["timeout", "token"];
+    mount();
+    await notice();
+    fireEvent.click(screen.getByTestId("map-retry"));
+    await waitFor(() => expect(mapStub.mounts).toBe(2));
+    await waitFor(() => expect(screen.getByTestId("map-unavailable")).toHaveAttribute("data-reason", "token"));
+    expect(screen.getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE_EXPLANATION.token);
+    expect(MAP_RETRY_LIMIT).toBeGreaterThan(1);
+    expect(screen.queryByTestId("map-retry")).toBeNull();
+  });
+
+  it("a lost context reads as the browser's own failure whatever an earlier map said, and keeps its retry", async () => {
+    mapStub.script = ["timeout", "ready"];
+    mount();
+    await notice();
+    fireEvent.click(screen.getByTestId("map-retry"));
+    await screen.findByTestId("map-buttons");
+    act(() => mapStub.report?.("lost"));
+    const card = await notice();
+    expect(card).toHaveAttribute("data-status", "lost");
+    expect(card).toHaveAttribute("data-reason", "webgl");
+    expect(within(card).getByTestId("map-unavailable-text")).toHaveTextContent(MAP_FAILURE.explanation);
+    expect(within(card).getByTestId("map-retry")).toBeEnabled();
+  });
+
+  it("Reset map is not offered while there is no map: the selection is still cleared from the place picker and from Reset filters, and the control returns with the map", async () => {
+    mapStub.script = ["ready"];
+    const updates: Parameters<OnUrlUpdateFunction>[0][] = [];
+    mount("?geo=Punjab", (e) => updates.push(e));
+    await screen.findByTestId("map-buttons");
+    // a place is picked and the map is up: there is something to reset, and a map to reset
+    expect(screen.getByTestId("header-reset")).toHaveTextContent("Reset map");
+    act(() => mapStub.report?.("lost"));
+    await notice();
+    expect(screen.queryByTestId("header-reset")).toBeNull();
+    expect(screen.getByTestId("header-block")).not.toHaveTextContent("Reset map");
+    // the place card keeps its other two actions, and the selection it still shows
+    expect(screen.getByTestId("header-utilities")).toHaveTextContent("Share");
+    expect(screen.getByTestId("header-utilities")).toHaveTextContent("Download");
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "Punjab");
+    act(() => mapStub.report?.("ready"));
+    expect(screen.getByTestId("header-reset")).toBeInTheDocument();
+    // down again, for good this time: the two other ways to clear the selection both work
+    act(() => mapStub.report?.("token"));
+    await notice();
+    expect(screen.queryByTestId("header-reset")).toBeNull();
+    fireEvent.click(screen.getByTestId("place-picker"));
+    fireEvent.click(screen.getByTestId("place-option-all"));
+    await waitFor(() => expect(screen.getByTestId("workspace")).toHaveAttribute("data-scope", "PK"));
+    expect(updates.at(-1)?.queryString ?? "").not.toContain("geo=");
+    expect(screen.queryByTestId("header-reset")).toBeNull();
+    fireEvent.click(within(screen.getByTestId("deck-header")).getByTestId("filters-button"));
+    expect(screen.getByTestId("reset-filters")).toBeInTheDocument();
   });
 
   it("a narrow window on its map pane is not left on a blank one: the deck takes it, the switch goes, the filters stay, and the pane in the URL is left alone", async () => {

@@ -51,6 +51,14 @@
  * buttons. `onStatus` now publishes the one fact a page needs (MapStatus) and the page decides
  * what stands in the map's place; this component only reports, and clears up what a half-built
  * map left behind.
+ *
+ * WHY IT FAILED goes with it (MapFailure, through `onFailure`, just before `onStatus("failed")`),
+ * because the page's two decisions both turn on it: what to say, and whether to offer another
+ * try. A browser that cannot draw the map fails the same way every time, and so does an address
+ * the token is not allowed on; a chunk, a style or a slow line may well do better the second
+ * time. Three ways of having no map used to report nothing at all — no token in the build, a
+ * style request that was refused before `load`, and a map that simply never loaded — and each
+ * left a blank canvas under a status still reading `loading`. All three are failures now.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -119,14 +127,50 @@ function BriefingOpacity({ value, onChange }: { value: number; onChange: (pct: n
  * Whether there is a map to look at. `loading` is where every map starts and is published only
  * when a lost context comes back before the first `load`; `ready` is the `load` event, and a
  * context restored after it; `failed` is a map that could not be built (no WebGL 2, the
- * constructor's throw, the library's chunk not arriving) or whose context could not be re-made;
+ * constructor's throw, the library's chunk not arriving, no token), whose context could not be
+ * re-made, that the map service refused, or that never loaded — MapFailure says which;
  * `lost` is a built map whose context the browser took away, which it may yet give back. On
  * `failed` and `lost` there is nothing on the canvas and the page must say so.
  */
 export type MapStatus = "loading" | "ready" | "failed" | "lost";
 
+/**
+ * Why a map is `failed`, in the terms a page needs to choose its words and its remedy:
+ *
+ *  · `unsupported`  the library's own probe says this browser cannot draw it. The answer is cached
+ *                   for the life of the page, so a second attempt is the same attempt;
+ *  · `webgl`        the probe passed and the context was still refused, at construction or when a
+ *                   lost one came back and could not be set up again;
+ *  · `library`      the library's chunk never arrived;
+ *  · `token`        there is no token in this build, or Mapbox refused the one there is (a token
+ *                   restricted to other hostnames answers 403 on this one) or took it back later;
+ *  · `style`        the basemap's style was answered with an HTTP error before the map loaded;
+ *  · `timeout`      none of the above was ever said, and neither was `load`.
+ *
+ * Trying again can help `webgl`, `library`, `style` and `timeout`; it cannot help `unsupported`
+ * or `token`, and a page should not offer it for them (useMapRecovery.ts holds that rule).
+ */
+export type MapFailure = "unsupported" | "webgl" | "library" | "token" | "style" | "timeout";
+
+/**
+ * How long a map may stay silent. A map reports `load` or a failure; one that has done neither
+ * by now — a request that hangs, a style that is neither served nor refused — is reported as
+ * `timeout`, so nothing waits on it for ever: not the page, and not a "Trying again…" that only a
+ * status could clear. Generous on purpose: a slow line loads the style, the sprite and the first
+ * tiles well inside it, and a map that arrives after all is still shown (the `load` handler).
+ */
+export const MAP_LOAD_TIMEOUT_MS = 20000;
+
 /** The one `error` event that is the map's own death rather than a tile's or a style's. */
 const WEBGL_ERROR = /failed to initialize webgl/i;
+
+/**
+ * Mapbox's own words when the token is the trouble: a 401 on one of its URLs ("…you may have
+ * provided an invalid Mapbox access token"), the request manager's "An API access token is
+ * required…", and the "A valid Mapbox access token is required…" it fires as it clears the canvas
+ * of a map whose session it would not authorise — which can happen after `load`.
+ */
+const TOKEN_ERROR = /access token/i;
 
 /** The chrome a page puts over the map, in CSS pixels: the camera keeps the country inside it. */
 export type MapPadding = { top: number; right: number; bottom: number; left: number };
@@ -169,6 +213,8 @@ export type ExplorerMapProps = {
   onMap?: (map: MBMap | null) => void;
   /** Every change of MapStatus after the initial `loading`; a page that mounts a map handles `failed` and `lost`. */
   onStatus?: (status: MapStatus) => void;
+  /** Why the map failed, called once just before `onStatus("failed")`: what the page says and whether it offers a retry turn on it. */
+  onFailure?: (reason: MapFailure) => void;
 };
 
 /** The hover tip's line for the current layer: the feature's class, status, retained mass or exception kind, in words. */
@@ -198,7 +244,7 @@ export function layerHoverLine(layer: ExplorerState["layer"], level: Level, cell
   return k ? `Exception: ${k.label}` : "no known exception here";
 }
 
-export function ExplorerMap({ variant = "console", override, request, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap, onStatus }: ExplorerMapProps = {}) {
+export function ExplorerMap({ variant = "console", override, request, onPick, padding, opacity: opacityProp, basemap: basemapChoice, boundaries = true, onMap, onStatus, onFailure }: ExplorerMapProps = {}) {
   const { state: urlState, setState, labels, dims, release, defaults, isMobile } = useExplorer();
   // a handed request names its own grain: the polygons shown and the key its cells are indexed by follow the body
   const asked = request?.body.geography_level;
@@ -220,6 +266,8 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
   onMapRef.current = onMap;
   const onStatusRef = useRef(onStatus);
   onStatusRef.current = onStatus;
+  const onFailureRef = useRef(onFailure);
+  onFailureRef.current = onFailure;
   const [status, setStatus] = useState<MapStatus>("loading");
   // the page's chrome, read through a ref so a panel toggling does not re-run the framing effects
   const padRef = useRef<MapPadding | undefined>(padding);
@@ -295,22 +343,42 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
   useEffect(() => {
     let cancelled = false;
     let loaded = false;
-    let dead = false; // failed for good: a later `webglcontextrestored` must not call it ready
+    let dead = false; // failed: nothing more is reported, and a later `webglcontextrestored` must not call it ready
+    let provisional = false; // ...unless it was a failure a `load` would disprove: see the `load` handler
     const publish = (next: MapStatus) => {
       if (cancelled) return;
       setStatus(next);
       onStatusRef.current?.(next);
     };
-    const fail = () => {
-      if (dead || cancelled) return;
+    // ONE REPORT PER FAILURE, WITH ITS REASON. The first cause to speak is the one reported: `dead`
+    // shuts out every later one (an error event behind the throw, the timer behind the error) and
+    // `cancelled` shuts out a map that has been unmounted, so the page never hears `failed` twice
+    // over and never hears from a map it has already replaced. The reason goes first, so that by
+    // the time the page handles `failed` it already knows which failure it is handling.
+    const fail = (reason: MapFailure) => {
+      if (cancelled) return;
+      const final = reason !== "timeout" && reason !== "style";
+      if (dead) {
+        // said once already, and not said again; but a verdict `load` cannot overrule (a token
+        // Mapbox refused after we had merely stopped waiting) closes the door the first left open
+        if (final) provisional = false;
+        return;
+      }
       dead = true;
+      provisional = !final;
+      window.clearTimeout(wait);
       markFailed("map"); // the loading screen stops waiting for a `load` that will not come
+      onFailureRef.current?.(reason);
       publish("failed");
     };
+    // THE ONE TIMER, started with the effect so that it covers everything that can hang — the
+    // chunk, the style, the first frame — on the first mount and on every remount a page's retry
+    // makes, in this one place. It is cleared by `load`, by any failure and by the teardown.
+    const wait = window.setTimeout(() => fail("timeout"), MAP_LOAD_TIMEOUT_MS);
     (async () => {
       // the library is a chunk of its own: one that never arrives is a map that cannot be built
       const mapboxgl = await import("mapbox-gl").then((mod) => mod.default, () => null);
-      if (!mapboxgl) return fail();
+      if (!mapboxgl) return fail("library");
       // Development aid: a hidden document never fires requestAnimationFrame, so Mapbox GL
       // neither loads tiles nor paints there (browser automation windows are hidden). With
       // `?hidden=render` the frame callback runs on a timer instead; nothing else changes.
@@ -322,12 +390,17 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
         Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
         Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
       }
-      if (cancelled || !containerRef.current || !bm.token) return; // no token: no map (basemap.ts)
+      if (cancelled || !containerRef.current) return;
+      // NO TOKEN IS A FAILURE, NOT A SILENCE. Mapbox GL draws nothing without one (basemap.ts), so
+      // no map is built; but returning here without a word left the status at `loading` for good:
+      // the page kept its legend and buttons over an empty canvas and the loading screen sat out
+      // its ceiling waiting for a `load` nobody was going to fire.
+      if (!bm.token) return fail("token");
       const container = containerRef.current;
       // The library's own probe, asked first where it exists: it also catches the browsers that
       // hand out a context and then refuse to compile a shader, which the constructor does not.
       // It answers from a cache, so a "no" stands for the life of the page.
-      if (typeof mapboxgl.supported === "function" && !mapboxgl.supported()) return fail();
+      if (typeof mapboxgl.supported === "function" && !mapboxgl.supported()) return fail("unsupported");
       // The token is assigned here and nowhere else; it leaves the page only as the query
       // parameter of Mapbox's own requests.
       mapboxgl.accessToken = bm.token;
@@ -368,18 +441,41 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
       } catch {
         container.replaceChildren();
         container.classList.remove("mapboxgl-map");
-        return fail();
+        return fail("webgl");
       }
       mapRef.current = m;
       (window as unknown as { __pakemisMap?: unknown }).__pakemisMap = m; // inspection aid: the map holds no numbers
       // Mapbox's own control (their terms want the attribution and wordmark), plus ours.
       m.addControl(new mapboxgl.AttributionControl({ compact: true, customAttribution: bm.attribution }), "bottom-right");
       m.on("error", (e) => {
-        const msg = (e as { error?: { message?: string } }).error?.message ?? "";
+        const event = e as { error?: { message?: unknown; status?: unknown; url?: unknown }; sourceId?: unknown; tile?: unknown };
+        const msg = typeof event.error?.message === "string" ? event.error.message : "";
         // a context that came back and could not be set up again is reported here, not thrown;
         // the map object is left for the teardown below, since this fires inside the library's
         // own restore handler and removing it there would pull the map from under that handler
-        if (WEBGL_ERROR.test(msg)) return fail();
+        if (WEBGL_ERROR.test(msg)) return fail("webgl");
+        // WHICH ERRORS ARE THE MAP'S OWN. A request the server answered with an error arrives as
+        // the library's AJAXError, carrying the HTTP `status` and the `url`; its message is the
+        // status text, which over HTTP/2 is empty, so the status is what is read. Three cases:
+        //
+        //  · 401 or 403, or Mapbox's own words about the token, AT ANY TIME: the token is not
+        //    accepted here. Before `load` this is the style being refused (what a token restricted
+        //    to other hostnames gets on this one) and `load` will never come; after it, Mapbox has
+        //    withdrawn the session and cleared the canvas itself. A 401 or 403 from this page's
+        //    OWN API is not that: it is one of our layers being refused, and it says nothing about
+        //    the map token, so it falls through to the cases below.
+        //  · any other HTTP error on THE STYLE before `load`: the basemap could not be fetched,
+        //    and a map with no style never loads. The style's own events carry no `sourceId`; a
+        //    source's and a tile's do, which is how one refused tile is told from a refused style.
+        //    (The style's sprite reports the same way and a map can load without it, which is one
+        //    reason `load` is allowed to overrule this verdict; see the handler below.)
+        //  · everything else — a tile, a source, a validation complaint, and anything at all once
+        //    the map has loaded — is the one-line strip, as before. A tile that did not arrive
+        //    must not take down a map that is otherwise on screen.
+        const http = typeof event.error?.status === "number" ? event.error.status : null;
+        const ours = typeof event.error?.url === "string" && event.error.url.startsWith(apiOrigin);
+        if (TOKEN_ERROR.test(msg) || ((http === 401 || http === 403) && !ours)) return fail("token");
+        if (http !== null && !loaded && event.sourceId === undefined && event.tile === undefined) return fail("style");
         if (msg) setMapError(msg);
       });
       // The browser can take a context away (the GPU process restarts, the tab is discarded, too
@@ -404,11 +500,22 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
         setStyleEpoch((e) => e + 1);
       });
       m.on("load", () => {
+        // A failed map has nothing more to say, with two exceptions, both of them verdicts that
+        // `load` itself disproves. A map reported as `timeout` was not refused by anyone: it was
+        // given up on, and it has kept loading out of sight. A map reported as `style` was judged
+        // on one HTTP error that a map with no style could not have survived. If either gets here
+        // it IS a map, and a drawn map hidden behind "did not finish loading" would be the page
+        // contradicting its own canvas; so the failure is undone, exactly as a restored context
+        // undoes `lost`. A refused token and a refused context stand whatever loads afterwards:
+        // Mapbox clears the canvas of the first itself, and the second has no canvas to draw on.
+        if (dead && !provisional) return;
+        dead = false;
         loaded = true;
+        window.clearTimeout(wait);
         markStage("map"); // the loading screen's last stage on the pages with a map
         setMap(m);
         onMapRef.current?.(m);
-        if (!dead) publish("ready");
+        publish("ready");
       });
       m.on("moveend", () => {
         const c = m.getCenter();
@@ -420,6 +527,7 @@ export function ExplorerMap({ variant = "console", override, request, onPick, pa
     if (el && ro) ro.observe(el);
     return () => {
       cancelled = true;
+      window.clearTimeout(wait);
       ro?.disconnect();
       // a map whose context is gone can throw from its own teardown, and nothing above this
       // effect would catch it: the cleanup of a dead map must not take the page with it

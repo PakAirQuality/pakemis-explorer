@@ -9,13 +9,15 @@
  * compact variant for a province or district breakdown - greenhouse gases or a pollutant, the
  * map reading the canvas's own request rather than one of its own - and the typed reason otherwise.
  *
- * A map that cannot be drawn (no WebGL in this browser, or a context the browser took away) is
- * never a blank canvas: the canvas says so in the workspace's own sentence and shows the CHART
+ * A map that cannot be drawn (no WebGL in this browser, a context the browser took away, a token
+ * that is not accepted on this address, a map that never finished loading) is never a blank
+ * canvas: the canvas says so in the workspace's own sentence for that failure and shows the CHART
  * of the same envelope in the map's place, with one click to make Chart or Table the page's
- * representation. The URL is not rewritten behind the reader's back, so a context that comes
- * back finds the map still asked for.
+ * representation and, where another attempt could help, the workspace's own bounded retry. The
+ * URL is not rewritten behind the reader's back, so a map that comes back finds itself still
+ * asked for.
  */
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { Level } from "@/lib/urlState";
 import type { Cell, Envelope } from "@/lib/envelope";
 import { shown } from "@/lib/envelope";
@@ -30,8 +32,9 @@ import { StackedBar, type Segment } from "@/components/charts/StackedBar";
 import { GroupedBars, type GroupedRow } from "@/components/charts/GroupedBars";
 import { EnvelopeTable } from "@/components/ui/EnvelopeTable";
 import { RefusalCard, Loading } from "@/components/ui/RefusalCard";
-import { ExplorerMap, type ExplorerMapProps, type MapRequest, type MapStatus } from "@/components/map/ExplorerMap";
-import { MAP_FAILURE } from "@/components/workspace/copy";
+import { ExplorerMap, type ExplorerMapProps, type MapRequest } from "@/components/map/ExplorerMap";
+import { useMapRecovery } from "@/components/map/useMapRecovery";
+import { MAP_FAILURE, MAP_FAILURE_EXPLANATION } from "@/components/workspace/copy";
 import type { Action, ExploreContext, ExploreState, QueryPlan } from "@/lib/explore/query";
 import { EXPLORE } from "./copy";
 
@@ -121,30 +124,41 @@ export function Canvas({ state, plan, ctx, env, error, isLoading, labels, dims, 
 const FALLBACK_ACTION = "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent-soft";
 
 /**
- * The map, or — while it reports `failed` or `lost` — the sentence, the two one-click
- * representations and the chart handed in as children. The map stays MOUNTED and hidden while it
- * is down: a lost context can only return to the instance that lost it, and when it does the
- * frame simply comes back.
+ * The map, or — while it reports `failed` or `lost` — the sentence for that failure, the two
+ * one-click representations and the chart handed in as children. The map stays MOUNTED and hidden
+ * while it is down: a lost context can only return to the instance that lost it, and when it does
+ * the frame simply comes back.
+ *
+ * The rule is the workspace's, from the same hook (map/useMapRecovery.ts), so the two pages
+ * cannot answer one failure differently: the retry is there for a failure another attempt could
+ * cure and absent for one it could not, it remounts the map under a new key, it is spent after
+ * MAP_RETRY_LIMIT attempts, and a map that is down stays down until it has drawn. A build with no
+ * token used to leave this frame blank with nothing said; the map reports that as a failure now
+ * and it arrives here like any other.
  */
 function MapOrFallback({ override, request, onPick, dispatch, children }: { override: ExplorerMapProps["override"]; request: ExplorerMapProps["request"]; onPick: ExplorerMapProps["onPick"]; dispatch: (a: Action) => void; children: ReactNode }) {
-  const [status, setStatus] = useState<MapStatus>("loading");
-  const down = status === "failed" || status === "lost";
+  const { status, down, reason, attempt, retrying, offerRetry, retry, onStatus, onFailure } = useMapRecovery();
   return (
     <>
       {down && (
         <div data-testid="canvas-map-fallback" data-status={status}>
-          <div className="mb-3 rounded-card border-l-4 border-warn bg-refusal px-3 py-2" role="status" data-testid="map-unavailable">
-            <p className="text-sm text-fg" data-testid="map-unavailable-text">{MAP_FAILURE.explanation}</p>
+          <div className="mb-3 rounded-card border-l-4 border-warn bg-refusal px-3 py-2" role="status" data-testid="map-unavailable" data-reason={reason}>
+            <p className="text-sm text-fg" data-testid="map-unavailable-text">{MAP_FAILURE_EXPLANATION[reason]}</p>
             <div className="mt-1 flex flex-wrap items-center gap-1">
               <button type="button" onClick={() => dispatch({ control: "rep", value: "chart" })} className={FALLBACK_ACTION} data-testid="map-unavailable-chart">{MAP_FAILURE.chart}</button>
               <button type="button" onClick={() => dispatch({ control: "rep", value: "table" })} className={FALLBACK_ACTION} data-testid="map-unavailable-table">{MAP_FAILURE.table}</button>
+              {offerRetry && (
+                <button type="button" onClick={retry} disabled={retrying} className={`${FALLBACK_ACTION} disabled:opacity-60`} data-testid="map-retry">
+                  {retrying ? MAP_FAILURE.retrying : MAP_FAILURE.retry}
+                </button>
+              )}
             </div>
           </div>
           {children}
         </div>
       )}
       <div className={`map-frame relative h-[560px] w-full overflow-hidden${down ? " hidden" : ""}`} data-testid="canvas-map" aria-hidden={down ? true : undefined}>
-        <ExplorerMap variant="briefing" override={override} request={request} onPick={onPick} onStatus={setStatus} />
+        <ExplorerMap key={attempt} variant="briefing" override={override} request={request} onPick={onPick} onStatus={onStatus} onFailure={onFailure} />
       </div>
     </>
   );

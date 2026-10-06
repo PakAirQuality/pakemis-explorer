@@ -32,14 +32,18 @@
  * the filters reachable from the deck's own header. At 1280 px and above both panes are on
  * screen exactly as before and no switch is offered.
  *
- * WHEN THE MAP CANNOT BE DRAWN (no WebGL in this browser, or a context the browser took away;
- * `ExplorerMap` reports it as its status) the workspace is the deck alone, at every width: the
- * map's legend and buttons come off rather than sit live-looking over a blank canvas, the deck
- * takes the full-width layout it has under 1280 px with one card above the others saying what
- * happened, and that card links to /data with the whole selection and offers a retry that
- * remounts the map — twice at most, after which it is the sentence and the link. The filters,
- * the cards, the evidence and the downloads never depended on the canvas and all stay; a
- * context the browser gives back restores the map by itself and spends no retry.
+ * WHEN THE MAP CANNOT BE DRAWN (no WebGL in this browser, a context the browser took away, a
+ * token that is not accepted on this address, a map that never finished loading; `ExplorerMap`
+ * reports it as its status and says which as its failure) the workspace is the deck alone, at
+ * every width: the map's legend and buttons come off rather than sit live-looking over a blank
+ * canvas, the deck takes the full-width layout it has under 1280 px with one card above the
+ * others saying what happened IN THE WORDS OF THAT FAILURE, and that card links to /data with
+ * the whole selection. Where another attempt could help it offers a retry that remounts the map
+ * — twice at most, after which it is the sentence and the link; where it could not (the browser
+ * cannot draw it, the token is refused) there is no retry to spend (map/useMapRecovery.ts). The
+ * place card's "Reset map" comes off with the rest of the map's controls. The filters, the
+ * cards, the evidence and the downloads never depended on the canvas and all stay; a context
+ * the browser gives back restores the map by itself and spends no retry.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -52,7 +56,8 @@ import { hrefForState } from "@/lib/urlState";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
 import { ASK_PANEL_GAP, ASK_PANEL_WIDTH, WIDE_QUERY, subscribeOpenFilters, useAskDocked } from "@/components/ask/docked";
 import { NavCapsule } from "@/components/shell/NavCapsule";
-import { ExplorerMap, OPENING_MAX_ZOOM, type MapPadding, type MapStatus } from "@/components/map/ExplorerMap";
+import { ExplorerMap, OPENING_MAX_ZOOM, type MapPadding } from "@/components/map/ExplorerMap";
+import { useMapRecovery } from "@/components/map/useMapRecovery";
 import { unionBbox, useBboxes } from "@/components/map/tiles";
 import { OPACITY_DEFAULT } from "@/components/map/layers";
 import { BASEMAP_DEFAULT, type BasemapChoice } from "@/components/map/basemap";
@@ -62,7 +67,7 @@ import { Deck, DeckRail } from "./Deck";
 import { PaneSwitch } from "./PaneSwitch";
 import { FILTER_GAP_PX, FILTER_INSET_PX, FilterPanel, RAIL_WIDTH } from "./FilterPanel";
 import { LegendCapsule } from "./LegendCapsule";
-import { FILTERS, MAP_BUTTONS, MAP_FAILURE } from "./copy";
+import { FILTERS, MAP_BUTTONS, MAP_FAILURE, MAP_FAILURE_EXPLANATION } from "./copy";
 import type { Pane } from "@/lib/urlState";
 
 /** The gap the deck keeps from the map's own chrome, and the chrome above and below it. */
@@ -101,13 +106,6 @@ export function chromePadding({ deck, docked, wide }: { deck: boolean; docked: b
 
 const MAP_BUTTON = "glass flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-fg";
 
-/**
- * How many times "Try again" may remount a map that failed. Bounded on purpose: a browser with
- * no WebGL fails the same way every time, and a control that can be pressed for ever over a
- * blank panel is the defect this replaces. The count is the page's and only a reload resets it.
- */
-export const MAP_RETRY_LIMIT = 2;
-
 const NOTICE_ACTION = "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-semibold";
 
 export function Workspace() {
@@ -117,26 +115,11 @@ export function Workspace() {
   const docked = useAskDocked();
   const rightInset = docked ? ASK_PANEL_WIDTH + ASK_PANEL_GAP : FILTER_INSET_PX;
   const [map, setMap] = useState<MBMap | null>(null);
-  // whether there is a map to look at, as the map itself reports it; `loading` until it says otherwise
-  const [mapStatus, setMapStatus] = useState<MapStatus>("loading");
-  const [retries, setRetries] = useState(0);
-  const [retrying, setRetrying] = useState(false);
-  /**
-   * A map that is down stays down until it has DRAWN. The `loading` a context restored before
-   * the first load reports is not yet a map, so the deck keeps the screen rather than the layout
-   * flipping to an empty canvas and back; a retry's fresh instance reports nothing until it
-   * loads or fails, which holds the same line.
-   */
-  const onMapStatus = useCallback((next: MapStatus) => {
-    if (next !== "loading") setRetrying(false);
-    setMapStatus((was) => (next === "loading" && (was === "failed" || was === "lost") ? was : next));
-  }, []);
-  const mapDown = mapStatus === "failed" || mapStatus === "lost";
-  const retryMap = useCallback(() => {
-    if (retrying || retries >= MAP_RETRY_LIMIT) return;
-    setRetrying(true);
-    setRetries(retries + 1); // the map's key: a new one is a new map
-  }, [retries, retrying]);
+  // whether there is a map to look at and, when there is not, why and what can be done about it:
+  // the map reports both, and the rule for holding the deck, the sentence and the retry is shared
+  // with the /data canvas (map/useMapRecovery.ts)
+  const recovery = useMapRecovery();
+  const { status: mapStatus, down: mapDown, reason: mapFailure, retrying } = recovery;
   // "Reset map" appears only once there is something to reset: a user-driven move, or a picked place or level
   const [moved, setMoved] = useState(false);
   const [deckOpen, setDeckOpen] = useState(true);
@@ -219,7 +202,12 @@ export function Workspace() {
       for (const e of events) el.removeEventListener(e, mark);
     };
   }, [map]);
-  const showReset = moved || !!state.geo || !!state.cell || state.level !== "adm1";
+  // NOT WHILE THE MAP IS DOWN. "Reset map" names the one thing that is not there, and half of what
+  // it does (the camera) has nothing to act on. It is hidden rather than relabelled: clearing the
+  // selection stays within reach where it always was — the place picker's "All provinces" in this
+  // same card, and Reset filters in the filter card the deck's header opens — so a second, renamed
+  // button would only be a third way to do it.
+  const showReset = !mapDown && (moved || !!state.geo || !!state.cell || state.level !== "adm1");
   const fitAllRef = useRef<(() => void) | null>(null);
   const fitAll = () => {
     const u = bboxes.data ? unionBbox(bboxes.data.adm1) : null;
@@ -238,12 +226,12 @@ export function Workspace() {
   // estimate, warming potentials and spatial view are the URL's own keys, written as this page
   // writes them, so /data opens on the same question rather than on its defaults.
   const mapNotice = mapDown ? (
-    <section className={DECK_CARD} role="status" data-testid="map-unavailable" data-status={mapStatus}>
-      <p className="text-sm text-fg" data-testid="map-unavailable-text">{MAP_FAILURE.explanation}</p>
+    <section className={DECK_CARD} role="status" data-testid="map-unavailable" data-status={mapStatus} data-reason={mapFailure}>
+      <p className="text-sm text-fg" data-testid="map-unavailable-text">{MAP_FAILURE_EXPLANATION[mapFailure]}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Link href={hrefForState(state, defaults, "/data")} className={`${NOTICE_ACTION} bg-accent-soft text-accent hover:underline`} data-testid="map-unavailable-link">{MAP_FAILURE.alternative}</Link>
-        {retries < MAP_RETRY_LIMIT || retrying ? (
-          <button type="button" onClick={retryMap} disabled={retrying} className={`${NOTICE_ACTION} text-muted hover:bg-surface-3 hover:text-fg disabled:opacity-60`} data-testid="map-retry">
+        {recovery.offerRetry ? (
+          <button type="button" onClick={recovery.retry} disabled={retrying} className={`${NOTICE_ACTION} text-muted hover:bg-surface-3 hover:text-fg disabled:opacity-60`} data-testid="map-retry">
             {retrying ? MAP_FAILURE.retrying : MAP_FAILURE.retry}
           </button>
         ) : null}
@@ -257,7 +245,7 @@ export function Workspace() {
           the instance that lost it. `invisible` rather than `hidden`, so the container keeps its
           size and the map that returns is already the right one. */}
       <div className={`absolute inset-0${mapDown ? " invisible" : ""}`} data-testid="map-pane" data-map-status={mapStatus} aria-hidden={showMap ? undefined : true}>
-        <ExplorerMap key={retries} variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} onStatus={onMapStatus} override={override} />
+        <ExplorerMap key={recovery.attempt} variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} onStatus={recovery.onStatus} onFailure={recovery.onFailure} override={override} />
       </div>
 
       {/* The pane switch is its OWN pill (the atlas pattern): top-left on a narrow

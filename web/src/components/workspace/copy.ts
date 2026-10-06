@@ -4,6 +4,7 @@
  * written here: every figure on the workspace is an envelope's string, and every label of a
  * sector, gas, period, configuration or view comes from the release's own labels.
  */
+import type { MapFailure } from "@/components/map/ExplorerMap";
 
 /** The deck's section bar: what the cards below actually hold - how emissions move over time. */
 export const DECK_TITLE = "Emissions trends".toUpperCase();
@@ -110,12 +111,13 @@ export const MAP_BUTTONS = {
 } as const;
 
 /**
- * What stands in the map's place when the browser cannot draw it (no WebGL, or a context the
- * browser took away): one sentence saying so and where the same estimates are, the link that
- * carries the selection there, and a retry that is offered a bounded number of times. The /data
- * canvas says the same sentence over its own chart and offers its two other representations.
+ * What stands in the map's place when it cannot be drawn: one sentence saying so and where the
+ * same estimates are, the link that carries the selection there, and a retry that is offered a
+ * bounded number of times and only for a failure another attempt could cure. The /data canvas
+ * says the same sentence over its own chart and offers its two other representations.
  */
 export const MAP_FAILURE = {
+  /** The browser's own failure, and the sentence for a map that gave no reason; MAP_FAILURE_EXPLANATION has one per reason. */
   explanation: "The map could not load in this browser. You can explore the same estimates in the table or chart.",
   alternative: "Open the table and chart",
   retry: "Try again",
@@ -123,3 +125,30 @@ export const MAP_FAILURE = {
   chart: "Show the chart",
   table: "Show the table",
 } as const;
+
+/** Where the same figures are: the second sentence of every explanation below, whatever the first one says. */
+const ELSEWHERE = "You can explore the same estimates in the table or chart.";
+
+/**
+ * The sentence for each way the map can fail (map/ExplorerMap.tsx `MapFailure`). Each one says
+ * only what is known to be true of that failure, in a reader's words:
+ *
+ *  · `unsupported`, `webgl` — the browser would not draw it. "In this browser" is the fact, and
+ *    the reader's own remedy (another browser, or hardware acceleration) follows from it. A
+ *    context the browser took away reads the same.
+ *  · `token` — the map service does not serve this address. Nothing about the reader's browser
+ *    is wrong and nothing they can do here will change it, so the sentence blames neither and
+ *    offers no retry; "in this browser" would send them off to fix something that is not broken.
+ *  · `library`, `style` — part of the map was asked for and did not come. It did not finish;
+ *    whether the cause was the line or the server is not known, so neither is named.
+ *  · `timeout` — nothing was refused; the map is still being waited for and may yet arrive, which
+ *    is why this one is in the present tense.
+ */
+export const MAP_FAILURE_EXPLANATION: Record<MapFailure, string> = {
+  unsupported: MAP_FAILURE.explanation,
+  webgl: MAP_FAILURE.explanation,
+  token: `The map is not available on this address. ${ELSEWHERE}`,
+  library: `The map did not finish loading. ${ELSEWHERE}`,
+  style: `The map did not finish loading. ${ELSEWHERE}`,
+  timeout: `The map is taking too long to load. ${ELSEWHERE}`,
+};
