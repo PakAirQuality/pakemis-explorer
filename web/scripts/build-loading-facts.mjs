@@ -1,20 +1,35 @@
 /**
  * Write the loading screen's facts from the release.
  *
- * The loader used to rotate eight sentences about method, with no digit in them, because the rule
- * of this site is that every number on screen is a string the release returned. The sentences
- * were true and nobody read them. This script keeps the rule and drops the dryness: it asks the
- * API the same questions the workspace deck asks (lib/requests.ts - one total, four partitions,
- * one series), and builds each fact ONLY out of strings in the answers - `display_short`,
- * `share_pct_short`, `rank`, the series' `change`, the release's own labels. Nothing numeric is
- * typed here. Each fact is written out with the strings it used and the receipts they came
- * under, and LoadingScreen.test.tsx holds the file to that: a digit in a fact that is not one of
- * its recorded strings fails, and so does a file built from a release other than the pinned one.
+ * WHAT A FACT IS FOR. The loader shows one sentence for a few seconds to someone who has not yet
+ * seen the site. The first set of facts written here was eleven correct statistics in the
+ * inventory's own vocabulary - "469.64 Mt CO2e", "Enteric fermentation is the largest single
+ * category", "second-largest category, at 12.3 % of the total" - and the person they were written
+ * for called them very weird. A fact now has to be something a reader would repeat: a comparison
+ * that surprises, in words nobody has to look up. Sewage against rubbish dumps. Buffalo against
+ * cattle. Farming against power plants, factories and vehicles together.
  *
- * ⚠ A GLOSS IS PINNED TO WHAT IT GLOSSES. "methane from livestock digestion" is only true of
- * enteric fermentation, so a fact that carries a gloss names the cell it expects at that rank and
- * the script stops if the release has put something else there. A fact with no gloss reads its
- * subject's name from the answer and needs no such pin.
+ * THE RULE THAT DOES NOT CHANGE: nothing numeric is typed here. Every digit in a fact is a string
+ * the API returned (`display_short`, `share_pct_short`, the series' `change`, a period's label, the
+ * warming potential in the release's own label), recorded beside the sentence with the receipt it
+ * came under, and LoadingScreen.test.tsx fails a digit that is not one of them.
+ *
+ * WHAT PLAIN WORDS ADD, AND HOW EACH IS HELD.
+ *   - A PHRASE instead of a decimal. Every one-key breakdown carries the server's `share_phrase`
+ *     ("nearly half", "about a third", "most", "almost all"). A fact may use it; it is recorded
+ *     like a figure, and the sentence is written around whatever the server says.
+ *   - A COMPARISON. "More than power plants, factories and vehicles put together" is a claim, so
+ *     it is ASSERTED from the answer's values before it is written (`assertMore`) and the build
+ *     stops if a later release makes it false. A surprising sentence that has quietly become
+ *     untrue is worse than a dull one.
+ *   - A GLOSS. "The methane animals burp" is only true of enteric fermentation, so a fact that
+ *     glosses a row names the row it expects (`expectAt`, `named`) and stops if it is not there.
+ *   - AN EXPLAINER. A sentence with no number at all - what an estimate is, what it is not. It
+ *     carries no figures and no receipt, and the test holds it to containing no digit.
+ *
+ * WHAT IS LEFT OUT ON PURPOSE. "Most sulphur dioxide comes from industry" is what the covered air
+ * table says and it would mislead: grid power's SO2 is only a screening range in this release and
+ * may be larger than everything counted. The two air facts say "counted here" for the same reason.
  *
  * Run by hand against a served release; the output is committed.
  *
@@ -40,13 +55,18 @@ const period = release.defaults.period_id;
 const emissions = (extra) => call("/query/emissions", { periods: [period], ...extra });
 const ranked = { order_by: "value desc" };
 
-const [total, sectors, categories, provinces, gases, series] = await Promise.all([
+const air = (pollutant) => call("/query/air", { pollutants: [pollutant], periods: [period], group_by: ["sector_id"], ...ranked });
+
+const [total, sectors, categories, provinces, gases, series, livestock, particles, ammonia] = await Promise.all([
   emissions({}),
   emissions({ group_by: ["reporting_sector"], ...ranked }),
   emissions({ group_by: ["category"], ...ranked }),
   emissions({ geography_level: "adm1", group_by: ["province"], ...ranked }),
   emissions({ group_by: ["gas"], ...ranked }),
   call("/query/timeseries", { query: {}, step: "annual" }),
+  emissions({ categories: ["Enteric fermentation"], group_by: ["subitem"], ...ranked }),
+  air("PM2.5"),
+  air("NH3"),
 ]);
 
 /** The cell holding a rank, or the cell of a named group; both stop the build when absent. */
@@ -65,60 +85,108 @@ function expectAt(env, key, rank, id) {
   if (cell.group?.[key] !== id) throw new Error(`rank ${rank} of ${key} is '${cell.group?.[key]}', not '${id}': the sentence written for '${id}' no longer describes it`);
   return cell;
 }
-const PLACE = ["largest", "second-largest", "third-largest", "fourth-largest", "fifth-largest"];
-const placeOf = (cell) => {
-  const word = PLACE[cell.rank - 1];
-  if (!word) throw new Error(`no word for rank ${cell.rank}`);
-  return word;
-};
+/**
+ * A comparison a sentence is about to make, checked against the answer's own values. `value` is
+ * read for the inequality and nothing else - it sizes bars everywhere on the site, and here it
+ * decides whether a sentence may be written; it is never printed.
+ */
+function assertMore(bigger, smaller, what) {
+  const sum = (cells) => [].concat(cells).reduce((t, c) => {
+    if (typeof c.value !== "number") throw new Error(`${what}: a cell carries no value to compare`);
+    return t + c.value;
+  }, 0);
+  if (!(sum(bigger) > sum(smaller))) throw new Error(`no longer true in this release: ${what} (${sum(bigger)} against ${sum(smaller)})`);
+}
 const periodName = (id) => {
   const short = labels.periods[id]?.short;
   if (!short) throw new Error(`the release has no short label for ${id}`);
   return short;
 };
-const sectorName = (id) => labels.reporting_sectors?.[id] ?? labels.sectors[id] ?? id;
+const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
 
-/** One fact: `write` receives `n`, which records a server string as it places it in the sentence. */
+/**
+ * One fact. `write` receives `n`, which records a server NUMBER as it places it in the sentence,
+ * and `p`, which records a server PHRASE the same way. Nothing reaches a sentence through either
+ * unless it is a non-empty string the API returned.
+ */
 function fact(envelopes, write) {
   const figures = [];
-  const n = (value) => {
-    if (typeof value !== "string" || value === "") throw new Error(`a figure must be a non-empty server string, got ${JSON.stringify(value)}`);
-    figures.push(value);
+  const phrases = [];
+  const taker = (into, what) => (value) => {
+    if (typeof value !== "string" || value === "") throw new Error(`a ${what} must be a non-empty server string, got ${JSON.stringify(value)}`);
+    into.push(value);
     return value;
   };
-  return { text: write(n), figures, receipts: envelopes.map((e) => e.receipt) };
+  return { text: write(taker(figures, "figure"), taker(phrases, "phrase")), figures, phrases, receipts: envelopes.map((e) => e.receipt) };
 }
+/** A sentence with no number in it: nothing to record, and the test holds it to carrying no digit. */
+const explain = (text) => ({ text, figures: [], phrases: [], receipts: [] });
+const sentence = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const all = total.values[0];
-const unit = all.unit_short;
 const year = periodName(period);
-const topSector = at(sectors, "reporting_sector", 1);
+// "million tonnes" is said in words, so the unit the words stand for is checked, not assumed
+if (!String(all.unit_words ?? "").startsWith("million tonnes")) throw new Error(`the total is in '${all.unit_words}', and the sentences here say million tonnes`);
+
+// --- greenhouse gases -----------------------------------------------------------------------
+const sector = (id) => named(sectors, "reporting_sector", id);
+const farming = expectAt(sectors, "reporting_sector", 1, "agriculture");
+assertMore(farming, ["power", "industry", "ippu", "transport", "railways", "aviation"].map(sector), "farming emits more than power plants, factories and vehicles put together");
+
 const enteric = expectAt(categories, "category", 1, "Enteric fermentation");
 const electricity = expectAt(categories, "category", 2, "Electricity and heat production");
 const road = named(categories, "category", "Road transport");
-const homes = named(categories, "category", "Residential fuel combustion");
+const sewage = named(categories, "category", "Domestic wastewater");
+const dumps = named(categories, "category", "Solid waste disposal");
+const rice = named(categories, "category", "Rice cultivation");
+const cement = named(categories, "category", "Cement production");
+const leaks = named(categories, "category", "Fugitive emissions from oil and gas");
+assertMore(sewage, dumps, "sewage emits more than rubbish dumps");
+assertMore(rice, dumps, "growing rice emits more than rubbish dumps");
+
+const buffalo = expectAt(livestock, "subitem", 1, "buffalo");
+assertMore(buffalo, [named(livestock, "subitem", "dairy_cattle"), named(livestock, "subitem", "other_cattle")], "buffalo produce more livestock methane than all the cattle");
+
 const methane = expectAt(gases, "gas", 1, "CH4");
 const carbon = expectAt(gases, "gas", 2, "CO2");
-const nitrous = expectAt(gases, "gas", 3, "N2O");
-if (gases.values.length !== 3) throw new Error(`the gas partition has ${gases.values.length} gases, and a sentence here says three`);
+// the warming potential, from the release's own description of its default basis ("CH₄ × 28")
+const basis = labels.gwp?.[release.defaults.gwp_basis]?.tooltip ?? "";
+const potency = /100-year[^()]*\(CH₄ × (\d+)[,)]/.exec(basis)?.[1];
+if (!potency) throw new Error(`the release's warming-potential label no longer states methane's 100-year factor: ${JSON.stringify(basis)}`);
+
 const [firstProvince, secondProvince] = [at(provinces, "province", 1), at(provinces, "province", 2)];
-const waste = named(sectors, "reporting_sector", "waste");
+const [trains, planes] = [sector("railways"), sector("aviation")];
+if (trains.share_pct_short !== planes.share_pct_short) throw new Error(`trains (${trains.share_pct_short} %) and planes (${planes.share_pct_short} %) no longer share one figure, and a sentence here says "each"`);
+
 const change = series.change;
-if (!change || !["rose", "fell"].includes(change.direction)) throw new Error(`the series carries no rise or fall to state: ${JSON.stringify(change)}`);
-const unsigned = (s) => s.replace(/^[+-]/, ""); // the direction is said in a word, as the overview says it
+if (!change || change.direction !== "rose") throw new Error(`the series no longer rises, and a sentence here says it grew: ${JSON.stringify(change)}`);
+const span = COUNT_WORDS[series.values.length - 1];
+if (!span || series.values[0]?.group?.period_id !== change.from_period || series.values.at(-1)?.group?.period_id !== change.to_period) throw new Error("the series is not one consecutive run from the change's first period to its last");
+const unsigned = (s) => s.replace(/^[+-]/, ""); // the direction is said in a word
+
+// --- air pollutants: "counted here", because grid power is outside the covered air total --------
+const fires = expectAt(particles, "sector_id", 1, "residential");
+const traffic = named(particles, "sector_id", "transport");
+const fields = expectAt(ammonia, "sector_id", 1, "agriculture");
 
 const facts = [
-  fact([total], (n) => `In ${n(year)}, Pakistan emitted an estimated ${n(all.display_short)} ${unit} of greenhouse gases.`),
-  fact([sectors], (n) => `${sectorName(topSector.group.reporting_sector)} is Pakistan's largest source of emissions: ${n(topSector.display_short)} ${unit}, or ${n(topSector.share_pct_short)} % of the national total.`),
-  fact([categories], (n) => `Enteric fermentation — methane from the digestion of cattle, buffalo and other livestock — is the largest single category, at ${n(enteric.share_pct_short)} % of the total.`),
-  fact([gases], (n) => `Methane, not carbon dioxide, is the leading gas: ${n(methane.share_pct_short)} % of the total against ${n(carbon.share_pct_short)} %.`),
-  fact([series], (n) => `Emissions ${change.direction} ${n(unsigned(change.change_pct_short))} % between ${n(periodName(change.from_period))} and ${n(periodName(change.to_period))}, from ${n(change.from_short)} to ${n(change.to_short)} ${change.unit_short}.`),
-  fact([provinces], (n) => `${firstProvince.group.province} accounts for ${n(firstProvince.share_pct_short)} % of national emissions; ${secondProvince.group.province} follows at ${n(secondProvince.share_pct_short)} %.`),
-  fact([categories], (n) => `Electricity and heat production is the second-largest category, at ${n(electricity.share_pct_short)} % of the total.`),
-  fact([categories], (n) => `Road transport emitted ${n(road.display_short)} ${unit} in ${n(year)} — ${n(road.share_pct_short)} % of the total.`),
-  fact([categories], (n) => `Household cooking and heating — residential fuel combustion — accounts for ${n(homes.share_pct_short)} % of the total.`),
-  fact([sectors], (n) => `Waste is the ${placeOf(waste)} source, at ${n(waste.share_pct_short)} % of the total.`),
-  fact([gases], (n) => `Nitrous oxide is the smallest of the three gases counted, at ${n(nitrous.share_pct_short)} % of the total.`),
+  fact([sectors], (n, p) => `${sentence(p(farming.share_phrase))} of Pakistan's greenhouse gases come from farming — more than power plants, factories and vehicles put together.`),
+  fact([categories], (n, p) => `The biggest single source is not a chimney or an exhaust pipe. It is livestock: the methane animals burp is ${p(enteric.share_phrase)} of the total.`),
+  fact([livestock], (n, p) => `Buffalo alone produce ${p(buffalo.share_phrase)} of Pakistan's livestock methane — more than all the cattle.`),
+  fact([gases], (n) => `Methane traps about ${n(potency)} times more heat than carbon dioxide over a century. That is why it outweighs carbon dioxide here: ${n(methane.share_pct_short)} % against ${n(carbon.share_pct_short)} %.`),
+  fact([series], (n) => `Pakistan's emissions grew by ${n(unsigned(change.change_pct_short))} % in ${span} years, from ${n(periodName(change.from_period))} to ${n(periodName(change.to_period))}.`),
+  fact([total], (n) => `In ${n(year)} Pakistan released an estimated ${n(all.display_short)} million tonnes of greenhouse gases, counted as carbon dioxide.`),
+  fact([categories], (n, p) => `Power stations, the source most people think of first, come second: ${p(electricity.share_phrase)} of the total.`),
+  fact([provinces], (n, p) => `${firstProvince.group.province} accounts for ${p(firstProvince.share_phrase)} of the country's emissions, and ${secondProvince.group.province} for ${p(secondProvince.share_phrase)}.`),
+  fact([categories], (n) => `Sewage emits more than rubbish dumps: ${n(sewage.share_pct_short)} % of the total against ${n(dumps.share_pct_short)} %.`),
+  fact([categories], () => `Flooded rice fields make methane. Growing rice emits more than all the country's rubbish dumps.`),
+  fact([categories], (n) => `Making cement releases carbon dioxide from the limestone itself, not only from the fuel: ${n(cement.display_short)} million tonnes a year.`),
+  fact([categories], (n) => `Gas that leaks from wells and pipelines before it is ever burned still warms the planet: ${n(leaks.share_pct_short)} % of the total.`),
+  fact([categories, sectors], (n) => `Road vehicles emit ${n(road.share_pct_short)} % of the total. Trains and planes: about ${n(trains.share_pct_short)} % each.`),
+  fact([particles], (n, p) => `Cooking and heating fires at home produce ${p(fires.share_phrase)} of the fine-particle pollution counted here: ${n(fires.share_pct_short)} %. Transport: ${n(traffic.share_pct_short)} %.`),
+  fact([ammonia], (n, p) => `${sentence(p(fields.share_phrase))} of the ammonia counted here comes from farming — fertiliser and animal manure: ${n(fields.share_pct_short)} %.`),
+  explain("Nobody measures these emissions directly. They are worked out from records: fuel sold, animals counted, crops grown, cement made."),
+  explain("An estimate of what was released is not a measurement of the air you breathe. Wind and weather decide where it goes."),
 ];
 
 const file = `// GENERATED by scripts/build-loading-facts.mjs from the release named below. Do not edit:
@@ -129,7 +197,9 @@ export type LoadingFact = {
   text: string;
   /** Every numeric string in it, verbatim from the answers (a signed change loses its sign). */
   figures: readonly string[];
-  /** The receipts of the envelopes those strings came from. */
+  /** Every share phrase in it ("nearly half"), verbatim from the answers; a sentence may open with one capitalised. */
+  phrases: readonly string[];
+  /** The receipts of the envelopes those strings came from; none for a sentence that states no figure and no phrase. */
   receipts: readonly string[];
 };
 

@@ -6,22 +6,30 @@ export type LoadingFact = {
   text: string;
   /** Every numeric string in it, verbatim from the answers (a signed change loses its sign). */
   figures: readonly string[];
-  /** The receipts of the envelopes those strings came from. */
+  /** Every share phrase in it ("nearly half"), verbatim from the answers; a sentence may open with one capitalised. */
+  phrases: readonly string[];
+  /** The receipts of the envelopes those strings came from; none for a sentence that states no figure and no phrase. */
   receipts: readonly string[];
 };
 
 export const FACTS_RELEASE = "1.0.0rc59";
 
 export const LOADING_FACTS: readonly LoadingFact[] = [
-  {"text":"In 2023–24, Pakistan emitted an estimated 469.64 Mt CO₂e of greenhouse gases.","figures":["2023–24","469.64"],"receipts":["51f8dcb6e255c6b499d0134dc6e0359d"]},
-  {"text":"Agriculture is Pakistan's largest source of emissions: 223.45 Mt CO₂e, or 47.6 % of the national total.","figures":["223.45","47.6"],"receipts":["0f8d17260852931e20b08b4dfcd46075"]},
-  {"text":"Enteric fermentation — methane from the digestion of cattle, buffalo and other livestock — is the largest single category, at 32.3 % of the total.","figures":["32.3"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Methane, not carbon dioxide, is the leading gas: 53.0 % of the total against 38.0 %.","figures":["53.0","38.0"],"receipts":["9fddd137eb0ac2ad5853b44b1ccc846f"]},
-  {"text":"Emissions rose 17.1 % between 2015–16 and 2023–24, from 401.09 to 469.64 Mt CO₂e.","figures":["17.1","2015–16","2023–24","401.09","469.64"],"receipts":["ae87f50efaab71a28b2391f0caa69f41"]},
-  {"text":"Punjab accounts for 50.7 % of national emissions; Sindh follows at 29.3 %.","figures":["50.7","29.3"],"receipts":["a68f51eb868478e07839b6e37cc4add4"]},
-  {"text":"Electricity and heat production is the second-largest category, at 12.3 % of the total.","figures":["12.3"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Road transport emitted 40.19 Mt CO₂e in 2023–24 — 8.6 % of the total.","figures":["40.19","2023–24","8.6"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Household cooking and heating — residential fuel combustion — accounts for 6.3 % of the total.","figures":["6.3"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Waste is the fourth-largest source, at 8.1 % of the total.","figures":["8.1"],"receipts":["0f8d17260852931e20b08b4dfcd46075"]},
-  {"text":"Nitrous oxide is the smallest of the three gases counted, at 9.0 % of the total.","figures":["9.0"],"receipts":["9fddd137eb0ac2ad5853b44b1ccc846f"]},
+  {"text":"Nearly half of Pakistan's greenhouse gases come from farming — more than power plants, factories and vehicles put together.","figures":[],"phrases":["nearly half"],"receipts":["0f8d17260852931e20b08b4dfcd46075"]},
+  {"text":"The biggest single source is not a chimney or an exhaust pipe. It is livestock: the methane animals burp is about a third of the total.","figures":[],"phrases":["about a third"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Buffalo alone produce nearly half of Pakistan's livestock methane — more than all the cattle.","figures":[],"phrases":["nearly half"],"receipts":["b90d40736ea6f88e0ac4708339f5093d"]},
+  {"text":"Methane traps about 28 times more heat than carbon dioxide over a century. That is why it outweighs carbon dioxide here: 53.0 % against 38.0 %.","figures":["28","53.0","38.0"],"phrases":[],"receipts":["9fddd137eb0ac2ad5853b44b1ccc846f"]},
+  {"text":"Pakistan's emissions grew by 17.1 % in eight years, from 2015–16 to 2023–24.","figures":["17.1","2015–16","2023–24"],"phrases":[],"receipts":["ae87f50efaab71a28b2391f0caa69f41"]},
+  {"text":"In 2023–24 Pakistan released an estimated 469.64 million tonnes of greenhouse gases, counted as carbon dioxide.","figures":["2023–24","469.64"],"phrases":[],"receipts":["51f8dcb6e255c6b499d0134dc6e0359d"]},
+  {"text":"Power stations, the source most people think of first, come second: about a tenth of the total.","figures":[],"phrases":["about a tenth"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Punjab accounts for nearly half of the country's emissions, and Sindh for about a quarter.","figures":[],"phrases":["nearly half","about a quarter"],"receipts":["a68f51eb868478e07839b6e37cc4add4"]},
+  {"text":"Sewage emits more than rubbish dumps: 5.3 % of the total against 2.0 %.","figures":["5.3","2.0"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Flooded rice fields make methane. Growing rice emits more than all the country's rubbish dumps.","figures":[],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Making cement releases carbon dioxide from the limestone itself, not only from the fuel: 21.82 million tonnes a year.","figures":["21.82"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Gas that leaks from wells and pipelines before it is ever burned still warms the planet: 5.3 % of the total.","figures":["5.3"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Road vehicles emit 8.6 % of the total. Trains and planes: about 0.1 % each.","figures":["8.6","0.1"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9","0f8d17260852931e20b08b4dfcd46075"]},
+  {"text":"Cooking and heating fires at home produce most of the fine-particle pollution counted here: 81.9 %. Transport: 1.1 %.","figures":["81.9","1.1"],"phrases":["most"],"receipts":["b1192fde3e367fd4b0cf4b4a76dcdad3"]},
+  {"text":"Almost all of the ammonia counted here comes from farming — fertiliser and animal manure: 96.1 %.","figures":["96.1"],"phrases":["almost all"],"receipts":["dff27ced370208fffa0395a399175559"]},
+  {"text":"Nobody measures these emissions directly. They are worked out from records: fuel sold, animals counted, crops grown, cement made.","figures":[],"phrases":[],"receipts":[]},
+  {"text":"An estimate of what was released is not a measurement of the air you breathe. Wind and weather decide where it goes.","figures":[],"phrases":[],"receipts":[]},
 ];

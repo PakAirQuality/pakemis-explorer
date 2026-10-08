@@ -225,15 +225,18 @@ describe("LoadingScreen", () => {
     expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-progress", "60");
     expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "shown");
   });
-  it("every digit in a fact is a string the pinned release returned; the facts pass the audits", () => {
+  it("every digit and share phrase in a fact is a string the pinned release returned; the facts are short and in plain words", () => {
     // the file is generated (scripts/build-loading-facts.mjs): a release bump fails here until `make facts` reruns
     const pinned = /^pinned:\s*(\S+)/m.exec(readFileSync(join(__dirname, "..", "..", "..", "..", "RELEASES.md"), "utf8"))?.[1];
     expect(FACTS_RELEASE).toBe(pinned);
-    expect(LOADING_FACTS.length).toBeGreaterThanOrEqual(8);
+    expect(LOADING_FACTS.length).toBeGreaterThanOrEqual(12);
     expect(new Set(LOADING_FACTS.map((f) => f.text)).size).toBe(LOADING_FACTS.length);
     for (const fact of LOADING_FACTS) {
-      expect(fact.figures.length, fact.text).toBeGreaterThan(0);
-      expect(fact.receipts.length, fact.text).toBeGreaterThan(0);
+      // A sentence that states a figure or a share phrase names the answer it came from. So may one
+      // that states only a COMPARISON the generator checked against an answer ("rice emits more
+      // than rubbish dumps"). An EXPLAINER names none - and the leftover-digit check below is what
+      // keeps both honest: with no figure recorded, no digit may appear in the sentence at all.
+      if (fact.figures.length + fact.phrases.length > 0) expect(fact.receipts.length, fact.text).toBeGreaterThan(0);
       for (const receipt of fact.receipts) expect(receipt).toMatch(/^[0-9a-f]{32}$/);
       // take each recorded server string out of the sentence, longest first; no digit may be left
       let rest: string = fact.text;
@@ -242,13 +245,26 @@ describe("LoadingScreen", () => {
         rest = rest.replace(figure, "");
       }
       expect(rest, fact.text).not.toMatch(/\d/);
+      // a share phrase is the server's too ("nearly half"); a sentence may open with it capitalised
+      for (const phrase of fact.phrases) expect(fact.text.toLowerCase(), `${phrase} in: ${fact.text}`).toContain(phrase.toLowerCase());
       expect(fact.text).not.toContain("FY");
       expect(fact.text).not.toMatch(/(^|[^A-Z0-9(])AR5(?![)\w])/);
       expect(fact.text).not.toContain("LULUCF");
       expect(fact.text).not.toMatch(/\b[A-Z]{2,}_[A-Z0-9_]+\b/); // REF_2023_24 and its kind
       expect(fact.text).not.toMatch(/\b[0-9][A-Z][0-9a-z]*\b/); // 1A3b and its kind
       expect(avoidPhrasesIn(fact.text)).toEqual([]);
+      // WRITTEN FOR SOMEONE WHO HAS NOT SEEN THE SITE YET. The first set of facts was eleven correct
+      // statistics in the inventory's own vocabulary ("469.64 Mt CO₂e", "Enteric fermentation is the
+      // largest single category") and the person they were written for called them very weird.
+      // These are the words that made them so; a fact says the thing instead (livestock, leaks).
+      for (const jargon of [/\bMt\b/, /CO₂e/, /CO2e/i, /enteric/i, /fermentation/i, /fugitive/i, /\bcategor(y|ies)\b/i, /reporting sector/i, /\bkt\b/, /PM₂/, /\bNH₃/])
+        expect(fact.text, `${jargon} in: ${fact.text}`).not.toMatch(jargon);
+      // three lines of the loader at its narrowest: a fact that wraps to a fourth pushes the bar
+      expect(fact.text.length, fact.text).toBeLessThanOrEqual(170);
     }
+    // a mix, not a table: some sentences explain and state no number, and the air side is represented
+    expect(LOADING_FACTS.filter((f) => f.receipts.length === 0).length).toBeGreaterThanOrEqual(2);
+    expect(LOADING_FACTS.some((f) => /counted here/.test(f.text))).toBe(true);
     // on screen: the fact is the only place a digit appears
     render(<LoadingScreen force />);
     const line = screen.getByTestId("loading-line").textContent ?? "";
