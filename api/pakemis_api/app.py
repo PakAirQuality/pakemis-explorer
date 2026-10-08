@@ -345,17 +345,24 @@ class Service:
                 env = self._run(request, method_rows)
             except (duckdb.BinderException, duckdb.CatalogException) as exc:
                 raise self.grain_refusal(exc, request) from exc
+            # The unallocated block for the periods, gases and view ASKED (unallocated.py): the
+            # core attaches the reference year's, whole, to every spatial answer. Outside the
+            # result digest, so the receipt stands.
+            #
+            # ⚠ INSIDE THE LOCK, AND IT WAS NOT. This reads the ENGINE'S connection, and a DuckDB
+            # connection is one thread's at a time - which is the whole reason this lock exists.
+            # The first version ran it after the `with` block: every province or district answer
+            # then queried the shared connection while another request's query could be on it. A
+            # page load is exactly that burst, and the process did not raise - it DIED (a fatal
+            # error in the driver), taking every request on the instance with it. The suite asks
+            # one question at a time and passed; tests/test_concurrent_queries.py is the burst.
+            env = self.own_unallocated.apply(env)
         if defaulted:
             # said in the envelope, beside the defaults the core applied itself (the core rewrites
             # the request's own defaults_applied, so it cannot be carried in on the request)
             context = env.get("context") or {}
             context["defaults_applied"] = list(context.get("defaults_applied") or []) + ["periods"]
             env["context"] = context
-        # the unallocated block for the periods, gases and view ASKED (unallocated.py): the core
-        # attaches the reference year's, whole, to every spatial answer. Outside the result digest,
-        # so the receipt stands; done before the downloads' early return so a receipt file for
-        # another year does not carry the reference year's block either.
-        env = self.own_unallocated.apply(env)
         self.product_digests(env)
         if not decorate_cells:
             return env
