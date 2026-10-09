@@ -24,7 +24,10 @@ ROOT = os.path.dirname(HERE)
 VENDOR = os.path.join(ROOT, "api", "vendor")
 PACKAGE = "pakemis_query"
 SOURCE_SUBDIR = "src/" + PACKAGE
-# The goldens are vendored FROM THE SAME COMMIT as the engine, and for the same reason.
+# The goldens are vendored FROM THE SAME COMMIT as the engine by default, and for the same reason.
+# --goldens-ref separates the two when the core moves ahead of the served release: a golden is a
+# frozen answer of ONE release, so a core that gained a function (query_activity) is still held to
+# the pinned release's own fixtures, and the record names both commits.
 # Until they were, conftest read them in place from a live checkout while the app served a
 # pinned release: when the emissions tree moved past the vendored commit, four fixtures that
 # a later release had refrozen produced twenty value mismatches across three test modules,
@@ -108,7 +111,7 @@ def check():
     return 0
 
 
-def vendor(emissions, ref):
+def vendor(emissions, ref, goldens_ref=None):
     if not os.path.isdir(os.path.join(emissions, SOURCE_SUBDIR)):
         raise SystemExit("%s has no %s" % (emissions, SOURCE_SUBDIR))
     commit = git(emissions, "rev-parse", ref).decode().strip()
@@ -129,19 +132,20 @@ def vendor(emissions, ref):
         with open(path, "wb") as handle:
             handle.write(data)
         files[rel] = sha256_bytes(data)
-    # the goldens, at the same commit
+    # the goldens: at the same commit, or at the served release's own (--goldens-ref)
+    golden_commit = git(emissions, "rev-parse", goldens_ref).decode().strip() if goldens_ref else commit
     gdir = os.path.join(VENDOR, GOLDEN_DIR)
     if os.path.isdir(gdir):
         for f in os.listdir(gdir):
             os.remove(os.path.join(gdir, f))
     os.makedirs(gdir, exist_ok=True)
-    glisting = git(emissions, "ls-tree", "-r", "--name-only", commit, GOLDEN_SUBDIR).decode().split("\n")
+    glisting = git(emissions, "ls-tree", "-r", "--name-only", golden_commit, GOLDEN_SUBDIR).decode().split("\n")
     goldens = {}
     for path_in_repo in glisting:
         if not path_in_repo.endswith(".json"):
             continue
         rel = path_in_repo[len(GOLDEN_SUBDIR) + 1:]
-        data = git(emissions, "show", "%s:%s" % (commit, path_in_repo))
+        data = git(emissions, "show", "%s:%s" % (golden_commit, path_in_repo))
         with open(os.path.join(gdir, rel), "wb") as handle:
             handle.write(data)
         goldens[rel] = sha256_bytes(data)
@@ -152,7 +156,7 @@ def vendor(emissions, ref):
                       "working_tree_dirty_at_vendoring": dirty},
            "vendored_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
            "files": files, "digest": combined_digest(files),
-           "goldens": {"subdir": GOLDEN_SUBDIR, "files": goldens, "digest": combined_digest(goldens)},
+           "goldens": {"subdir": GOLDEN_SUBDIR, "commit": golden_commit, "files": goldens, "digest": combined_digest(goldens)},
            "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here"}
     with open(record_path(), "w", encoding="utf-8") as handle:
         json.dump(rec, handle, indent=1, sort_keys=True)
@@ -163,10 +167,13 @@ def vendor(emissions, ref):
                      "development the API imports the checkout itself (`PAKEMIS_QUERY_PATH`, default the sibling\n"
                      "checkout) and falls back to this copy only when the checkout is absent. Do not edit here: refresh\n"
                      "with `make vendor`; `VENDOR.json` records the commit and every file's sha256 (%d files, digest\n"
-                     "`%s`), and `api/tests/test_vendor.py` proves the copy against it.\n"
-                     % (PACKAGE, SOURCE_SUBDIR, emissions, commit, len(files), rec["digest"]))
+                     "`%s`), and `api/tests/test_vendor.py` proves the copy against it.\n\n"
+                     "The goldens in `goldens/` are the frozen answers of commit `%s`%s.\n"
+                     % (PACKAGE, SOURCE_SUBDIR, emissions, commit, len(files), rec["digest"], golden_commit,
+                        "" if golden_commit == commit else
+                        ": the served release's own, because the core is ahead of the release it serves"))
     print("vendored %d files of %s at %s%s into api/vendor/%s (digest %s)" % (len(files), SOURCE_SUBDIR, commit[:12], " (working tree dirty)" if dirty else "", PACKAGE, rec["digest"][:16]))
-    print("vendored %d goldens of %s at the same commit (digest %s)" % (len(goldens), GOLDEN_SUBDIR, rec["goldens"]["digest"][:16]))
+    print("vendored %d goldens of %s at %s (digest %s)" % (len(goldens), GOLDEN_SUBDIR, "the same commit" if golden_commit == commit else golden_commit[:12], rec["goldens"]["digest"][:16]))
     return 0
 
 
@@ -174,6 +181,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--emissions", default=os.environ.get("EMISSIONS", DEFAULT_EMISSIONS))
     ap.add_argument("--ref", default="HEAD")
+    ap.add_argument("--goldens-ref", default=None, help="the commit whose goldens to vendor (default: --ref); the served release's own commit when the core is ahead of it")
     ap.add_argument("--check", action="store_true", help="verify api/vendor against VENDOR.json; write nothing")
     args = ap.parse_args(argv)
     if args.check:
@@ -182,7 +190,7 @@ def main(argv=None):
         # no checkout on this machine (CI, the container build): the committed copy must be intact
         print("%s is absent; checking the committed copy instead" % args.emissions)
         return check()
-    return vendor(args.emissions, args.ref)
+    return vendor(args.emissions, args.ref, args.goldens_ref)
 
 
 if __name__ == "__main__":

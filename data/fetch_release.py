@@ -138,6 +138,25 @@ def canonical_input_bytes(table, source, schema_version):
     return payload
 
 
+def untracked_asset(repo, commit, rel, pinned):
+    """A packaged asset the commit does not hold (the source repository gitignores a few derived
+    GIS files the contract still packages). The checkout's copy is taken ONLY when its sha256 is the
+    one the contract pins, so the bytes are the release's whatever the working tree is on; FETCH.json
+    records the origin. Anything else is refused: a path the contract does not pin has no identity
+    outside the commit."""
+    if not pinned:
+        sys.exit("%s is absent at %s and the contract pins no digest for it" % (rel, commit[:12]))
+    path = safe_path(repo, rel)
+    if not os.path.isfile(path):
+        sys.exit("packaged asset %s is absent at %s and from the checkout" % (rel, commit[:12]))
+    with open(path, "rb") as handle:
+        data = handle.read()
+    if sha256_bytes(data) != pinned:
+        sys.exit("packaged asset %s is untracked and the checkout's copy hashes to %s; the contract pins %s"
+                 % (rel, sha256_bytes(data)[:12], pinned[:12]))
+    return data
+
+
 def fetch_from_git(repo, ref, out_root):
     commit = git(repo, "rev-parse", ref).strip()
     contract = json.loads(git(repo, "show", "%s:outputs/semantic/semantic_release.json" % commit))
@@ -155,13 +174,20 @@ def fetch_from_git(repo, ref, out_root):
     paths = list(dict.fromkeys(paths))
     dest = os.path.join(out_root, version)
     files = {}
+    pinned = {asset["path"]: asset["sha256"] for asset in assets.entries.values() if asset.get("packaged")}
     for rel in paths:
-        data = git(repo, "show", "%s:%s" % (commit, rel), binary=True)
+        origin = None
+        if exists_at(repo, commit, rel):
+            data = git(repo, "show", "%s:%s" % (commit, rel), binary=True)
+        else:
+            data, origin = untracked_asset(repo, commit, rel, pinned.get(rel)), "working_tree"
         target = safe_path(dest, rel)
         os.makedirs(os.path.dirname(target), exist_ok=True)
         with open(target, "wb") as handle:
             handle.write(data)
         files[rel] = {"sha256": sha256_bytes(data), "bytes": len(data)}
+        if origin:
+            files[rel]["origin"] = origin
         print("  %s  %s  %d" % (files[rel]["sha256"][:12], rel, len(data)))
     inputs = contract.get("activity_inputs", {})
     for table in inputs.get("tables", []) if not assets.catalog else []:

@@ -1,6 +1,8 @@
 # PakEmis Explorer - one numerical truth layer; every target below is a view of it.
 EMISSIONS ?= /Users/rehanahmad/Desktop/emissions
 REF       ?= HEAD
+# the commit whose goldens are vendored; set it to the served release's commit when REF is ahead of it
+GOLDENS_REF ?= $(REF)
 VERSION   ?= $(shell sed -n 's/^pinned:[[:space:]]*//p' RELEASES.md)
 export PAKEMIS_QUERY_PATH ?= $(EMISSIONS)/src
 
@@ -46,7 +48,7 @@ library:            ## rebuild the assistant's cards + source register from the 
 	python3 scripts/vendor_library.py
 
 vendor:             ## copy pakemis_query out of $(EMISSIONS) at $(REF) into api/vendor for the image (VENDOR.json: commit + digests)
-	python3 scripts/vendor_query_core.py --emissions $(EMISSIONS) --ref $(REF)
+	python3 scripts/vendor_query_core.py --emissions $(EMISSIONS) --ref $(REF) --goldens-ref $(GOLDENS_REF)
 
 docker-build: vendor  ## the Cloud Run image, built from the repository root (api/Dockerfile)
 	docker build -t pakemis -f api/Dockerfile .
