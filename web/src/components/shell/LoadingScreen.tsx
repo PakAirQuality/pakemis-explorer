@@ -41,10 +41,14 @@ export const SESSION_KEY = "pakemis.loading-shown";
 export const CEILING_MS = 6000;
 /** Before it has: how long a cold start may, which only an outage outlasts. */
 export const HARD_CAP_MS = 45000;
-export const MIN_SHOW_MS = 3000;
+/**
+ * How long the screen stays even when the page is ready at once: long enough not to flash, and no
+ * longer. It was raised to three seconds when the facts arrived, so that a fact could be read - which
+ * made every first visit wait for a sentence. A fact is something to look at WHILE the page loads;
+ * the page is never held for it.
+ */
+export const MIN_SHOW_MS = 900;
 export const FADE_MS = 700;
-/** One fact's stay: longer than the minimum display, so a fast load shows one fact, whole. */
-export const LINE_MS = 3200;
 /** While the release is awaited the bar eases toward (never to) its first stage. */
 export const CREEP_MS = 400;
 const CREEP_TOWARD = STAGE_PERCENT.release - 5;
@@ -88,17 +92,17 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
     if (!forced && seenThisSession()) setPhase("gone");
   }, [force, pin]);
 
-  // the hard cap, the minimum display and the rotating fact (the first one drawn at random)
+  // the hard cap, the minimum display and the visit's ONE fact, drawn at random. It used to rotate
+  // every few seconds: a slow load read as a slideshow, and a reader half-way through a sentence
+  // lost it. One fact with its source stays put for as long as the load takes.
   useEffect(() => {
     if (phase === "gone") return;
     setFactIx(Math.floor(Math.random() * LOADING_FACTS.length));
     const c = window.setTimeout(() => setCeiling(true), HARD_CAP_MS);
     const m = window.setTimeout(() => setMinShown(true), MIN_SHOW_MS);
-    const l = window.setInterval(() => setFactIx((i) => ((i ?? 0) + 1) % LOADING_FACTS.length), LINE_MS);
     return () => {
       window.clearTimeout(c);
       window.clearTimeout(m);
-      window.clearInterval(l);
     };
   }, [phase === "gone"]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -167,6 +171,10 @@ export function LoadingScreen({ force, pin }: { force?: boolean; pin?: Stage | n
         </div>
         <p key={factIx ?? "unset"} className={`mt-5 min-h-[66px] max-w-sm text-center text-[13px] leading-relaxed text-muted ${styles.line}`} data-testid="loading-line">
           {factIx === null ? null : LOADING_FACTS[factIx].text}
+        </p>
+        {/* whose figure, of what date, and what it leaves out - or the page an explanation was checked against */}
+        <p className={`mt-1.5 min-h-[16px] max-w-sm text-center text-[11px] leading-snug text-muted opacity-75 ${styles.line}`} data-testid="loading-source">
+          {factIx === null ? null : LOADING_FACTS[factIx].source}
         </p>
       </div>
     </div>

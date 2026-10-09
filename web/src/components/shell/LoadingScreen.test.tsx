@@ -12,7 +12,7 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { avoidPhrasesIn } from "@/__tests__/vocabulary";
 import { markFailed, markStage, resetBootstrap } from "./bootstrap";
-import { CEILING_MS, CREEP_MS, FADE_MS, HARD_CAP_MS, LINE_MS, LoadingScreen, MIN_SHOW_MS, readLoadingQuery, SESSION_KEY } from "./LoadingScreen";
+import { CEILING_MS, CREEP_MS, FADE_MS, HARD_CAP_MS, LoadingScreen, MIN_SHOW_MS, readLoadingQuery, SESSION_KEY } from "./LoadingScreen";
 import { FACTS_RELEASE, LOADING_FACTS } from "./loadingFacts.gen";
 import { reducedMotion } from "./PlumeCanvas";
 
@@ -188,18 +188,32 @@ describe("LoadingScreen", () => {
     act(() => vi.advanceTimersByTime(FADE_MS));
     expect(screen.queryByTestId("loading-screen")).toBeNull();
   });
-  it("the fact advances and is re-keyed so its animation replays; a fast load shows one fact whole", () => {
-    expect(LINE_MS).toBeGreaterThan(MIN_SHOW_MS);
+  it("one fact per visit, with its source: it stays put however long the load takes, and never holds the page", () => {
+    // the page is not kept waiting for a sentence: the minimum display only stops a flash
+    expect(MIN_SHOW_MS).toBeLessThanOrEqual(1000);
     fakeClock();
     render(<LoadingScreen force />);
-    const first = screen.getByTestId("loading-line");
     const start = factShown();
-    act(() => vi.advanceTimersByTime(LINE_MS));
-    const second = screen.getByTestId("loading-line");
-    expect(factShown()).toBe((start + 1) % LOADING_FACTS.length);
-    expect(second).not.toBe(first);
-    act(() => vi.advanceTimersByTime(LINE_MS * (LOADING_FACTS.length - 1)));
-    expect(factShown()).toBe(start);
+    expect(screen.getByTestId("loading-source")).toHaveTextContent(LOADING_FACTS[start].source);
+    // a slow load is not a slideshow: the same sentence and the same source, all the way to the cap
+    for (const ms of [MIN_SHOW_MS, CEILING_MS, HARD_CAP_MS - CEILING_MS - MIN_SHOW_MS - 1]) {
+      act(() => vi.advanceTimersByTime(ms));
+      expect(factShown()).toBe(start);
+      expect(screen.getByTestId("loading-source")).toHaveTextContent(LOADING_FACTS[start].source);
+    }
+  });
+  it("a page that is ready at once is shown at once: no fact extends the load", () => {
+    fakeClock();
+    pathname.value = "/methods";
+    render(<LoadingScreen force />);
+    act(() => {
+      markStage("release");
+      markStage("labels");
+    });
+    act(() => vi.advanceTimersByTime(MIN_SHOW_MS));
+    expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "fading");
+    act(() => vi.advanceTimersByTime(FADE_MS));
+    expect(screen.queryByTestId("loading-screen")).toBeNull();
   });
   it("shown once per session: the second mount renders nothing, unless forced by the query", () => {
     const { unmount } = render(<LoadingScreen />);
@@ -245,6 +259,21 @@ describe("LoadingScreen", () => {
         rest = rest.replace(figure, "");
       }
       expect(rest, fact.text).not.toMatch(/\d/);
+      // THE SOURCE LINE IS HELD TO THE SAME RULE. It names a year, a register's date or a
+      // warming-potential basis, and each of those is the release's own string or it is not there.
+      expect(fact.source.length, fact.text).toBeGreaterThan(0);
+      expect(fact.source.length, fact.source).toBeLessThanOrEqual(90);
+      let sourceRest: string = fact.source;
+      for (const figure of [...fact.sourceFigures].sort((a, b) => b.length - a.length)) {
+        expect(sourceRest, `${figure} in: ${fact.source}`).toContain(figure);
+        sourceRest = sourceRest.replace(figure, "");
+      }
+      expect(sourceRest, fact.source).not.toMatch(/\d/);
+      expect(fact.source).not.toContain("FY");
+      expect(fact.source).not.toMatch(/\.(xlsx|csv|pdf)\b|fact_|_/);     // never a file, a table id or a machine name
+      expect(avoidPhrasesIn(fact.source)).toEqual([]);
+      // an estimate says whose it is and what it leaves out; a record says what it is not
+      if (fact.receipts.length > 0) expect(fact.source, fact.text).toMatch(/excludes land use and forestry|grid power not included|not traffic/);
       // a share phrase is the server's too ("nearly half"); a sentence may open with it capitalised
       for (const phrase of fact.phrases) expect(fact.text.toLowerCase(), `${phrase} in: ${fact.text}`).toContain(phrase.toLowerCase());
       expect(fact.text).not.toContain("FY");
@@ -262,6 +291,18 @@ describe("LoadingScreen", () => {
       // three lines of the loader at its narrowest: a fact that wraps to a fourth pushes the bar
       expect(fact.text.length, fact.text).toBeLessThanOrEqual(170);
     }
+    // THE SENTENCE THAT SAID NEITHER WHAT WAS WEIGHED NOR WHERE: "outweighs carbon dioxide here".
+    // "Outweighs" reads as mass and "here" named no quantity; no fact may say either again, and
+    // the one about methane carries the year and the warming-potential convention under it. ("The
+    // fine-particle pollution counted here" is a different thing: it names what is counted.)
+    for (const fact of LOADING_FACTS) expect(fact.text, fact.text).not.toMatch(/outweigh|dioxide here/i);
+    const methane = LOADING_FACTS.find((f) => /^Methane traps/.test(f.text));
+    expect(methane?.text).toMatch(/of Pakistan's greenhouse gases/);
+    expect(methane?.source).toMatch(/^Pakistan · \S+ · IPCC .*100-year values · excludes land use and forestry$/);
+    // a record beside the estimates: the register's own date, and what a register is not
+    const register = LOADING_FACTS.find((f) => /motorcycles for every car/.test(f.text));
+    expect(register?.source).toMatch(/\d{1,2} [A-Z][a-z]+ \d{4} · registered vehicles, not traffic$/);
+    expect(register?.figures.every((f) => / million$/.test(f))).toBe(true);
     // a mix, not a table: some sentences explain and state no number, and the air side is represented
     expect(LOADING_FACTS.filter((f) => f.receipts.length === 0).length).toBeGreaterThanOrEqual(2);
     expect(LOADING_FACTS.some((f) => /counted here/.test(f.text))).toBe(true);
@@ -269,7 +310,9 @@ describe("LoadingScreen", () => {
     render(<LoadingScreen force />);
     const line = screen.getByTestId("loading-line").textContent ?? "";
     expect(LOADING_FACTS.map((f) => f.text)).toContain(line);
-    const text = (screen.getByTestId("loading-screen").textContent ?? "").replace(line, "");
+    const sourceLine = screen.getByTestId("loading-source").textContent ?? "";
+    expect(LOADING_FACTS.find((f) => f.text === line)?.source).toBe(sourceLine);
+    const text = (screen.getByTestId("loading-screen").textContent ?? "").replace(line, "").replace(sourceLine, "");
     expect(text).not.toMatch(/\d/);
     expect(avoidPhrasesIn(text)).toEqual([]);
   });

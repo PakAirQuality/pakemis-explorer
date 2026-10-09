@@ -4,8 +4,12 @@
 export type LoadingFact = {
   /** The sentence the loading screen shows. */
   text: string;
-  /** Every numeric string in it, verbatim from the answers (a signed change loses its sign). */
+  /** The small line under it: whose figure, of what date, and what it leaves out; or the public page an explanation was checked against. */
+  source: string;
+  /** Every numeric string in the sentence, verbatim from the answers (a signed change loses its sign). */
   figures: readonly string[];
+  /** Every server string in the source line that carries a digit (the year, a register's date, the warming-potential basis). */
+  sourceFigures: readonly string[];
   /** Every share phrase in it ("nearly half"), verbatim from the answers; a sentence may open with one capitalised. */
   phrases: readonly string[];
   /** The receipts of the envelopes those strings came from; none for a sentence that states no figure and no phrase. */
@@ -15,21 +19,26 @@ export type LoadingFact = {
 export const FACTS_RELEASE = "1.0.0rc59";
 
 export const LOADING_FACTS: readonly LoadingFact[] = [
-  {"text":"Nearly half of Pakistan's greenhouse gases come from farming — more than power plants, factories and vehicles put together.","figures":[],"phrases":["nearly half"],"receipts":["0f8d17260852931e20b08b4dfcd46075"]},
-  {"text":"The biggest single source is not a chimney or an exhaust pipe. It is livestock: the methane animals burp is about a third of the total.","figures":[],"phrases":["about a third"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Buffalo alone produce nearly half of Pakistan's livestock methane — more than all the cattle.","figures":[],"phrases":["nearly half"],"receipts":["b90d40736ea6f88e0ac4708339f5093d"]},
-  {"text":"Methane traps about 28 times more heat than carbon dioxide over a century. That is why it outweighs carbon dioxide here: 53.0 % against 38.0 %.","figures":["28","53.0","38.0"],"phrases":[],"receipts":["9fddd137eb0ac2ad5853b44b1ccc846f"]},
-  {"text":"Pakistan's emissions grew by 17.1 % in eight years, from 2015–16 to 2023–24.","figures":["17.1","2015–16","2023–24"],"phrases":[],"receipts":["ae87f50efaab71a28b2391f0caa69f41"]},
-  {"text":"In 2023–24 Pakistan released an estimated 469.64 million tonnes of greenhouse gases, counted as carbon dioxide.","figures":["2023–24","469.64"],"phrases":[],"receipts":["51f8dcb6e255c6b499d0134dc6e0359d"]},
-  {"text":"Power stations, the source most people think of first, come second: about a tenth of the total.","figures":[],"phrases":["about a tenth"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Punjab accounts for nearly half of the country's emissions, and Sindh for about a quarter.","figures":[],"phrases":["nearly half","about a quarter"],"receipts":["a68f51eb868478e07839b6e37cc4add4"]},
-  {"text":"Sewage emits more than rubbish dumps: 5.3 % of the total against 2.0 %.","figures":["5.3","2.0"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Flooded rice fields make methane. Growing rice emits more than all the country's rubbish dumps.","figures":[],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Making cement releases carbon dioxide from the limestone itself, not only from the fuel: 21.82 million tonnes a year.","figures":["21.82"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Gas that leaks from wells and pipelines before it is ever burned still warms the planet: 5.3 % of the total.","figures":["5.3"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
-  {"text":"Road vehicles emit 8.6 % of the total. Trains and planes: about 0.1 % each.","figures":["8.6","0.1"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9","0f8d17260852931e20b08b4dfcd46075"]},
-  {"text":"Cooking and heating fires at home produce most of the fine-particle pollution counted here: 81.9 %. Transport: 1.1 %.","figures":["81.9","1.1"],"phrases":["most"],"receipts":["b1192fde3e367fd4b0cf4b4a76dcdad3"]},
-  {"text":"Almost all of the ammonia counted here comes from farming — fertiliser and animal manure: 96.1 %.","figures":["96.1"],"phrases":["almost all"],"receipts":["dff27ced370208fffa0395a399175559"]},
-  {"text":"Nobody measures these emissions directly. They are worked out from records: fuel sold, animals counted, crops grown, cement made.","figures":[],"phrases":[],"receipts":[]},
-  {"text":"An estimate of what was released is not a measurement of the air you breathe. Wind and weather decide where it goes.","figures":[],"phrases":[],"receipts":[]},
+  {"text":"More than three motorcycles for every car: Lahore's register listed 4.82 million motorcycles and 1.56 million cars, jeeps and station wagons.","source":"Provincial vehicle registrations · 30 June 2023 · registered vehicles, not traffic","figures":["4.82 million","1.56 million"],"sourceFigures":["30 June 2023"],"phrases":[],"receipts":["4681826c2a08f77f54df4d4af024c1ee"]},
+  {"text":"Nearly half of Pakistan's greenhouse gases come from farming — more than power plants, factories and vehicles put together.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":[],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":["nearly half"],"receipts":["0f8d17260852931e20b08b4dfcd46075"]},
+  {"text":"The biggest single source is not a chimney or an exhaust pipe. It is livestock: the methane animals burp is about a third of the total.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":[],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":["about a third"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Buffalo alone produce nearly half of Pakistan's livestock methane — more than all the cattle.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":[],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":["nearly half"],"receipts":["b90d40736ea6f88e0ac4708339f5093d"]},
+  {"text":"Methane traps about 28 times more heat than carbon dioxide over a century. Counted that way it is 53.0 % of Pakistan's greenhouse gases; carbon dioxide is 38.0 %.","source":"Pakistan · 2023–24 · IPCC 2013 (AR5) 100-year values · excludes land use and forestry","figures":["28","53.0","38.0"],"sourceFigures":["2023–24","IPCC 2013 (AR5)","100-year","excludes land use and forestry"],"phrases":[],"receipts":["9fddd137eb0ac2ad5853b44b1ccc846f"]},
+  {"text":"Pakistan's emissions grew by 17.1 % in eight years, from 2015–16 to 2023–24.","source":"Pakistan · excludes land use and forestry","figures":["17.1","2015–16","2023–24"],"sourceFigures":["excludes land use and forestry"],"phrases":[],"receipts":["ae87f50efaab71a28b2391f0caa69f41"]},
+  {"text":"In 2023–24 Pakistan released an estimated 469.64 million tonnes of greenhouse gases, counted as carbon dioxide.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":["2023–24","469.64"],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":[],"receipts":["51f8dcb6e255c6b499d0134dc6e0359d"]},
+  {"text":"Power stations, the source most people think of first, come second: about a tenth of the total.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":[],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":["about a tenth"],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Punjab accounts for nearly half of the country's emissions, and Sindh for about a quarter.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":[],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":["nearly half","about a quarter"],"receipts":["a68f51eb868478e07839b6e37cc4add4"]},
+  {"text":"Sewage emits more than rubbish dumps: 5.3 % of the total against 2.0 %.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":["5.3","2.0"],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Flooded rice fields make methane. Growing rice emits more than all the country's rubbish dumps.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":[],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Making cement releases carbon dioxide in two ways: fuel heats the kiln, and the limestone itself gives off 21.82 million tonnes a year.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":["21.82"],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Gas that leaks from wells and pipelines before it is ever burned still warms the planet: 5.3 % of the total.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":["5.3"],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9"]},
+  {"text":"Road vehicles emit 8.6 % of the total. Trains and planes: about 0.1 % each.","source":"Pakistan · 2023–24 · excludes land use and forestry","figures":["8.6","0.1"],"sourceFigures":["2023–24","excludes land use and forestry"],"phrases":[],"receipts":["ea5dd07f46cb8afa8811ff317f0544e9","0f8d17260852931e20b08b4dfcd46075"]},
+  {"text":"Cooking and heating fires at home produce most of the fine-particle pollution counted here: 81.9 %. Transport: 1.1 %.","source":"Pakistan · 2023–24 · sources estimated here; grid power not included","figures":["81.9","1.1"],"sourceFigures":["2023–24"],"phrases":["most"],"receipts":["b1192fde3e367fd4b0cf4b4a76dcdad3"]},
+  {"text":"Almost all of the ammonia counted here comes from farming — fertiliser and animal manure: 96.1 %.","source":"Pakistan · 2023–24 · sources estimated here; grid power not included","figures":["96.1"],"sourceFigures":["2023–24"],"phrases":["almost all"],"receipts":["dff27ced370208fffa0395a399175559"]},
+  {"text":"Most of the weight of the carbon dioxide from an exhaust pipe comes from the air: burning joins the fuel's carbon to oxygen.","source":"US EPA, greenhouse gases from a typical passenger vehicle","figures":[],"sourceFigures":[],"phrases":[],"receipts":[]},
+  {"text":"Some particle pollution forms in the air itself: gases from power plants, factories and vehicles react to make fine particles.","source":"US EPA, particulate matter basics","figures":[],"sourceFigures":[],"phrases":[],"receipts":[]},
+  {"text":"Waste can warm the planet without burning. Buried food and plant waste makes methane as it rots without oxygen.","source":"US EPA, basic information about landfill gas","figures":[],"sourceFigures":[],"phrases":[],"receipts":[]},
+  {"text":"A human hair is about thirty times wider than the largest fine particle. Most of this pollution is too small to see.","source":"US EPA, particulate matter basics","figures":[],"sourceFigures":[],"phrases":[],"receipts":[]},
+  {"text":"Nobody measures these emissions directly. They are worked out from records: fuel sold, animals counted, crops grown, cement made.","source":"How this inventory is built","figures":[],"sourceFigures":[],"phrases":[],"receipts":[]},
+  {"text":"An estimate of what was released is not a measurement of the air you breathe. Wind and weather decide where it goes.","source":"How this inventory is built","figures":[],"sourceFigures":[],"phrases":[],"receipts":[]},
 ];
