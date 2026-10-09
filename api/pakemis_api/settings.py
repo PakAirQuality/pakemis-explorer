@@ -22,6 +22,7 @@ PAKEMIS_ASK_MODEL       the model id; empty -> the provider's default (claude-so
 The keys themselves are read by the provider SDKs from the environment; nothing here reads them.
 """
 import os
+import logging
 import re
 import sys
 from dataclasses import dataclass
@@ -46,14 +47,43 @@ def _key_present(provider):
     return any(os.environ.get(v) for v in KEY_VARS[provider])
 
 
+def _request_models(query_path):
+    """The request classes a copy of the query core defines, read from its models.py as text (the
+    package is not imported: choosing between two copies must not load either)."""
+    try:
+        with open(os.path.join(query_path, "pakemis_query", "models.py"), encoding="utf-8") as handle:
+            return set(re.findall(r"^class (\w+)", handle.read(), re.M))
+    except OSError:
+        return set()
+
+
+def checkout_is_behind(checkout=None, vendored=None):
+    """The request classes the vendored core defines and the checkout's does not; empty when the
+    checkout is at least as new. The API is generated from the vendored core's models, so a checkout
+    on a branch that predates one of them (query_activity landed on a follow-up branch first) cannot
+    serve it - importing it raised AttributeError before a single route existed."""
+    return sorted(_request_models(vendored or VENDOR_QUERY_PATH) - _request_models(checkout or DEFAULT_QUERY_PATH))
+
+
 def default_query_path():
-    """PAKEMIS_QUERY_PATH, else the emissions checkout when it is present (development: its golden
-    files sit beside it), else the vendored copy (the container)."""
+    """PAKEMIS_QUERY_PATH, else the emissions checkout when it is present and not behind the vendored
+    copy (development: its golden files sit beside it), else the vendored copy (the container, and a
+    checkout on an older branch)."""
     explicit = os.environ.get("PAKEMIS_QUERY_PATH")
     if explicit:
         return explicit
+    vendored = os.path.isdir(os.path.join(VENDOR_QUERY_PATH, "pakemis_query"))
     if os.path.isdir(os.path.join(DEFAULT_QUERY_PATH, "pakemis_query")):
-        return DEFAULT_QUERY_PATH
+        missing = checkout_is_behind() if vendored else []
+        if not missing:
+            return DEFAULT_QUERY_PATH
+        logging.getLogger("pakemis_api").warning(
+            "the emissions checkout's query core lacks %s, which the vendored copy has; using api/vendor "
+            "(set PAKEMIS_QUERY_PATH to choose)", ", ".join(missing))
+        return VENDOR_QUERY_PATH
+    if vendored:
+        return VENDOR_QUERY_PATH
+    return DEFAULT_QUERY_PATH
     if os.path.isdir(os.path.join(VENDOR_QUERY_PATH, "pakemis_query")):
         return VENDOR_QUERY_PATH
     return DEFAULT_QUERY_PATH

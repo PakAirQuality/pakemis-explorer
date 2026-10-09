@@ -92,3 +92,23 @@ def test_the_vendored_core_can_answer_every_group_key_the_release_declares():
         assert "reporting_sectors" in fields, (
             "the pinned release carries the reporting axis but the vendored QueryEmissions has no "
             "filter for it")
+
+
+def test_a_checkout_behind_the_vendored_core_is_not_imported(tmp_path, monkeypatch):
+    """THE BREAK THIS PREVENTS. query_activity landed on an engine follow-up branch; the API is
+    generated from the core's request models, so with the default setup `make api` imported the
+    main checkout, found no QueryActivity and died with AttributeError before one route existed."""
+    from pakemis_api import settings as S
+    old = tmp_path / "old" / "pakemis_query"
+    old.mkdir(parents=True)
+    (old / "models.py").write_text("class QueryEmissions:\n    pass\n")
+    assert "QueryActivity" in S.checkout_is_behind(checkout=str(tmp_path / "old"))
+    assert S.checkout_is_behind(checkout=S.VENDOR_QUERY_PATH) == []
+    monkeypatch.delenv("PAKEMIS_QUERY_PATH", raising=False)
+    monkeypatch.setattr(S, "DEFAULT_QUERY_PATH", str(tmp_path / "old"))
+    assert S.default_query_path() == S.VENDOR_QUERY_PATH
+    # a checkout that has everything is still preferred, and an explicit path always wins
+    monkeypatch.setattr(S, "DEFAULT_QUERY_PATH", S.VENDOR_QUERY_PATH)
+    assert S.default_query_path() == S.VENDOR_QUERY_PATH
+    monkeypatch.setenv("PAKEMIS_QUERY_PATH", str(tmp_path / "old"))
+    assert S.default_query_path() == str(tmp_path / "old")

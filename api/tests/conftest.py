@@ -13,11 +13,13 @@ if API_DIR not in sys.path:
     sys.path.insert(0, API_DIR)
 os.environ.setdefault("PAKEMIS_API_LAZY", "1")
 
-from pakemis_api.settings import Settings, DEFAULT_QUERY_PATH  # noqa: E402
+from pakemis_api.settings import Settings, default_query_path  # noqa: E402
 
 
 def query_path():
-    return os.environ.get("PAKEMIS_QUERY_PATH", DEFAULT_QUERY_PATH)
+    """The path the API itself would choose: the override, the checkout, or the vendored copy when
+    the checkout is on a branch older than it."""
+    return default_query_path()
 
 
 def golden_dir():
