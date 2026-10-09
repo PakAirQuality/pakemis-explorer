@@ -31,6 +31,7 @@ import { barLabel, cellName, chartKind, downloadTool, exactnessWords, groupKeyOf
 import { useReceiptDrawer } from "./receiptDrawer";
 import { MapMovedLine, ProvenanceLine } from "./Provenance";
 import { WORD_KEYS, mapPatchFromInput, movesMap, previousOf, undoPatch, type MapMove } from "./mapMove";
+import { activityNote, activityScopeRows, activitySources, isActivity } from "./activity";
 import { attachmentOf, attachmentTitle, disclosureOf, followUps, isModelled, methodDisclosure, methodTool, periodSpan, scopeNote } from "./attachment";
 import { allocationSurfaceWords } from "@/components/methods/evidenceClassText";
 import type { Highlight } from "./ToolCard";
@@ -197,7 +198,11 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
   // "Pakistan (national)". The principal result is by definition where the figures are from.
   const context = r.context;
   const cb = release.context_bar;
-  const rows = scopeRows(labels, dims, context, principal.input, cb.basis_label ? { basis: cb.basis, label: cb.basis_label } : undefined);
+  // A RECORD HAS ITS OWN SCOPE. A count from the vehicle register is about a place and a date, not
+  // about a gas, a warming-potential basis or the fiscal year the map happens to show; see activity.ts.
+  const activity = isActivity(r, principal.name);
+  const rows = activity ? activityScopeRows(r) : scopeRows(labels, dims, context, principal.input, cb.basis_label ? { basis: cb.basis, label: cb.basis_label } : undefined);
+  const recordSources = activity ? activitySources(r) : null;
   const ticks = env?.axis?.ticks_short ?? null;
   // the gases keep their three hues; every other set is the PAQI ramp by rank (the cell's order in the envelope), a visual encoding that prints nothing
   const colorOf = (c: ToolResultCell, i: number) => (key === "gas" ? gasColor(c.group?.[key]) : rampByRank(i, shownCells.length));
@@ -211,7 +216,7 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
     ...exactness,
     ...(r.unallocated ? ["some mass is unallocated at this grain"] : []),
   ].filter(Boolean);
-  const patch = principal.name === "set_map_view" ? {} : stateFromRequest({ name: principal.name, body: principal.input });
+  const patch = principal.name === "set_map_view" || activity ? {} : stateFromRequest({ name: principal.name, body: principal.input });
   // THE LINK OPENS THE ANSWER'S SCOPE, NOT THE READER'S LATEST. It was the request's fields patched
   // over the current state, so anything selected since the question rode along: an answer about
   // the whole country opened on the province now on screen, and a greenhouse answer opened as a
@@ -342,7 +347,7 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
 
   // THE SCOPE, SAID ONCE, BY US. See attachment.scopeNote: the model used to write this and wrote it
   // twice. It reads as the answer's last sentence, muted so it does not pretend to be the model's.
-  const note = scopeNote(r, {
+  const note = activity ? activityNote(r) : scopeNote(r, {
     period: (id) => periodShort(labels, id),
     gwp: (id) => gwpLabel(labels, id),
     place: (res) => placeWords(labels, res),
@@ -448,6 +453,9 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
             {disclosure.data && <Row name="National data" testid="detail-data">{disclosure.data}</Row>}
             {disclosure.proxies && <Row name="Spatial proxies" testid="detail-proxies">{disclosure.proxies}</Row>}
             {disclosure.method && <Row name="Method" testid="detail-method">{disclosure.method}</Row>}
+            {/* a record's source as the release prints it, and the whole of what it may not be read as */}
+            {recordSources?.reference && <Row name="Source" testid="detail-record-source">{recordSources.reference}</Row>}
+            {recordSources?.note && <Row name="Read it as" testid="detail-record-note">{recordSources.note}</Row>}
             {/* uncertainty appears only when there IS some: "Uncertainty not requested" told a
                 reader nothing about the answer and everything about the query we happened to run */}
             {(uncRows.length > 0 || uncCells.length > 0) && <Row name="Uncertainty" testid="detail-uncertainty">{uncertaintyBody}</Row>}

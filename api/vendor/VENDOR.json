@@ -1,18 +1,19 @@
 {
- "digest": "7aadcace8c36254457a345fcfe492ec78f729641cfcdaccdf021464fa6bde3a6",
+ "digest": "4b91667dc70e2bade2b39bb78537997f11860d6c3bcdcace1b72c5b89e9fdcfd",
  "files": {
   "__init__.py": "b62a1f4439f2724e28903286167094f97058ad8df22e90295e45321ee7590d53",
   "download.py": "82d0980ffeec7dc9505f2d478a9de5d2d2e1cdd5cb05f511703bfa2c364cfe59",
-  "engine.py": "279440c9d5217dfc65ba43585efedefdc52649fc9505161c92c69389fee9a0f4",
+  "engine.py": "21565d5f6d97cac76e8493a5363aeb61e56decce2e17dff8f3a12c1db3e2502b",
   "envelope.py": "0e0c4e8ffdac28d366ddaaff8f2984317f79593d0e442a204ac50cceaab0d831",
   "errors.py": "18fd543445d0858d9d1755d41fa2449ca7ecf8e0ba7f1d29014a13b4e39dfee8",
-  "functions.py": "7fd1b9ed44795b6b810f7e10278c9bcc6d31b1e45bef491d5fd2c418dd9250d5",
-  "models.py": "9979379c95d5c899dc763f42df231725f5723b156d1371424b14ad588cb39e3a",
+  "functions.py": "324773f524c4bb71adf6e1eda22fd180d12797978133de1102c6108174988eaf",
+  "models.py": "ae43c50af60c05cd8d1ea0b6edac556c6e5c59d49860a486bb9b669c1cbf3cfb",
   "placeholders.py": "1111b8d735f5fe394cb9d4e3cffffe09763894b5b8ee9d7b30ed20b6eb1fe57f",
   "receipt.py": "20f8b18ee58ff7794c353d5a0fea3629c12ebada59448dbef61c9bd391f46dd1",
-  "release.py": "1d5dfb37e60622b5cce54666ed9779b1337d3ffa7ce6ff64a7e3172768124913"
+  "release.py": "1b1040fb22ae273acf7ad5cf36baa0377d40499aa3215913e8159111bd8aadf1"
  },
  "goldens": {
+  "commit": "5915e0c0fe59ba242473f2a650acb7e85f51d175",
   "digest": "b5d9d93820cf2058b0bfbec77c8c93927a18f6136629da635bb8f090b6cb7afa",
   "files": {
    "adm1_punjab_agriculture.json": "ae8e56a6712dd882246d976688b9c55874137c3957f88d85a8dfc40c634f4188",
@@ -46,12 +47,12 @@
  "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here",
  "schema": "pakemis_explorer.vendor/v1",
  "source": {
-  "commit": "5915e0c0fe59ba242473f2a650acb7e85f51d175",
+  "commit": "3dccf78ffc667ab900912dfe5873d86042c372ed",
   "kind": "git",
-  "ref": "5915e0c0",
+  "ref": "3dccf78ffc667ab900912dfe5873d86042c372ed",
   "repository": "/Users/rehanahmad/Desktop/emissions",
   "subdir": "src/pakemis_query",
   "working_tree_dirty_at_vendoring": false
  },
- "vendored_at": "2026-09-30T01:53:16+00:00"
+ "vendored_at": "2026-10-09T22:47:31+00:00"
 }

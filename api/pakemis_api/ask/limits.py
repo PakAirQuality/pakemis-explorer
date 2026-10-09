@@ -73,6 +73,15 @@ class Limits:
     effort: str = "medium"
     max_cells_for_model: int = 60
     trusted_proxies: tuple = ()
+    # A TURN HAS A DEADLINE, AND IT IS SHORTER THAN THE EDGE'S. On 9 October 2026 one turn sat for
+    # the service's whole 300 s request timeout: the model stream stalled after the first tool
+    # call, nothing in the turn had a clock, and the hosting edge in front of the service gave the
+    # reader an HTML 502 long before the service gave up. Past `turn_seconds` no further model
+    # call is started and the reader is told, in the stream, to ask again; a model call that goes
+    # silent is cut after `model_stall_seconds` or what is left of the turn, whichever is less.
+    # 0 switches either off.
+    turn_seconds: int = 50
+    model_stall_seconds: int = 40
 
     @classmethod
     def from_env(cls):
@@ -84,6 +93,8 @@ class Limits:
             daily_tokens=_int("PAKEMIS_ASK_DAILY_TOKENS", cls.daily_tokens),
             per_ip_per_hour=_int("PAKEMIS_ASK_PER_IP_PER_HOUR", cls.per_ip_per_hour),
             effort=os.environ.get("PAKEMIS_ASK_EFFORT") or cls.effort,
+            turn_seconds=_int("PAKEMIS_ASK_TURN_SECONDS", cls.turn_seconds),
+            model_stall_seconds=_int("PAKEMIS_ASK_MODEL_STALL_SECONDS", cls.model_stall_seconds),
             trusted_proxies=parse_networks(os.environ.get("PAKEMIS_TRUSTED_PROXIES")),
         )
 

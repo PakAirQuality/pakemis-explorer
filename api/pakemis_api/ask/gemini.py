@@ -221,10 +221,15 @@ class GeminiModel:
             out.append(types.Content(role=role, parts=parts))
         return out
 
-    def config(self, system, tools):
+    # the loop may hand stream() a timeout: how long this one call may stay silent (see Limits)
+    accepts_timeout = True
+
+    def config(self, system, tools, timeout_s=None):
         from google.genai import types
         kwargs = dict(system_instruction=system, tools=gemini_tools(tools), max_output_tokens=self.max_output_tokens,
                       tool_config=types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode="AUTO")))
+        if timeout_s:
+            kwargs["http_options"] = types.HttpOptions(timeout=int(timeout_s * 1000))    # milliseconds
         try:
             kwargs["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
         except (AttributeError, TypeError):
@@ -303,9 +308,9 @@ class GeminiModel:
         if self.on_model_change:
             self.on_model_change(model)
 
-    def stream(self, system, messages, tools):
+    def stream(self, system, messages, tools, timeout_s=None):
         contents = self.contents(messages)
-        config = self.config(system, tools)
+        config = self.config(system, tools, timeout_s)
         start = self.chain.index(self.active_model) if self.active_model in self.chain else 0
         remaining = list(self.chain[start:]) or [self.active_model]
         started = False

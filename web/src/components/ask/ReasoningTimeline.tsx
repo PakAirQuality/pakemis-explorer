@@ -40,7 +40,12 @@ export const ERROR_TITLES: Record<string, string> = {
   stream_ended: "The stream ended before an answer",
   empty_answer: "No answer: the model returned no answer text after its tool calls",
   network_error: "Could not reach the API",
+  upstream_unavailable: "The assistant did not answer in time",
+  turn_timeout: "The assistant took too long and stopped",
 };
+
+/** The error codes a reader can usefully retry: the question itself was fine. */
+export const RETRYABLE = new Set(["upstream_unavailable", "turn_timeout", "network_error", "stream_ended", "model_error", "rate_limited"]);
 
 /* A TITLE THAT NAMES THE REMEDY. `budget_exhausted` covered two different situations - this
    conversation is full, or the whole day's budget is gone - and said "the token budget is spent"
@@ -151,7 +156,15 @@ export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAg
         <div key={i} className="rounded-card border border-warn/30 bg-refusal px-3 py-2 text-sm text-warn" data-testid="error-card" data-code={item.code}>
           <div className="font-semibold">{errorTitle(item.code, item.scope)}</div>
           {item.message && <div className="mt-0.5 text-xs">{item.message}</div>}
-          <div className="mono mt-0.5 text-micro normal-case tracking-normal text-muted">{item.code}</div>
+          <div className="mt-1 flex items-center gap-3">
+            {/* the edge's timeout has no code a reader could use: its message already carries the status */}
+            {item.code !== "upstream_unavailable" && item.code !== "turn_timeout" && <span className="mono text-micro normal-case tracking-normal text-muted">{item.code}</span>}
+            {RETRYABLE.has(item.code) && onFollowUp && !live && (
+              <button type="button" className="text-xs underline underline-offset-2" data-testid="error-retry" onClick={() => onFollowUp(turn.message)}>
+                Ask again
+              </button>
+            )}
+          </div>
         </div>
       ))}
       {live && !tl.answer && <WorkingLine />}

@@ -139,8 +139,17 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
           return;
         }
         if (!res.ok) {
+          // A 502/504 FROM THE EDGE IS NOT A SERVER ANSWER. The hosting edge in front of the API
+          // answers them itself when the API instance did not reply in time (or restarted), with
+          // an HTML body and no `error`/`message`; the panel used to print the raw status line
+          // ("http_502", "502 502") as if it were a code the reader could act on. The title names
+          // what happened and the card offers a retry; the raw status stays in the mono line.
           const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-          fail(body.error ?? `http_${res.status}`, body.message ?? `${res.status} ${res.statusText}`);
+          const edge = res.status === 502 || res.status === 503 || res.status === 504;
+          fail(
+            body.error ?? (edge ? "upstream_unavailable" : `http_${res.status}`),
+            body.message ?? (edge ? `The assistant did not answer in time (HTTP ${res.status}). The question was not lost: try again.` : `${res.status} ${res.statusText}`),
+          );
           return;
         }
         if (!res.body) {

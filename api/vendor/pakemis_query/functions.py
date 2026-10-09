@@ -11,7 +11,7 @@ from pakemis_query.engine import DECIMAL, REFERENCE_PERIOD
 from pakemis_query.envelope import envelope, value
 from pakemis_query.receipt import receipt_id
 from pakemis_query.models import (CompareRequest, EvidenceRequest, GridCellRequest, MethodRequest,
-                                  QueryEmissions, SpatialLineageRequest, TimeseriesRequest,
+                                  QueryActivity, QueryEmissions, SpatialLineageRequest, TimeseriesRequest,
                                   TransferRequest, UncertaintyRequest, CompletenessRequest,
                                   canonical_json)
 
@@ -152,9 +152,18 @@ def get_method(engine, req, method_rows):
     values = [value("", "method", 0, formula=r.get("equation", ""), **r) for r in rows]
     for v in values:
         v["display"] = v.get("method_id", "")
+    path = "data/method_registry.csv"
+    digest = engine.release.product_digest(path)
+    catalog = engine.release.contract.get("asset_catalog")
+    if catalog:
+        asset_id = catalog["bindings"]["method_registry"]
+        asset = next((asset for asset in catalog["assets"] if asset["asset_id"] == asset_id), None)
+        if asset is None:
+            raise E.IdentityError("method registry asset binding is absent: %s" % asset_id)
+        path, digest = asset["path"], asset["sha256"]
     return envelope(engine.release, "get_method", canonical_json(req), {"basis": "fiscal", "periods": (REFERENCE_PERIOD,)},
-                    values, {"kind": "lookup", "table": "data/method_registry.csv"},
-                    {"tables": [{"path": "data/method_registry.csv", "sha256": engine.release.product_digest("data/method_registry.csv")}]})
+                    values, {"kind": "lookup", "table": path},
+                    {"tables": [{"path": path, "sha256": digest}]})
 
 
 def get_spatial_lineage(engine, req):
@@ -314,3 +323,263 @@ def get_grid_cell(engine, req, cube_paths):
                     [v], {"kind": "lookup", "table": os.path.basename(path), "conservation": conservation},
                     {"tables": [{"path": "outputs/" + os.path.basename(path), "sha256": engine.release.product_digest("outputs/" + os.path.basename(path))}]},
                     limitations_hit=["grid_not_tabular"])
+
+
+# --- query_activity ---------------------------------------------------------------------------
+# The columns every activity table shares, in the order the release writes them. A table's
+# CLASS columns are the ones between Measure and Value (vehicles: "Vehicle class", "Fuel";
+# livestock: "Animal type"), read from the table's own header rather than listed here, so a
+# table added later is queryable without a second copy of its schema.
+ACTIVITY_STANDARD = ("Period", "Location", "Province", "Locality", "Measure", "Value", "Unit",
+                     "Period type", "Reporting interval", "Location level", "Evidence",
+                     "Source status", "Source series", "Use note", "Source reference", "Record ID")
+ACTIVITY_ROW_CAP = 400
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August",
+           "September", "October", "November", "December")
+
+
+def activity_tables(release):
+    """The queryable activity tables of the release: the fact_activity_* facts except the
+    source-detail join table, which is not a record table."""
+    return sorted(t for t in release.tables
+                  if t.startswith("fact_activity_") and t != "fact_activity_source_details")
+
+
+def _activity_columns(engine, table):
+    cols = [d[0] for d in engine.con.execute("SELECT * FROM %s LIMIT 0" % table).description]
+    i, j = cols.index("Measure"), cols.index("Value")
+    return cols, cols[i + 1:j]
+
+
+def _period_label(period, period_type):
+    """'2023-06-30' -> '30 June 2023' when the period is a date; otherwise as printed."""
+    parts = str(period).split("-")
+    if len(parts) == 3 and all(x.isdigit() for x in parts) and len(parts[0]) == 4:
+        y, m, d = (int(x) for x in parts)
+        if 1 <= m <= 12:
+            return "%d %s %d" % (d, _MONTHS[m - 1], y)
+    return str(period)
+
+
+def _display_grouped(exact):
+    """The source's figure with thousands separators and its own decimals: 1561386 -> '1,561,386',
+    0.275 -> '0.275'. No rounding: what is printed is what the source printed."""
+    from decimal import Decimal
+    try:
+        x = Decimal(exact)
+    except Exception:
+        return str(exact)
+    if x == x.to_integral_value():
+        return "{:,}".format(int(x))
+    return "{:,f}".format(x)
+
+
+def _display_words(exact):
+    """A count as a reader would say it: 4,822,762 -> '4.82 million'; below a million, the grouped figure."""
+    from decimal import Decimal
+    try:
+        x = Decimal(exact)
+    except Exception:
+        return str(exact)
+    ax = abs(x)
+    if ax >= 1_000_000_000:
+        return "%s billion" % (x / 1_000_000_000).quantize(Decimal("0.01"))
+    if ax >= 1_000_000:
+        return "%s million" % (x / 1_000_000).quantize(Decimal("0.01"))
+    return _display_grouped(exact)
+
+
+def _activity_held(engine, table, where, params, column):
+    """The distinct values of one column under a filter, for a refusal that says what IS held."""
+    sql = 'SELECT DISTINCT t."%s" AS v FROM %s t' % (column, table)
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    return sorted(r[0] for r in engine.con.execute(sql, params).fetchall() if r[0] not in (None, ""))
+
+
+def query_activity(engine, req):
+    """Rows of one activity table, filtered, each carrying its definitions. The value is the
+    source's figure in the source's unit; `total` adds one computed sum and says it is one."""
+    release = engine.release
+    tables = activity_tables(release)
+    if not req.table:
+        raise E.UnknownDimensionValue("name the activity table: one of %s" % ", ".join(tables))
+    if req.table not in tables:
+        raise E.UnknownDimensionValue("%r is not an activity table of this release; the tables are %s"
+                               % (req.table, ", ".join(tables)))
+    cols, classes = _activity_columns(engine, req.table)
+    if req.location_level:
+        # matched without case, as a location is: the tables print "District", a caller types "district"
+        levels = sorted(r["Location level"] for r in
+                        engine._fetch('SELECT DISTINCT "Location level" FROM %s' % req.table))
+        if req.location_level.lower() not in {level.lower() for level in levels}:
+            raise E.UnknownDimensionValue("%r is not a location level of %s (it has: %s)"
+                                          % (req.location_level, req.table, ", ".join(levels)))
+    if req.order_by not in ("", "value desc", "value asc"):
+        raise E.UnknownDimensionValue("order_by is 'value desc', 'value asc' or empty")
+    # the filter in three parts, so a refusal can say what the release holds once one part is dropped
+    base, base_params = [], []
+    if req.measure:
+        base.append('t."Measure" = ?'); base_params.append(req.measure)
+    if req.location_level:
+        base.append('lower(t."Location level") = ?'); base_params.append(req.location_level.lower())
+    if req.categories:
+        if not classes:
+            raise E.UnknownDimensionValue("%s has no class column to filter on" % req.table)
+        base.append('lower(t."%s") IN (%s)' % (classes[0], ",".join("?" * len(req.categories))))
+        base_params += [c.lower() for c in req.categories]
+    place, place_params = [], []
+    if req.locations:
+        place.append('lower(t."Location") IN (%s)' % ",".join("?" * len(req.locations)))
+        place_params += [l.lower() for l in req.locations]
+    when, when_params = [], []
+    if req.periods:
+        # a period as printed, or the year of a printed date: "2023" finds the register of 2023-06-30
+        when.append("(" + " OR ".join(['t."Period" = ? OR t."Period" LIKE ?'] * len(req.periods)) + ")")
+        for period in req.periods:
+            when_params += [period, period + "-__-__"]
+    where, params = base + place + when, base_params + place_params + when_params
+    detailed = "fact_activity_source_details" in release.tables
+    sql = "SELECT t.*%s FROM %s t" % (
+        ', d.combinable AS "_combinable", d.source_id AS "_source_table", d.source_row AS "_source_row"' if detailed else "",
+        req.table)
+    if detailed:
+        sql += ' LEFT JOIN fact_activity_source_details d ON d."Record ID" = t."Record ID"'
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    applied = []
+    if not req.periods:
+        # the latest period of each (place, measure, classes): a register's newest stock, a
+        # series' last year - never a sum across periods
+        keys = ", ".join('t."%s"' % c for c in ["Location", "Measure"] + classes)
+        sql += ' QUALIFY t."Period" = MAX(t."Period") OVER (PARTITION BY %s)' % keys
+        applied.append("periods")
+    if req.order_by:
+        sql += ' ORDER BY TRY_CAST(t."Value" AS DOUBLE) %s NULLS LAST, t."Location", t."Period"' % req.order_by.split()[1].upper()
+    else:
+        sql += ' ORDER BY t."Location", t."Period"' + "".join(', t."%s"' % c for c in classes)
+    cap = req.limit if req.limit and req.limit > 0 else ACTIVITY_ROW_CAP
+    sql += " LIMIT %d" % (cap + 1)
+    cur = engine.con.execute(sql, params)
+    names = [d[0] for d in cur.description]
+    rows = [dict(zip(names, r)) for r in cur.fetchall()]
+    if not rows:
+        # an empty answer would read as "there is none"; say what the release holds instead
+        # worded for a reader: the refusal is shown as written, so it names the subject and never a table id
+        target = " ".join(x for x in (req.measure or "anything", "/".join(req.categories),
+                                      "in " + ", ".join(req.locations) if req.locations else "") if x)
+        if req.periods:
+            held = _activity_held(engine, req.table, base + place, base_params + place_params, "Period")
+            if held:
+                span = ("%s to %s (%d periods)" % (_period_label(held[0], ""), _period_label(held[-1], ""), len(held))
+                        if len(held) > 1 else _period_label(held[0], ""))
+                raise E.UnknownDimensionValue(
+                    "no record of %s is held for %s; the records held run %s, and nothing later is held"
+                    % (target, ", ".join(req.periods), span),
+                    dimension="periods", first_period=held[0], last_period=held[-1])
+        if req.locations:
+            known = _activity_held(engine, req.table, base, base_params, "Location")
+            near = [k for k in known if any(k.lower().startswith(l.lower()[:3]) for l in req.locations)][:12]
+            raise E.UnknownDimensionValue(
+                "no record of %s is held; these records name %d places%s"
+                % (target, len(known), (", among them " + ", ".join(near)) if near else ""),
+                dimension="locations")
+        raise E.UnknownDimensionValue("no record of %s is held" % target)
+    truncated = len(rows) > cap
+    rows = rows[:cap]
+    values = []
+    for r in rows:
+        exact = str(r["Value"] if r["Value"] not in (None, "") else "")
+        decimals = 0 if exact and exact.lstrip("-").replace(".", "", 1).isdigit() and float(exact) == int(float(exact)) else 3
+        extra = _activity_extra(r, classes)
+        if exact:
+            extra["display"] = _display_grouped(exact)
+            extra["display_words"] = _display_words(exact)
+        values.append(value(exact, r["Unit"], decimals, row_ids=[r["Record ID"]],
+                            formula="as printed by the source; no arithmetic", **extra))
+    if req.total:
+        values.append(_activity_total(req, rows, classes, truncated, detailed))
+    cur = engine.con.execute('SELECT "column", meaning FROM dim_activity_columns WHERE file = ?',
+                             [req.table.replace("fact_", "") + ".csv"])
+    definitions = {column: meaning for column, meaning in cur.fetchall()}
+    fields = dataclasses.asdict(req)
+    fields.update({"periods": tuple(sorted({r["Period"] for r in rows})), "basis": "as printed",
+                   "configuration_id": "", "gwp_basis": "", "geography_level": req.location_level or "",
+                   "geography_ids": tuple(req.locations), "spatial_view": ""})
+    limitation = "activity:registered_stock" if req.table == "fact_activity_vehicles" else ""
+    return envelope(release, "query_activity", canonical_json(req), fields, values,
+                    {"kind": "records", "table": req.table, "class_columns": classes,
+                     "definitions": definitions, "rows": len(rows), "truncated": truncated,
+                     "total": bool(req.total),
+                     "note": "each row's value is the source's own figure in the source's unit, never converted "
+                             "or inferred, and its use note states what the figure is not; a `total` value is "
+                             "the one sum this function computes, over one place, one period and one measure"},
+                    engine._provenance([req.table]),
+                    limitations_hit=[limitation] if limitation in release.limitations else [],
+                    defaults_applied=applied)
+
+
+def _activity_extra(r, classes):
+    """The definitions one activity row carries: what is counted, where, when, on what evidence,
+    from which source, and what the figure may not be read as."""
+    extra = {"measure": r["Measure"], "location": r["Location"], "province": r.get("Province") or "",
+             "locality": r.get("Locality") or "", "location_level": r["Location level"],
+             "period": r["Period"], "period_type": r["Period type"],
+             "period_label": _period_label(r["Period"], r["Period type"]),
+             "classes": {c: r[c] for c in classes}, "category": r[classes[0]] if classes else "",
+             "evidence": r["Evidence"], "source_status": r.get("Source status") or "",
+             "source_series": r["Source series"], "use_note": r["Use note"],
+             "source_reference": r["Source reference"], "record_id": r["Record ID"]}
+    if r.get("_combinable"):
+        extra["combinable"] = r["_combinable"]
+    if r.get("_source_table"):
+        # where the figure sits in the deposit: the ingested table and its row
+        extra["source_table"] = r["_source_table"]
+        extra["source_row"] = str(r.get("_source_row") or "")
+    return extra
+
+
+def _activity_total(req, rows, classes, truncated, detailed):
+    """The sum of the rows returned, as ONE more value, under the release's own additivity rules:
+    one measure, one unit, one place and one period, every row marked combinable. A register
+    summed across years would count each vehicle once per year, and a projection summed with a
+    count is neither, so anything wider is refused rather than added."""
+    from decimal import Decimal, InvalidOperation
+    if truncated:
+        raise E.GrainUnavailable("a total needs every row and this result was cut at its row cap; narrow the request")
+    if not detailed:
+        raise E.GrainUnavailable("this release ships no combinable column, so no activity total is computed")
+    for column, word in (("Measure", "measure"), ("Unit", "unit"), ("Location", "place"), ("Period", "period")):
+        found = sorted({r[column] for r in rows})
+        if len(found) != 1:
+            raise E.GrainUnavailable(
+                "a total is over the classes of one measure, one place and one period; this request returned %d %ss "
+                "(%s). Name one." % (len(found), word, ", ".join(found[:8])), dimension=word)
+    barred = sorted({r.get("_combinable") or "(not stated)" for r in rows
+                     if not str(r.get("_combinable") or "").lower().startswith("yes")})
+    if barred:
+        raise E.GrainUnavailable("the release marks these rows as not to be combined: %s" % "; ".join(barred),
+                                 dimension="combinable")
+    if len({r["Evidence"] for r in rows}) != 1:
+        raise E.GrainUnavailable("these rows mix evidence classes (%s) and are not summed"
+                                 % ", ".join(sorted({r["Evidence"] for r in rows})), dimension="evidence")
+    try:
+        total = sum((Decimal(str(r["Value"])) for r in rows), Decimal(0))
+    except (InvalidOperation, TypeError):
+        raise E.GrainUnavailable("a row of this result has no numeric value, so no total is computed")
+    exact = str(total.quantize(Decimal(1)) if total == total.to_integral_value() else total)
+    first = rows[0]
+    summed = [r[classes[0]] for r in rows] if classes else []
+    extra = _activity_extra(first, classes)
+    extra.update({"classes": {c: "" for c in classes}, "category": "Every class held, summed",
+                  "classes_summed": "; ".join(summed), "derived": "sum",
+                  "interpretation": "Computed here as the sum of the %s rows this release holds for this place and "
+                                    "period. It is not a figure the source printed: the release withholds printed "
+                                    "total rows, so a class the source lists and this release does not hold is not in it."
+                                    % (classes[0].lower() if classes else "class"),
+                  "record_id": "", "display": _display_grouped(exact), "display_words": _display_words(exact)})
+    extra.pop("source_row", None)
+    return value(exact, first["Unit"], 0 if "." not in exact else 3, row_ids=[r["Record ID"] for r in rows],
+                 formula="sum of the %d rows above, as printed" % len(rows), **extra)
+
+

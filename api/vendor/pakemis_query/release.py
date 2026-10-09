@@ -26,6 +26,28 @@ def _canonical_text(columns, rows, key):
     return buf.getvalue()
 
 
+class VerificationCache:
+    """Share work within one startup audit; changed files never reuse a cached digest."""
+
+    def __init__(self):
+        self._digests = {}
+
+    def _get(self, path, representation, calculate):
+        stat = os.stat(path)
+        key = (os.path.realpath(path), stat.st_dev, stat.st_ino, stat.st_size,
+               stat.st_mtime_ns, stat.st_ctime_ns, representation)
+        if key not in self._digests:
+            self._digests[key] = calculate()
+        return self._digests[key]
+
+    def sha256_file(self, path):
+        return self._get(path, "bytes", lambda: _sha256_file(path))
+
+    def parquet_digest(self, path, table):
+        shape = (tuple(table["columns"]), tuple(table["primary_key"]))
+        return self._get(path, shape, lambda: Release._parquet_digest(path, table))
+
+
 class Release:
     """`Release.open(directory)`: `directory` holds semantic_release.json and the tables;
     `manifest_path` (optional) is the release manifest, used only to report the commit."""
@@ -42,24 +64,27 @@ class Release:
         self._dims = {}
 
     @classmethod
-    def open(cls, directory, verify=True, manifest_path=None):
+    def open(cls, directory, verify=True, manifest_path=None, verification_cache=None):
         with open(os.path.join(directory, "semantic_release.json"), encoding="utf-8") as handle:
             contract = json.load(handle)
         verified = {}
+        cache = verification_cache or VerificationCache()
         if verify:
             for name, table in dict(contract["dimensions"], **contract["facts"]).items():
                 csv_path = os.path.join(directory, os.path.basename(table["path"]))
                 pq_path = os.path.join(directory, os.path.basename(table["parquet"]["path"]))
+                present = []
                 if os.path.exists(csv_path):
-                    digest = _sha256_file(csv_path)
-                elif os.path.exists(pq_path):
-                    digest = cls._parquet_digest(pq_path, table)
-                else:
+                    present.append((csv_path, cache.sha256_file(csv_path)))
+                if os.path.exists(pq_path):
+                    present.append((pq_path, cache.parquet_digest(pq_path, table)))
+                if not present:
                     raise IdentityError("%s: neither the CSV nor the Parquet is present" % name)
-                if digest != table["sha256_csv"]:
-                    raise IdentityError("%s: bytes do not match the contract (%s != %s)"
-                                        % (name, digest[:12], table["sha256_csv"][:12]), table=name)
-                verified[name] = digest
+                for path, digest in present:
+                    if digest != table["sha256_csv"]:
+                        raise IdentityError("%s: bytes do not match the contract (%s != %s)"
+                                            % (path, digest[:12], table["sha256_csv"][:12]), table=name)
+                verified[name] = table["sha256_csv"]
         release = cls(directory, contract, verified)
         release.commit = None
         if manifest_path and os.path.exists(manifest_path):

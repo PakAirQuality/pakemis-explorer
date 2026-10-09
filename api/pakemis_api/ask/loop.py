@@ -78,10 +78,15 @@ class AnthropicModel:
             self._client = anthropic.Anthropic()          # the key comes from the environment, never from settings
         return self._client
 
-    def stream(self, system, messages, tools):
+    # the loop may hand stream() a timeout: how long this one call may stay silent (see Limits)
+    accepts_timeout = True
+
+    def stream(self, system, messages, tools, timeout_s=None):
         import anthropic
         kwargs = dict(model=self.model_id, max_tokens=self.max_tokens, tools=tools, messages=messages,
                       system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}])
+        if timeout_s:
+            kwargs["timeout"] = float(timeout_s)
         if self._thinking:
             kwargs["thinking"] = self._thinking
         if self.effort:
@@ -147,7 +152,10 @@ def _metric_of(env):
 
 _CELL_SKIP = {"exact", "value", "display", "display_short", "unit", "unit_words", "unit_short", "quantiles_short",
               "share_pct_short", "interval_short",       # derived figures no placeholder can print
-              "result_row_ids", "formula", "group"}
+              "result_row_ids", "formula", "group",
+              # an activity record: its reader form is printed through .short, and its ids and deposit
+              # locator are for the receipt, not for prose
+              "display_words", "record_id", "source_table", "source_row", "source_status"}
 _NUMERIC = re.compile(r"^[-+]?(\d+[.,]?\d*|\.\d+)([eE][-+]?\d+)?$")
 _ID_KEYS = ("month", "period_id")           # digit-shaped identifiers the model may name
 
@@ -464,11 +472,28 @@ class Turn:
             if turns >= self.limits.max_turns:
                 yield "error", {"code": "turn_limit", "message": "the agent made %d model calls without a final answer" % turns}
                 break
+            # the turn's clock: no further model call once it has run out (see Limits.turn_seconds)
+            elapsed = time.time() - started
+            deadline = self.limits.turn_seconds
+            if deadline and elapsed >= deadline:
+                log.warning("ask turn stopped at its deadline: %.1f s, %d model call(s), %d tool call(s)", elapsed, turns, k)
+                yield "error", {"code": "turn_timeout",
+                                "message": "The assistant took too long over this question and stopped. "
+                                           "Nothing was lost: ask it again, or ask for one thing at a time."}
+                break
             turns += 1
             yield "status", {"phase": "model", "turn": turns}
             text_parts, calls, stop = [], [], None
+            # one line when a model call starts and one when it ends, so a call that never returns is
+            # visible in the log as a start with no end - the stalled turn left nothing at all
+            stall = self.limits.model_stall_seconds
+            if stall and deadline:
+                stall = max(5.0, min(float(stall), deadline - elapsed))
+            log.info("ask model call %d starting at %.1f s%s", turns, elapsed, " (silent for at most %.0f s)" % stall if stall else "")
+            call_started = time.time()
+            stream_kwargs = {"timeout_s": stall} if stall and getattr(self.model, "accepts_timeout", False) else {}
             try:
-                for ev in self.model.stream(self.system, messages, self.tools):
+                for ev in self.model.stream(self.system, messages, self.tools, **stream_kwargs):
                     if ev.kind == "thinking_delta":
                         yield "thinking", {"text": ev.text}
                     elif ev.kind == "text_delta":
@@ -478,9 +503,16 @@ class Turn:
                     elif ev.kind == "stop":
                         stop = ev
             except ModelError as exc:
-                log.warning("model error: %s", exc)
-                yield "error", {"code": "model_error", "message": str(exc)}
+                log.warning("ask model call %d failed after %.1f s: %s", turns, time.time() - call_started, exc)
+                # a call cut for going silent is the reader's "try again", not a model's error message
+                if "timeout" in str(exc).lower() or "timed out" in str(exc).lower():
+                    yield "error", {"code": "turn_timeout",
+                                    "message": "The assistant stopped answering part-way through and was cut off. "
+                                               "Nothing was lost: ask it again."}
+                else:
+                    yield "error", {"code": "model_error", "message": str(exc)}
                 break
+            log.info("ask model call %d returned in %.1f s with %d tool call(s)", turns, time.time() - call_started, len(calls))
             if stop is None:
                 stop = ModelEvent("stop", stop_reason="tool_use" if calls else "end_turn")
             self._spend(stop.usage)
@@ -505,7 +537,9 @@ class Turn:
                                              "content": "tool call limit (%d) reached for this message; answer with the results you have" % self.limits.max_tool_calls})
                         continue
                     yield "status", {"phase": "tool", "k": k, "name": call.name}
+                    tool_started = time.time()
                     body, is_error, out = self._execute(k, call)
+                    log.info("ask tool call %d (%s) took %.2f s%s", k, call.name, time.time() - tool_started, ", refused" if is_error else "")
                     for name, payload in out:
                         yield name, payload
                     tr = {"type": "tool_result", "tool_use_id": call.id, "content": body}

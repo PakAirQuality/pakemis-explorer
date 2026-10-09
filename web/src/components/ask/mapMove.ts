@@ -59,6 +59,10 @@ const first = (v: unknown): string => (Array.isArray(v) && typeof v[0] === "stri
 const SCOPED_TOOLS = new Set(["query_emissions", "query_air"]);
 
 export function mapPatchFromInput(input: Record<string, unknown>, tool?: string): Partial<ExplorerState> {
+  // A RECORD IS NOT A MAP LAYER. An activity query's `periods` are dates as a register prints them
+  // ("2023-06-30", "2023"), and patching one onto the map would set a fiscal year that does not
+  // exist; its places are names, not shapes. The map stays where the reader left it.
+  if (tool === "query_activity") return {};
   if (tool && SCOPED_TOOLS.has(tool)) {
     const level = typeof input.geography_level === "string" ? input.geography_level : "";
     const whole: Record<string, string | null> = {

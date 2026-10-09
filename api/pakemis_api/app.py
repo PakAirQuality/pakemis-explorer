@@ -530,6 +530,8 @@ class Service:
             env = self.engine.query_emissions(request)
         elif name == "QueryAir":
             env = self.engine.query_air(request)
+        elif name == "QueryActivity":
+            env = F.query_activity(self.engine, request)
         elif name == "CompareRequest":
             env = F.compare_emissions(self.engine, request)
         elif name == "TimeseriesRequest":
@@ -886,6 +888,17 @@ def create_app(settings=None, model_client=None):
         power kept out of every total and returned beside it as a screening pair (`completeness`).
         `years` asks for agriculture's 1990-2024 calendar history instead. A request that names
         neither is answered for the reference fiscal period (see `context.defaults_applied`)."""
+        return svc().run(G.to_request(body))
+
+    @api.post("/query/activity", tags=["query"])
+    def activity(body: G.QueryActivityModel):
+        """ACTIVITY RECORDS behind the inventory (the fact_activity_* tables): a count, a quantity
+        or a rate as its source printed it - registered vehicles by class and district, livestock
+        by species, fuel sales by product and customer group, crop areas, generation by plant -
+        each with its measure, class, place and level, period and period type, unit, evidence
+        class, source series and use note. Never an emission, never summed or converted: a vehicle
+        register is a registered stock, not traffic, and the use note says so. `periods` empty
+        returns the latest period of each place and class."""
         return svc().run(G.to_request(body))
 
     @api.post("/query/compare", tags=["query"])

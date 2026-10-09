@@ -367,8 +367,13 @@ def test_tools_are_the_contract_functions_plus_set_map_view(ask_client):
     from pakemis_api.ask.tools import FUNCTION_MODEL, inline_schema
     runtime = ask_client.app.state.ask
     contract = ask_client.get("/api/v1/emissions/release").json()["query_contract"]["functions"]
-    assert [t["name"] for t in runtime.tools] == contract + ["set_map_view"]
-    assert len(runtime.tools) == 13  # 12 + query_air (the air beta)
+    from pakemis_api.ask.tools import BACKFILLED
+    # the contract's functions in the contract's order; then a function the core answers on a
+    # contract written before it existed (none once the contract names it); then the map tool
+    backfilled = [name for name in BACKFILLED if name not in contract]
+    assert [t["name"] for t in runtime.tools] == contract + backfilled + ["set_map_view"]
+    assert "query_activity" in [t["name"] for t in runtime.tools]
+    assert len(runtime.tools) == 14  # 12 + query_air (the air beta) + query_activity
     for tool in runtime.tools:
         assert tool["description"] and tool["input_schema"]["type"] == "object"
         assert "$defs" not in json.dumps(tool) and '"title"' not in json.dumps(tool)

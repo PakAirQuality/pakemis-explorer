@@ -24,7 +24,7 @@ from pakemis_query import models as M  # noqa: E402
 
 REQUEST_TYPES = [M.QueryEmissions, M.QueryAir, M.CompareRequest, M.TimeseriesRequest, M.UncertaintyRequest,
                  M.CompletenessRequest, M.EvidenceRequest, M.MethodRequest, M.SpatialLineageRequest,
-                 M.TransferRequest, M.GridCellRequest, M.DownloadRequest]
+                 M.TransferRequest, M.GridCellRequest, M.DownloadRequest, M.QueryActivity]
 BY_NAME = {t.__name__: t for t in REQUEST_TYPES}
 
 _COMMENT = re.compile(r"^\s*(\w+)\s*:\s*[^#]*#\s*(.*?)\s*$")
@@ -94,6 +94,7 @@ SpatialLineageRequestModel = MODELS["SpatialLineageRequest"]
 TransferRequestModel = MODELS["TransferRequest"]
 GridCellRequestModel = MODELS["GridCellRequest"]
 DownloadRequestModel = MODELS["DownloadRequest"]
+QueryActivityModel = MODELS["QueryActivity"]
 
 
 def _coerce(dc, payload):

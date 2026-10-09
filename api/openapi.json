@@ -144,9 +144,74 @@
     "title": "HTTPValidationError",
     "type": "object"
    },
+   "QueryActivity": {
+    "additionalProperties": false,
+    "description": "A record from the activity tables behind the inventory (fact_activity_*): a count, a\nquantity or a rate AS ITS SOURCE PRINTED IT, with the definitions that make it readable -\nthe measure, the class, the place and its level, the period and its type, the unit, the\nevidence class, the source series and the use note. Never an emission and never converted:\na vehicle register is a registered stock, not traffic, and the use note says so. The one\narithmetic offered is `total`, a sum over the classes of ONE place at ONE date, marked as\ncomputed here and refused wherever the release says the rows may not be combined.",
+    "properties": {
+     "categories": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Categories",
+      "type": "array"
+     },
+     "limit": {
+      "default": 0,
+      "description": "0 -> the contract's row cap",
+      "title": "Limit",
+      "type": "integer"
+     },
+     "location_level": {
+      "default": "",
+      "description": "national | province | district | sales area | airport | plant; empty -> any level",
+      "title": "Location Level",
+      "type": "string"
+     },
+     "locations": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Locations",
+      "type": "array"
+     },
+     "measure": {
+      "default": "",
+      "description": "the table's Measure as printed (\"Registered vehicles\"); empty -> every measure",
+      "title": "Measure",
+      "type": "string"
+     },
+     "order_by": {
+      "default": "",
+      "description": "\"value desc\" | \"value asc\" | \"\"",
+      "title": "Order By",
+      "type": "string"
+     },
+     "periods": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Periods",
+      "type": "array"
+     },
+     "table": {
+      "default": "",
+      "description": "fact_activity_vehicles | fact_activity_livestock | ... (empty -> refused, with the list)",
+      "title": "Table",
+      "type": "string"
+     },
+     "total": {
+      "default": false,
+      "description": "true -> one more value after the rows: their sum, for one measure, place and period only",
+      "title": "Total",
+      "type": "boolean"
+     }
+    },
+    "title": "QueryActivity",
+    "type": "object"
+   },
    "QueryAir": {
     "additionalProperties": false,
-    "description": "The air beta: native kt of a named species, never CO2e. Seven sectors carry a layer\n(industry, IPPU and fugitives are NE); the spatial and timeseries grains are\nagriculture's alone. A sum across pollutants is refused - the particulate strata\ncontain one another - so a request either filters to one pollutant or groups by it.",
+    "description": "The air tables: native kt of a named species, never CO2e. `periods` (fiscal) asks the\ncovered-sources family - the national panel and its province and district marginals -\nand `years` (calendar) the national agriculture series; a request naming neither is\nanswered for the reference period and says so. Which sectors a grain holds is read from\nits table, not listed here. A sum across pollutants is refused - the particulate strata\ncontain one another - so a request either filters to one pollutant or groups by it.",
     "properties": {
      "categories": {
       "items": {
@@ -810,6 +875,46 @@
     "summary": "One product file from the release payload (attachment; ETag = sha256; immutable; ranges)",
     "tags": [
      "products"
+    ]
+   }
+  },
+  "/api/v1/emissions/query/activity": {
+   "post": {
+    "description": "ACTIVITY RECORDS behind the inventory (the fact_activity_* tables): a count, a quantity\nor a rate as its source printed it - registered vehicles by class and district, livestock\nby species, fuel sales by product and customer group, crop areas, generation by plant -\neach with its measure, class, place and level, period and period type, unit, evidence\nclass, source series and use note. Never an emission, never summed or converted: a vehicle\nregister is a registered stock, not traffic, and the use note says so. `periods` empty\nreturns the latest period of each place and class.",
+    "operationId": "activity_api_v1_emissions_query_activity_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/QueryActivity"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Activity",
+    "tags": [
+     "query"
     ]
    }
   },

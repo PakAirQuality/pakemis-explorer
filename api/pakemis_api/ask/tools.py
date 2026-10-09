@@ -27,12 +27,35 @@ FUNCTION_MODEL = {
     "get_cross_sector_transfer": "TransferRequest",
     "get_grid_cell": "GridCellRequest",
     "download_query_result": "DownloadRequest",
+    "query_activity": "QueryActivity",
 }
+# A function the query core answers on a release whose contract was written before the function
+# existed, with the tables it needs. query_activity reads only release tables (the fact_activity_*
+# family, shipped since rc55, and their dictionary), so a release that holds them can answer it;
+# offered AFTER the contract's own functions, and not at all once the contract names it.
+BACKFILLED = {"query_activity": ("fact_activity_vehicles", "dim_activity_columns")}
 MAP_TOOL = "set_map_view"
 DOWNLOAD_TOOL = "download_query_result"
 ENGINE_TOOLS = tuple(n for n in FUNCTION_MODEL if n != DOWNLOAD_TOOL)
 
 WHEN_TO_CALL = {
+    "query_activity": "ACTIVITY RECORDS, not emissions: how many vehicles are registered in a district and of "
+                      "what class, how many animals of a species, how much fuel was sold to a customer group, "
+                      "how much electricity a plant generated, what area a crop covered. Call this for any "
+                      "question about a COUNT, a STOCK, a QUANTITY SOLD or PRODUCED, or an AREA - never "
+                      "query_emissions, which would answer with an emission. Name the `table` and the `measure`; "
+                      "leave `periods` empty for the newest figure of each place and class; filter `locations` "
+                      "by the place named in the question. Every value comes back with its measure, class, "
+                      "place, period, unit, evidence, source series and use note: report those with the figure, "
+                      "and report the use note's qualification (a register is a stock, not traffic). For "
+                      "\"altogether\" or \"in total\" set `total` true with ONE place, ONE measure and periods "
+                      "empty or one period: the LAST cell is then the sum of the classes held, computed by the "
+                      "server and marked so - say it is the sum of the classes listed, not a figure the source "
+                      "printed. A refusal that names the span of periods held is the answer to a question about "
+                      "a year outside it: give the newest figure and say nothing later is held. "
+                      "{{result_k_cell_n}} prints the figure as the source printed it and "
+                      "{{result_k_cell_n.short}} the same figure as a reader says it. Never add rows yourself, "
+                      "never convert a count into an emission, and never answer a count from memory.",
     "query_air": "AIR POLLUTANT EMISSIONS (NOx, SO2, CO, NMVOC, PM2.5, BC, NH3) in native kilotonnes for a fiscal "
                  "period - never CO2e, never a concentration or a measure of air quality, never summed across "
                  "pollutants. ALWAYS give `periods` (the fiscal year in question): that selects the covered-sources "
@@ -151,10 +174,56 @@ class Dims:
         except Exception:           # the table is optional in older releases
             self.ledger_ids = []
         self.limitations = {k: v for k, v in rel.limitations.items() if not k.startswith("completeness:")}
+        self.activity_tables = sorted(n for n in rel.tables
+                                      if n.startswith("fact_activity_") and n != "fact_activity_source_details")
+        self.activity_catalog = activity_catalog(service.engine, self.activity_tables)
+        self.activity_levels = sorted({level for entry in self.activity_catalog.values() for level in entry["levels"]})
         self.functions = list(rel.contract["query_contract"]["functions"])
+        self.backfilled = [name for name, tables in BACKFILLED.items()
+                           if name not in self.functions and all(t in rel.tables for t in tables)]
+        self.functions += self.backfilled
         missing = [f for f in self.functions if f not in FUNCTION_MODEL]
         if missing:
             raise RuntimeError("query_contract names functions this agent has no model for: %s" % missing)
+
+
+# a class column is listed value by value only when a reader could hold the list in mind
+ACTIVITY_CLASS_LIST_MAX = 12
+
+
+def activity_catalog(engine, tables):
+    """table -> {measures, class_columns, levels, classes}: what each activity table holds, read from
+    the release so the tool names real measures, levels and classes and never a remembered one.
+    `classes` is the first class column's values, listed only when there are few of them."""
+    out = {}
+    for table in tables:
+        columns = [r["column_name"] for r in engine._fetch("DESCRIBE %s" % table)]
+        if "Measure" not in columns or "Value" not in columns:
+            continue
+        class_columns = columns[columns.index("Measure") + 1:columns.index("Value")]
+        entry = {"class_columns": class_columns,
+                 "measures": sorted(r["m"] for r in engine._fetch('SELECT DISTINCT "Measure" AS m FROM %s' % table)),
+                 "levels": sorted(r["l"] for r in engine._fetch('SELECT DISTINCT "Location level" AS l FROM %s' % table)),
+                 "classes": []}
+        if class_columns:
+            classes = sorted(r["c"] for r in engine._fetch('SELECT DISTINCT "%s" AS c FROM %s' % (class_columns[0], table))
+                             if r["c"])
+            if len(classes) <= ACTIVITY_CLASS_LIST_MAX:
+                entry["classes"] = classes
+        out[table] = entry
+    return out
+
+
+def activity_catalog_text(catalog):
+    """One line per table for the tool description: its measures, how it is classed, where it reaches."""
+    lines = ["THE ACTIVITY TABLES (measures | classed by | location levels):"]
+    for table, entry in catalog.items():
+        line = "%s: %s | %s | %s" % (table, "; ".join(entry["measures"]), ", ".join(entry["class_columns"]) or "unclassed",
+                                     ", ".join(entry["levels"]))
+        if entry["classes"]:
+            line += " | %s = %s" % (entry["class_columns"][0], "; ".join(entry["classes"]))
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _field_values(dims, model_name=None):
@@ -200,6 +269,24 @@ def _field_values(dims, model_name=None):
         "format": (["csv"], "the explorer serves CSV and RECEIPT.json"),
         "module": (dims.sectors, ""),
     }
+    if model_name == "QueryActivity":
+        values["table"] = (dims.activity_tables, "one activity table per call; the tool description lists what "
+                           "each one measures, how it is classed and which location levels it reaches")
+        values["locations"] = (["Pakistan"] + dims.adm1_names + ["district names as printed (e.g. Lahore)"],
+                               "place names as the source prints them; empty -> every place")
+        values["location_level"] = (dims.activity_levels, "empty -> any level")
+        values["periods"] = (["as printed: a date (2023-06-30), FY2023-24, 2023, or a survey round"],
+                             "empty -> the latest period of each place and class, which is what a 'how many' "
+                             "question wants")
+        values["measure"] = (["a measure of the chosen table, exactly as the tool description lists it "
+                              "(e.g. 'Registered vehicles')"],
+                             "empty -> every measure; a table holding several (vehicles also holds distance and "
+                             "fuel-share assumptions) is read one measure at a time")
+        values["categories"] = (["values of the table's FIRST class column, exactly as listed or as a previous "
+                                 "result printed them (e.g. 'Small cars (4W1)', 'Two-wheelers (2W)')"],
+                                "empty -> every class")
+        values["geography_level"] = ([], "")
+        values["geography_ids"] = ([], "")
     if model_name == "QueryAir":
         values["group_by"] = (dims.air_groups,
                               "the AIR tables; they do not carry gas, module, spatial_view, "
@@ -220,7 +307,7 @@ def _enrich(schema, dims, values):
                 if note:
                     text += " " + note + "."
                 prop["description"] = (prop.get("description", "") + " " + text).strip()
-                closed = name in ("basis", "gwp_basis", "geography_level", "spatial_view", "step", "mode", "scope", "gas")
+                closed = name in ("basis", "gwp_basis", "geography_level", "spatial_view", "step", "mode", "scope", "gas", "table", "location_level")
                 if closed and prop.get("type") == "string":
                     enum = list(allowed)
                     if prop.get("default", None) == "" and "" not in enum:
@@ -238,6 +325,8 @@ def function_tool(name, dims):
     dc = G.BY_NAME[FUNCTION_MODEL[name]]
     fn = getattr(F, name, None)
     parts = [p for p in (_docstring(dc), _docstring(fn) if fn else "", WHEN_TO_CALL[name]) if p]
+    if name == "query_activity":
+        parts.append(activity_catalog_text(dims.activity_catalog))
     return {"name": name, "description": "\n".join(parts), "input_schema": schema}
 
 
@@ -317,5 +406,6 @@ def validate_map_view(payload, dims):
 
 
 def build_tools(dims):
-    """The tool list in contract order: query_contract.functions, then set_map_view."""
+    """The tool list in contract order: query_contract.functions, any BACKFILLED function the release's
+    tables can answer, then set_map_view."""
     return [function_tool(name, dims) for name in dims.functions] + [map_view_tool(dims)]

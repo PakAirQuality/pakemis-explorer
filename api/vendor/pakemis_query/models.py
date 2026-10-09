@@ -47,22 +47,46 @@ class QueryEmissions:
 
 @dataclass(frozen=True)
 class QueryAir:
-    """The air beta: native kt of a named species, never CO2e. Seven sectors carry a layer
-    (industry, IPPU and fugitives are NE); the spatial and timeseries grains are
-    agriculture's alone. A sum across pollutants is refused - the particulate strata
+    """The air tables: native kt of a named species, never CO2e. `periods` (fiscal) asks the
+    covered-sources family - the national panel and its province and district marginals -
+    and `years` (calendar) the national agriculture series; a request naming neither is
+    answered for the reference period and says so. Which sectors a grain holds is read from
+    its table, not listed here. A sum across pollutants is refused - the particulate strata
     contain one another - so a request either filters to one pollutant or groups by it."""
     pollutants: tuple = ()              # subset of dim_pollutant; empty -> all, grouped
-    sectors: tuple = ()                 # sector_id filter over the seven covered sectors
+    sectors: tuple = ()                 # sector_id filter (Engine.AIR_SECTORS)
     categories: tuple = ()
     geography_level: str = ""           # national | adm1 | adm2; empty -> national
     geography_ids: tuple = ()           # province names or district labels
     years: tuple = ()                   # 1990..2024 -> the agriculture timeseries grain
-    periods: tuple = ()                 # FY2015-16..FY2023-24 -> the covered-sources panel,
+    periods: tuple = ()                 # FY2015-16..FY2023-24 -> the covered-sources panel;
+                                        # empty with no years -> the reference period,
                                         # national or (rc49) adm1/adm2 spatial by-year
     configuration_id: str = ""          # panel + spatial by-year: REF_2023_24 (default) | S_HIES1925
     group_by: tuple = ()                # subset of pollutant sector_id category subitem province district year
     order_by: str = ""
     limit: int = 0
+    defaults_applied: tuple = field(default=(), compare=False)
+
+
+@dataclass(frozen=True)
+class QueryActivity:
+    """A record from the activity tables behind the inventory (fact_activity_*): a count, a
+    quantity or a rate AS ITS SOURCE PRINTED IT, with the definitions that make it readable -
+    the measure, the class, the place and its level, the period and its type, the unit, the
+    evidence class, the source series and the use note. Never an emission and never converted:
+    a vehicle register is a registered stock, not traffic, and the use note says so. The one
+    arithmetic offered is `total`, a sum over the classes of ONE place at ONE date, marked as
+    computed here and refused wherever the release says the rows may not be combined."""
+    table: str = ""                     # fact_activity_vehicles | fact_activity_livestock | ... (empty -> refused, with the list)
+    measure: str = ""                   # the table's Measure as printed ("Registered vehicles"); empty -> every measure
+    locations: tuple = ()               # Location names as printed ("Lahore", "Punjab", "Pakistan"); empty -> every location
+    location_level: str = ""            # national | province | district | sales area | airport | plant; empty -> any level
+    categories: tuple = ()              # the table's first class column ("Small cars (4W1)", "buffalo"); empty -> every class
+    periods: tuple = ()                 # Period strings as printed ("2023-06-30", "FY2023-24") or a date's year ("2023"); empty -> the latest period of each place and class
+    total: bool = False                 # true -> one more value after the rows: their sum, for one measure, place and period only
+    order_by: str = ""                  # "value desc" | "value asc" | ""
+    limit: int = 0                      # 0 -> the contract's row cap
     defaults_applied: tuple = field(default=(), compare=False)
 
 

@@ -70,6 +70,9 @@ export function attachmentOf(principal: ToolItem | null, answer: AnswerEvent, it
   // the answers that deserved it.
   const method = methodTool(items) ?? (principal.name === "get_method" || r.request_type === "get_method" ? principal : null);
   if (method?.result && methodDisclosure(method.result).method) return "method";
+  // a record is said in the prose with its date and source; a chart titled "National emissions"
+  // over a vehicle count would be a card about something else
+  if (principal.name === "query_activity" || r.request_type === "query_activity") return "none";
   const kind = chartKind(r.cells);
   // "figure", "table" and "none" alike draw nothing: a lone figure is already cited in the prose,
   // and a table is machine rows, which never print themselves
@@ -113,6 +116,7 @@ export function restedOn(r: ToolResultEvent, input: Record<string, unknown>): st
   if (r.request_type === "get_evidence" || r.name === "get_evidence") return "Evidence record";
   if (r.request_type === "get_method" || r.name === "get_method") return "Method record";
   if (r.request_type === "get_completeness" || r.name === "get_completeness") return "Completeness ledger";
+  if (r.request_type === "query_activity" || r.name === "query_activity") return "Source record";
   const level = typeof r.context?.geography_level === "string" ? r.context.geography_level : "national";
   const place = PLACE[level] ?? "National";
   const shape = shapeWord(r, input);
@@ -175,6 +179,7 @@ export function scopeNote(r: ToolResultEvent, words: { period: (id: string) => s
 const SPECIAL: Record<string, string> = {
   get_uncertainty: "uncertainty analysis", get_evidence: "evidence records",
   get_method: "method records", get_completeness: "the completeness ledger",
+  query_activity: "source records",
 };
 
 /** The constant second half of the provenance line: it is the published release, and nothing else. */
@@ -228,7 +233,8 @@ export function followUps(principal: ToolItem | null, answer: AnswerEvent, turnH
   const out: string[] = [];
   if (chartKind(r.cells) === "columns") out.push(CHANGE_FOLLOW_UP);
   // the interval function is the greenhouse inventory's: offering it under an air answer asked for something the release cannot give
-  if (!turnHasUncertainty && principal.name !== "query_air") out.push(UNCERTAINTY_FOLLOW_UP);
+  // nor under a record: a register's count has no interval in this release
+  if (!turnHasUncertainty && principal.name !== "query_air" && principal.name !== "query_activity") out.push(UNCERTAINTY_FOLLOW_UP);
   if (out.length < 2 && r.context?.geography_level === "adm1") {
     const ids = r.context?.geography_ids;
     if (Array.isArray(ids) && ids.length === 1 && (dims?.adm1?.length ?? 0) > 1) out.push(COMPARE_FOLLOW_UP);

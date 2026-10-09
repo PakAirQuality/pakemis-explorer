@@ -38,6 +38,8 @@ import json
 from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN
 
 COUNT_UNITS = ("rows", "count")
+# the field an activity record carries from the query core: its figure as a reader would say it
+ACTIVITY_WORDS = "display_words"
 DECIMALS = 2
 Q = Decimal("0.01")
 BELOW = "<0.01"          # a non-zero value that would print as 0.00
@@ -288,13 +290,17 @@ PRESENTATION_ROUNDING = {
         "trailing zeros kept (465.92, 0.25, 0.30), for every numeric cell whatever its unit; a zero prints as 0.00; "
         "a non-zero value that would print as 0.00 prints as <0.01 (>-0.01 when negative, so -0.00 never appears); "
         "a negative keeps its sign; a bounded cell prints both ends at two decimals as [low, high], or the single "
-        "value when the two ends round equal; a count and a non-numeric cell print their display unchanged. "
+        "value when the two ends round equal; a count and a non-numeric cell print their display unchanged; an "
+        "activity record (query_activity) prints the source's own figure, grouped in thousands, and a figure of a "
+        "million or more as that figure divided by a million at two decimals with the word (1.56 million). "
         "display and exact are unchanged beside it."
     ),
     "rules": {
         "numeric": {"units": "every unit except a count (rows, count)", "decimals": DECIMALS, "zero": "0.00",
                     "below_precision": "<0.01 (>-0.01 when negative)", "negative": "sign kept (-5.13)"},
         "count": {"units": "rows, count", "rendering": "display unchanged"},
+        "activity": {"applies_to": "query_activity cells", "field": ACTIVITY_WORDS,
+                     "rendering": "the source's figure grouped in thousands; a million or more as N.NN million"},
         "non_numeric": {"rendering": "display unchanged"},
         "bounded": {"rendering": "[low, high] at two decimals; ends that round equal print the single value"},
         "quantiles": {"field": "quantiles_short", "decimals": DECIMALS},
@@ -723,7 +729,12 @@ def decorate_cell(cell):
     if not isinstance(cell, dict):
         return cell
     unit = cell.get("unit", "")
-    cell["display_short"] = short_display(cell.get("exact"), unit, cell.get("exact_high"), cell.get("display", ""))
+    if cell.get(ACTIVITY_WORDS):
+        # an activity record (query_activity): a count is not rounded to two decimals. The core
+        # prints the source's own figure grouped (`display`) and says a million or more in words.
+        cell["display_short"] = cell[ACTIVITY_WORDS]
+    else:
+        cell["display_short"] = short_display(cell.get("exact"), unit, cell.get("exact_high"), cell.get("display", ""))
     cell["unit_words"] = unit_words(unit)
     cell["unit_short"] = unit_short(unit)
     for side in ("left", "right"):
