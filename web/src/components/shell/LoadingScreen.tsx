@@ -6,15 +6,14 @@
  * progress bar and a rotating fact about Pakistan's emissions.
  *
  * THE BAR IS REAL, not a timer: it reads the bootstrap store (shell/bootstrap.ts) — the release
- * resolved, the labels applied, the page's first envelope answered, the map loaded on the pages
- * that carry one (stagesFor) — and finishes when the page's last stage is reached. A map that
- * cannot start (no WebGL) is a stage that FAILED: the page stops waiting for it and finishes at
- * the envelope, onto a workspace that says so, rather than holding the screen to its ceiling.
+ * resolved, the labels applied, the page's first envelope answered — and finishes when the
+ * page's last required stage is reached. The map loads independently with its own status;
+ * waiting for tiles must not block usable cards and controls.
  *
- * TWO CEILINGS, because there are two different waits. Once the release has answered, a slow tile
+ * TWO CEILINGS, because there are two different waits. Once the release has answered, a slow query
  * must not trap anyone: six seconds later the screen leaves regardless. But BEFORE it answers
- * there is nothing underneath to leave to — the API scales to zero and a cold start is about
- * thirty-five seconds — and the single six-second ceiling this had used to drop a reader onto an
+ * there is nothing underneath to leave to — a replacement API instance can take about
+ * thirty-five seconds to start — and the single six-second ceiling this had used to drop a reader onto an
  * empty page for half a minute. So that wait is held, to a hard cap that only an outage reaches,
  * and while it lasts the bar eases toward its first stage instead of sitting at nothing.
  *

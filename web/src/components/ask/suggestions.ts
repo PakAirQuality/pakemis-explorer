@@ -15,8 +15,17 @@ import type { ExplorerState, StateDefaults } from "@/lib/urlState";
 import { configWords, districtName, gasLabel, geographyName, gwpIsDefault, gwpLabel, monthLabel, periodShort, sectorLabel, type Dims } from "@/lib/labels";
 import { geoGrain } from "@/lib/geography";
 import { metricOf } from "@/lib/selection";
+import type { AskIntent } from "./types";
 
 export type ScopeDims = Dims & { fiscalPeriods: string[] };
+
+/** A button action, never a classifier for a visitor's typed question. */
+export function suggestionIntent(question: string, s: ExplorerState): AskIntent | undefined {
+  if (s.pol || s.month || s.cell || s.level === "grid") return undefined;
+  if (!s.sector && /^What is .+'s largest source\?$/.test(question)) return "largest_source";
+  if (/^How (?:have emissions|has .+) changed (?:since .+|over the nine years)\?$/.test(question)) return "annual_trend";
+  return undefined;
+}
 
 /** The subject each sector's "How much comes from …?" names; a sector outside the map asks for its largest category. */
 export const SECTOR_FOCUS: Record<string, string> = {

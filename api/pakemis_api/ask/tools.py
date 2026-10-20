@@ -322,9 +322,10 @@ def function_tool(name, dims):
     model = G.MODELS[FUNCTION_MODEL[name]]
     schema = _enrich(inline_schema(model.model_json_schema()), dims, _field_values(dims, FUNCTION_MODEL[name]))
     schema.pop("description", None)
-    dc = G.BY_NAME[FUNCTION_MODEL[name]]
     fn = getattr(F, name, None)
-    parts = [p for p in (_docstring(dc), _docstring(fn) if fn else "", WHEN_TO_CALL[name]) if p]
+    # Request-class prose repeats the field descriptions and WHEN_TO_CALL (especially the
+    # activity and air contracts). Keep operational instructions and function-specific notes.
+    parts = [p for p in (WHEN_TO_CALL[name], _docstring(fn) if fn else "") if p]
     if name == "query_activity":
         parts.append(activity_catalog_text(dims.activity_catalog))
     return {"name": name, "description": "\n".join(parts), "input_schema": schema}

@@ -247,6 +247,9 @@ export function Workspace() {
       <div className={`absolute inset-0${mapDown ? " invisible" : ""}`} data-testid="map-pane" data-map-status={mapStatus} aria-hidden={showMap ? undefined : true}>
         <ExplorerMap key={recovery.attempt} variant="workspace" padding={padding} opacity={opacity} basemap={basemapChoice} boundaries={boundaries} onMap={setMap} onStatus={recovery.onStatus} onFailure={recovery.onFailure} override={override} />
       </div>
+      {showMap && mapStatus === "loading" ? (
+        <div role="status" data-testid="map-loading" className="pointer-events-none absolute bottom-5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-card/90 px-3 py-1.5 text-xs text-muted shadow-card">Loading map…</div>
+      ) : null}
 
       {/* The pane switch is its OWN pill (the atlas pattern): top-left on a narrow
           window, never embedded in the nav - and the nav itself docks to the bottom

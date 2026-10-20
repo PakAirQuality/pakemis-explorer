@@ -28,7 +28,9 @@ import { airScopeBody } from "@/lib/requests";
 import { Composer } from "./Composer";
 import { DisabledCard } from "./DisabledCard";
 import { ReasoningTimeline } from "./ReasoningTimeline";
-import { scopeChips, scopeLine, suggestedQuestions } from "./suggestions";
+import { scopeChips, scopeLine, suggestedQuestions, suggestionIntent } from "./suggestions";
+import { prepareAppCheck } from "@/lib/appCheck";
+import type { AskIntent } from "./types";
 import { AskRings } from "./AskRings";
 import { HistoryList } from "./HistoryList";
 import { clearHistory, forgetConversation, loadHistory, type HistoryEntry } from "./history";
@@ -138,6 +140,7 @@ export function withFigure(questions: string[], cell: { display: string | null; 
 }
 
 export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, variant = "dock", onClose, active = true }: AskDockProps = {}) {
+  useEffect(() => { if (active) prepareAppCheck(); }, [active]);
   const { state, setState, release, agent, labels, dims, defaults } = useExplorer();
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -168,7 +171,7 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
   // A MOVE BELONGS TO THE TURN THAT MADE IT. It was never cleared, so "Map updated to…" and its
   // Undo attached themselves to the next answer too - one that had moved nothing.
   const streamSend = stream.send;
-  const send = useCallback((text: string) => { setAgentMove(null); return streamSend(text); }, [streamSend]);
+  const send = useCallback((text: string, intent?: AskIntent) => { setAgentMove(null); return streamSend(text, intent); }, [streamSend]);
   const ask = useMemo(() => ({ ...stream, send }), [stream, send]);
   const docked = useAskDocked();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -479,7 +482,7 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
                 return (
                   // the hairline goes BETWEEN the rows, inset past the icon, and never under the last
                   <li key={q} className="ml-2.5 border-b border-line last:border-b-0">
-                    <button type="button" onClick={() => ask.send(q)} className="group -ml-2.5 flex w-[calc(100%+0.625rem)] items-center gap-3.5 py-3.5 text-left" data-testid="suggestion">
+                    <button type="button" onClick={() => ask.send(q, suggestionIntent(q, state))} className="group -ml-2.5 flex w-[calc(100%+0.625rem)] items-center gap-3.5 py-3.5 text-left" data-testid="suggestion">
                       <span aria-hidden="true" className="shrink-0 text-accent"><Icon size={22} strokeWidth={1.75} /></span>
                       <span className="min-w-0 flex-1 text-base leading-snug text-fg group-hover:text-accent">{q}</span>
                       <ChevronRight size={18} aria-hidden="true" className="mr-0.5 shrink-0 text-muted group-hover:text-accent" />

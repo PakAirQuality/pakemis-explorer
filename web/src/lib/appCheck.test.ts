@@ -66,4 +66,17 @@ describe("the bot check, on the page", () => {
     expect(await m.appCheckHeaders()).toEqual({ [APP_CHECK_HEADER]: "minted-token" });
     expect(initializeApp).toHaveBeenCalledTimes(2);
   });
+  it("opening the assistant prepares a token and Send shares the in-flight assessment", async () => {
+    const m = await load(ALL);
+    let finish!: (v: { token: string }) => void;
+    getToken.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    m.prepareAppCheck();
+    const send = m.appCheckHeaders();
+    await vi.waitFor(() => expect(getToken).toHaveBeenCalledTimes(1));
+    finish({ token: "prepared" });
+    expect(await send).toEqual({ [APP_CHECK_HEADER]: "prepared" });
+    expect(getToken).toHaveBeenCalledTimes(1);
+    // Later calls use the SDK again so it can enforce expiry and refresh.
+    expect(await m.appCheckHeaders()).toEqual({ [APP_CHECK_HEADER]: "minted-token" });
+  });
 });

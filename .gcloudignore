@@ -12,6 +12,9 @@ web/out/
 data/releases/
 data/receipts.json
 assistant/
+eval/
+api/tests/
+web/
 tiles/
 **/__pycache__/
 *.pyc

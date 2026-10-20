@@ -22,6 +22,21 @@
       ],
       "title": "Conversation Id"
      },
+     "intent": {
+      "anyOf": [
+       {
+        "enum": [
+         "largest_source",
+         "annual_trend"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Intent"
+     },
      "message": {
       "maxLength": 4000,
       "minLength": 1,

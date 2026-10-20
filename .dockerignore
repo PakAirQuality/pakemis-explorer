@@ -4,6 +4,7 @@ web
 tiles
 scripts
 docs
+eval
 data/releases
 data/receipts.json
 data/fetch_release.py

@@ -11,9 +11,8 @@
  * none is a secret. With any one missing the module is inert — `appCheckHeaders()` answers `{}`
  * and nothing is loaded — which is the repository's default and what every local build is.
  *
- * LOADED ON THE FIRST QUESTION, NOT WITH THE PAGE. The Firebase client is imported inside
- * `appCheckHeaders`, so a reader who never opens the assistant never downloads it and the map is
- * no heavier for the check existing.
+ * Prepared when the assistant opens. Readers who never open it download no Firebase client;
+ * readers who do can type while the token is being prepared.
  *
  * A FAILURE TO MINT IS THE SERVER'S TO JUDGE. If the token cannot be had (an ad blocker, a
  * network that drops Google), the question is sent without one: a deployment that only reports
@@ -42,6 +41,7 @@ export const APP_CHECK_ON = CONFIG !== null;
 /** Mints a token from the one App Check instance this page holds. */
 type Minter = () => Promise<string>;
 let minter: Promise<Minter> | null = null;
+let pending: Promise<Record<string, string>> | null = null;
 
 function minterFor(config: AppCheckConfig): Promise<Minter> {
   minter ??= (async () => {
@@ -55,13 +55,25 @@ function minterFor(config: AppCheckConfig): Promise<Minter> {
 }
 
 /** The header to send with a question: the token when the check is configured and one can be had, else nothing. */
-export async function appCheckHeaders(): Promise<Record<string, string>> {
-  if (!CONFIG) return {};
-  try {
-    const token = await (await minterFor(CONFIG))();
-    return token ? { [APP_CHECK_HEADER]: token } : {};
-  } catch {
-    minter = null; // let the next question try again from the start
-    return {};
-  }
+export function appCheckHeaders(): Promise<Record<string, string>> {
+  if (!CONFIG) return Promise.resolve({});
+  const config = CONFIG;
+  // Share an in-flight assessment with Send. The SDK owns token caching and expiry.
+  pending ??= (async (): Promise<Record<string, string>> => {
+    const start = performance.now();
+    try {
+      const token = await (await minterFor(config))();
+      return token ? { [APP_CHECK_HEADER]: token } : {};
+    } catch {
+      minter = null;
+      return {};
+    } finally {
+      performance.measure?.("pakemis.ask.app_check", { start, end: performance.now() });
+    }
+  })().finally(() => { pending = null; });
+  return pending;
+}
+
+export function prepareAppCheck(): void {
+  void appCheckHeaders();
 }

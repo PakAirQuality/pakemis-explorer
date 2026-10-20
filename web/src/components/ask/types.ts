@@ -3,6 +3,8 @@
  * card prints (display, unit, exactness, message, receipt) is taken from these as received.
  */
 export type StatusEvent = { phase: string; turn?: number; k?: number; name?: string; reason?: string };
+/** Sent only by supported suggestion buttons; free-text questions omit it. */
+export type AskIntent = "largest_source" | "annual_trend";
 export type ThinkingEvent = { text: string };
 export type ToolCallEvent = { k: number; id: string; name: string; input: Record<string, unknown> };
 export type ToolResultCell = {

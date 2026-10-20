@@ -16,7 +16,7 @@ import { resolveState, type ExplorerState } from "@/lib/urlState";
 import type { ReleaseInfo } from "@/lib/envelope";
 import { RELEASE, stubViewport, stubWideViewport } from "@/__tests__/fixtures";
 import { AskDrawer } from "./AskDrawer";
-import { comparisonProvince, scopeLine, suggestedQuestions } from "./suggestions";
+import { comparisonProvince, scopeLine, suggestedQuestions, suggestionIntent } from "./suggestions";
 
 const pathname = vi.hoisted(() => ({ value: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
@@ -55,7 +55,7 @@ const DONE: [string, unknown][] = [
 function askCalls(spy: { mock: { calls: unknown[][] } }): RequestInit[] {
   return spy.mock.calls.filter((c) => String(c[0]).includes("/ask")).map((c) => c[1] as RequestInit);
 }
-function askBody(spy: { mock: { calls: unknown[][] } }, i = 0): { message: string; ui_state: Record<string, unknown> } {
+function askBody(spy: { mock: { calls: unknown[][] } }, i = 0): { message: string; intent?: string; ui_state: Record<string, unknown> } {
   return JSON.parse(String(askCalls(spy)[i].body));
 }
 
@@ -195,6 +195,31 @@ describe("AskDrawer", () => {
     expect(body.message).toBe("How much comes from livestock?");
     expect(body.ui_state.geo).toBe("Punjab");
     expect(body.ui_state.sector).toBe("agriculture");
+    expect(body.intent).toBeUndefined();
+  });
+
+  it("supported suggestion buttons send an explicit action, while typed questions do not", async () => {
+    const fetchSpy = vi.fn(async () => sse(DONE));
+    vi.stubGlobal("fetch", fetchSpy);
+    mount(ctx(national));
+    fireEvent.click(screen.getByTestId("ask-fab"));
+    fireEvent.click(screen.getAllByTestId("suggestion")[0]);
+    await waitFor(() => expect(askCalls(fetchSpy)).toHaveLength(1));
+    expect(askBody(fetchSpy).intent).toBe("largest_source");
+    await waitFor(() => expect(screen.queryByLabelText("Stop")).toBeNull());
+    fireEvent.change(screen.getByTestId("question"), { target: { value: "What is Pakistan's largest source?" } });
+    fireEvent.keyDown(screen.getByTestId("question"), { key: "Enter" });
+    await waitFor(() => expect(askCalls(fetchSpy)).toHaveLength(2));
+    expect(askBody(fetchSpy, 1).intent).toBeUndefined();
+  });
+
+  it("annual-series actions stay limited to the supported selection family", () => {
+    const question = "How have emissions changed since 2015–16?";
+    expect(suggestionIntent(question, national)).toBe("annual_trend");
+    for (const patch of [{ pol: "PM2.5" }, { month: "202307" }, { level: "grid" as const }, { cell: "30,70" }]) {
+      expect(suggestionIntent(question, { ...national, ...patch })).toBeUndefined();
+    }
+    expect(suggestionIntent("How certain is this estimate?", national)).toBeUndefined();
   });
 
   it("stays out of the /ask page and is full-screen on mobile", () => {

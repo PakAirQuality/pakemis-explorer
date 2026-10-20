@@ -12,7 +12,7 @@ import { createSseParser } from "./sse";
 import { loadConversation, saveConversation } from "./store";
 import { rememberConversation } from "./history";
 import { clientHistory } from "./timeline";
-import type { AskEvent, DoneEvent, MapActionEvent, Turn } from "./types";
+import type { AskEvent, AskIntent, DoneEvent, MapActionEvent, Turn } from "./types";
 import { appCheckHeaders } from "@/lib/appCheck";
 import { authedFetch } from "@/lib/embedAuth";
 
@@ -25,7 +25,7 @@ export type AskStream = {
   streaming: boolean;
   disabled: Disabled | null;
   conversationId: string | null;
-  send: (message: string) => void;
+  send: (message: string, intent?: AskIntent) => void;
   reset: () => void;
 };
 
@@ -84,7 +84,7 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
   }, []);
 
   const send = useCallback(
-    (message: string) => {
+    (message: string, intent?: AskIntent) => {
       const text = message.trim();
       if (!text || abortRef.current) return;
       const turn: Turn = { id: `t${Date.now()}_${++turnCounter}`, message: text, ui_state: cbs.current.uiState(), events: [], status: "streaming" };
@@ -115,7 +115,7 @@ export function useAskStream({ conversationId, uiState, onMapAction, onConversat
             method: "POST",
             // the bot check's token, where this build is configured for one (lib/appCheck.ts); {} otherwise
             headers: { "content-type": "application/json", accept: "text/event-stream", ...(await appCheckHeaders()) },
-            body: JSON.stringify({ conversation_id: cid ?? undefined, message: text, ui_state: turn.ui_state, client_history: history }),
+            body: JSON.stringify({ conversation_id: cid ?? undefined, message: text, intent, ui_state: turn.ui_state, client_history: history }),
             signal: ac.signal,
           });
         } catch (e) {

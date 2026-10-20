@@ -251,6 +251,23 @@ verbatim in the dock as a model-error card; nothing is retried or hidden.
 
 ## The API
 
+The `largest_source` and `annual_trend` suggestion buttons send an optional `intent` with
+`POST /ask`. For annual greenhouse-gas views at national, province or district grain, the
+server runs the same reporting-sector breakdown or annual-series request as the dashboard
+and renders the answer through the normal citation placeholders. The SSE tool results,
+receipts, scope and conversation history are preserved; these answers use no model tokens.
+Typed questions and other scopes continue through the explanation library or model loop.
+An unsupported configuration or geography is refused rather than replaced with another.
+
+Opening the assistant prepares its App Check token while the reader types. The SDK handles
+token expiry, and Send shares any assessment already in flight. Browser Performance entries
+named `pakemis.ask.app_check` measure that wait. Server logs separately time admission,
+the first event, each model/tool call, quick answers and completion without logging questions.
+The Cloud Run service keeps one instance warm (`--min=1`, service-level), with the existing
+capacity limits; this adds idle hosting cost and avoids most scale-from-zero waits.
+The workspace becomes interactive after its first verified envelope, while map tiles finish
+loading independently with a small status indicator.
+
 Every route lives under the prefix `/api/v1/emissions` (the prefix Firebase Hosting rewrites to
 the Cloud Run service; in development `http://localhost:8000/api/v1/emissions`). The same routes
 answer under the legacy `/v1` prefix for one more release, out of the schema, with

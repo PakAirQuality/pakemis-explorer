@@ -1,3 +1,4 @@
+import { expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import { DataLibrary } from "./DataLibrary";

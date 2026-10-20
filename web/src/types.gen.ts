@@ -166,6 +166,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/emissions/query/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activity
+         * @description ACTIVITY RECORDS behind the inventory (the fact_activity_* tables): a count, a quantity
+         *     or a rate as its source printed it - registered vehicles by class and district, livestock
+         *     by species, fuel sales by product and customer group, crop areas, generation by plant -
+         *     each with its measure, class, place and level, period and period type, unit, evidence
+         *     class, source series and use note. Never an emission, never summed or converted: a vehicle
+         *     register is a registered stock, not traffic, and the use note says so. `periods` empty
+         *     returns the latest period of each place and class.
+         */
+        post: operations["activity_api_v1_emissions_query_activity_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/emissions/query/air": {
         parameters: {
             query?: never;
@@ -458,6 +484,8 @@ export interface components {
             }[];
             /** Conversation Id */
             conversation_id?: string | null;
+            /** Intent */
+            intent?: ("largest_source" | "annual_trend") | null;
             /** Message */
             message: string;
             /** Ui State */
@@ -538,10 +566,66 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * QueryActivity
+         * @description A record from the activity tables behind the inventory (fact_activity_*): a count, a
+         *     quantity or a rate AS ITS SOURCE PRINTED IT, with the definitions that make it readable -
+         *     the measure, the class, the place and its level, the period and its type, the unit, the
+         *     evidence class, the source series and the use note. Never an emission and never converted:
+         *     a vehicle register is a registered stock, not traffic, and the use note says so. The one
+         *     arithmetic offered is `total`, a sum over the classes of ONE place at ONE date, marked as
+         *     computed here and refused wherever the release says the rows may not be combined.
+         */
+        QueryActivity: {
+            /** Categories */
+            categories?: string[];
+            /**
+             * Limit
+             * @description 0 -> the contract's row cap
+             * @default 0
+             */
+            limit: number;
+            /**
+             * Location Level
+             * @description national | province | district | sales area | airport | plant; empty -> any level
+             * @default
+             */
+            location_level: string;
+            /** Locations */
+            locations?: string[];
+            /**
+             * Measure
+             * @description the table's Measure as printed ("Registered vehicles"); empty -> every measure
+             * @default
+             */
+            measure: string;
+            /**
+             * Order By
+             * @description "value desc" | "value asc" | ""
+             * @default
+             */
+            order_by: string;
+            /** Periods */
+            periods?: string[];
+            /**
+             * Table
+             * @description fact_activity_vehicles | fact_activity_livestock | ... (empty -> refused, with the list)
+             * @default
+             */
+            table: string;
+            /**
+             * Total
+             * @description true -> one more value after the rows: their sum, for one measure, place and period only
+             * @default false
+             */
+            total: boolean;
+        };
+        /**
          * QueryAir
-         * @description The air beta: native kt of a named species, never CO2e. Seven sectors carry a layer
-         *     (industry, IPPU and fugitives are NE); the spatial and timeseries grains are
-         *     agriculture's alone. A sum across pollutants is refused - the particulate strata
+         * @description The air tables: native kt of a named species, never CO2e. `periods` (fiscal) asks the
+         *     covered-sources family - the national panel and its province and district marginals -
+         *     and `years` (calendar) the national agriculture series; a request naming neither is
+         *     answered for the reference period and says so. Which sectors a grain holds is read from
+         *     its table, not listed here. A sum across pollutants is refused - the particulate strata
          *     contain one another - so a request either filters to one pollutant or groups by it.
          */
         QueryAir: {
@@ -965,6 +1049,39 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activity_api_v1_emissions_query_activity_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryActivity"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

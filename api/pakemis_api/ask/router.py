@@ -19,6 +19,8 @@ The provider (anthropic | gemini) and model come from settings; `service.agent_s
 import json
 import logging
 import os
+import time
+from typing import Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -31,6 +33,7 @@ from pakemis_api.ask.limits import Limits, PerIpBucket, build_budget, client_add
 from pakemis_api.ask.loop import AnthropicModel, Turn
 from pakemis_api.ask.memory import Memory
 from pakemis_api.ask.prompt import system_prompt
+from pakemis_api.ask.quick import QuickTurn, supported
 from pakemis_api.ask.tools import Dims, build_tools
 
 log = logging.getLogger("pakemis_api.ask")
@@ -42,6 +45,7 @@ class AskBody(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     ui_state: dict = Field(default_factory=dict)
     client_history: list[dict] = Field(default_factory=list)
+    intent: Literal["largest_source", "annual_trend"] | None = None
 
 
 class AskRuntime:
@@ -70,6 +74,9 @@ class AskRuntime:
 
     def turn(self, body: AskBody):
         conv = self.memory.get_or_create(body.conversation_id, body.client_history)
+        if supported(body.intent, body.ui_state):
+            return QuickTurn(self.service, self.model, self.tools, self.system, self.dims, conv,
+                             body.message, body.ui_state, self.limits, intent=body.intent)
         # LOCAL FIRST. A prepared explanation costs no model call and no budget, and most of what
         # a visitor asks is an explanation rather than a number. The library declines the moment
         # a question is about the SELECTED RESULT, and the loop below takes it - that path holds
@@ -134,6 +141,7 @@ def _client_ip(request: Request, trusted=()):
 
 @router.post("/ask", tags=["ask"])
 def ask(body: AskBody, request: Request):
+    started = time.monotonic()
     runtime = getattr(request.app.state, "ask", None)
     status = getattr(request.app.state.service, "agent_status", {}) or {}
     if runtime is None:
@@ -141,6 +149,8 @@ def ask(body: AskBody, request: Request):
     address = _client_ip(request, runtime.limits.trusted_proxies)
     # whether this came from the site's own page in a browser (appcheck.py); "off" when not asked for
     check = runtime.app_check.verdict(request.headers) if runtime.app_check is not None else "off"
+    check_ms = (time.monotonic() - started) * 1000
+    log.info("ask admission app_check_ms=%.1f verdict=%s", check_ms, check)
     # the chain as it arrived, beside the address chosen from it: the only way to see that the
     # trusted ranges still describe the edge in front of this service (%r: a caller writes part of it)
     log.info("ask from %s forwarded=%r edge-client=%r app-check=%s", address, (request.headers.get("x-forwarded-for") or "")[:200],
@@ -152,17 +162,25 @@ def ask(body: AskBody, request: Request):
         return JSONResponse(status_code=429, content={"error": "rate_limited", "message": "too many questions from this address; try again in an hour"})
     turn = runtime.turn(body)
     # the library answered nothing and there is no model to ask: this question needed the data
-    if runtime.model is None and not isinstance(turn, LocalTurn):
+    if runtime.model is None and not isinstance(turn, (LocalTurn, QuickTurn)):
         return JSONResponse(status_code=503, content={"error": "agent_disabled", "reason": status.get("reason") or "no model client",
                                                       "message": "This question needs the inventory query, which needs the assistant's model. Explanations of the concepts and methods still work."})
 
     def events():
+        first = True
         try:
             for name, payload in turn.events():
+                if first:
+                    log.info("ask first_event elapsed_s=%.3f path=%s", time.monotonic() - started, type(turn).__name__)
+                    first = False
+                if name == "answer":
+                    log.info("ask answer elapsed_s=%.3f path=%s", time.monotonic() - started, type(turn).__name__)
                 yield ServerSentEvent(data=json.dumps(payload, ensure_ascii=False, sort_keys=True), event=name)
         except Exception as exc:                              # never let a traceback end the stream silently
             log.exception("ask turn failed")
             yield ServerSentEvent(data=json.dumps({"code": "model_error", "message": "%s: %s" % (type(exc).__name__, exc)}), event="error")
             yield ServerSentEvent(data=json.dumps({"conversation_id": turn.conv.id, "usage": turn.usage, "cost_estimate_usd": None}), event="done")
+        finally:
+            log.info("ask finished elapsed_s=%.3f path=%s", time.monotonic() - started, type(turn).__name__)
 
     return EventSourceResponse(events(), headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

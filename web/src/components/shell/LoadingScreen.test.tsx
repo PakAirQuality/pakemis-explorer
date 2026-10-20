@@ -77,7 +77,7 @@ describe("LoadingScreen", () => {
     expect(screen.getByTestId("plume-canvas")).toBeInTheDocument();
     expect(raf).toHaveBeenCalled();
   });
-  it("the bar follows the stages the app marks, on the home page through the map", () => {
+  it("the workspace bar follows data readiness independently of map tiles", () => {
     render(<LoadingScreen force />);
     const bar = () => screen.getByTestId("loading-screen").getAttribute("data-progress");
     act(() => markStage("release"));
@@ -88,7 +88,7 @@ describe("LoadingScreen", () => {
     expect(bar()).toBe("85");
     expect(screen.getByTestId("loading-fill").style.width).toBe("85%");
     act(() => markStage("map"));
-    expect(bar()).toBe("100");
+    expect(bar()).toBe("85");
   });
   it("a page without a map or an envelope finishes at the labels: minimum display, then the fade, then unmount", () => {
     vi.useFakeTimers();
@@ -107,7 +107,7 @@ describe("LoadingScreen", () => {
     expect(screen.queryByTestId("loading-screen")).toBeNull();
     expect(document.body.style.overflow).toBe("");
   });
-  it("on the home page the map's load is the last stage; six seconds after the release answered, the ceiling finishes the bar regardless", () => {
+  it("the workspace becomes usable when its envelope arrives, while map tiles are still loading", () => {
     vi.useFakeTimers();
     render(<LoadingScreen force />);
     act(() => {
@@ -116,11 +116,8 @@ describe("LoadingScreen", () => {
       markStage("envelope");
     });
     act(() => vi.advanceTimersByTime(MIN_SHOW_MS + 100));
-    expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "shown");
-    expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-progress", "85");
-    act(() => vi.advanceTimersByTime(CEILING_MS));
-    expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-progress", "100");
     expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-phase", "fading");
+    expect(screen.getByTestId("loading-screen")).toHaveAttribute("data-progress", "85");
     act(() => vi.advanceTimersByTime(FADE_MS));
     expect(screen.queryByTestId("loading-screen")).toBeNull();
   });
