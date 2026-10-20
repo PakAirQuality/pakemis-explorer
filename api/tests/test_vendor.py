@@ -29,15 +29,38 @@ def test_vendored_files_match_the_record(record):
 
 
 def test_vendored_copy_equals_the_source_commit(record):
+    """The copy is the recorded commit's files, plus the recorded patches applied in order
+    (api/vendor/patches/, scripts/vendor_query_core.py) - rebuilt here from git and compared."""
+    import shutil
+    import tempfile
     src = record["source"]
     repo = src["repository"]
     if not os.path.isdir(os.path.join(repo, ".git")):
         pytest.skip("the emissions checkout %s is not on this machine" % repo)
-    for rel, digest in sorted(record["files"].items()):
-        shown = subprocess.run(["git", "-C", repo, "show", "%s:%s/%s" % (src["commit"], src["subdir"], rel)],
-                               capture_output=True, check=True).stdout
-        with open(os.path.join(VENDOR, record["package"], rel), "rb") as handle:
-            assert handle.read() == shown, rel
+    tmp = tempfile.mkdtemp(prefix="vendor-rebuild-")
+    try:
+        subprocess.run(["git", "init", "-q", tmp], check=True)
+        pkg = os.path.join(tmp, "api", "vendor", record["package"])
+        listing = subprocess.run(["git", "-C", repo, "ls-tree", "-r", "--name-only", src["commit"], src["subdir"]],
+                                 capture_output=True, check=True, text=True).stdout.split()
+        for path in listing:
+            rel = path[len(src["subdir"]) + 1:]
+            if rel.endswith(".pyc") or "__pycache__" in rel:
+                continue
+            target = os.path.join(pkg, rel)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with open(target, "wb") as handle:
+                handle.write(subprocess.run(["git", "-C", repo, "show", "%s:%s" % (src["commit"], path)],
+                                            capture_output=True, check=True).stdout)
+        for patch in record.get("patches", []):
+            subprocess.run(["git", "-C", tmp, "apply", "--whitespace=nowarn",
+                            os.path.join(VENDOR, "patches", patch["name"])], check=True)
+        for rel in sorted(record["files"]):
+            with open(os.path.join(pkg, rel), "rb") as rebuilt, \
+                    open(os.path.join(VENDOR, record["package"], rel), "rb") as handle:
+                assert handle.read() == rebuilt.read(), rel
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_vendored_copy_imports_and_agrees_with_the_served_core(record):
@@ -107,8 +130,9 @@ def test_a_checkout_behind_the_vendored_core_is_not_imported(tmp_path, monkeypat
     monkeypatch.delenv("PAKEMIS_QUERY_PATH", raising=False)
     monkeypatch.setattr(S, "DEFAULT_QUERY_PATH", str(tmp_path / "old"))
     assert S.default_query_path() == S.VENDOR_QUERY_PATH
-    # a checkout that has everything is still preferred, and an explicit path always wins
-    monkeypatch.setattr(S, "DEFAULT_QUERY_PATH", S.VENDOR_QUERY_PATH)
+    # the vendored copy is preferred whatever the checkout holds (2026-10-20), and an explicit
+    # path always wins
+    monkeypatch.setattr(S, "DEFAULT_QUERY_PATH", str(tmp_path / "current"))
     assert S.default_query_path() == S.VENDOR_QUERY_PATH
     monkeypatch.setenv("PAKEMIS_QUERY_PATH", str(tmp_path / "old"))
     assert S.default_query_path() == str(tmp_path / "old")

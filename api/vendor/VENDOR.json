@@ -1,13 +1,14 @@
 {
- "digest": "4b91667dc70e2bade2b39bb78537997f11860d6c3bcdcace1b72c5b89e9fdcfd",
+ "base_digest": "4b91667dc70e2bade2b39bb78537997f11860d6c3bcdcace1b72c5b89e9fdcfd",
+ "digest": "1a8909c39b49c9f25a0a98714725490c0a094009d5f71c3858b4a1ddf3aee04f",
  "files": {
   "__init__.py": "b62a1f4439f2724e28903286167094f97058ad8df22e90295e45321ee7590d53",
   "download.py": "82d0980ffeec7dc9505f2d478a9de5d2d2e1cdd5cb05f511703bfa2c364cfe59",
   "engine.py": "21565d5f6d97cac76e8493a5363aeb61e56decce2e17dff8f3a12c1db3e2502b",
   "envelope.py": "0e0c4e8ffdac28d366ddaaff8f2984317f79593d0e442a204ac50cceaab0d831",
   "errors.py": "18fd543445d0858d9d1755d41fa2449ca7ecf8e0ba7f1d29014a13b4e39dfee8",
-  "functions.py": "324773f524c4bb71adf6e1eda22fd180d12797978133de1102c6108174988eaf",
-  "models.py": "ae43c50af60c05cd8d1ea0b6edac556c6e5c59d49860a486bb9b669c1cbf3cfb",
+  "functions.py": "526415b6adc439b2421335abd8d6ab50c9c242563e788e079b5a0fd0b56a79d9",
+  "models.py": "afc1fec5e5c792282c68d6c7e8a16ad17a1d11d3f820ee40f9ada4f93480c761",
   "placeholders.py": "1111b8d735f5fe394cb9d4e3cffffe09763894b5b8ee9d7b30ed20b6eb1fe57f",
   "receipt.py": "20f8b18ee58ff7794c353d5a0fea3629c12ebada59448dbef61c9bd391f46dd1",
   "release.py": "1b1040fb22ae273acf7ad5cf36baa0377d40499aa3215913e8159111bd8aadf1"
@@ -41,9 +42,16 @@
    "timeseries_annual_L.json": "07118073eba1bb0a651c459703f3d3d00e40343f96cdae054a1244fd6479df4f",
    "transfers_dung.json": "29a8cdf53671a2a42e36ecafee7a8fbc43fb3afc8878e30b28c6b0298c8bd5f2"
   },
+  "repository": "/Users/rehanahmad/Desktop/emissions",
   "subdir": "tests/semantic/golden"
  },
  "package": "pakemis_query",
+ "patches": [
+  {
+   "name": "0001-province-names-its-districts.patch",
+   "sha256": "cbf299d72389bf02b6fe6a30b637f9a03cebdc845a962a72ab4bf1a087127bf1"
+  }
+ ],
  "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here",
  "schema": "pakemis_explorer.vendor/v1",
  "source": {
@@ -54,5 +62,5 @@
   "subdir": "src/pakemis_query",
   "working_tree_dirty_at_vendoring": false
  },
- "vendored_at": "2026-10-09T22:47:31+00:00"
+ "vendored_at": "2026-10-20T12:32:10+00:00"
 }

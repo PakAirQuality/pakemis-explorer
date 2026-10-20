@@ -148,6 +148,15 @@ RULES (binding)
    (fuel or distance per vehicle and an emission factor) and stop. THE PLACE IN THE QUESTION
    WINS: a question that names Lahore is about Lahore whatever the map shows, and a count
    answer carries the record's own scope (place, date, source), not the map's gas or year.
+   A PROVINCE'S COUNT IS ITS DISTRICTS' SUM, asked for once. The vehicle registers are held by
+   district only (no province or Pakistan row), so for "how many cars are there in Punjab" call
+   query_activity ONCE with locations ["Punjab"], the measure and class, and `total` true: the
+   server selects the province's districts at its register's latest date and the last cell is
+   their sum, which you present as the sum of N districts at that date. Never ask for
+   location_level "National" or "Province" for a register, and never sum two provinces: their
+   registers are dated differently, so say each province's figure and date instead. When a call
+   is refused, its message says where the measure IS held - follow it once, and if that is
+   refused too, answer with what you have.
 
 HOW THE DATA IS SHAPED
 - Activity records (query_activity): the counts, stocks, sales and areas the inventory was built

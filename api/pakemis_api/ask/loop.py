@@ -8,6 +8,7 @@ a client that gives none gets a synthesised text+tool_use message.
 
 run_turn(...) is a generator of (event_name, payload) pairs: the SSE stream of one user message.
 """
+import collections
 import json
 import logging
 import re
@@ -27,6 +28,28 @@ from pakemis_query import errors as E
 from pakemis_query.placeholders import PlaceholderError
 
 log = logging.getLogger("pakemis_api.ask")
+
+# WHEN THE TURN STOPS LOOKING AND ANSWERS (2026-10-20). On 19 October one question spent its whole
+# 50 s on four refused calls to the same tool, the last one after a call that had succeeded, and
+# the reader got "took too long" instead of the figure already in hand. Two refusals of one tool,
+# or a turn nearly out of time with any result in hand, now end the looking: the next model call
+# may not call a tool and is told why.
+REFUSALS_BEFORE_ANSWER = 2
+ANSWER_AFTER_REFUSALS = ("%d calls to %s have now been refused for this question. Do not call a "
+                         "tool again: answer now from the results you have, and say what the release "
+                         "holds and where, as the refusals state it.")
+ANSWER_BEFORE_DEADLINE = ("Time for this question is nearly up. Do not call a tool again: answer now "
+                          "from the results already obtained, and say plainly what is not covered.")
+
+
+def _instruct(messages, text):
+    """Add an instruction to the turn without breaking the role order: beside the tool results
+    when they are the last message, else as a user message of its own."""
+    last = messages[-1] if messages else None
+    if last and last.get("role") == "user" and isinstance(last.get("content"), list):
+        last["content"] = list(last["content"]) + [{"type": "text", "text": text}]
+    else:
+        messages.append({"role": "user", "content": text})
 USAGE_KEYS = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 
 
@@ -80,11 +103,14 @@ class AnthropicModel:
 
     # the loop may hand stream() a timeout: how long this one call may stay silent (see Limits)
     accepts_timeout = True
+    accepts_answer_only = True
 
-    def stream(self, system, messages, tools, timeout_s=None):
+    def stream(self, system, messages, tools, timeout_s=None, answer_only=False):
         import anthropic
         kwargs = dict(model=self.model_id, max_tokens=self.max_tokens, tools=tools, messages=messages,
                       system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}])
+        if answer_only:
+            kwargs["tool_choice"] = {"type": "none"}
         if timeout_s:
             kwargs["timeout"] = float(timeout_s)
         if self._thinking:
@@ -455,6 +481,9 @@ class Turn:
         turns = 0
         corrected = False
         started = time.time()
+        answer_only = False                     # the next model call may not call a tool
+        refused = collections.Counter()         # refusals per tool, this message
+        tried = collections.Counter()           # calls per tool, this message
         while True:
             # "this conversation OR this day" left a reader unable to tell whether starting a new
             # conversation would help. It is knowable here, so say which, and say the remedy.
@@ -477,10 +506,22 @@ class Turn:
             deadline = self.limits.turn_seconds
             if deadline and elapsed >= deadline:
                 log.warning("ask turn stopped at its deadline: %.1f s, %d model call(s), %d tool call(s)", elapsed, turns, k)
+                lookups = ""
+                if tried:
+                    lookups = " It made %d lookup%s (%s)%s." % (
+                        sum(tried.values()), "" if sum(tried.values()) == 1 else "s",
+                        ", ".join("%s x%d" % kv for kv in sorted(tried.items())),
+                        ", %d of them refused" % sum(refused.values()) if refused else "")
                 yield "error", {"code": "turn_timeout",
-                                "message": "The assistant took too long over this question and stopped. "
-                                           "Nothing was lost: ask it again, or ask for one thing at a time."}
+                                "message": "The assistant took too long over this question and stopped.%s "
+                                           "Nothing was lost: ask it again, or ask for one thing at a time." % lookups}
                 break
+            # the answer window: little of the turn left and a result in hand, so this call answers
+            if (not answer_only and k and deadline and self.limits.final_answer_seconds
+                    and deadline - elapsed <= self.limits.final_answer_seconds):
+                answer_only = True
+                _instruct(messages, ANSWER_BEFORE_DEADLINE)
+                yield "status", {"phase": "answer_now", "reason": "deadline"}
             turns += 1
             yield "status", {"phase": "model", "turn": turns}
             text_parts, calls, stop = [], [], None
@@ -489,11 +530,19 @@ class Turn:
             stall = self.limits.model_stall_seconds
             if stall and deadline:
                 stall = max(5.0, min(float(stall), deadline - elapsed))
-            log.info("ask model call %d starting at %.1f s%s", turns, elapsed, " (silent for at most %.0f s)" % stall if stall else "")
+            log.info("ask model call %d starting at %.1f s%s%s", turns, elapsed,
+                     " (silent for at most %.0f s)" % stall if stall else "", " (answer only)" if answer_only else "")
             call_started = time.time()
             stream_kwargs = {"timeout_s": stall} if stall and getattr(self.model, "accepts_timeout", False) else {}
+            tools = self.tools
+            if answer_only:
+                # a client that can switch calling off keeps the declarations the history refers to
+                if getattr(self.model, "accepts_answer_only", False):
+                    stream_kwargs["answer_only"] = True
+                else:
+                    tools = []
             try:
-                for ev in self.model.stream(self.system, messages, self.tools, **stream_kwargs):
+                for ev in self.model.stream(self.system, messages, tools, **stream_kwargs):
                     if ev.kind == "thinking_delta":
                         yield "thinking", {"text": ev.text}
                     elif ev.kind == "text_delta":
@@ -542,9 +591,15 @@ class Turn:
                     log.info("ask tool call %d (%s) took %.2f s%s", k, call.name, time.time() - tool_started, ", refused" if is_error else "")
                     for name, payload in out:
                         yield name, payload
+                    tried[call.name] += 1
                     tr = {"type": "tool_result", "tool_use_id": call.id, "content": body}
                     if is_error:
                         tr["is_error"] = True
+                        refused[call.name] += 1
+                        if refused[call.name] >= REFUSALS_BEFORE_ANSWER and not answer_only:
+                            answer_only = True
+                            tr["content"] = "%s\n\n%s" % (body, ANSWER_AFTER_REFUSALS % (refused[call.name], call.name))
+                            yield "status", {"phase": "answer_now", "reason": "refusals", "tool": call.name}
                     tool_results.append(tr)
                 messages.append({"role": "user", "content": tool_results})
                 continue

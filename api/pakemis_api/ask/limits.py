@@ -82,6 +82,11 @@ class Limits:
     # 0 switches either off.
     turn_seconds: int = 50
     model_stall_seconds: int = 40
+    # THE LAST CALL ANSWERS (2026-10-20). On 19 October a turn holding a successful result spent
+    # its deadline on one more refused lookup and ended in "took too long". Once this little of
+    # the turn is left and a tool has run, the next model call may not call a tool: it answers
+    # from what it has. 0 switches it off.
+    final_answer_seconds: int = 15
 
     @classmethod
     def from_env(cls):
@@ -95,6 +100,7 @@ class Limits:
             effort=os.environ.get("PAKEMIS_ASK_EFFORT") or cls.effort,
             turn_seconds=_int("PAKEMIS_ASK_TURN_SECONDS", cls.turn_seconds),
             model_stall_seconds=_int("PAKEMIS_ASK_MODEL_STALL_SECONDS", cls.model_stall_seconds),
+            final_answer_seconds=_int("PAKEMIS_ASK_FINAL_ANSWER_SECONDS", cls.final_answer_seconds),
             trusted_proxies=parse_networks(os.environ.get("PAKEMIS_TRUSTED_PROXIES")),
         )
 

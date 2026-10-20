@@ -161,7 +161,7 @@
    },
    "QueryActivity": {
     "additionalProperties": false,
-    "description": "A record from the activity tables behind the inventory (fact_activity_*): a count, a\nquantity or a rate AS ITS SOURCE PRINTED IT, with the definitions that make it readable -\nthe measure, the class, the place and its level, the period and its type, the unit, the\nevidence class, the source series and the use note. Never an emission and never converted:\na vehicle register is a registered stock, not traffic, and the use note says so. The one\narithmetic offered is `total`, a sum over the classes of ONE place at ONE date, marked as\ncomputed here and refused wherever the release says the rows may not be combined.",
+    "description": "A record from the activity tables behind the inventory (fact_activity_*): a count, a\nquantity or a rate AS ITS SOURCE PRINTED IT, with the definitions that make it readable -\nthe measure, the class, the place and its level, the period and its type, the unit, the\nevidence class, the source series and the use note. Never an emission and never converted:\na vehicle register is a registered stock, not traffic, and the use note says so. The one\narithmetic offered is `total`, a sum over the classes of ONE place at ONE date - or over the\ndistricts of ONE province named on its own, at that province's register date - marked as\ncomputed here and refused wherever the release says the rows may not be combined.",
     "properties": {
      "categories": {
       "items": {
@@ -216,7 +216,7 @@
      },
      "total": {
       "default": false,
-      "description": "true -> one more value after the rows: their sum, for one measure, place and period only",
+      "description": "true -> one more value after the rows: their sum, for one measure, place (or one province's districts) and period only",
       "title": "Total",
       "type": "boolean"
      }

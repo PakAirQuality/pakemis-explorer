@@ -572,7 +572,8 @@ export interface components {
          *     the measure, the class, the place and its level, the period and its type, the unit, the
          *     evidence class, the source series and the use note. Never an emission and never converted:
          *     a vehicle register is a registered stock, not traffic, and the use note says so. The one
-         *     arithmetic offered is `total`, a sum over the classes of ONE place at ONE date, marked as
+         *     arithmetic offered is `total`, a sum over the classes of ONE place at ONE date - or over the
+         *     districts of ONE province named on its own, at that province's register date - marked as
          *     computed here and refused wherever the release says the rows may not be combined.
          */
         QueryActivity: {
@@ -614,7 +615,7 @@ export interface components {
             table: string;
             /**
              * Total
-             * @description true -> one more value after the rows: their sum, for one measure, place and period only
+             * @description true -> one more value after the rows: their sum, for one measure, place (or one province's districts) and period only
              * @default false
              */
             total: boolean;

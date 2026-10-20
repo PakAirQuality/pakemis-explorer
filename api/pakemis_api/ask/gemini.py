@@ -223,11 +223,15 @@ class GeminiModel:
 
     # the loop may hand stream() a timeout: how long this one call may stay silent (see Limits)
     accepts_timeout = True
+    # the loop's "answer now" call: the tools stay declared (the history holds their calls) and
+    # calling them is switched off
+    accepts_answer_only = True
 
-    def config(self, system, tools, timeout_s=None):
+    def config(self, system, tools, timeout_s=None, answer_only=False):
         from google.genai import types
+        mode = "NONE" if answer_only else "AUTO"
         kwargs = dict(system_instruction=system, tools=gemini_tools(tools), max_output_tokens=self.max_output_tokens,
-                      tool_config=types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode="AUTO")))
+                      tool_config=types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=mode)))
         if timeout_s:
             kwargs["http_options"] = types.HttpOptions(timeout=int(timeout_s * 1000))    # milliseconds
         try:
@@ -308,9 +312,9 @@ class GeminiModel:
         if self.on_model_change:
             self.on_model_change(model)
 
-    def stream(self, system, messages, tools, timeout_s=None):
+    def stream(self, system, messages, tools, timeout_s=None, answer_only=False):
         contents = self.contents(messages)
-        config = self.config(system, tools, timeout_s)
+        config = self.config(system, tools, timeout_s, answer_only)
         start = self.chain.index(self.active_model) if self.active_model in self.chain else 0
         remaining = list(self.chain[start:]) or [self.active_model]
         started = False

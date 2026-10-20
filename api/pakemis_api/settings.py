@@ -66,13 +66,20 @@ def checkout_is_behind(checkout=None, vendored=None):
 
 
 def default_query_path():
-    """PAKEMIS_QUERY_PATH, else the emissions checkout when it is present and not behind the vendored
-    copy (development: its golden files sit beside it), else the vendored copy (the container, and a
-    checkout on an older branch)."""
+    """PAKEMIS_QUERY_PATH, else the vendored copy (the core this site ships), else the emissions
+    checkout.
+
+    THE VENDORED COPY FIRST (2026-10-20). The site serves the pinned release (rc59) with the core of
+    its era plus recorded patches (api/vendor/patches). The emissions checkouts have moved on - the
+    private one to rc68, the public inventory to the ten-year releases - and their cores answer rc59
+    with configuration refusals (33 of the activity and ask tests failed against the private
+    checkout). Developing against a checkout is a choice made with PAKEMIS_QUERY_PATH."""
     explicit = os.environ.get("PAKEMIS_QUERY_PATH")
     if explicit:
         return explicit
     vendored = os.path.isdir(os.path.join(VENDOR_QUERY_PATH, "pakemis_query"))
+    if vendored:
+        return VENDOR_QUERY_PATH
     if os.path.isdir(os.path.join(DEFAULT_QUERY_PATH, "pakemis_query")):
         missing = checkout_is_behind() if vendored else []
         if not missing:

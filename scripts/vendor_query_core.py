@@ -35,6 +35,13 @@ SOURCE_SUBDIR = "src/" + PACKAGE
 GOLDEN_SUBDIR = "tests/semantic/golden"
 GOLDEN_DIR = "goldens"
 DEFAULT_EMISSIONS = "/Users/rehanahmad/Desktop/emissions"
+# PATCHES ON A PINNED CORE (2026-10-20). The site serves rc59, and the core that reads it is the one
+# of its era (3dccf78): the inventory's current core speaks the ten-year releases' configuration
+# ids and answers rc59 with refusals. A fix the site needs before it moves to a newer release is a
+# patch in api/vendor/patches/, applied in name order on top of the pinned commit and recorded with
+# its digest, so the copy is still exactly "this commit, plus these patches". Each patch is the
+# same change as a commit of the inventory's core, which its first line names.
+PATCHES_DIR = "patches"
 SCHEMA = "pakemis_explorer.vendor/v1"
 
 
@@ -96,6 +103,15 @@ def check():
     if combined_digest(got) != rec["digest"]:
         print("VENDOR.json digest mismatch", file=sys.stderr)
         return 1
+    for p in rec.get("patches", []):
+        path = os.path.join(VENDOR, PATCHES_DIR, p["name"])
+        if not os.path.exists(path):
+            print("api/vendor/%s/%s is recorded and absent" % (PATCHES_DIR, p["name"]), file=sys.stderr)
+            return 1
+        with open(path, "rb") as handle:
+            if sha256_bytes(handle.read()) != p["sha256"]:
+                print("api/vendor/%s/%s differs from VENDOR.json" % (PATCHES_DIR, p["name"]), file=sys.stderr)
+                return 1
     recorded = rec.get("goldens")
     if recorded:
         present = vendored_goldens()
@@ -111,7 +127,7 @@ def check():
     return 0
 
 
-def vendor(emissions, ref, goldens_ref=None):
+def vendor(emissions, ref, goldens_ref=None, goldens_repo=None):
     if not os.path.isdir(os.path.join(emissions, SOURCE_SUBDIR)):
         raise SystemExit("%s has no %s" % (emissions, SOURCE_SUBDIR))
     commit = git(emissions, "rev-parse", ref).decode().strip()
@@ -132,20 +148,34 @@ def vendor(emissions, ref, goldens_ref=None):
         with open(path, "wb") as handle:
             handle.write(data)
         files[rel] = sha256_bytes(data)
-    # the goldens: at the same commit, or at the served release's own (--goldens-ref)
-    golden_commit = git(emissions, "rev-parse", goldens_ref).decode().strip() if goldens_ref else commit
+    base_digest = combined_digest(files)
+    patches = []
+    pdir = os.path.join(VENDOR, PATCHES_DIR)
+    for name in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else ():
+        if not name.endswith(".patch"):
+            continue
+        path = os.path.join(pdir, name)
+        subprocess.run(["git", "-C", ROOT, "apply", "--whitespace=nowarn", path], check=True)
+        with open(path, "rb") as handle:
+            patches.append({"name": name, "sha256": sha256_bytes(handle.read())})
+    if patches:
+        files = vendored_files()
+    # the goldens: at the same commit, or at the served release's own (--goldens-ref), from the same
+    # repository or from the one that holds that release's history (--goldens-repo)
+    grepo = goldens_repo or emissions
+    golden_commit = git(grepo, "rev-parse", goldens_ref).decode().strip() if goldens_ref else commit
     gdir = os.path.join(VENDOR, GOLDEN_DIR)
     if os.path.isdir(gdir):
         for f in os.listdir(gdir):
             os.remove(os.path.join(gdir, f))
     os.makedirs(gdir, exist_ok=True)
-    glisting = git(emissions, "ls-tree", "-r", "--name-only", golden_commit, GOLDEN_SUBDIR).decode().split("\n")
+    glisting = git(grepo, "ls-tree", "-r", "--name-only", golden_commit, GOLDEN_SUBDIR).decode().split("\n")
     goldens = {}
     for path_in_repo in glisting:
         if not path_in_repo.endswith(".json"):
             continue
         rel = path_in_repo[len(GOLDEN_SUBDIR) + 1:]
-        data = git(emissions, "show", "%s:%s" % (golden_commit, path_in_repo))
+        data = git(grepo, "show", "%s:%s" % (golden_commit, path_in_repo))
         with open(os.path.join(gdir, rel), "wb") as handle:
             handle.write(data)
         goldens[rel] = sha256_bytes(data)
@@ -156,7 +186,9 @@ def vendor(emissions, ref, goldens_ref=None):
                       "working_tree_dirty_at_vendoring": dirty},
            "vendored_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
            "files": files, "digest": combined_digest(files),
-           "goldens": {"subdir": GOLDEN_SUBDIR, "commit": golden_commit, "files": goldens, "digest": combined_digest(goldens)},
+           "base_digest": base_digest, "patches": patches,
+           "goldens": {"subdir": GOLDEN_SUBDIR, "repository": grepo, "commit": golden_commit, "files": goldens,
+                       "digest": combined_digest(goldens)},
            "rule": "a copy for the container image only; development imports the checkout (PAKEMIS_QUERY_PATH); refresh with scripts/vendor_query_core.py, never edit here"}
     with open(record_path(), "w", encoding="utf-8") as handle:
         json.dump(rec, handle, indent=1, sort_keys=True)
@@ -172,7 +204,14 @@ def vendor(emissions, ref, goldens_ref=None):
                      % (PACKAGE, SOURCE_SUBDIR, emissions, commit, len(files), rec["digest"], golden_commit,
                         "" if golden_commit == commit else
                         ": the served release's own, because the core is ahead of the release it serves"))
+    if patches:
+        with open(os.path.join(VENDOR, "README.md"), "a", encoding="utf-8") as handle:
+            handle.write("\nOn top of that commit, these patches from `%s/` are applied in order (digests in\n"
+                         "`VENDOR.json`): %s. Each repeats a commit of the inventory's core, named on its first line.\n"
+                         % (PATCHES_DIR, ", ".join("`%s`" % p["name"] for p in patches)))
     print("vendored %d files of %s at %s%s into api/vendor/%s (digest %s)" % (len(files), SOURCE_SUBDIR, commit[:12], " (working tree dirty)" if dirty else "", PACKAGE, rec["digest"][:16]))
+    for p in patches:
+        print("applied patch %s (%s)" % (p["name"], p["sha256"][:16]))
     print("vendored %d goldens of %s at %s (digest %s)" % (len(goldens), GOLDEN_SUBDIR, "the same commit" if golden_commit == commit else golden_commit[:12], rec["goldens"]["digest"][:16]))
     return 0
 
@@ -182,6 +221,8 @@ def main(argv=None):
     ap.add_argument("--emissions", default=os.environ.get("EMISSIONS", DEFAULT_EMISSIONS))
     ap.add_argument("--ref", default="HEAD")
     ap.add_argument("--goldens-ref", default=None, help="the commit whose goldens to vendor (default: --ref); the served release's own commit when the core is ahead of it")
+    ap.add_argument("--goldens-repo", default=os.environ.get("GOLDENS_REPO"),
+                    help="the repository holding --goldens-ref (default: --emissions); the private checkout for releases served before rc69")
     ap.add_argument("--check", action="store_true", help="verify api/vendor against VENDOR.json; write nothing")
     args = ap.parse_args(argv)
     if args.check:
@@ -190,7 +231,7 @@ def main(argv=None):
         # no checkout on this machine (CI, the container build): the committed copy must be intact
         print("%s is absent; checking the committed copy instead" % args.emissions)
         return check()
-    return vendor(args.emissions, args.ref, args.goldens_ref)
+    return vendor(args.emissions, args.ref, args.goldens_ref, args.goldens_repo)
 
 
 if __name__ == "__main__":
