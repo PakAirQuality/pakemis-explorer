@@ -1,6 +1,6 @@
 /**
  * The words of the public Overview (the country briefing) and of the Methods page, in one
- * place so the two never drift: the release's short summary (paper_national/short_summary.txt,
+ * place so the two never drift: the release's short summary (the national article's short summary,
  * verbatim), the Ask dock's own empty-state sentences, the explore / open terms the
  * introduction used, and the briefing's fixed copy (eyebrow, header actions, deck pills, section
  * ids, widget titles).

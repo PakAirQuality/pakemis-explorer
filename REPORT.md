@@ -199,7 +199,7 @@ districts already had its own cell.
 
 The explainer is `WelcomeModal` (four panels with a stepper, one scroll under 768 px), shown
 until `localStorage['pakemis.intro.dismissed'] === "1"` and re-openable from the rail's "?"
-and from `/about`. It quotes `paper_national/short_summary.txt` verbatim, the release's
+and from `/about`. It quotes the national article's short summary verbatim, the release's
 reporting period and note, LULUCF status and note, GWP bases, configuration labels and notes,
 the seven structural limitation texts, the contract's functions and the agent's status, all
 from `/v1/release`; the one number it prints is the national total's `display` from the same

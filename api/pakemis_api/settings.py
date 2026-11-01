@@ -1,7 +1,7 @@
 """Settings: where the query core lives, which release is served, where receipts are kept.
 
 PAKEMIS_QUERY_PATH      the directory that holds pakemis_query. Default: the sibling emissions
-                        checkout's src/ (/Users/rehanahmad/Desktop/emissions/src) when it exists,
+                        checkout's src/ (../pakistan-emissions-sectors/src) when it exists,
                         else the vendored copy api/vendor/ (written by scripts/vendor_query_core.py
                         from a recorded commit; the container image carries only that copy).
 ALLOWED_ORIGINS         comma-separated CORS origins (default `*`, the development setting).
@@ -29,7 +29,7 @@ from dataclasses import dataclass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-DEFAULT_QUERY_PATH = "/Users/rehanahmad/Desktop/emissions/src"
+DEFAULT_QUERY_PATH = os.path.join(os.path.dirname(ROOT), "pakistan-emissions-sectors", "src")
 VENDOR_QUERY_PATH = os.path.join(os.path.dirname(HERE), "vendor")     # api/vendor/pakemis_query
 API_PREFIX = "/api/v1/emissions"     # every route; Firebase Hosting rewrites this prefix to the Cloud Run service
 LEGACY_PREFIX = "/v1"                # the pre-prefix paths, answered with `Deprecation: true` for one release

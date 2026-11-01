@@ -34,7 +34,7 @@ SOURCE_SUBDIR = "src/" + PACKAGE
 # none of which said anything about the API. Paired at one vintage the same suite is green.
 GOLDEN_SUBDIR = "tests/semantic/golden"
 GOLDEN_DIR = "goldens"
-DEFAULT_EMISSIONS = "/Users/rehanahmad/Desktop/emissions"
+DEFAULT_EMISSIONS = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "pakistan-emissions-sectors"))
 # PATCHES ON A PINNED CORE (2026-10-20). The site serves rc59, and the core that reads it is the one
 # of its era (3dccf78): the inventory's current core speaks the ten-year releases' configuration
 # ids and answers rc59 with refusals. A fix the site needs before it moves to a newer release is a

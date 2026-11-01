@@ -19,7 +19,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_EMISSIONS = "/Users/rehanahmad/Desktop/emissions"
+DEFAULT_EMISSIONS = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "pakistan-emissions-sectors"))
 
 # case id -> value name -> (product file, row predicate, column)
 CHECKS = {

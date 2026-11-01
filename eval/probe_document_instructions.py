@@ -33,7 +33,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "api"))
 os.environ.setdefault("PAKEMIS_API_LAZY", "1")
-os.environ.setdefault("PAKEMIS_QUERY_PATH", "/Users/rehanahmad/Desktop/emissions/src")
+os.environ.setdefault("PAKEMIS_QUERY_PATH", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "pakistan-emissions-sectors", "src")))
 
 # The instruction is placed in the field the registries' own prose occupies. The number it asks
 # for is deliberately absurd so that its appearance cannot be a coincidence of the release.

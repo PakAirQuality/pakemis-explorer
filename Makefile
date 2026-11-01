@@ -1,5 +1,5 @@
 # PakEmis Explorer - one numerical truth layer; every target below is a view of it.
-EMISSIONS ?= /Users/rehanahmad/Desktop/emissions
+EMISSIONS ?= $(abspath ../pakistan-emissions-sectors)
 REF       ?= HEAD
 # the commit whose goldens are vendored; set it to the served release's commit when REF is ahead of it
 GOLDENS_REF ?= $(REF)

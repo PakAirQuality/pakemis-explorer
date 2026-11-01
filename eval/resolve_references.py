@@ -25,7 +25,7 @@ API = os.path.join(ROOT, "api")
 sys.path.insert(0, API)
 sys.path.insert(0, HERE)
 os.environ.setdefault("PAKEMIS_API_LAZY", "1")
-os.environ.setdefault("PAKEMIS_QUERY_PATH", "/Users/rehanahmad/Desktop/emissions/src")
+os.environ.setdefault("PAKEMIS_QUERY_PATH", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "pakistan-emissions-sectors", "src")))
 
 import yaml  # noqa: E402
 
