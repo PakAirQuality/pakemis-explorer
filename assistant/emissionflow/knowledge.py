@@ -17,9 +17,9 @@ def canonical(data) -> str:
 class Knowledge:
     def __init__(self,root:Path):
         self.root=root
-        self.cards={x['id']:x for x in json.loads((root/'knowledge/cards.json').read_text())}
-        self.sources={x['id']:x for x in json.loads((root/'knowledge/sources.json').read_text())}
-        self.conflicts=json.loads((root/'knowledge/conflicts.json').read_text())
+        self.cards={x['id']:x for x in json.loads((root/'knowledge/cards.json').read_text(encoding="utf-8"))}
+        self.sources={x['id']:x for x in json.loads((root/'knowledge/sources.json').read_text(encoding="utf-8"))}
+        self.conflicts=json.loads((root/'knowledge/conflicts.json').read_text(encoding="utf-8"))
         h=hashlib.sha256()
         # citation_map.json joins the list: it decides what every card cites, so a change to it
         # is a change to the library's evidence and must move the review digest

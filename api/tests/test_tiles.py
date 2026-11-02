@@ -106,9 +106,9 @@ def test_store_refuses_a_tampered_archive(tiles_dir, tmp_path):
     import shutil
     copy = tmp_path / "tiles"
     shutil.copytree(tiles_dir, copy, ignore=shutil.ignore_patterns("raster", "grid.pmtiles"))
-    meta = json.load(open(copy / "TILES.json"))
+    meta = json.load(open(copy / "TILES.json", encoding="utf-8"))
     meta["outputs"].pop("grid.pmtiles")                              # absent outputs are not listed in this copy
-    json.dump(meta, open(copy / "TILES.json", "w"))
+    json.dump(meta, open(copy / "TILES.json", "w", encoding="utf-8"))
     store = TileStore(str(copy), meta["version"])
     assert store.verify() == 3
     with open(copy / "adm1.pmtiles", "r+b") as handle:

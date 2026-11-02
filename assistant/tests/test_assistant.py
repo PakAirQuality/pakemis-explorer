@@ -255,7 +255,7 @@ def snapshot(settings,knowledge,tmp_path):
     data={'schema':'emission-flow/engine-answers/v1','release_id':'1.0.0rc54','inventory_manifest_sha256':'a'*64,'reviewed_by':'UNIT TEST ONLY','synthetic':False,'answers':[{
       'context':context.model_dump(),'operation':'value','title':'Fixture answer, not inventory data','paragraphs':['A test result.'],'citations':[{'source_id':'national','pages':[16]}],
       'limitations':['This is a unit-test fixture.'],'result_kind':'reported_estimate','query_receipt':'test-receipt'}]}
-    path=tmp_path/'engine.json';path.write_text(json.dumps(data))
+    path=tmp_path/'engine.json';path.write_text(json.dumps(data), encoding="utf-8")
     settings.engine_snapshot=path;settings.engine_snapshot_digest=hashlib.sha256(path.read_bytes()).hexdigest();settings.engine_manifest_digest='a'*64
     return path
 

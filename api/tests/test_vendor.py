@@ -42,7 +42,7 @@ def test_vendored_copy_equals_the_source_commit(record):
         subprocess.run(["git", "init", "-q", tmp], check=True)
         pkg = os.path.join(tmp, "api", "vendor", record["package"])
         listing = subprocess.run(["git", "-C", repo, "ls-tree", "-r", "--name-only", src["commit"], src["subdir"]],
-                                 capture_output=True, check=True, text=True).stdout.split()
+                                 capture_output=True, check=True, text=True, encoding="utf-8").stdout.split()
         for path in listing:
             rel = path[len(src["subdir"]) + 1:]
             if rel.endswith(".pyc") or "__pycache__" in rel:
@@ -124,7 +124,7 @@ def test_a_checkout_behind_the_vendored_core_is_not_imported(tmp_path, monkeypat
     from pakemis_api import settings as S
     old = tmp_path / "old" / "pakemis_query"
     old.mkdir(parents=True)
-    (old / "models.py").write_text("class QueryEmissions:\n    pass\n")
+    (old / "models.py").write_text("class QueryEmissions:\n    pass\n", encoding="utf-8")
     assert "QueryActivity" in S.checkout_is_behind(checkout=str(tmp_path / "old"))
     assert S.checkout_is_behind(checkout=S.VENDOR_QUERY_PATH) == []
     monkeypatch.delenv("PAKEMIS_QUERY_PATH", raising=False)

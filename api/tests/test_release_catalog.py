@@ -15,7 +15,7 @@ def payload(tmp_path):
     path = root / "data/canonical/activity/example.csv"
     path.parent.mkdir(parents=True)
     text = "Fuel,Value,Record ID,Source row\nGas,1.00,row-a,1\n"
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     table = {"table_id": "activity.example", "path": "data/canonical/activity/example.csv",
              "source_path": "data/activity/example.csv", "title": "Example fuel", "role": "input",
              "row_count": 1, "sha256": hashlib.sha256(text.encode()).hexdigest(),
@@ -26,13 +26,13 @@ def payload(tmp_path):
                 "activity_inputs": {"tables": [table]}, "download_catalog": catalog}
     semantic = root / "outputs/semantic/semantic_release.json"
     semantic.parent.mkdir(parents=True)
-    semantic.write_text(json.dumps(contract))
+    semantic.write_text(json.dumps(contract), encoding="utf-8")
     manifest = root / "outputs/release_manifest.json"
-    manifest.write_text(json.dumps({"version": "test", "products": []}))
+    manifest.write_text(json.dumps({"version": "test", "products": []}), encoding="utf-8")
     files = {str(p.relative_to(root)): {"sha256": hashlib.sha256(p.read_bytes()).hexdigest()} for p in [path, semantic, manifest]}
     (root / "FETCH.json").write_text(json.dumps({"files": files, "source": {"commit": "test"}, "digests": {
         "semantic_release.json": files[str(semantic.relative_to(root))]["sha256"],
-        "release_manifest.json": files[str(manifest.relative_to(root))]["sha256"]}}))
+        "release_manifest.json": files[str(manifest.relative_to(root))]["sha256"]}}), encoding="utf-8")
     return root, path, contract
 
 
@@ -71,7 +71,7 @@ def test_one_audit_hashes_each_file_once_and_refuses_changed_input(tmp_path, mon
     result = module.verify("test", str(tmp_path), str(tmp_path / "absent.md"), log=lambda _: None)
     assert result["semantic_tables"] == {}
     assert len(calls) == len(set(calls))
-    path.write_text(path.read_text().replace("1.00", "9.00"))
+    path.write_text(path.read_text(encoding="utf-8").replace("1.00", "9.00"), encoding="utf-8")
     with pytest.raises(module.Mismatch, match="canonical input differs"):
         module.verify("test", str(tmp_path), str(tmp_path / "absent.md"), log=lambda _: None)
 

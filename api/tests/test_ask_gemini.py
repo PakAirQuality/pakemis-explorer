@@ -355,8 +355,8 @@ def test_prices_for_the_chain():
 
 def test_no_key_prefix_in_the_diff_or_the_tree():
     prefixes = ("AI" + "za", "pk." + "ey", "sk-" + "ant-")
-    diff = subprocess.run(["git", "diff", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout
-    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\0")
+    diff = subprocess.run(["git", "diff", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True, encoding="utf-8").stdout
+    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True, check=True, encoding="utf-8").stdout.split("\0")
     hits = []
     for prefix in prefixes:
         if prefix in diff:

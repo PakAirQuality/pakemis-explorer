@@ -34,6 +34,6 @@ async def evaluate():
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path)
     args=parser.parse_args();result=asyncio.run(evaluate());text=json.dumps(result,ensure_ascii=False,indent=2)
-    if args.output:args.output.write_text(text+'\n')
+    if args.output:args.output.write_text(text+'\n', encoding="utf-8")
     else:print(text)
 if __name__=='__main__':main()

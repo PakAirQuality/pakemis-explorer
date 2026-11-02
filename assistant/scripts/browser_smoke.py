@@ -13,9 +13,9 @@ client=TestClient(create_app(Settings(root=root,state_path=Path(tempfile.mkdtemp
 def api(source,args):
  response=client.request(args.get('method','GET'),args['path'],content=args.get('body'),headers={'Content-Type':'application/json'})
  return {'status':response.status_code,'json':response.json()}
-html=(root/'web/index.html').read_text().replace('<link rel="stylesheet" href="/static/style.css">','').replace('<script src="/static/app.js" defer></script>','')
-script=(root/'web/app.js').read_text()
-css=(root/'web/style.css').read_text()
+html=(root/'web/index.html').read_text(encoding="utf-8").replace('<link rel="stylesheet" href="/static/style.css">','').replace('<script src="/static/app.js" defer></script>','')
+script=(root/'web/app.js').read_text(encoding="utf-8")
+css=(root/'web/style.css').read_text(encoding="utf-8")
 shim="""window.fetch=async(path,opts={})=>{const r=await window.__api({path:String(path),method:opts.method||'GET',body:opts.body});return new Response(JSON.stringify(r.json),{status:r.status,headers:{'Content-Type':'application/json'}});};"""
 errors=[];results={'harness':'offline DOM; browser fetch bridged to FastAPI TestClient; network/CSP not exercised'}
 with sync_playwright() as p:
@@ -45,4 +45,4 @@ with sync_playwright() as p:
  mobile=page_with({'width':390,'height':844});mobile.screenshot(path=str(out/'mobile-home.png'),full_page=True)
  results['mobile_horizontal_overflow']=mobile.evaluate('document.documentElement.scrollWidth > window.innerWidth')
  results['javascript_errors']=errors;browser.close()
-(out/'browser_results.json').write_text(json.dumps(results,indent=2));print(json.dumps(results,indent=2))
+(out/'browser_results.json').write_text(json.dumps(results,indent=2), encoding="utf-8");print(json.dumps(results,indent=2))

@@ -13,7 +13,7 @@ def main():
     if not args.accept_source_update:p.error('Review the source update first, then pass --accept-source-update')
     try:import fitz
     except ImportError:raise SystemExit('Install PyMuPDF in the build environment: python -m pip install pymupdf')
-    sources=json.loads((ROOT/'knowledge/sources.json').read_text());pages=[]
+    sources=json.loads((ROOT/'knowledge/sources.json').read_text(encoding="utf-8"));pages=[]
     for s in sources:
         if not s.get('file'):continue
         path=(ROOT/s['file']).resolve()
@@ -28,7 +28,7 @@ def main():
                     pages.append({'id':f'{s["id"]}:p{n}','source_id':s['id'],'page':n,'text':text})
         else:
             s['pages']=1;pages.append({'id':f'{s["id"]}:p1','source_id':s['id'],'page':1,'text':b.decode('utf-8')})
-    (ROOT/'knowledge/pages.jsonl').write_text(''.join(json.dumps(x,ensure_ascii=False)+'\n' for x in pages))
-    (ROOT/'knowledge/sources.json').write_text(json.dumps(sources,ensure_ascii=False,indent=2)+'\n')
+    (ROOT/'knowledge/pages.jsonl').write_text(''.join(json.dumps(x,ensure_ascii=False)+'\n' for x in pages), encoding="utf-8")
+    (ROOT/'knowledge/sources.json').write_text(json.dumps(sources,ensure_ascii=False,indent=2)+'\n', encoding="utf-8")
     print('Rebuilt the retrieval index. Re-check citations, conflicts, cards and tests; production approval must be renewed.')
 if __name__=='__main__':main()

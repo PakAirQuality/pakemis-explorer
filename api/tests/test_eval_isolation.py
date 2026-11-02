@@ -18,7 +18,7 @@ CHECK = os.path.join(ROOT, "eval", "check_isolation.py")
 
 @pytest.mark.skipif(not os.path.exists(CHECK), reason="the evaluation set is not present")
 def test_the_holdout_is_frozen_and_unreferenced():
-    proc = subprocess.run([sys.executable, CHECK], capture_output=True, text=True, cwd=ROOT)
+    proc = subprocess.run([sys.executable, CHECK], capture_output=True, text=True, cwd=ROOT, encoding="utf-8")
     assert proc.returncode == 0, proc.stdout + proc.stderr
 
 

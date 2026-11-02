@@ -81,8 +81,8 @@ def test_fetch_uses_tracked_bytes_at_commit_without_staging_sources(tmp_path):
     contract, canonical, payload = fixture(repo)
     semantic = repo / "outputs/semantic/semantic_release.json"
     semantic.parent.mkdir(parents=True)
-    semantic.write_text(json.dumps(contract))
-    (repo / "outputs/release_manifest.json").write_text(json.dumps({"version": "test", "products": []}))
+    semantic.write_text(json.dumps(contract), encoding="utf-8")
+    (repo / "outputs/release_manifest.json").write_text(json.dumps({"version": "test", "products": []}), encoding="utf-8")
     def git(*args):
         return subprocess.check_output(["git", "-C", str(repo), *args], stderr=subprocess.PIPE)
     git("init", "-q")
