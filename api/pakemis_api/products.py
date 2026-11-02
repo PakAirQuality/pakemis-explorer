@@ -303,7 +303,8 @@ class ProductCatalog:
             if os.path.realpath(path) in seen:
                 continue
             seen.add(os.path.realpath(path))
-            members.append((os.path.relpath(path, self.release_dir), path, sha256))
+            # a zip member name and a SHA256SUMS line are "/"-separated on every platform
+            members.append((os.path.relpath(path, self.release_dir).replace(os.sep, "/"), path, sha256))
         return members
 
     def stream_archive(self):

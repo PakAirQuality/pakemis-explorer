@@ -8,7 +8,9 @@ SCHEMA = "pakemis.asset_catalog/v1"
 def safe_path(root, relative):
     if os.path.isabs(relative) or ".." in relative.replace("\\", "/").split("/"):
         raise ValueError("asset path escapes release: %s" % relative)
-    return os.path.join(root, relative)
+    # joined part by part: a catalog path is always "/"-separated, and joined whole it left a
+    # Windows path half in each separator
+    return os.path.join(root, *relative.replace("\\", "/").split("/"))
 
 
 class ReleaseAssets:
