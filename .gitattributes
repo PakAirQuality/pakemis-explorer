@@ -1,0 +1,4 @@
+# Every file is stored and checked out byte for byte. The API verifies the release and the
+# vendored core by sha256, so a line-ending conversion on checkout (Git for Windows does one by
+# default) made a Windows clone fail its own digests.
+* -text

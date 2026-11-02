@@ -7,6 +7,18 @@ import pytest
 from pakemis_api.settings import Settings
 
 
+def _link(source, link):
+    """A symlink, or a copy where the OS refuses one (Windows without Developer Mode): a copied
+    entry is already private to tmp_path, so _tamper's walk has nothing to unlink on its way."""
+    try:
+        os.symlink(source, link)
+    except OSError:
+        if os.path.isdir(source):
+            shutil.copytree(source, link)
+        else:
+            shutil.copyfile(source, link)
+
+
 def _copy_release(settings, tmp_path):
     """The pinned release mirrored as symlinks, one per top-level entry: nothing is copied here.
 
@@ -17,7 +29,7 @@ def _copy_release(settings, tmp_path):
     root = tmp_path / "releases"
     os.makedirs(root / settings.version)
     for name in os.listdir(source):
-        os.symlink(os.path.join(source, name), root / settings.version / name)
+        _link(os.path.join(source, name), root / settings.version / name)
     return Settings(query_path=settings.query_path, releases_root=str(root), version=settings.version,
                     receipt_store=str(tmp_path / "receipts.json"), releases_md=settings.releases_md)
 
@@ -37,7 +49,7 @@ def _tamper(tampered, path):
         if os.path.isdir(target):
             os.mkdir(here)
             for name in os.listdir(target):
-                os.symlink(os.path.join(target, name), os.path.join(here, name))
+                _link(os.path.join(target, name), os.path.join(here, name))
         else:
             shutil.copyfile(target, here)
     assert os.path.realpath(path).startswith(os.path.realpath(tampered.releases_root) + os.sep), path
