@@ -15,7 +15,7 @@ def payload(tmp_path):
     path = root / "data/canonical/activity/example.csv"
     path.parent.mkdir(parents=True)
     text = "Fuel,Value,Record ID,Source row\nGas,1.00,row-a,1\n"
-    path.write_text(text, encoding="utf-8")
+    path.write_bytes(text.encode("utf-8"))  # bytes: write_text would turn \n into \r\n on Windows
     table = {"table_id": "activity.example", "path": "data/canonical/activity/example.csv",
              "source_path": "data/activity/example.csv", "title": "Example fuel", "role": "input",
              "row_count": 1, "sha256": hashlib.sha256(text.encode()).hexdigest(),
