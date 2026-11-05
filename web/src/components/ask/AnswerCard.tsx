@@ -27,6 +27,7 @@ import { gasColor, rampByRank } from "@/lib/palette";
 import { stateFromRequest } from "@/lib/requests";
 import { applyPatch, hrefForState, resolveState } from "@/lib/urlState";
 import { renderAnswer } from "./answerText";
+import { dataFilesOf, resolveLink, useDownloadCollections } from "./answerLinks";
 import { barLabel, cellName, chartKind, downloadTool, exactnessWords, groupKeyOf, principalTool, rowsOf, scopeRows, sizeOf, uncertaintyTool } from "./answerParts";
 import { useReceiptDrawer } from "./receiptDrawer";
 import { MapMovedLine, ProvenanceLine } from "./Provenance";
@@ -131,6 +132,7 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
   // A CITE STILL LEADS SOMEWHERE. Clicking a cited number used to scroll to the tool card that
   // produced it; those cards are gone, so it opens the evidence instead - the same destination,
   // which is the call, its filters and its receipt.
+  const collections = useDownloadCollections();
   const citeHandlers = {
     hover: onCite.hover,
     click: (h: Highlight) => { setEvidenceOpen(true); onCite.click(h); },
@@ -139,7 +141,12 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
       const cells = t && t.kind === "tool" ? t.result?.cells ?? [] : [];
       return isModelled(cells.find((c: ToolResultCell) => c.i === cell));
     },
+    // the server's checked links (answerLinks.ts): a route on this site, never the model's address
+    link: (to: string, label: string) => resolveLink(to, label, collections),
   };
+  // THE DOWNLOADS THE FIGURES WERE READ FROM, on the answer itself rather than inside "View
+  // details": a reader who wants the whole table should not have to know to open a fold for it
+  const dataFiles = dataFilesOf(items, collections);
   const answerBody = (
     <div className="text-sm leading-relaxed text-fg" data-testid="answer-part-answer">
       {renderAnswer(answer.text, citeHandlers)}
@@ -407,6 +414,21 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
         </dl>
       )}
       {note && <p className="text-xs leading-relaxed text-muted" data-testid="answer-caveat">{note}</p>}
+      {dataFiles.length > 0 && (
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted" data-testid="answer-data">
+          <Download size={12} className="shrink-0" aria-hidden="true" />
+          <span>Data:</span>
+          {dataFiles.map((d, i) => (
+            <span key={d.id}>
+              <Link href={`/downloads?item=${encodeURIComponent(d.id)}`} className="font-medium text-accent underline underline-offset-2 hover:text-accent-bright"
+                    data-testid="answer-data-link" data-id={d.id}>
+                {d.title}
+              </Link>
+              {i < dataFiles.length - 1 ? " ·" : ""}
+            </span>
+          ))}
+        </p>
+      )}
       {provenance}
       {move && (
         <MapMovedLine

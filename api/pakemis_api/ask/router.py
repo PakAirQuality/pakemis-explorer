@@ -8,7 +8,8 @@ Events (name: data), in the order a turn emits them:
                   (uncertainty and n_rows are on the event only; the model's tool_result content is unchanged)
     refusal       {k, id, name, error, error_class, limitation_id, message, detail}
     map_action    {level?, geo?, period?, month?, sector?, gas?, config?, gwp?, view?}
-    answer        {text, receipts, citations, scope, elapsed_s}   text carries <cite k cell receipt> tags; scope is the last
+    answer        {text, receipts, citations, scope, elapsed_s}   text carries <cite k cell receipt> tags and checked
+                  <plink to> links (render.py); scope is the last
                   tool result's compact context {basis, periods, configuration_id, gwp_basis, geography_level, ..., k, request_type, receipt, name} or null
     error         {code, message}                          bare_numbers | placeholder_error | empty_answer | turn_limit | budget_exhausted | model_error | model_refusal | agent_disabled
     done          {conversation_id, usage, cost_estimate_usd}

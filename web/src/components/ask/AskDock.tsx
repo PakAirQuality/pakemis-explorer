@@ -261,7 +261,7 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
     for (const t of ask.turns) {
       lines.push(`Q: ${t.message}`);
       const answer = t.events.find((e) => e.name === "answer")?.data as { text?: string; receipts?: string[] } | undefined;
-      if (answer?.text) lines.push(`A: ${answer.text.replace(/<cite\b[^>]*>(.*?)<\/cite>/g, "$1")}`);
+      if (answer?.text) lines.push(`A: ${answer.text.replace(/<cite\b[^>]*>(.*?)<\/cite>/g, "$1").replace(/<plink\b[^>]*>(.*?)<\/plink>/g, "$1")}`);
       if (answer?.receipts?.length) lines.push(`   receipts: ${answer.receipts.join(", ")}`);
       lines.push("");
     }

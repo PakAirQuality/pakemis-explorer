@@ -34,6 +34,13 @@ import type { DownloadCatalog } from "@/lib/products";
 
 export type CollectionId = "emissions" | "activity" | "air" | "methods" | "maps";
 
+/**
+ * The page's sections, in tab order: the Downloads tabs (after "All data"), the `?show=` values,
+ * and the sections the assistant may link to. The API's renderer keeps the same list
+ * (api/pakemis_api/ask/render.py DOWNLOAD_SECTIONS) and api/tests/test_ask_links.py reads this one.
+ */
+export const COLLECTION_IDS = ["emissions", "activity", "air", "methods", "maps"] as const satisfies readonly CollectionId[];
+
 export type Download = {
   id: string;
   title: string;

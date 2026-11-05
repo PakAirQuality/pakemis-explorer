@@ -295,6 +295,12 @@ def tool_result_payload(k, call_id, name, env, cap):
         "cells": compact_cells(values, cap),
         "limitations_hit": [l.get("id") for l in env.get("limitations_hit") or [] if isinstance(l, dict)],
     }
+    # THE TABLES THE ANSWER WAS READ FROM, by name (the envelope's provenance). The model uses them
+    # for {{link:file:<table>}}, and the web app for the answer's "Data" line; the digests and
+    # paths stay in the envelope, which "Reproduce" replays.
+    tables = [t.get("table") for t in (env.get("provenance") or {}).get("tables") or [] if isinstance(t, dict) and t.get("table")]
+    if tables:
+        payload["source_tables"] = tables
     if len(values) > cap:
         payload["truncated"] = "showing the first %d of %d cells; narrow the request or use limit/group_by" % (cap, len(values))
     un = env.get("unallocated") or {}
@@ -302,6 +308,13 @@ def tool_result_payload(k, call_id, name, env, cap):
     if un.get("by_province") or un.get("by_module_gas"):
         payload["unallocated"] = un
     return payload
+
+
+def served_tables(service):
+    """The table names the release serves as CSV files (products.ProductCatalog.files), or none
+    for a service without a catalogue - a test double - so no file link is recognised there."""
+    files = getattr(getattr(service, "products", None), "files", None) or {}
+    return frozenset(name[:-4] for name in files if name.endswith(".csv"))
 
 
 def refusal_payload(k, call_id, name, exc, service=None):
@@ -353,6 +366,8 @@ class Turn:
         self._calls = {}
         # tokens this turn has spent but the CONVERSATION has not yet accepted. See `_spend`.
         self.turn_spent = 0
+        # the tables the release serves as files: what a {{link:file:<table>}} may name
+        self.link_tables = served_tables(service)
 
     # -- repeated calls ---------------------------------------------------------------------
 
@@ -618,7 +633,8 @@ class Turn:
                 break
             # a final text: render or correct once
             try:
-                rendered, citations = render_multi(text, self.results, allowlist=(self.dims.version, self.dims.release_id))
+                rendered, citations = render_multi(text, self.results, allowlist=(self.dims.version, self.dims.release_id),
+                                                   tables=self.link_tables)
             except PlaceholderError as exc:
                 code = "bare_numbers" if isinstance(exc, BareNumberError) else "placeholder_error"
                 self.rejected_drafts.append(text)
@@ -637,7 +653,7 @@ class Turn:
                     log.warning("answer shipped with an unknown placeholder dropped: %s", exc)
                     rendered, citations = render_multi(text, self.results,
                                                        allowlist=(self.dims.version, self.dims.release_id),
-                                                       drop_unknown=True)
+                                                       drop_unknown=True, tables=self.link_tables)
                 else:
                     yield "error", {"code": code, "message": str(exc)}
                     break

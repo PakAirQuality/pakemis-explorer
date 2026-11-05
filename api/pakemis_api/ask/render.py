@@ -43,6 +43,42 @@ SERVICE_ATTRS = {"short": ("display_short", "display"), "unit": ("unit_short", "
 # could not resolve; a form it did not recognise was invisible to all of them.
 UNKNOWN = re.compile(r"\{\{.*?\}\}", re.S)
 
+# LINKS TO THIS SITE'S OWN PAGES, NEVER A URL THE MODEL WROTE. The model writes a link the way it
+# writes a number - as a placeholder - and the server checks it against what the release actually
+# serves before it becomes a tag the web app can draw:
+#     {{link:downloads}}                    the Downloads page
+#     {{link:downloads:<section>}}          one of its sections (DOWNLOAD_SECTIONS)
+#     {{link:file:<table>}}                 the Downloads entry of one served table, e.g. fact_activity_vehicles
+# rendered as <plink to="downloads:activity">Downloads</plink>. The web app turns `to` into the
+# route and, for a file, the entry's title; nothing here is ever an href. A link to a section or a
+# table that does not exist is not recognised, so it is an unknown placeholder: one redraft, then
+# struck - the same path as an invented field.
+LINK = re.compile(r"\{\{link:(?:downloads(?::(?P<section>[a-z]+))?|file:(?P<table>[a-z0-9_]+))\}\}")
+LINK_LABEL = "Downloads"
+# The Downloads page's sections (web/src/components/downloads/catalogue.ts, COLLECTION_IDS);
+# tests/test_ask_links.py holds the two lists together.
+DOWNLOAD_SECTIONS = ("emissions", "activity", "air", "methods", "maps")
+# A link tag in the model's own text would be drawn as a link without having been checked: strip it.
+FORGED_LINK = re.compile(r"</?plink\b[^>]*>", re.I)
+
+
+def link_tag(to, label):
+    return '<plink to="%s">%s</plink>' % (html.escape(to, quote=True), html.escape(label, quote=False))
+
+
+def render_links(text, tables=frozenset()):
+    """Replace every recognised link placeholder with its tag. `tables` is the set of table names
+    the release serves as files; a file link to anything else, or a section the page does not
+    have, is left in place for the unknown-placeholder check to catch."""
+    def sub(match):
+        section, table = match.group("section"), match.group("table")
+        if table is not None:
+            return link_tag("file:" + table, table) if table in tables else match.group(0)
+        if section is None:
+            return link_tag("downloads", LINK_LABEL)
+        return link_tag("downloads:" + section, LINK_LABEL) if section in DOWNLOAD_SECTIONS else match.group(0)
+    return LINK.sub(sub, text)
+
 
 class BareNumberError(P.PlaceholderError):
     """A decimal that is not a placeholder."""
@@ -73,7 +109,7 @@ def strip_unknown(text):
 
 def check_bare_numbers(template, allowlist=()):
     """Raise BareNumberError if the template carries a decimal outside a placeholder."""
-    stripped = MULTI.sub("", template)
+    stripped = LINK.sub("", MULTI.sub("", template))
     for word in allowlist:
         if word:
             stripped = stripped.replace(word, "")
@@ -83,14 +119,17 @@ def check_bare_numbers(template, allowlist=()):
         raise BareNumberError(str(exc)) from exc
 
 
-def render_multi(template, results, allowlist=(), drop_unknown=False):
+def render_multi(template, results, allowlist=(), drop_unknown=False, tables=frozenset()):
     """-> (text, citations). results[k-1] is the envelope of tool call k (None for a call that
     returned no envelope). Raises PlaceholderError (BareNumberError for a bare decimal,
     UnknownPlaceholderError for brace syntax this renderer does not know).
 
     `drop_unknown` is the loop's second pass: the model has already been asked to redraft once, so
-    the unknown phrase is removed rather than the answer withheld.
+    the unknown phrase is removed rather than the answer withheld. `tables` is the set of table
+    names a `{{link:file:<table>}}` may name (the release's served files); empty, no file link is
+    recognised.
     """
+    template = FORGED_LINK.sub("", template)
     check_bare_numbers(template, allowlist)
     citations = []
 
@@ -130,13 +169,15 @@ def render_multi(template, results, allowlist=(), drop_unknown=False):
                           "receipt": env.get("receipt", ""), "text": text})
         return '<cite k="%d" cell="%s" receipt="%s">%s</cite>' % (k, n_text, html.escape(env.get("receipt", ""), quote=True), html.escape(text, quote=False))
 
-    out = MULTI.sub(sub, template)
+    out = render_links(MULTI.sub(sub, template), tables)
     left = UNKNOWN.findall(out)
     if left:
         if not drop_unknown:
             raise UnknownPlaceholderError(
                 "template uses %s, which is not a placeholder; the only forms are {{result_k_cell_n}} "
-                "and its .short/.exact/.unit/.value/.share/.pct variants" % ", ".join(sorted(set(left))[:3]))
+                "and its .short/.exact/.unit/.value/.share/.pct variants, and the links {{link:downloads}}, "
+                "{{link:downloads:<section>}} (sections: %s) and {{link:file:<table>}} for a table the "
+                "release serves" % (", ".join(sorted(set(left))[:3]), ", ".join(DOWNLOAD_SECTIONS)))
         out = strip_unknown(out)
     return out, citations
 

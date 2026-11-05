@@ -262,6 +262,43 @@ describe("/downloads", () => {
     for (const c of COLLECTIONS) for (const d of c.downloads) expect(d.pending).toBeUndefined();
   });
 
+  it("?item= opens the download's collection, scrolls to its row and highlights it; a tab lets go", async () => {
+    // the assistant's file links land here: /downloads?item=vehicles
+    const scrolled = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrolled;
+    try {
+      const onUrlUpdate = vi.fn();
+      mount("?item=vehicles", onUrlUpdate);
+      await screen.findAllByTestId("collection");
+      // only the vehicles' own collection is shown, with its tab selected
+      expect(screen.getAllByTestId("collection").map((c) => c.getAttribute("data-collection"))).toEqual(["activity"]);
+      const activeTab = screen.getAllByTestId("collection-tab").find((t) => t.getAttribute("aria-selected") === "true");
+      expect(activeTab).toHaveAttribute("data-collection", "activity");
+      const row = screen.getAllByTestId("download-row").find((r) => r.getAttribute("data-id") === "vehicles")!;
+      expect(row).toHaveAttribute("data-highlighted", "1");
+      expect(row.id).toBe("download-vehicles");
+      // and no other row is
+      expect(screen.getAllByTestId("download-row").filter((r) => r.getAttribute("data-highlighted"))).toHaveLength(1);
+      await waitFor(() => expect(scrolled).toHaveBeenCalled());
+      expect(scrolled.mock.contexts[0]).toBe(row);
+      // choosing a tab is choosing to browse: the link lets go
+      fireEvent.click(screen.getAllByTestId("collection-tab").find((t) => t.getAttribute("data-collection") === "all")!);
+      await waitFor(() => expect(screen.getAllByTestId("collection").length).toBeGreaterThan(1));
+      expect(screen.getAllByTestId("download-row").filter((r) => r.getAttribute("data-highlighted"))).toHaveLength(0);
+      expect(onUrlUpdate.mock.calls.at(-1)![0].queryString).not.toContain("item=");
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it("an ?item= the page does not offer changes nothing", async () => {
+    mount("?item=no-such-table");
+    await screen.findAllByTestId("collection");
+    expect(screen.getAllByTestId("collection").length).toBeGreaterThan(1);
+    expect(screen.getAllByTestId("download-row").filter((r) => r.getAttribute("data-highlighted"))).toHaveLength(0);
+  });
+
   it("the search matches a column name, and a tab narrows to one collection", async () => {
     const onUrlUpdate = vi.fn();
     mount("", onUrlUpdate);

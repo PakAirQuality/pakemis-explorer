@@ -20,7 +20,7 @@
  * The API mode is unchanged, and `?receipt=` still forces it: that URL is what every receipt in the
  * app links to, including the assistant's answers.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
@@ -39,7 +39,7 @@ import { Widget, WIDGET_TITLE } from "@/components/ui/Widget";
 import { Frame } from "@/components/ui/Frame";
 import { RefusalCard } from "@/components/ui/RefusalCard";
 import { DOWNLOADS } from "./copy";
-import { collectionsFor, matches, type Collection, type Download as Item } from "./catalogue";
+import { COLLECTION_IDS, collectionsFor, matches, type Collection, type Download as Item } from "./catalogue";
 import { PreviewDrawer } from "./PreviewDrawer";
 import { MapMotif, MOTIF_CREDIT } from "@/components/shell/MapMotif";
 
@@ -74,7 +74,7 @@ export const ROW_GRID = "flex flex-wrap items-center gap-x-6 gap-y-2.5 px-5 py-3
 export const ROW_COVERAGE = "w-44 shrink-0";
 export const ROW_ACTIONS = "flex w-56 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 md:justify-end";
 const MODES = ["files", "api"] as const;
-const TABS = ["all", "emissions", "activity", "air", "methods", "maps"] as const;
+const TABS = ["all", ...COLLECTION_IDS] as const;
 const TAB_LABEL: Record<string, string> = {
   all: "All data", emissions: "Emissions", activity: "Activity data",
   air: "Air pollutants", methods: "Methods & uncertainty", maps: "Maps & grids",
@@ -93,7 +93,14 @@ export function Downloads() {
   const doi = releaseDoi(release);
   const facts = releaseFacts(release);
   const [modeParam, setModeParam] = useQueryState("mode", parseAsStringLiteral(MODES));
-  const [tab, setTab] = useQueryState("show", parseAsStringLiteral(TABS));
+  const [tab, setTabParam] = useQueryState("show", parseAsStringLiteral(TABS));
+  // ONE DOWNLOAD, LINKED TO (`?item=<id>`, the assistant's file links): its collection is shown,
+  // the page scrolls to it and it is highlighted. Choosing a tab lets go of it.
+  const [itemParam, setItemParam] = useQueryState("item", parseAsString);
+  const setTab = (next: (typeof TABS)[number] | null) => {
+    setItemParam(null);
+    setTabParam(next);
+  };
   const [receiptParam, setReceiptParam] = useQueryState("receipt", parseAsString);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
@@ -119,14 +126,30 @@ export function Downloads() {
   }, [products.data]);
 
   const collections = useMemo(() => collectionsFor(products.data?.download_catalog), [products.data?.download_catalog]);
+  // the linked download's collection, when the URL names a published one and no tab was chosen
+  const linked = useMemo(() => {
+    if (!itemParam) return null;
+    const home = collections.find((c) => c.downloads.some((d) => d.id === itemParam && !d.pending));
+    return home ? { id: itemParam, collection: home.id as (typeof TABS)[number] } : null;
+  }, [itemParam, collections]);
+  const activeTab = tab ?? linked?.collection ?? null;
   const shown: Collection[] = useMemo(() => {
     const columnsOf = (item: Item) => item.files.flatMap((f) => byName.get(f)?.columns ?? []);
-    const picked = tab && tab !== "all" ? collections.filter((c) => c.id === tab) : collections;
+    const picked = activeTab && activeTab !== "all" ? collections.filter((c) => c.id === activeTab) : collections;
     if (!query.trim()) return picked;
     return picked
       .map((c) => ({ ...c, downloads: c.downloads.filter((d) => matches(d, query, columnsOf(d))) }))
       .filter((c) => c.downloads.length > 0);
-  }, [tab, query, byName, collections]);
+  }, [activeTab, query, byName, collections]);
+  // scroll the linked download into view once per link, when its row is on the page
+  const scrolledTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (!linked || scrolledTo.current === linked.id) return;
+    const row = document.getElementById(downloadAnchor(linked.id));
+    if (!row) return;
+    scrolledTo.current = linked.id;
+    row.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  }, [linked, shown]);
 
   const setMode = (next: (typeof MODES)[number]) => {
     if (next === "files") setReceiptParam(null);
@@ -204,7 +227,7 @@ export function Downloads() {
               collections and leave no way back */}
           {shown.length === 0 && (
             <div className={`mt-4 ${PALE_CARD} px-6 py-5`} data-testid="collection-header">
-              <Tabs tab={tab} setTab={setTab} />
+              <Tabs tab={activeTab} setTab={setTab} />
               <p className="mt-4 text-sm text-muted" data-testid="no-matches">Nothing matches that. Try a fuel, a place or a column name.</p>
             </div>
           )}
@@ -216,7 +239,7 @@ export function Downloads() {
                   that rule while the card's own corners stay round. */}
               <div className={`overflow-hidden rounded-card ${PALE_BORDER} bg-card shadow-card`} data-testid="collection-card">
                 <div className={`${PALE_FILL} px-6 py-5`} data-testid="collection-header">
-                  {i === 0 && <Tabs tab={tab} setTab={setTab} />}
+                  {i === 0 && <Tabs tab={activeTab} setTab={setTab} />}
                   <h2 className={`${i === 0 ? "mt-4 " : ""}text-xl font-semibold tracking-tight text-fg`}>{c.title}</h2>
                   <p className="mt-0.5 text-sm text-muted">{c.dek}</p>
 
@@ -230,7 +253,7 @@ export function Downloads() {
                     published tables as rows, and beneath them the ones still being packaged. */}
                 <div>
                   {c.downloads.filter((d) => !d.pending).map((d) => (
-                    <ItemRow key={d.id} item={d} product={byName.get(d.files[0])} pending={false} onPreview={setPreview} />
+                    <ItemRow key={d.id} item={d} product={byName.get(d.files[0])} pending={false} onPreview={setPreview} highlighted={linked?.id === d.id} />
                   ))}
                 </div>
                 {c.downloads.some((d) => d.pending) && (
@@ -315,7 +338,12 @@ function Tabs({ tab, setTab }: { tab: string | null; setTab: (v: (typeof TABS)[n
 }
 
 /** One download: what it is, what it covers, and the two things a reader does with it. */
-function ItemRow({ item, product, pending, onPreview }: { item: Item; product?: Product; pending: boolean; onPreview: (p: { title: string; file: string }) => void }) {
+/** The element id of a download's row, which `?item=<id>` scrolls to. */
+export function downloadAnchor(id: string): string {
+  return `download-${id}`;
+}
+
+function ItemRow({ item, product, pending, onPreview, highlighted = false }: { item: Item; product?: Product; pending: boolean; onPreview: (p: { title: string; file: string }) => void; highlighted?: boolean }) {
   const Icon = item.icon;
   if (pending) {
     // designed, not yet published: the card says what it will hold and the section above says why
@@ -338,7 +366,9 @@ function ItemRow({ item, product, pending, onPreview }: { item: Item; product?: 
   const [primary] = item.files;
   const csv = item.files.find((f) => f.endsWith(".csv"));
   return (
-    <div className={`${ROW_GRID} border-b border-line last:border-b-0`} data-testid="download-row" data-id={item.id}>
+    <div id={downloadAnchor(item.id)}
+         className={`${ROW_GRID} border-b border-line last:border-b-0 ${highlighted ? "bg-accent-soft ring-2 ring-inset ring-accent" : ""}`}
+         data-testid="download-row" data-id={item.id} data-highlighted={highlighted ? "1" : undefined}>
       <Icon size={17} className="w-5 shrink-0 text-accent" aria-hidden="true" data-testid="download-icon" />
       {/* ⚠ THE MEASURE GOES ON THE SENTENCE, NOT ON THE COLUMN. A max-width here stops `flex-1` from
           growing, so the whole row bunches to the left and leaves a void where the window continues -

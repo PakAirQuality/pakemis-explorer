@@ -36,6 +36,8 @@ export type ToolResultEvent = {
   uncertainty?: UncertaintyBlock;
   truncated?: string;
   download?: { csv: string; receipt_json: string };
+  /** The release tables the result was read from (the envelope's provenance), by name. */
+  source_tables?: string[];
 };
 export type RefusalEvent = { k: number; id: string; name: string; error: string; error_class: string; limitation_id: string | null; message: string; message_worded?: string; detail: Record<string, unknown> };
 export type MapActionKey = "level" | "geo" | "period" | "month" | "sector" | "gas" | "pol" | "config" | "gwp" | "view";

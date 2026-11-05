@@ -185,6 +185,31 @@ describe("the Lahore question, on screen", () => {
     window.sessionStorage.clear();
   });
 
+  it("names the download the figure was read from under the answer, and links it in the sentence", async () => {
+    const events = stream([CARS], `Lahore's register held ${cite(0, CARS.display)} cars; the full table is <plink to="file:fact_activity_vehicles">fact_activity_vehicles</plink>.`);
+    (events[3][1] as ToolResultEvent).source_tables = ["fact_activity_vehicles"];
+    const replay = envelope([{ display: CARS.display, display_short: CARS.display_short }], { receipt: RECEIPT });
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (String(url).endsWith("/ask")) return sse(events);
+      if (String(url).includes("/receipt/")) return { ok: true, status: 200, statusText: "OK", json: async () => replay } as unknown as Response;
+      throw new Error(`unexpected fetch ${url}`);
+    }));
+    mount();
+    await askQuestion("How many cars are in Lahore?");
+    const card = screen.getByTestId("answer-card");
+    // in the sentence: the download's own title, to its entry on the Downloads page
+    const inline = within(card).getByTestId("answer-link");
+    expect(inline).toHaveTextContent("Registered vehicles by district");
+    expect(inline.getAttribute("href")).toBe("/downloads?item=vehicles");
+    expect(within(card).getByTestId("answer-part-answer").textContent).not.toContain("fact_activity_vehicles");
+    // under the answer, on the card itself rather than inside "View details"
+    const data = within(card).getByTestId("answer-data");
+    expect(data).toHaveTextContent("Data:");
+    const links = within(data).getAllByTestId("answer-data-link");
+    expect(links.map((l) => [l.textContent, l.getAttribute("href")])).toEqual([["Registered vehicles by district", "/downloads?item=vehicles"]]);
+    expect(within(card).queryByTestId("evidence-detail")).toBeNull();
+  });
+
   it("answers with the record's scope while the map shows somewhere else", async () => {
     const replay = envelope([{ display: CARS.display, display_short: CARS.display_short }], { receipt: RECEIPT });
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
