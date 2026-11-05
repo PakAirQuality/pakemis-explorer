@@ -105,8 +105,8 @@ describe("a prepared explanation", () => {
     expect(within(prov).getByTestId("provenance-action")).toHaveTextContent("View details");
     // a prepared explanation queried nothing, so there is no map state to offer
     expect(screen.queryByTestId("show-on-map")).toBeNull();
-    // a prepared explanation ran no query, so there is no scope to state
-    expect(screen.queryByTestId("scope-note")).toBeNull();
+    // a prepared explanation ran no query, so there is no caveat to state
+    expect(screen.queryByTestId("answer-caveat")).toBeNull();
     expect(screen.queryByTestId("answer-sources")).toBeNull();     // folded until asked for
 
     fireEvent.click(within(prov).getByTestId("provenance-action"));
@@ -214,21 +214,20 @@ describe("the empty state", () => {
     expect(screen.queryByTestId("ask-title")).toBeNull();
     expect(screen.queryAllByTestId("suggestion")).toHaveLength(0);
     expect(screen.getByTestId("composer")).toBeInTheDocument();   // one box, moved to the foot
-    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Using this view:");
+    expect(screen.queryByTestId("ask-scope")).toBeNull();          // and no scope row beside it
   });
 
   it("names the scope in the same words the scope line uses", () => {
-    // a chip row and a scope line that can disagree will, so they are one function apart
-    vi.stubGlobal("fetch", vi.fn(async () => sseResponse(LIBRARY)));
-    mount();
-    const chips = screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent ?? "");
+    // the chips (the restore banner and the history list still word a saved scope with them) and the
+    // scope line (the transcript download) can disagree only if they drift apart, so they are one
+    // function apart
+    const chips = scopeChips(releaseLabels(release), releaseDims(release), base, DEFAULTS).filter((p) => p.primary).map((p) => p.label);
     expect(chips).toEqual(["Pakistan", "agriculture", "All gases", "2023–24"]);
     // the pills are the primary parts; the line is all of them, and the line must never say a
     // different word for the same thing
     const line = scopeLine(releaseLabels(release), releaseDims(release), base, DEFAULTS);
     for (const chip of chips.filter((c) => c !== "All gases")) expect(line).toContain(chip);
     const parts = scopeChips(releaseLabels(release), releaseDims(release), base, DEFAULTS);
-    expect(parts.filter((p) => p.primary).map((p) => p.label)).toEqual(chips);
     expect(parts.filter((p) => !p.primary).map((p) => p.id)).toEqual(["config"]);
   });
 });

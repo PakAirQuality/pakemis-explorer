@@ -60,20 +60,17 @@ export const RECORD_LEAD = "This is a source record, not an emission estimate";
 export const TOTAL_NOTE = "The total is the sum of the classes this release holds, computed here; it is not a figure the source printed.";
 
 /**
- * The scope of a record answer, said once: what was counted, where, when, by whom, and what the
- * figure is not. "This is a source record, not an emission estimate: Registered vehicles · Lahore ·
- * 30 June 2023 · Provincial vehicle registrations. Registered stock at 30 June is not traffic and
- * not an active fleet."
+ * The warnings on a record answer, said once: what the figure is not. "This is a source record, not
+ * an emission estimate. Registered stock at 30 June is not traffic and not an active fleet."
+ *
+ * The scope that used to follow the lead ("Registered vehicles · Lahore · 30 June 2023 · Provincial
+ * vehicle registrations") is gone from this line: the answer names the record's place and date in
+ * its own sentence, and "View details" lists record, place, date, source and evidence
+ * (activityScopeRows below).
  */
 export function activityNote(r: ToolResultEvent): string {
   const cells = r.cells;
-  const parts = [
-    listed(distinct(cells, "measure")),
-    listed(distinct(cells, "location")),
-    span(distinct(cells, "period_label")),
-    listed(distinct(cells, "source_series")),
-  ].filter(Boolean);
-  let out = parts.length ? `${RECORD_LEAD}: ${parts.join(" · ")}.` : `${RECORD_LEAD}.`;
+  let out = `${RECORD_LEAD}.`;
   const notes = distinct(cells, "use_note");
   if (notes.length === 1) out += ` ${firstSentence(notes[0])}`;
   if (cells.some(isComputedTotal)) out += ` ${TOTAL_NOTE}`;

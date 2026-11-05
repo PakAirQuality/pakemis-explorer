@@ -11,7 +11,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderAnswer } from "./answerText";
-import { attachmentOf, attachmentTitle, disclosureOf, followUps, isModelled, methodDisclosure, periodSpan, restedOn, restedOnTurn, scopeNote, UNCERTAINTY_FOLLOW_UP } from "./attachment";
+import { attachmentOf, attachmentTitle, disclosureOf, followUps, isModelled, methodDisclosure, periodSpan, restedOn, restedOnTurn, caveatNote, UNCERTAINTY_FOLLOW_UP } from "./attachment";
 import { allocationSurfaceWords } from "@/components/methods/evidenceClassText";
 import { cellName } from "./answerParts";
 import type { AnswerEvent, ToolResultCell, ToolResultEvent } from "./types";
@@ -253,20 +253,18 @@ describe("what the interface says, so the model does not", () => {
     expect(restedOnTurn([moved], "fallback")).toBe("fallback");
   });
 
-  it("states the scope in ONE sentence, in the release's own words, and never prints a period id", () => {
-    const r = tool([cell(0, "1.0")], { context: { geography_level: "national", periods: ["FY2023-24"], gwp_basis: "AR5" } }).result!;
-    const note = scopeNote(r, words);
-    expect(note).toBe("These are national estimates for 2023–24, using IPCC 2013 (AR5) warming potentials. The release excludes land use and forestry.");
-    expect(note).not.toContain("FY");
+  it("keeps the release's caveat, once, and no longer states the scope", () => {
+    const note = caveatNote(words.lulucf);
+    expect(note).toBe("The release excludes land use and forestry.");
     // the caveat appears once, which is the whole complaint: "(Note: every national total excludes
     // land use and forestry)" was arriving on every answer, sometimes twice
     expect(note.match(/land use/g)).toHaveLength(1);
+    // the scope sentence is gone: the answer names its own year and place
+    expect(note).not.toMatch(/These are|estimates for|warming potentials/);
   });
 
-  it("says nothing it does not know: no basis clause without a basis", () => {
-    const r = tool([cell(0, "1.0")], { context: { geography_level: "national", periods: ["FY2023-24"] } }).result!;
-    expect(scopeNote(r, { ...words, gwp: () => "" })).not.toContain("warming potentials");
-    expect(scopeNote(r, { ...words, lulucf: "" })).not.toContain("The release");
+  it("says nothing it does not know: no caveat without the release's wording", () => {
+    expect(caveatNote("")).toBe("");
   });
 });
 

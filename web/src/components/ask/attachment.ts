@@ -155,25 +155,19 @@ export function restedOnTurn(items: TimelineItem[], fallback = ""): string {
 }
 
 /**
- * The scope, said ONCE, by the interface.
+ * The release's standing caveat on an emissions answer, said ONCE, by the interface, in the
+ * release's own words ("The release excludes land use and forestry."); empty when the release
+ * supplies none.
  *
- * THE MODEL USED TO SAY THIS, AND SAID IT TWICE. Its rule 4 read "state the scope with every
- * figure", so an answer with two figures carried the caveat twice, and `lulucf_excluded` is on every
- * envelope so "(note that land use and forestry are excluded)" arrived on every reply. None of it
- * was the model's to write: the place, the period, the basis and the exclusion are properties of the
- * release and the query, known exactly, and the release even supplies its own wording for the last
- * one. Nothing here is generated; every clause is a lookup.
+ * THE SCOPE SENTENCE THAT LED IT IS GONE. "These are national estimates for 2023–24, using IPCC 2013
+ * (AR5) warming potentials" sat under every answer as a separate line; the answer now names its
+ * year and place in its own sentence, taken from the result it used (prompt.py, rule 4), and
+ * "View details" keeps the applied filters. The exclusion stays here rather than in the model's
+ * prose because `lulucf_excluded` is on every envelope, and the model, when it owned the caveat,
+ * wrote it on every reply and sometimes twice.
  */
-export function scopeNote(r: ToolResultEvent, words: { period: (id: string) => string; gwp: (id: string) => string; place: (r: ToolResultEvent) => string; lulucf: string }): string {
-  const span = periodSpan(r, words.period);
-  const basis = typeof r.context?.gwp_basis === "string" ? words.gwp(r.context.gwp_basis) : "";
-  const parts = [`These are ${words.place(r)} estimates`];
-  if (span) parts.push(`for ${span}`);
-  let out = parts.join(" ");
-  if (basis) out += `, using ${basis} warming potentials`;
-  out += ".";
-  if (words.lulucf) out += ` The release ${words.lulucf}.`;
-  return out;
+export function caveatNote(lulucf: string): string {
+  return lulucf ? `The release ${lulucf}.` : "";
 }
 
 const SPECIAL: Record<string, string> = {

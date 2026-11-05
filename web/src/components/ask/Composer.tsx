@@ -1,8 +1,8 @@
 "use client";
 /**
  * The question box: a white card carrying a textarea (Enter sends, Shift+Enter breaks a line), a
- * round send button, and a `footer` slot the dock fills with the scope the question will be sent
- * with. `@` mentions are inserted when a map feature is clicked while the panel is open
+ * round send button, and an optional `footer` slot (the dock leaves it empty since the scope row
+ * under the box was removed). `@` mentions are inserted when a map feature is clicked while the panel is open
  * (mentions.ts). The suggested questions live in the dock's empty state (suggestions.ts);
  * ui_state is sent by the dock.
  *

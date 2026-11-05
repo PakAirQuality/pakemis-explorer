@@ -3,9 +3,8 @@
  * The Ask panel: the body of the AskDrawer (every page), of the /ask permalink page and of the
  * Map page's right column when `ask=1`. Header: the title, the one-line contract ("The
  * assistant interprets your question; the inventory engine supplies every number…"), the model,
- * New conversation and — in the drawer — Close. Under it the scope line the drawer inherits
- * from the URL state ("Scope: Punjab · agriculture · 2023–24 · reference estimate"). The empty
- * state lists the scope-derived suggested questions (suggestions.ts; a click sends one). The
+ * New conversation and — in the drawer — Close. The URL state is sent with every question as
+ * ui_state but is not printed beside the box. The empty state lists the scope-derived suggested questions (suggestions.ts; a click sends one). The
  * turns render as ReasoningTimeline (AnswerCard each). Disabled (no key: /release.agent.enabled
  * false, or a 503 on send) shows the DisabledCard. `map_action` events are applied to the URL
  * state as they arrive; the conversation id is written to `c` and the log kept in localStorage
@@ -34,7 +33,7 @@ import type { AskIntent } from "./types";
 import { AskRings } from "./AskRings";
 import { HistoryList } from "./HistoryList";
 import { clearHistory, forgetConversation, loadHistory, type HistoryEntry } from "./history";
-import { ASK_PANEL_WIDTH, openFilters, useAskDocked } from "./docked";
+import { ASK_PANEL_WIDTH } from "./docked";
 import { movePatch, previousOf, undoPatch, type MapMove } from "./mapMove";
 import { useAskStream } from "./useAskStream";
 import type { MapActionEvent } from "./types";
@@ -173,7 +172,6 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
   const streamSend = stream.send;
   const send = useCallback((text: string, intent?: AskIntent) => { setAgentMove(null); return streamSend(text, intent); }, [streamSend]);
   const ask = useMemo(() => ({ ...stream, send }), [stream, send]);
-  const docked = useAskDocked();
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
@@ -302,7 +300,6 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
     };
   }, [menuOpen]);
 
-  const chips = scopeChips(labels, dims, state, defaults).filter((c) => c.primary);
   const scope = scopeLine(labels, dims, state, defaults);
   const suggestions = withFigure(suggestedQuestions(labels, dims, state), total).slice(0, ASK_SUGGESTIONS);
   const empty = ask.turns.length === 0 && disabled === null;
@@ -331,9 +328,11 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
     return { words, restore: () => setState(patch) };
   })();
 
-  // The scope row fits one line in the common case: the label, three pills and Change come to
-  // 374 px of the 377 the card leaves. A sector adds a fourth pill and it wraps, which is the
-  // right answer - the scope is worth two lines before it is worth an ellipsis.
+  // NO "USING THIS VIEW" ROW UNDER THE BOX. The map selection is still sent with every question
+  // (uiState above) so the assistant can resolve "here" and "this year", but a row of the map's
+  // pills beside the box told the reader every question was about them - and the question, not
+  // the map, says what a question is about. Its "Change" link went with it; the map's own
+  // filters button opens the same card (docked.ts keeps openFilters for whoever needs it next).
   const composer = (
     <Composer
       onSend={ask.send}
@@ -341,21 +340,6 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
       streaming={ask.streaming}
       disabled={disabled !== null}
       placeholder={empty ? undefined : "Ask a follow-up…"}
-      footer={
-        <div className="flex flex-wrap items-center gap-[5px] border-t border-line px-3.5 py-2.5" data-testid="ask-scope" title="The current URL scope, sent with every question">
-          <span className="shrink-0 whitespace-nowrap text-xs text-muted">Using this view:</span>
-          {chips.map((c) => (
-            <span key={c.id} className="pill max-w-full truncate bg-surface-3 px-2.5 py-1.5 text-xs font-medium text-fg" data-testid="ask-scope-chip" data-chip={c.id}>
-              {c.label}
-            </span>
-          ))}
-          {docked && (
-            <button type="button" onClick={() => openFilters()} className="shrink-0 text-xs font-medium text-accent underline underline-offset-2 hover:text-accent-bright" data-testid="ask-scope-toggle">
-              Change
-            </button>
-          )}
-        </div>
-      }
     />
   );
 

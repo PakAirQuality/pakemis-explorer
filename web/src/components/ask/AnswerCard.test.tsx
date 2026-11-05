@@ -220,19 +220,20 @@ describe("AnswerCard", () => {
     expect(trs[0]).toHaveTextContent("6");
     expect(trs[0].textContent).not.toContain("151.658");
 
-    // THE TAIL IS ALWAYS THE SAME THREE THINGS, chart or no chart: the answer, the scope it is
-    // measured under, then the way in to the sources. The line used to sit in the chart's footer,
-    // which put it somewhere different depending on what the question happened to return.
+    // THE TAIL IS ALWAYS THE SAME THINGS, chart or no chart: the answer, the release's caveat, then
+    // the way in to the sources. The line used to sit in the chart's footer, which put it somewhere
+    // different depending on what the question happened to return.
     const tail = Array.from(card.children).map((el) => el.getAttribute("data-testid"));
     // this fixture's agent DID call set_map_view, so the move is announced where the six-chip
     // "moved the map" block used to be
-    expect(tail).toEqual(["answer-part-answer", "answer-attachment", "scope-note", "provenance", "map-moved"]);
-    // the scope is stated ONCE, by us, in the release's own words - not by the model, and not twice
-    const note = within(card).getByTestId("scope-note");
-    expect(note).toHaveTextContent("national");
-    expect(note).toHaveTextContent("IPCC 2013 (AR5)");
-    expect(note.textContent).not.toContain("FY");
-    expect(within(card).getAllByTestId("scope-note")).toHaveLength(1);
+    expect(tail).toEqual(["answer-part-answer", "answer-attachment", "answer-caveat", "provenance", "map-moved"]);
+    // the caveat is stated ONCE, by us, in the release's own words - and the scope sentence that
+    // led it is gone: the answer names its own year and place
+    const note = within(card).getByTestId("answer-caveat");
+    expect(note.textContent).toMatch(/^The release /);
+    for (const word of ["These are", "national", "IPCC 2013 (AR5)", "warming potentials", "FY"]) expect(note.textContent).not.toContain(word);
+    expect(within(card).getAllByTestId("answer-caveat")).toHaveLength(1);
+    expect(within(card).queryByTestId("scope-note")).toBeNull();
     const prov = within(card).getByTestId("provenance");
     expect(within(prov).getByTestId("provenance-action")).toHaveTextContent("View details");
     // the move is stated in the reader's own words, with the way back

@@ -22,7 +22,7 @@ import { ColumnChart, type ColumnPoint } from "@/components/charts/ColumnChart";
 import { IntervalBadge, isBounded } from "@/components/ui/IntervalBadge";
 import { api, apiUrl, receiptHref } from "@/lib/api";
 import type { Envelope } from "@/lib/envelope";
-import { cellUnit, columnLabel, geographyName, inputChips, limitationText, periodShort, gwpLabel } from "@/lib/labels";
+import { cellUnit, columnLabel, inputChips, limitationText, periodShort } from "@/lib/labels";
 import { gasColor, rampByRank } from "@/lib/palette";
 import { stateFromRequest } from "@/lib/requests";
 import { applyPatch, hrefForState, resolveState } from "@/lib/urlState";
@@ -32,10 +32,10 @@ import { useReceiptDrawer } from "./receiptDrawer";
 import { MapMovedLine, ProvenanceLine } from "./Provenance";
 import { WORD_KEYS, mapPatchFromInput, movesMap, previousOf, undoPatch, type MapMove } from "./mapMove";
 import { activityNote, activityScopeRows, activitySources, isActivity } from "./activity";
-import { attachmentOf, attachmentTitle, disclosureOf, followUps, isModelled, methodDisclosure, methodTool, periodSpan, scopeNote } from "./attachment";
+import { attachmentOf, attachmentTitle, disclosureOf, followUps, isModelled, methodDisclosure, methodTool, periodSpan, caveatNote } from "./attachment";
 import { allocationSurfaceWords } from "@/components/methods/evidenceClassText";
 import type { Highlight } from "./ToolCard";
-import type { AnswerEvent, LibrarySource, TimelineItem, ToolResultCell, ToolResultEvent } from "./types";
+import type { AnswerEvent, LibrarySource, TimelineItem, ToolResultCell } from "./types";
 
 /** Re-exported: the question lives beside the follow-up rules that offer it. */
 export { UNCERTAINTY_FOLLOW_UP } from "./attachment";
@@ -65,15 +65,6 @@ function uncertaintyTooltip(row: Record<string, string | null>): string {
 function useReplay(receipt: string | null | undefined): Envelope | null {
   const q = useQuery({ queryKey: ["receipt", receipt], queryFn: () => api.receipt(receipt!), enabled: !!receipt, staleTime: Infinity, retry: false });
   return q.data ?? null;
-}
-
-/** "national", "Punjab", "district-level" - the place the note names, through the release's labels. */
-function placeWords(labels: Parameters<typeof geographyName>[0], r: ToolResultEvent): string {
-  const level = typeof r.context?.geography_level === "string" ? r.context.geography_level : "national";
-  const ids = Array.isArray(r.context?.geography_ids) ? (r.context.geography_ids as unknown[]).filter((x): x is string => typeof x === "string") : [];
-  if (level === "national") return "national";
-  if (ids.length === 1) return geographyName(labels, ids[0]);
-  return level === "adm1" ? "provincial" : level === "adm2" ? "district-level" : "grid-cell";
 }
 
 /** One labelled line of the details: a name on the left, words on the right. */
@@ -345,14 +336,10 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
     />
   );
 
-  // THE SCOPE, SAID ONCE, BY US. See attachment.scopeNote: the model used to write this and wrote it
-  // twice. It reads as the answer's last sentence, muted so it does not pretend to be the model's.
-  const note = activity ? activityNote(r) : scopeNote(r, {
-    period: (id) => periodShort(labels, id),
-    gwp: (id) => gwpLabel(labels, id),
-    place: (res) => placeWords(labels, res),
-    lulucf: labels.lulucf?.short ?? "",
-  });
+  // THE WARNINGS, SAID ONCE, BY US - not the scope. The answer names its own year and place; this
+  // keeps what a reader must not misread the figure as (attachment.caveatNote, activity.activityNote).
+  // Muted, so it does not pretend to be the model's.
+  const note = activity ? activityNote(r) : caveatNote(labels.lulucf?.short ?? "");
 
   const attachmentNode =
     attachment === "none" ? null : (
@@ -419,7 +406,7 @@ export function AnswerCard({ answer, items, onCite, onFollowUp, agentMove = null
           {disclosure.method && <Row name="Method" testid="disclosure-method">{disclosure.method}</Row>}
         </dl>
       )}
-      <p className="text-xs leading-relaxed text-muted" data-testid="scope-note">{note}</p>
+      {note && <p className="text-xs leading-relaxed text-muted" data-testid="answer-caveat">{note}</p>}
       {provenance}
       {move && (
         <MapMovedLine

@@ -14,10 +14,7 @@
  * scrolling to a card that is no longer rendered.
  */
 import { useMemo, useState } from "react";
-import { applyPatch, resolveState, type ExplorerState } from "@/lib/urlState";
-import { useExplorer } from "@/components/ExplorerContext";
-import { selectionPatch } from "@/lib/selection";
-import { scopeChips } from "./suggestions";
+import { applyPatch, type ExplorerState } from "@/lib/urlState";
 import { AnswerCard } from "./AnswerCard";
 import { WorkingLine } from "./Provenance";
 import type { Highlight } from "./ToolCard";
@@ -126,17 +123,10 @@ export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAg
   // and a red "Draft rejected by the server" box then sat above that good answer like a warning.
   // That is internal quality control, the same class of thing as the token counts. It still shows
   // when the turn produced NO answer, because then it is the explanation for what went wrong.
-  // THE SCOPE THIS QUESTION WAS ASKED UNDER, from the snapshot taken when it was sent. The row
-  // under the composer follows the filters, as it should - it is the context of the NEXT question.
-  // An answer needs its own: change the year while it is being written and nothing on screen said
-  // which year the answer was for.
-  const { labels, dims, defaults } = useExplorer();
-  const asked = useMemo(() => {
-    const ui = turn.ui_state;
-    if (!ui || !Object.keys(ui).length) return "";
-    const snapshot = applyPatch(resolveState({}, defaults), selectionPatch(ui as Record<string, unknown>, defaults));
-    return scopeChips(labels, dims, snapshot, defaults).filter((c) => c.primary).map((c) => c.label).join(" · ");
-  }, [turn.ui_state, labels, dims, defaults]);
+  // NO "ASKED ABOUT" LINE UNDER THE QUESTION. It printed the map selection at send time, which is
+  // not what a question is about: a general question asked with Khyber Pakhtunkhwa selected was
+  // labelled as a question about Khyber Pakhtunkhwa. The answer names its own year and place,
+  // taken from the results it used, and "View details" keeps the query's applied filters.
   const notices = tl.items.filter((i) =>
     (i.kind === "correction" && !tl.answer) || (i.kind === "tool" && !!i.refusal));
   const errors = tl.items.filter((i): i is Extract<TimelineItem, { kind: "error" }> => i.kind === "error");
@@ -145,11 +135,6 @@ export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAg
       <div className="max-w-[85%] self-end rounded-card bg-accent-fill px-3 py-2 text-sm text-on-accent" data-testid="user-message">
         {turn.message}
       </div>
-      {asked && (
-        <div className="-mt-1.5 max-w-[85%] self-end text-right text-micro normal-case tracking-normal text-muted" data-testid="turn-scope" title="The selection this question was asked under. Changing the filters afterwards does not change what this answer is about.">
-          Asked about {asked}
-        </div>
-      )}
       <TurnNotices items={notices} />
       {tl.answer && <AnswerCard answer={tl.answer} items={tl.items} onCite={onCite} onFollowUp={(q) => onFollowUp?.(q)} agentMove={agentMove} onUndoAgentMove={onUndoAgentMove} />}
       {errors.map((item, i) => (

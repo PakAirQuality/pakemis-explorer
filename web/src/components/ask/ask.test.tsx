@@ -166,8 +166,9 @@ describe("AskDock", () => {
     const fetchSpy = vi.fn(async (url: string) => (String(url).endsWith("/ask") ? sseResponse(sseBody(EVENTS)) : ({ ok: true, status: 200, statusText: "OK", json: async () => ({}) } as Response)));
     vi.stubGlobal("fetch", fetchSpy);
     const pm25 = resolveState({ pol: "PM2.5" }, DEFAULTS);
-    const view = mount(ctx(vi.fn(), undefined, pm25));
-    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent)).toEqual(["Pakistan", "PM₂.₅ emissions", "2023–24"]);
+    mount(ctx(vi.fn(), undefined, pm25));
+    // no "Using this view" row beside the box: the map's selection is sent, not printed
+    expect(screen.queryByTestId("ask-scope")).toBeNull();
     const offered = screen.getAllByTestId("suggestion").map((s) => s.textContent ?? "");
     expect(offered[0]).toBe("What are Pakistan's largest sources of PM₂.₅?");
     for (const q of offered) {
@@ -182,18 +183,9 @@ describe("AskDock", () => {
     const ask = (fetchSpy.mock.calls as unknown as [string, RequestInit][]).find((c) => String(c[0]).endsWith("/ask"))!;
     const body = JSON.parse(String(ask[1].body));
     expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", pol: "PM2.5", metric: "air_pollutant", unit: "kt", coverage: "covered sources only; grid power is a screening scenario outside the total" });
-    expect(screen.getByTestId("turn-scope")).toHaveTextContent("Asked about Pakistan · PM₂.₅ emissions · 2023–24");
-    // THE READER CHANGES THE FILTERS. The context row follows them - it is the next question's -
-    // and the answer already given keeps saying what IT was about.
-    view.rerender(
-      <Providers>
-        <ExplorerContext.Provider value={ctx(vi.fn(), undefined, resolveState({ period: "FY2020-21", geo: "Punjab" }, DEFAULTS))}>
-          <AskDock />
-        </ExplorerContext.Provider>
-      </Providers>,
-    );
-    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent)).toEqual(["Punjab", "All gases", "2020–21"]);
-    expect(screen.getByTestId("turn-scope")).toHaveTextContent("Asked about Pakistan · PM₂.₅ emissions · 2023–24");
+    // no "Asked about …" line under the question: the map selection is not what a question is about
+    expect(screen.queryByTestId("turn-scope")).toBeNull();
+    expect(screen.getByTestId("turn")).not.toHaveTextContent("Asked about");
   });
   it("streams a turn: thinking, tool call, result, map action, refusal, answer with cites, usage", async () => {
     const fetchSpy = vi.fn(async () => sseResponse(sseBody(EVENTS)));
@@ -202,11 +194,8 @@ describe("AskDock", () => {
     mount(ctx(setState));
     expect(screen.getAllByTestId("suggestion").length).toBeGreaterThan(2);
     expect(screen.getByText("How have emissions changed since 2020–21?")).toBeTruthy(); // the release's short label, never the id
-    // the scope is the composer's own chip row: it is sent with every question, so it belongs
-    // beside the box rather than behind a control a reader has to know to press
-    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Using this view:");
-    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent))
-      .toEqual(["Pakistan", "All gases", "2023–24"]);
+    // the scope is sent with every question (asserted on the request body below) but not printed
+    expect(screen.queryByTestId("ask-scope")).toBeNull();
     await askQuestion("How much did Punjab's agriculture emit in FY2023-24, and show it on the map");
     await waitFor(() => expect(screen.getByTestId("turn").getAttribute("data-status")).toBe("done"));
     // the request carried ui_state = the URL scope and no history on the first turn. Pick the /ask
@@ -218,8 +207,8 @@ describe("AskDock", () => {
     const body = JSON.parse(String(ask![1].body));
     expect(body.ui_state).toEqual({ level: "adm1", period: "FY2023-24", config: "REF_2023_24", gwp: "AR5", view: "all", metric: "greenhouse_gases" });
     expect(body.client_history).toEqual([]);
-    // the answer names the scope it was asked under
-    expect(screen.getByTestId("turn-scope")).toHaveTextContent("Asked about Pakistan · All gases · 2023–24");
+    // and the turn does not label the question with the map's selection
+    expect(screen.queryByTestId("turn-scope")).toBeNull();
     // THE TURN IS A CHAT MESSAGE NOW: the bubble, the answer, and the notices that concern the
     // reader. The model's reasoning, the per-call tool cards, the "How this was answered" fold and
     // the token line are all gone from the screen.

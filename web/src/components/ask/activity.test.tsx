@@ -79,10 +79,12 @@ describe("a record's scope is its own", () => {
     expect(isActivity(null)).toBe(false);
   });
 
-  it("says what was counted, where, when and by whom, then what the figure is not", () => {
+  it("says only what the figure is not: the scope is the answer's and the details'", () => {
     const note = activityNote(result());
-    expect(note).toBe(`${RECORD_LEAD}: Registered vehicles · Lahore · 30 June 2023 · Provincial vehicle registrations. Registered stock at 30 June is not traffic and not an active fleet.`);
-    // the estimate's furniture is gone: no basis, no warming potentials, no land-use exclusion, no fiscal year
+    expect(note).toBe(`${RECORD_LEAD}. Registered stock at 30 June is not traffic and not an active fleet.`);
+    // no scope on this line any more: not the record, place, date or source
+    for (const word of ["Registered vehicles ·", "Lahore", "30 June 2023", "Provincial vehicle registrations"]) expect(note).not.toContain(word);
+    // and the estimate's furniture stays out: no basis, no warming potentials, no land-use exclusion, no fiscal year
     for (const word of ["warming", "AR5", "land use", "estimates for", "FY", "2023-24", "2023–24"]) expect(note).not.toContain(word);
   });
 
@@ -93,11 +95,11 @@ describe("a record's scope is its own", () => {
     expect(activityNote(result([CARS, BIKES]))).not.toContain(TOTAL_NOTE);
   });
 
-  it("lists places by name and spans several dates, never with a count of its own", () => {
+  it("lists places by name and spans several dates in the details, never with a count of its own", () => {
     const karachi = { ...CARS, i: 1, attrs: { ...CARS.attrs, location: "Karachi", period: "2021-06-30", period_label: "30 June 2021" } };
-    const note = activityNote(result([karachi, CARS]));
-    expect(note).toContain("Karachi and Lahore");
-    expect(note).toContain("30 June 2021 to 30 June 2023");
+    const rows = activityScopeRows(result([karachi, CARS]));
+    expect(rows.find((r) => r.name === "Place")?.value).toBe("Karachi and Lahore");
+    expect(rows.find((r) => r.name === "Date")?.value).toBe("30 June 2021 to 30 June 2023");
   });
 
   it("gives the details the record's own rows, with no gas, basis or configuration", () => {
@@ -194,13 +196,12 @@ describe("the Lahore question, on screen", () => {
     await askQuestion("How many cars are in Lahore?");
     const card = screen.getByTestId("answer-card");
     expect(within(card).getByTestId("answer-part-answer")).toHaveTextContent("1,561,386");
-    const note = within(card).getByTestId("scope-note");
-    expect(note).toHaveTextContent("Lahore");
-    expect(note).toHaveTextContent("30 June 2023");
-    expect(note).toHaveTextContent("Provincial vehicle registrations");
+    // the line under the answer carries the record's warning, not a scope
+    const note = within(card).getByTestId("answer-caveat");
     expect(note).toHaveTextContent("not traffic");
     // nothing of the map's scope, and nothing of an estimate's
     for (const word of ["Sindh", "Methane", "CH₄", "warming", "land use", "national"]) expect(note.textContent).not.toContain(word);
+    expect(within(card).queryByTestId("scope-note")).toBeNull();
     expect(within(card).queryByTestId("answer-attachment")).toBeNull();
     expect(within(card).queryByTestId("show-on-map")).toBeNull();
     expect(within(card).queryByTestId("follow-ups")).toBeNull();

@@ -108,7 +108,7 @@ describe("suggestions", () => {
 });
 
 describe("AskDrawer", () => {
-  it("opens from the nav button with the scope line and the scope's suggestions, and closes on Escape", () => {
+  it("opens from the nav button with the scope's suggestions, and closes on Escape", () => {
     mount(ctx(punjabAg));
     const drawer = screen.getByTestId("ask-drawer");
     expect(drawer.getAttribute("data-open")).toBe("0");
@@ -119,13 +119,8 @@ describe("AskDrawer", () => {
     // the contract is printed under the questions now rather than folded behind an info button:
     // a promise a reader has to go looking for is not much of a promise
     expect(screen.getByTestId("ask-contract")).toHaveTextContent("Responses cite their sources and preserve the selected map context.");
-    // and the scope is the composer's own chip row, always on screen beside the box it applies to
-    expect(screen.getByTestId("ask-scope")).toHaveTextContent("Using this view:");
-    // the pills are the reader's OWN choices; the configuration qualifies every answer and is
-    // always on, so it stays in the scope line rather than sitting beside "Punjab" as though a
-    // reader had picked it
-    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent))
-      .toEqual(["Punjab", "agriculture", "All gases", "2023–24"]);
+    // the map's selection is sent with every question, but no "Using this view" row prints it
+    expect(screen.queryByTestId("ask-scope")).toBeNull();
     // four questions, not five: the panel asks rather than lists
     expect(screen.getAllByTestId("suggestion").map((b) => b.textContent)).toEqual(["Why is Punjab's estimate high?", "How much comes from livestock?", "Which parts are proxy-allocated?", "Compare Punjab with Sindh"]);
     expect(document.body.textContent).not.toContain("FY");
@@ -137,7 +132,7 @@ describe("AskDrawer", () => {
     expect(drawer.getAttribute("data-open")).toBe("0");
   });
 
-  it("the scope line and the suggestions change with the state", () => {
+  it("the suggestions change with the state", () => {
     const { rerender } = mount(ctx(punjabAg));
     fireEvent.click(screen.getByTestId("ask-fab"));
     expect(screen.getAllByTestId("suggestion")).toHaveLength(4);
@@ -149,7 +144,6 @@ describe("AskDrawer", () => {
         </ExplorerContext.Provider>
       </Providers>,
     );
-    expect(screen.getAllByTestId("ask-scope-chip").map((c) => c.textContent)).toEqual(["Pakistan", "All gases", "2023–24"]);
     // with no envelope in hand the certainty question keeps its number-free wording
     expect(screen.getAllByTestId("suggestion").map((b) => b.textContent)).toEqual(["What is Pakistan's largest source?", "How certain is this estimate?", "Which categories are not estimated?", "How have emissions changed since 2020–21?"]);
   });
