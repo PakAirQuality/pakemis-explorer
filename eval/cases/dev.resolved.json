@@ -776,6 +776,59 @@
     "unit": "",
     "value": null
    }
+  },
+  "D35": {},
+  "D36": {
+   "cars": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "1,561,386",
+    "exact": "1561386.0",
+    "unit": "vehicles",
+    "value": 1561386.0
+   }
+  },
+  "D37": {
+   "kp": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "adm1",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "59.7938",
+    "exact": "59.793794643216000000",
+    "unit": "Mt CO2e AR5",
+    "value": 59.793794643216
+   },
+   "sindh": {
+    "context": {
+     "basis": "fiscal",
+     "configuration_id": "REF_2023_24",
+     "geography_level": "adm1",
+     "gwp_basis": "AR5",
+     "periods": [
+      "FY2023-24"
+     ],
+     "spatial_view": "all"
+    },
+    "display": "137.8333",
+    "exact": "137.833349765496000000",
+    "unit": "Mt CO2e AR5",
+    "value": 137.833349765496
+   }
   }
  },
  "manifest_sha256_16": "7e7fed3f559f0c13",

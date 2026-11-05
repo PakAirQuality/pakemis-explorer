@@ -596,3 +596,61 @@ cases:
     must_phrases_any: ["not occurring", "not estimated"]
     must_phrases_all: [differ]
     axes: [uncertainty, boundary, source]
+
+# ------------------------------------------------- what the reader is handed (2026-11-05, format)
+- id: D35
+  topic: data_access
+  question: can i get the underlying activity data on which this repo is made?
+  # asked with a province selected on the map: a question about getting the data is not about the view
+  ui_state: {level: adm1, geo: Khyber Pakhtunkhwa, period: FY2023-24, metric: greenhouse_gases}
+  assumes: {scope: the release as a whole}
+  reference: >
+    Yes: the activity records the estimates are calculated from (vehicle registrations, livestock,
+    crop areas, fuel sales, power generation and the rest) are downloadable as CSV files, with
+    their sources and definitions, from the "The activity behind the estimates" section of the
+    Downloads page - linked, not described. The assistant can also fetch a single figure. The
+    answer is not about Khyber Pakhtunkhwa.
+  truth:
+    pointer: "web/src/components/downloads/catalogue.ts: collection 'activity', 'The activity behind the estimates'"
+  checks:
+    must_links: ["downloads:activity"]
+    must_phrases_any: ["the activity behind the estimates"]
+    forbid_phrases: [khyber]
+    axes: [format]
+
+- id: D36
+  topic: data_access
+  question: How many vehicles are registered in Lahore, by class?
+  assumes: {table: fact_activity_vehicles, location: Lahore, measure: Registered vehicles, period: the register's newest date}
+  reference: >
+    Lahore's register at its newest date, one row per vehicle class, as a table: the class in the
+    first column and each count as a cited figure, the date and the source named once, and the
+    qualification that a register counts a registered stock, not the vehicles on the road.
+  truth:
+    values:
+      cars: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Lahore], categories: ["Small cars (4W1)"]}, cell: 0}
+  checks:
+    must: [cars]
+    must_table: true
+    axes: [numeric, source, format]
+
+- id: D37
+  topic: question_over_map
+  question: What were Sindh's total greenhouse-gas emissions in 2023-24?
+  # the map shows Khyber Pakhtunkhwa; the question names Sindh, and the question wins
+  ui_state: {level: adm1, geo: Khyber Pakhtunkhwa, period: FY2023-24, metric: greenhouse_gases}
+  assumes: {period: FY2023-24, scope: adm1, place: Sindh, configuration: reference, gwp: AR5}
+  reference: >
+    Sindh's provincial total for 2023-24, named as Sindh's in the sentence that gives it. It is a
+    modelled share of national totals. Khyber Pakhtunkhwa's figure, the one on the map, is not the
+    answer.
+  truth:
+    values:
+      sindh: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm1, geography_ids: [Sindh]}, cell: 0}
+      kp: {request: {type: QueryEmissions, periods: [FY2023-24], geography_level: adm1, geography_ids: [Khyber Pakhtunkhwa]}, cell: 0}
+  checks:
+    must: [sindh]
+    forbid: [{ref: kp, why: "the map's province answered instead of the question's"}]
+    must_phrases_all: [sindh]
+    scope: {geography_level: adm1, geography_ids: [Sindh]}
+    axes: [numeric, boundary, source]

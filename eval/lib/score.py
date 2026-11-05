@@ -1,6 +1,6 @@
 """Deterministic scoring of one agent transcript against one case.
 
-FIVE AXES, each decided by fixed checks over the event stream - never by a model's opinion of the
+SIX AXES, each decided by fixed checks over the event stream - never by a model's opinion of the
 prose. An axis with no applicable check scores n/a and is excluded from its rate.
 
     numeric      the reference figure (within tolerance) appears in the rendered answer
@@ -12,6 +12,8 @@ prose. An axis with no applicable check scores n/a and is excluded from its rate
     uncertainty  an interval, or a stated absence, is reported as such: the case's wording checks
     refusal      the typed refusal was surfaced with its own error class and nothing was inferred
                  around it
+    format       the answer is shaped for its reader: the checked links a case names
+                 (`must_links`) and a Markdown table where the answer is a breakdown (`must_table`)
 
 WHY `forbid` IS CONDITIONAL. A good answer to "what is the survey total" may well mention the
 reference total beside it, so a forbidden value counts against the answer only when the required
@@ -27,9 +29,16 @@ import re
 
 NUMBER = re.compile(r"-?\d+(?:,\d{3})*(?:\.\d+)?")
 CITE = re.compile(r"<cite [^>]*>([^<]*)</cite>")
-PHRASE_AXIS_ORDER = ("uncertainty", "boundary", "numeric", "refusal", "source")
+PHRASE_AXIS_ORDER = ("uncertainty", "boundary", "numeric", "refusal", "source", "format")
 
-AXES = ("numeric", "boundary", "source", "uncertainty", "refusal")
+AXES = ("numeric", "boundary", "source", "uncertainty", "refusal", "format")
+
+# THE FORMAT AXIS (2026-11-05): what the reader is handed, not only what it says. A checked link is
+# the server's tag (api/pakemis_api/ask/render.py), never a URL, so `must_links` names the `to`
+# values the answer must carry; `must_table` asks for a Markdown table (a header row and its
+# separator) where the answer is a breakdown.
+PLINK = re.compile(r'<plink to="([^"]*)">[^<]*</plink>')
+TABLE = re.compile(r"^\s*\|.*\|\s*\n\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$", re.M)
 
 
 def numbers_in(text):
@@ -192,6 +201,13 @@ def score_case(case, resolved, transcript):
         ok = (not nums) or (refusal_expected and bool(refusals))
         add("forbid_any_number", "refusal" if "refusal" in axes else phrase_axis, ok,
             ("answer carried %s" % nums[:8]) + ("; refusal surfaced" if refusals else "; no refusal event"))
+
+    # --- format ---------------------------------------------------------------------------
+    links = PLINK.findall(text)
+    for to in (checks.get("must_links") or []):
+        add("link:%s" % to, "format", to in links, "links: %s" % links)
+    if checks.get("must_table"):
+        add("table", "format", bool(TABLE.search(text)), "a Markdown table" if TABLE.search(text) else "no table")
 
     verdicts = {}
     for axis in AXES:

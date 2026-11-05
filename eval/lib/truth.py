@@ -15,7 +15,7 @@ import sys
 
 REQUEST_TYPES = ("QueryEmissions", "QueryAir", "CompareRequest", "TimeseriesRequest",
                  "UncertaintyRequest", "CompletenessRequest", "EvidenceRequest", "MethodRequest",
-                 "SpatialLineageRequest", "TransferRequest", "GridCellRequest")
+                 "SpatialLineageRequest", "TransferRequest", "GridCellRequest", "QueryActivity")
 
 
 def _models():

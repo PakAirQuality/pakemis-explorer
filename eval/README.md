@@ -1,7 +1,7 @@
 # Evaluating Ask PakEmis against the inventory's real confusions
 
-Fifty-four cases built from the failure modes the inventory actually has - not paraphrases of one
-another, and not only traps. Thirty-four are the development split, twenty are held out and
+Fifty-seven cases built from the failure modes the inventory actually has - not paraphrases of one
+another, and not only traps. Thirty-seven are the development split, twenty are held out and
 frozen (`holdout/HOLDOUT.md` states exactly what that isolation is and what it is not).
 
 ## What a case is
@@ -20,11 +20,20 @@ python3 eval/run_baseline.py --split dev --transcripts eval/results/transcripts_
                                                 # re-score without paying for the run again
 ```
 
+⚠ Resolve against the query core the API ships: `PAKEMIS_QUERY_PATH=api/vendor`. The default is
+the inventory checkout beside this one, and while the explorer's pin lags the inventory (rc59 vs
+rc70 in November 2026) that core speaks other configuration ids, so most references fail to resolve
+and the resolved file is rewritten wrongly.
+
 The agent is driven in-process through the real app over `POST /ask`, with whatever provider
 client `install_ask` builds from the environment, one fresh conversation per case. Every SSE
 event is kept, so a scorecard can be re-derived from a transcript.
 
-## The five axes
+A case may also carry `ui_state`, the map selection the question is asked under; `run_baseline.py`
+sends it with the question (none by default). D35 and D37 use it: a general question and a
+question about another province, both asked with Khyber Pakhtunkhwa on the map.
+
+## The six axes
 
 Scoring is fixed checks over the event stream. No model judges another model's prose.
 
@@ -35,6 +44,7 @@ Scoring is fixed checks over the event stream. No model judges another model's p
 | source | the answer carries a receipt from a tool call of this turn, and no figure was struck as a bare number |
 | uncertainty | an interval, or a stated absence, is reported as such rather than as a point |
 | refusal | the typed refusal reached the reader with its own class, and nothing was inferred around it |
+| format | the answer is shaped for its reader: the checked links the case names (`must_links`, the `to` of a `<plink>`) and a Markdown table where the answer is a breakdown (`must_table`) |
 
 Two deliberate pieces of fairness, both in `lib/score.py`:
 

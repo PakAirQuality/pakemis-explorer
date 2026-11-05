@@ -36,9 +36,10 @@ FILES = {"dev": (os.path.join(HERE, "cases", "dev.yaml"), os.path.join(HERE, "ca
 RESULTS = os.path.join(HERE, "results")
 
 
-def sse(client, message, conversation_id):
+def sse(client, message, conversation_id, ui_state=None):
+    """One question through POST /ask; `ui_state` is the map selection the case assumes (none by default)."""
     events = []
-    body = {"message": message, "ui_state": {}, "conversation_id": conversation_id}
+    body = {"message": message, "ui_state": ui_state or {}, "conversation_id": conversation_id}
     with client.stream("POST", "/api/v1/emissions/ask", json=body) as r:
         if r.status_code != 200:
             return [("http_error", {"status": r.status_code, "body": r.read().decode("utf-8", "replace")[:800]})]
@@ -101,7 +102,7 @@ def main():
                 meta["blocked"] = status.get("reason")
             for i, case in enumerate(cases, 1):
                 t0 = time.time()
-                events = sse(client, case["question"], "eval-%s-%s" % (args.split, case["id"]))
+                events = sse(client, case["question"], "eval-%s-%s" % (args.split, case["id"]), case.get("ui_state"))
                 transcripts[case["id"]] = events
                 done = [d for n, d in events if n == "done"]
                 ans = [d for n, d in events if n == "answer"]
