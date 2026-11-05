@@ -369,6 +369,19 @@ class Turn:
         # the tables the release serves as files: what a {{link:file:<table>}} may name
         self.link_tables = served_tables(service)
 
+    # -- streaming ---------------------------------------------------------------------------
+
+    def _render_line(self, line):
+        """One completed line of the answer, rendered for the reader, or None when it fails a
+        check - a typed number, a cell that does not exist, an unknown placeholder - and must not
+        be sent. The whole answer is checked again when the model finishes."""
+        try:
+            rendered, _ = render_multi(line, self.results, allowlist=(self.dims.version, self.dims.release_id),
+                                       tables=self.link_tables)
+        except PlaceholderError:
+            return None
+        return rendered
+
     # -- repeated calls ---------------------------------------------------------------------
 
     @staticmethod
@@ -556,14 +569,36 @@ class Turn:
                     stream_kwargs["answer_only"] = True
                 else:
                     tools = []
+            # THE ANSWER STREAMS, A CHECKED LINE AT A TIME. Each completed line is rendered on its own
+            # - the same bare-number and placeholder checks the whole answer gets below - and sent at
+            # once as `answer_delta`, its figures already filled in. A line that fails is not sent,
+            # nor anything after it from this call: the whole-text check below decides what happens
+            # (a correction takes the draft back first). Text before a tool call was never the
+            # answer, so a tool call takes back what streamed and stops this call's streaming.
+            pending_line, streamed, holding = "", False, False
             try:
                 for ev in self.model.stream(self.system, messages, tools, **stream_kwargs):
                     if ev.kind == "thinking_delta":
                         yield "thinking", {"text": ev.text}
                     elif ev.kind == "text_delta":
                         text_parts.append(ev.text)
+                        if holding:
+                            continue
+                        pending_line += ev.text
+                        while "\n" in pending_line:
+                            line, pending_line = pending_line.split("\n", 1)
+                            piece = self._render_line(line)
+                            if piece is None:
+                                holding = True
+                                break
+                            streamed = True
+                            yield "answer_delta", {"text": piece + "\n"}
                     elif ev.kind == "tool_use":
                         calls.append(ev)
+                        if streamed:
+                            yield "answer_reset", {"reason": "tools"}
+                            streamed = False
+                        holding = True
                     elif ev.kind == "stop":
                         stop = ev
             except ModelError as exc:
@@ -622,6 +657,9 @@ class Turn:
                 yield "error", {"code": "model_error", "message": "the answer hit the output token cap"}
                 break
             if not text.strip():
+                if streamed:   # blank lines only: nothing worth keeping on screen
+                    yield "answer_reset", {"reason": "correction"}
+                    streamed = False
                 # the model ended the turn with no text (Gemini writes its answer beside the last tool
                 # call, which is not shown, then believes it has answered): ask once, then say so
                 if not corrected:
@@ -639,6 +677,11 @@ class Turn:
                 code = "bare_numbers" if isinstance(exc, BareNumberError) else "placeholder_error"
                 self.rejected_drafts.append(text)
                 log.info("answer rejected (%s): %s | draft: %r", code, exc, text)
+                if streamed:
+                    # what streamed was checked line by line, but the answer as a whole is being
+                    # rewritten (or withheld): take the draft back before anything else is said
+                    yield "answer_reset", {"reason": "correction"}
+                    streamed = False
                 if not corrected:
                     corrected = True
                     yield "status", {"phase": "correction", "reason": str(exc)}

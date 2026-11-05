@@ -1,5 +1,6 @@
 /** Conversations persisted per id in localStorage['pakemis.ask.<conversation_id>'] as their event logs. */
 import type { Conversation } from "./types";
+import { DRAFT_EVENTS } from "./timeline";
 
 export const STORE_PREFIX = "pakemis.ask.";
 
@@ -28,8 +29,11 @@ export function loadConversation(id: string): Conversation | null {
 export function saveConversation(conv: Conversation) {
   const s = storage();
   if (!s || !conv.conversation_id) return;
+  // a finished turn's answer is its `answer` event; the line-by-line draft that preceded it would
+  // store the whole text a second time, so the streaming events are not kept
+  const turns = conv.turns.map((t) => (t.status === "streaming" ? t : { ...t, events: t.events.filter((e) => !DRAFT_EVENTS.has(e.name)) }));
   try {
-    s.setItem(STORE_PREFIX + conv.conversation_id, JSON.stringify({ ...conv, updated: Date.now() }));
+    s.setItem(STORE_PREFIX + conv.conversation_id, JSON.stringify({ ...conv, turns, updated: Date.now() }));
   } catch {
     /* quota or private mode: the conversation lives in memory for this tab */
   }

@@ -5,7 +5,14 @@
  */
 import type { AnswerEvent, AskEvent, DoneEvent, ErrorEvent, MapActionEvent, RefusalEvent, StatusEvent, ThinkingEvent, TimelineItem, ToolCallEvent, ToolResultEvent } from "./types";
 
-export type Timeline = { items: TimelineItem[]; status: StatusEvent | null; done: DoneEvent | null; answer: AnswerEvent | null };
+/**
+ * `draft` is the answer as it streams: the lines the server has checked and sent (`answer_delta`),
+ * each with its figures already filled in, until the final `answer` replaces them. `checking` is
+ * true after the server took a draft back (`answer_reset` for a correction) and before the next
+ * line arrives. A reset for "tools" - text the model wrote before it decided to call a tool - just
+ * drops the draft: it was never the answer.
+ */
+export type Timeline = { items: TimelineItem[]; status: StatusEvent | null; done: DoneEvent | null; answer: AnswerEvent | null; draft: string; checking: boolean };
 
 function toolItem(items: TimelineItem[], k: number) {
   for (let i = items.length - 1; i >= 0; i--) {
@@ -20,8 +27,20 @@ export function timelineOf(events: AskEvent[]): Timeline {
   let status: StatusEvent | null = null;
   let done: DoneEvent | null = null;
   let answer: AnswerEvent | null = null;
+  let draft = "";
+  let checking = false;
   for (const { name, data } of events) {
     switch (name) {
+      case "answer_delta": {
+        draft += (data as { text?: string }).text ?? "";
+        checking = false;
+        break;
+      }
+      case "answer_reset": {
+        draft = "";
+        checking = (data as { reason?: string }).reason === "correction";
+        break;
+      }
       case "status": {
         const s = data as StatusEvent;
         status = s;
@@ -64,8 +83,13 @@ export function timelineOf(events: AskEvent[]): Timeline {
       case "answer":
         answer = data as AnswerEvent;
         items.push({ kind: "answer", answer });
+        draft = "";
+        checking = false;
         break;
       case "error": {
+        // an answer withheld is withheld whole: no half-streamed draft stays on screen
+        draft = "";
+        checking = false;
         const e = data as ErrorEvent;
         items.push({ kind: "error", code: e.code, message: e.message ?? "", scope: e.scope });
         break;
@@ -77,8 +101,11 @@ export function timelineOf(events: AskEvent[]): Timeline {
         break;
     }
   }
-  return { items, status, done, answer };
+  return { items, status, done, answer, draft, checking };
 }
+
+/** The streaming events: what builds a draft, and nothing a finished turn needs. */
+export const DRAFT_EVENTS: ReadonlySet<string> = new Set(["answer_delta", "answer_reset"]);
 
 /** The user/assistant text pairs the server accepts as `client_history` (answers keep their cite tags, as the server stores them). */
 export function clientHistory(turns: { message: string; events: AskEvent[] }[]): { role: "user" | "assistant"; content: string }[] {

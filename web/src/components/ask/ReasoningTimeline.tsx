@@ -16,7 +16,9 @@
 import { useMemo, useState } from "react";
 import { applyPatch, type ExplorerState } from "@/lib/urlState";
 import { AnswerCard } from "./AnswerCard";
-import { WorkingLine } from "./Provenance";
+import { ProvenanceLine, WorkingLine } from "./Provenance";
+import { renderAnswer, settledDraft, type CiteHandlers } from "./answerText";
+import { resolveLink, useDownloadCollections } from "./answerLinks";
 import type { Highlight } from "./ToolCard";
 import { refusalWords } from "@/lib/envelope";
 import { timelineOf } from "./timeline";
@@ -102,6 +104,24 @@ function TurnNotices({ items }: { items: TimelineItem[] }) {
   );
 }
 
+/** What stands in for a draft the server took back to correct. */
+export const CHECKING_TEXT = "Checking figures…";
+
+/** The answer so far: checked lines, drawn the way the final answer will be. */
+function DraftAnswer({ text }: { text: string }) {
+  const collections = useDownloadCollections();
+  const handlers: CiteHandlers = {
+    hover: () => {},
+    click: () => {},
+    link: (to, label) => resolveLink(to, label, collections),
+  };
+  return (
+    <div className="text-sm leading-relaxed text-fg" data-testid="answer-draft" aria-busy="true">
+      {renderAnswer(settledDraft(text), handlers)}
+    </div>
+  );
+}
+
 export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAgentMove }: {
   turn: Turn;
   onFollowUp?: (question: string) => void;
@@ -152,7 +172,12 @@ export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAg
           </div>
         </div>
       ))}
-      {live && !tl.answer && <WorkingLine />}
+      {/* THE ANSWER STREAMS, LINE BY LINE. Each line arrives already checked by the server and
+          with its figures filled in; the final answer replaces the draft when it lands. If the
+          server takes a draft back to correct it, "Checking figures…" stands in until the
+          corrected one starts. */}
+      {live && !tl.answer && tl.draft && <DraftAnswer text={tl.draft} />}
+      {live && !tl.answer && (tl.checking && !tl.draft ? <ProvenanceLine what={CHECKING_TEXT} live /> : <WorkingLine />)}
     </div>
   );
 }
