@@ -54,7 +54,7 @@ import { geographyName } from "@/lib/labels";
 import { placeWords } from "@/lib/selection";
 import { hrefForState } from "@/lib/urlState";
 import { useMediaQuery } from "@/components/shell/useMediaQuery";
-import { ASK_PANEL_GAP, ASK_PANEL_WIDTH, WIDE_QUERY, subscribeOpenFilters, useAskDocked } from "@/components/ask/docked";
+import { ASK_PANEL_GAP, ASK_PANEL_WIDTH, WIDE_QUERY, subscribeOpenFilters, useAskDocked, useAskPanelSettledWidth, useAskPanelWidth } from "@/components/ask/docked";
 import { NavCapsule } from "@/components/shell/NavCapsule";
 import { ExplorerMap, OPENING_MAX_ZOOM, type MapPadding } from "@/components/map/ExplorerMap";
 import { useMapRecovery } from "@/components/map/useMapRecovery";
@@ -93,14 +93,14 @@ export const BOTTOM_CHROME_PX = 56;
  * someone opens them would be a jolt rather than a courtesy. What is permanent gets padding;
  * what is transient floats.
  */
-export function chromePadding({ deck, docked, wide }: { deck: boolean; docked: boolean; wide: boolean }): MapPadding {
+export function chromePadding({ deck, docked, wide, askWidth = ASK_PANEL_WIDTH }: { deck: boolean; docked: boolean; wide: boolean; askWidth?: number }): MapPadding {
   // narrow: one pane at a time, so there is no side chrome — the nav above and a small inset all round
   if (!wide) return { top: TOP_CHROME_PX + FRAME_MARGIN_PX, right: FRAME_MARGIN_PX + 20, bottom: FRAME_MARGIN_PX + 20, left: FRAME_MARGIN_PX + 20 };
   return {
     top: TOP_CHROME_PX + FRAME_MARGIN_PX,
     bottom: BOTTOM_CHROME_PX + FRAME_MARGIN_PX,
     left: (deck ? DECK_PX + DECK_INSET_PX + DECK_GAP_PX : DECK_INSET_PX) + FRAME_MARGIN_PX,
-    right: (docked ? ASK_PANEL_WIDTH : RAIL_WIDTH + FILTER_INSET_PX + FILTER_GAP_PX) + FRAME_MARGIN_PX,
+    right: (docked ? askWidth : RAIL_WIDTH + FILTER_INSET_PX + FILTER_GAP_PX) + FRAME_MARGIN_PX,
   };
 }
 
@@ -113,7 +113,11 @@ export function Workspace() {
   const wide = useMediaQuery(WIDE_QUERY);
   // the assistant is this page's right column at this width; the map's own chrome clears it
   const docked = useAskDocked();
-  const rightInset = docked ? ASK_PANEL_WIDTH + ASK_PANEL_GAP : FILTER_INSET_PX;
+  // the panel's width as the reader has dragged it: the chrome follows it live, the camera follows
+  // where the drag ended (docked.ts, LIVE AND SETTLED)
+  const askWidth = useAskPanelWidth();
+  const askSettledWidth = useAskPanelSettledWidth();
+  const rightInset = docked ? askWidth + ASK_PANEL_GAP : FILTER_INSET_PX;
   const [map, setMap] = useState<MBMap | null>(null);
   // whether there is a map to look at and, when there is not, why and what can be done about it:
   // the map reports both, and the rule for holding the deck, the sentence and the retry is shared
@@ -157,7 +161,7 @@ export function Workspace() {
   // it used to read "Pakistan", because only province names were looked up
   const summaryPlace = placeWords(labels, dims, state);
 
-  const padding = useMemo(() => chromePadding({ deck: deckOpen, docked, wide }), [deckOpen, docked, wide]);
+  const padding = useMemo(() => chromePadding({ deck: deckOpen, docked, wide, askWidth: askSettledWidth }), [deckOpen, docked, wide, askSettledWidth]);
   // Pakistan stays centred in what is visible: the camera is re-padded whenever a panel toggles.
   // Only on a CHANGE: the map applies the same padding itself when it first frames the country
   // (and when it flies to a selection), and an easeTo on mount would interrupt that animation.
@@ -280,7 +284,7 @@ export function Workspace() {
           onFilters={deckFull ? openFilters : undefined}
           full={deckFull}
           notice={mapNotice}
-          clear={wide ? { top: TOP_CHROME_PX, right: docked ? ASK_PANEL_WIDTH : 0 } : undefined}
+          clear={wide ? { top: TOP_CHROME_PX, right: docked ? askWidth : 0 } : undefined}
         />
       ) : wide ? (
         <DeckRail onExpand={() => setDeckOpen(true)} />

@@ -83,7 +83,9 @@ const MOTIF_GAP_FROM_BADGE = 49;       // clear air between the badge and the fi
 export function motifBox(badge = BADGE_PX, badgeTop = HERO_PT, panel = ASK_PANEL_WIDTH) {
   return {
     top: badgeTop - MOTIF_ABOVE_BADGE_TOP,
-    left: panel / 2 + badge / 2 + MOTIF_GAP_FROM_BADGE,   // the badge is centred
+    // the badge is centred; on a panel dragged narrow the sweep would run off the right edge, so
+    // it is held inside it, giving up some of its gap from the badge rather than its last strokes
+    left: Math.min(panel / 2 + badge / 2 + MOTIF_GAP_FROM_BADGE, panel - ASK_MOTIF.width),
     width: ASK_MOTIF.width,
     height: ASK_MOTIF.height,
   };
@@ -108,6 +110,9 @@ export type AskDockProps = {
   seedKey?: number;
   onSeeded?: () => void;
   variant?: "dock" | "drawer";
+  /** The side panel's width as the reader has dragged it (AskDrawer); the empty state's motif is
+   *  placed against it. Omitted on the /ask page, which keeps the default. */
+  panelWidth?: number;
   onClose?: () => void;
   /** Whether the panel is actually on screen. The drawer is mounted on every route and slid out of
    *  sight, so a panel that fetched on mount would fetch on every page in the app for a figure
@@ -138,7 +143,7 @@ export function withFigure(questions: string[], cell: { display: string | null; 
   return questions.map((q) => q.replace(/^How certain is (?:this|the .+?) estimate\?$/, `How certain is the ${figure}${unit ? ` ${unit}` : ""} estimate?`));
 }
 
-export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, variant = "dock", onClose, active = true }: AskDockProps = {}) {
+export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, variant = "dock", onClose, active = true, panelWidth = ASK_PANEL_WIDTH }: AskDockProps = {}) {
   useEffect(() => { if (active) prepareAppCheck(); }, [active]);
   const { state, setState, release, agent, labels, dims, defaults } = useExplorer();
   const stateRef = useRef(state);
@@ -447,7 +452,7 @@ export function AskDock({ seed = null, seedScope = null, seedKey = 0, onSeeded, 
                 its ancestor's PADDING box - so `top-0 right-0` here is the header's bottom border
                 and the panel's right edge, whatever height the header turns out to be, with no
                 magic number to go stale. */}
-            <AskMotif style={motifBox()} />
+            <AskMotif style={motifBox(BADGE_PX, HERO_PT, panelWidth)} />
             {/* NOT overflow-hidden: the rings reach well above the badge, and the panel root is
                 already the clip. */}
             <div className="relative flex flex-col items-center px-2 pb-5 text-center">
