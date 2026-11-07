@@ -2,7 +2,7 @@
  * The /ask event payloads as api/pakemis_api/ask/router.py documents them. Every string a
  * card prints (display, unit, exactness, message, receipt) is taken from these as received.
  */
-export type StatusEvent = { phase: string; turn?: number; k?: number; name?: string; reason?: string };
+export type StatusEvent = { phase: string; turn?: number; k?: number; name?: string; reason?: string; attempt?: number };
 /** Sent only by supported suggestion buttons; free-text questions omit it. */
 export type AskIntent = "largest_source" | "annual_trend";
 export type ThinkingEvent = { text: string };

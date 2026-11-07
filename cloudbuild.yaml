@@ -37,6 +37,12 @@ substitutions:
   _ASK_FALLBACKS: gemini-3.8-flash
   _ASK_DAILY_TOKENS: "3000000"
   _ASK_PER_IP_PER_HOUR: "60"
+  # The cap on one question's whole turn. The code's default is 180 s (a model call is cut for
+  # SILENCE and retried, not for taking long), but Firebase Hosting ends any request it forwards
+  # at 60 s with an HTML 504 and the setting cannot be raised. While /ask is reached through
+  # Hosting the turn must end in words before that: 50. Raise it only once /ask reaches Cloud Run
+  # without passing through Hosting.
+  _ASK_TURN_SECONDS: "50"
   # WHERE the daily budget is counted. `firestore`: one document a day (in _ASK_BUDGET_COLLECTION
   # of this project's database) that every instance adds to, so _ASK_DAILY_TOKENS is the day's
   # total and not a per-instance, per-start allowance. Empty: each instance's own memory.
@@ -97,7 +103,7 @@ steps:
       - '--allow-unauthenticated'
       - '--port=8080'
       - '--set-secrets=GEMINI_API_KEY=${_GEMINI_SECRET}:latest'
-      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}|PAKEMIS_ASK_DAILY_TOKENS=${_ASK_DAILY_TOKENS}|PAKEMIS_ASK_PER_IP_PER_HOUR=${_ASK_PER_IP_PER_HOUR}|PAKEMIS_TRUSTED_PROXIES=${_TRUSTED_PROXIES}|PAKEMIS_ASK_BUDGET_STORE=${_ASK_BUDGET_STORE}|PAKEMIS_ASK_BUDGET_COLLECTION=${_ASK_BUDGET_COLLECTION}|PAKEMIS_APP_CHECK=${_APP_CHECK}|PAKEMIS_APP_CHECK_PROJECT=${_APP_CHECK_PROJECT}|PAKEMIS_APP_CHECK_APPS=${_APP_CHECK_APPS}|PAKEMIS_ASK_FALLBACKS=${_ASK_FALLBACKS}'
+      - '--set-env-vars=^|^PAKEMIS_RELEASES_BUCKET=${_RELEASES_BUCKET}|PAKEMIS_RELEASE_VERSION=${_RELEASE_VERSION}|ALLOWED_ORIGINS=${_ALLOWED_ORIGINS}|PAKEMIS_ASK_PROVIDER=gemini|PAKEMIS_REQUIRE_AUTH=${_REQUIRE_AUTH}|PAKEMIS_AUTH_PROJECT=${_AUTH_PROJECT}|PAKEMIS_AUTH_DOMAINS=${_AUTH_DOMAINS}|PAKEMIS_AUTH_EMAILS=${_AUTH_EMAILS}|PAKEMIS_ASK_DAILY_TOKENS=${_ASK_DAILY_TOKENS}|PAKEMIS_ASK_PER_IP_PER_HOUR=${_ASK_PER_IP_PER_HOUR}|PAKEMIS_ASK_TURN_SECONDS=${_ASK_TURN_SECONDS}|PAKEMIS_TRUSTED_PROXIES=${_TRUSTED_PROXIES}|PAKEMIS_ASK_BUDGET_STORE=${_ASK_BUDGET_STORE}|PAKEMIS_ASK_BUDGET_COLLECTION=${_ASK_BUDGET_COLLECTION}|PAKEMIS_APP_CHECK=${_APP_CHECK}|PAKEMIS_APP_CHECK_PROJECT=${_APP_CHECK_PROJECT}|PAKEMIS_APP_CHECK_APPS=${_APP_CHECK_APPS}|PAKEMIS_ASK_FALLBACKS=${_ASK_FALLBACKS}'
       - '--cpu=2'
       - '--memory=2Gi'
       - '--concurrency=20'

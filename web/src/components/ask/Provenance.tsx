@@ -84,7 +84,16 @@ export function MapMovedLine({ words, onUndo }: { words: string; onUndo: () => v
   );
 }
 
+/** How long a question runs before the working line says how long it has been running. */
+export const SHOW_ELAPSED_AFTER_S = 15;
+
+/** The working line's words: after SHOW_ELAPSED_AFTER_S, with the seconds so far, so a long
+ *  answer reads as still in hand rather than frozen. */
+export function workingText(elapsedS = 0, what: string = WORKING_TEXT) {
+  return elapsedS >= SHOW_ELAPSED_AFTER_S ? `${what} ${Math.floor(elapsedS)} s` : what;
+}
+
 /** The working state: the same line, one string, no action. */
-export function WorkingLine() {
-  return <ProvenanceLine what={WORKING_TEXT} live />;
+export function WorkingLine({ elapsedS = 0, what = WORKING_TEXT }: { elapsedS?: number; what?: string }) {
+  return <ProvenanceLine what={workingText(elapsedS, what)} live />;
 }

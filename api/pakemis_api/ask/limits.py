@@ -80,8 +80,22 @@ class Limits:
     # call is started and the reader is told, in the stream, to ask again; a model call that goes
     # silent is cut after `model_stall_seconds` or what is left of the turn, whichever is less.
     # 0 switches either off.
-    turn_seconds: int = 50
-    model_stall_seconds: int = 40
+    #
+    # A CAP ON A RUNAWAY TURN, NOT A RESPONSE-TIME TARGET (2026-11-07). The cap was 50 s so a turn
+    # ended in words before Firebase Hosting's fixed 60 s cut-off, and a Punjab question whose answer
+    # was still being written got "504 DEADLINE_EXCEEDED" at 50 s. A call is now cut for SILENCE
+    # (`model_stall_seconds` with nothing from the model; ask/watch.py), retried once
+    # (`model_retries`), and the turn's cap is generous. ⚠ A deployment still behind Firebase
+    # Hosting must set PAKEMIS_ASK_TURN_SECONDS under 60 (cloudbuild.yaml pins 50): the cap is the
+    # only thing that ends a long turn in words instead of the edge's HTML 504.
+    #
+    # MEASURED 2026-11-07, 14 calls to gemini-3.1-pro-preview over six questions: the model sends
+    # its first piece after 3-7 s and then keeps sending (thought summaries, then text) - the longest
+    # silence was 7.2 s, including a 40 s answer that thought for 39 s before its first word. 20 s
+    # of silence is nearly three times that, and a stalled call costs 20 s before its retry, not 40.
+    turn_seconds: int = 180
+    model_stall_seconds: int = 20
+    model_retries: int = 1
     # THE LAST CALL ANSWERS (2026-10-20). On 19 October a turn holding a successful result spent
     # its deadline on one more refused lookup and ended in "took too long". Once this little of
     # the turn is left and a tool has run, the next model call may not call a tool: it answers
@@ -100,6 +114,7 @@ class Limits:
             effort=os.environ.get("PAKEMIS_ASK_EFFORT") or cls.effort,
             turn_seconds=_int("PAKEMIS_ASK_TURN_SECONDS", cls.turn_seconds),
             model_stall_seconds=_int("PAKEMIS_ASK_MODEL_STALL_SECONDS", cls.model_stall_seconds),
+            model_retries=_int("PAKEMIS_ASK_MODEL_RETRIES", cls.model_retries),
             final_answer_seconds=_int("PAKEMIS_ASK_FINAL_ANSWER_SECONDS", cls.final_answer_seconds),
             trusted_proxies=parse_networks(os.environ.get("PAKEMIS_TRUSTED_PROXIES")),
         )

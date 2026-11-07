@@ -13,7 +13,7 @@
  * to the reader's own view. The tool cards do not, so a <cite> now opens the evidence rather than
  * scrolling to a card that is no longer rendered.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { applyPatch, type ExplorerState } from "@/lib/urlState";
 import { AnswerCard } from "./AnswerCard";
 import { ProvenanceLine, WorkingLine } from "./Provenance";
@@ -107,6 +107,23 @@ function TurnNotices({ items }: { items: TimelineItem[] }) {
 /** What stands in for a draft the server took back to correct. */
 export const CHECKING_TEXT = "Checking figures…";
 
+/** What the working line says after the server cut a model call that went silent or failed, and
+ *  asked again (api ask/loop.py, `status` phase "retry"). */
+export const RETRY_TEXT = "The model stopped responding. Trying again…";
+
+/** Seconds since this turn started streaming, ticking once a second while it is live. A turn
+ *  restored from history is never live, so it never starts a clock. */
+function useElapsed(live: boolean) {
+  const [startedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(startedAt);
+  useEffect(() => {
+    if (!live) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [live]);
+  return live ? (now - startedAt) / 1000 : 0;
+}
+
 /** The answer so far: checked lines, drawn the way the final answer will be. */
 function DraftAnswer({ text }: { text: string }) {
   const collections = useDownloadCollections();
@@ -138,6 +155,7 @@ export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAg
   const onCite = { hover: setHover, click: setPinned };
   void highlight;
   const live = turn.status === "streaming";
+  const elapsedS = useElapsed(live);
   // A CORRECTION THAT WAS RECOVERED IS NOT THE READER'S BUSINESS. The server rejects a draft that
   // typed a bare number or ended without text, asks for one rewrite, and usually gets a good answer -
   // and a red "Draft rejected by the server" box then sat above that good answer like a warning.
@@ -175,9 +193,11 @@ export function ReasoningTimeline({ turn, onFollowUp, agentMove = null, onUndoAg
       {/* THE ANSWER STREAMS, LINE BY LINE. Each line arrives already checked by the server and
           with its figures filled in; the final answer replaces the draft when it lands. If the
           server takes a draft back to correct it, "Checking figures…" stands in until the
-          corrected one starts. */}
+          corrected one starts. If a model call goes silent or fails and the server asks again,
+          the line says so until the retry shows progress; past 15 s it counts the seconds. */}
       {live && !tl.answer && tl.draft && <DraftAnswer text={tl.draft} />}
-      {live && !tl.answer && (tl.checking && !tl.draft ? <ProvenanceLine what={CHECKING_TEXT} live /> : <WorkingLine />)}
+      {live && !tl.answer && (tl.checking && !tl.draft ? <ProvenanceLine what={CHECKING_TEXT} live />
+        : <WorkingLine elapsedS={elapsedS} what={tl.retrying && !tl.draft ? RETRY_TEXT : undefined} />)}
     </div>
   );
 }

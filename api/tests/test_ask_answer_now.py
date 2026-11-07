@@ -149,7 +149,8 @@ def test_the_answer_window_waits_for_a_result(ask_client, fake, limits):
 
 
 def test_the_timeout_says_what_was_tried(ask_client, fake, limits):
-    limits(turn_seconds=1, model_stall_seconds=1, final_answer_seconds=0)
+    # the 1.2 s call is inside the silence limit; it is the turn's clock that ends the turn
+    limits(turn_seconds=1, model_stall_seconds=5, final_answer_seconds=0)
     bad = {"table": VEHICLES, "measure": REGISTERED, "locations": ["Nowhere"]}
     reset(fake, [tool_use("query_activity", bad), stop("tool_use")], [text("never"), stop()], delays=[1.2])
     events = ask(ask_client, "how many cars are there in nowhere?")

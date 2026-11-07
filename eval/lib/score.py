@@ -41,14 +41,34 @@ PLINK = re.compile(r'<plink to="([^"]*)">[^<]*</plink>')
 TABLE = re.compile(r"^\s*\|.*\|\s*\n\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$", re.M)
 
 
-def numbers_in(text):
+# A FIGURE AS THE READER SEES IT (2026-11-07). The server writes a large count rounded and scaled -
+# Lahore's 1,561,386 cars as "1.56 million" - and the scorer read that as 1.56, along with digits
+# from inside the tags (a receipt's hex, `k="1"`, `cell="0"`). Tags are dropped before reading, a
+# scaled figure is read at its scale, and it matches anything that rounds to what was printed.
+TAG = re.compile(r"<(?:cite|plink)\b[^>]*>|</(?:cite|plink)>")
+SCALED = re.compile(r"(-?\d+(?:,\d{3})*(?:\.(\d+))?)\s*(thousand|million|billion)\b", re.IGNORECASE)
+SCALE = {"thousand": 1e3, "million": 1e6, "billion": 1e9}
+
+
+def figures_in(text):
+    """(value, slack) for every number in the answer's words: a scaled figure carries half a step
+    of its printed precision as slack ("1.56 million" -> 1,560,000 +/- 5,000), a plain one none."""
+    words = TAG.sub("", text or "")
     out = []
-    for raw in NUMBER.findall(text or ""):
+    for m in SCALED.finditer(words):
+        decimals = len(m.group(2) or "")
+        scale = SCALE[m.group(3).lower()]
+        out.append((float(m.group(1).replace(",", "")) * scale, 0.5 * 10 ** -decimals * scale))
+    for raw in NUMBER.findall(SCALED.sub(" ", words)):
         try:
-            out.append(float(raw.replace(",", "")))
+            out.append((float(raw.replace(",", "")), 0.0))
         except ValueError:
             pass
     return out
+
+
+def numbers_in(text):
+    return [value for value, _ in figures_in(text)]
 
 
 def tolerance(ref_value, tol):
@@ -94,7 +114,8 @@ def score_case(case, resolved, transcript):
     answer = answers[-1] if answers else {}
     text = answer.get("text") or ""
     low = text.lower()
-    nums = numbers_in(text)
+    figures = figures_in(text)
+    nums = [value for value, _ in figures]
     out = []
 
     def add(name, axis, ok, detail=""):
@@ -105,7 +126,7 @@ def score_case(case, resolved, transcript):
         if ref is None:
             return None, None
         band = tolerance(ref, tol)
-        hit = [n for n in nums if abs(n - ref) <= band]
+        hit = [n for n, slack in figures if abs(n - ref) <= max(band, slack)]
         return ref, (hit[0] if hit else None)
 
     # --- numeric ---------------------------------------------------------------------------

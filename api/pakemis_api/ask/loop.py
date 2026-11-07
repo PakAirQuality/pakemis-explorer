@@ -23,6 +23,7 @@ from pakemis_api.ask import prompt as PROMPT
 from pakemis_api.ask.limits import Limits, cost_estimate_usd, usage_total
 from pakemis_api.ask.render import BareNumberError, UnknownPlaceholderError, render_multi
 from pakemis_api.ask.tools import DOWNLOAD_TOOL, FUNCTION_MODEL, MAP_TOOL, ToolInputError, validate_map_view
+from pakemis_api.ask.watch import CallTiming, OutOfTime, Silent, watched
 from pakemis_api.settings import API_PREFIX
 from pakemis_query import errors as E
 from pakemis_query.placeholders import PlaceholderError
@@ -40,6 +41,42 @@ ANSWER_AFTER_REFUSALS = ("%d calls to %s have now been refused for this question
                          "holds and where, as the refusals state it.")
 ANSWER_BEFORE_DEADLINE = ("Time for this question is nearly up. Do not call a tool again: answer now "
                           "from the results already obtained, and say plainly what is not covered.")
+
+# A RETRY NEEDS ROOM, AND A BUSY SERVICE A MOMENT. No retry starts with less than this much of the
+# turn left (it could not finish), and a retry after a server error waits this long first.
+RETRY_MIN_LEFT_S = 10.0
+RETRY_PAUSE_S = 1.0
+# what a provider says when the fault is its own and passing: a server error, an overloaded or
+# unreachable service, a deadline its side ran out of, a connection dropped mid-stream. A 429 is
+# not here - Gemini's fallback chain answers that (ask/gemini.py) - nor is anything about the request.
+_TRANSIENT = re.compile(r"\b(500|502|503|504)\b|UNAVAILABLE|DEADLINE_EXCEEDED|INTERNAL|OVERLOADED|"
+                        r"TIMEOUT|TIMED OUT|CONNECT|REMOTEPROTOCOL|READERROR|CONNECTION RESET|INCOMPLETE", re.IGNORECASE)
+_TIMED_OUT = re.compile(r"DEADLINE|TIMEOUT|TIMED OUT", re.IGNORECASE)
+
+
+def retryable_model_error(exc):
+    """Whether a ModelError is the provider's passing fault, so asking again may work."""
+    return bool(_TRANSIENT.search(str(exc)))
+
+
+def call_failure_payload(kind, exc, attempts):
+    """The reader's error for a model call that failed for good: plain words for what they can do
+    about it. A timeout of any kind is "ask again" (`turn_timeout`), never the provider's text -
+    "504 DEADLINE_EXCEEDED" reached a reader on 7 November because only "timeout" was matched."""
+    tried = " It was tried %d times." % attempts if attempts > 1 else ""
+    if kind == "silent":
+        return {"code": "turn_timeout",
+                "message": "The assistant stopped responding (nothing for %.0f s) and was cut off.%s "
+                           "Nothing was lost: ask it again." % (exc.silent_s, tried)}
+    if kind == "cap" or _TIMED_OUT.search(str(exc)):
+        return {"code": "turn_timeout",
+                "message": "The assistant took too long over this question and stopped.%s Nothing was lost: "
+                           "ask it again, or ask for one thing at a time." % tried}
+    if kind == "transient":
+        return {"code": "model_error",
+                "message": "The assistant's model service is having trouble right now (%s).%s Ask again in a moment."
+                           % (str(exc)[:160], tried)}
+    return {"code": "model_error", "message": str(exc)}
 
 
 def _instruct(messages, text):
@@ -552,66 +589,94 @@ class Turn:
                 yield "status", {"phase": "answer_now", "reason": "deadline"}
             turns += 1
             yield "status", {"phase": "model", "turn": turns}
-            text_parts, calls, stop = [], [], None
-            # one line when a model call starts and one when it ends, so a call that never returns is
-            # visible in the log as a start with no end - the stalled turn left nothing at all
-            stall = self.limits.model_stall_seconds
-            if stall and deadline:
-                stall = max(5.0, min(float(stall), deadline - elapsed))
-            log.info("ask model call %d starting at %.1f s%s%s", turns, elapsed,
-                     " (silent for at most %.0f s)" % stall if stall else "", " (answer only)" if answer_only else "")
-            call_started = time.time()
-            stream_kwargs = {"timeout_s": stall} if stall and getattr(self.model, "accepts_timeout", False) else {}
-            tools = self.tools
+            tools, base_kwargs = self.tools, {}
             if answer_only:
                 # a client that can switch calling off keeps the declarations the history refers to
                 if getattr(self.model, "accepts_answer_only", False):
-                    stream_kwargs["answer_only"] = True
+                    base_kwargs["answer_only"] = True
                 else:
                     tools = []
-            # THE ANSWER STREAMS, A CHECKED LINE AT A TIME. Each completed line is rendered on its own
-            # - the same bare-number and placeholder checks the whole answer gets below - and sent at
-            # once as `answer_delta`, its figures already filled in. A line that fails is not sent,
-            # nor anything after it from this call: the whole-text check below decides what happens
-            # (a correction takes the draft back first). Text before a tool call was never the
-            # answer, so a tool call takes back what streamed and stops this call's streaming.
-            pending_line, streamed, holding = "", False, False
-            try:
-                for ev in self.model.stream(self.system, messages, tools, **stream_kwargs):
-                    if ev.kind == "thinking_delta":
-                        yield "thinking", {"text": ev.text}
-                    elif ev.kind == "text_delta":
-                        text_parts.append(ev.text)
-                        if holding:
-                            continue
-                        pending_line += ev.text
-                        while "\n" in pending_line:
-                            line, pending_line = pending_line.split("\n", 1)
-                            piece = self._render_line(line)
-                            if piece is None:
-                                holding = True
-                                break
-                            streamed = True
-                            yield "answer_delta", {"text": piece + "\n"}
-                    elif ev.kind == "tool_use":
-                        calls.append(ev)
-                        if streamed:
-                            yield "answer_reset", {"reason": "tools"}
-                            streamed = False
-                        holding = True
-                    elif ev.kind == "stop":
-                        stop = ev
-            except ModelError as exc:
-                log.warning("ask model call %d failed after %.1f s: %s", turns, time.time() - call_started, exc)
-                # a call cut for going silent is the reader's "try again", not a model's error message
-                if "timeout" in str(exc).lower() or "timed out" in str(exc).lower():
-                    yield "error", {"code": "turn_timeout",
-                                    "message": "The assistant stopped answering part-way through and was cut off. "
-                                               "Nothing was lost: ask it again."}
-                else:
-                    yield "error", {"code": "model_error", "message": str(exc)}
+            # A CALL IS CUT FOR SILENCE, AND RETRIED ONCE (2026-11-07; ask/watch.py). The provider is
+            # handed the rest of the turn as its own deadline, never the silence limit: the Gemini SDK
+            # sends a timeout to the server as a total deadline, which killed answers still being
+            # written. What cuts a call is `model_stall_seconds` with nothing from the model.
+            silent_s = float(self.limits.model_stall_seconds or 0) or None
+            cap_at = started + deadline if deadline else None
+            attempt, failure = 0, None
+            while True:
+                attempt += 1
+                now = time.time()
+                stream_kwargs = dict(base_kwargs)
+                if cap_at and getattr(self.model, "accepts_timeout", False):
+                    stream_kwargs["timeout_s"] = max(5.0, cap_at - now)
+                # one line when a model call starts and one when it ends, so a call that never returns
+                # is visible in the log as a start with no end - the stalled turn left nothing at all
+                log.info("ask model call %d%s starting at %.1f s%s%s", turns, " (retry %d)" % (attempt - 1) if attempt > 1 else "",
+                         now - started, " (cut after %.0f s of silence)" % silent_s if silent_s else "",
+                         " (answer only)" if answer_only else "")
+                timing = CallTiming(started=now)
+                text_parts, calls, stop, failure = [], [], None, None
+                # THE ANSWER STREAMS, A CHECKED LINE AT A TIME. Each completed line is rendered on its
+                # own - the same bare-number and placeholder checks the whole answer gets below - and
+                # sent at once as `answer_delta`, its figures already filled in. A line that fails is
+                # not sent, nor anything after it from this call: the whole-text check below decides
+                # what happens (a correction takes the draft back first). Text before a tool call was
+                # never the answer, so a tool call takes back what streamed and stops this call's
+                # streaming.
+                pending_line, streamed, holding = "", False, False
+                try:
+                    stream = self.model.stream(self.system, messages, tools, **stream_kwargs)
+                    # a little past the cap, so a provider honouring its own deadline reports it first
+                    for ev in watched(stream, silent_s, cap_at + 2 if cap_at else None, timing):
+                        if ev.kind == "thinking_delta":
+                            yield "thinking", {"text": ev.text}
+                        elif ev.kind == "text_delta":
+                            text_parts.append(ev.text)
+                            if holding:
+                                continue
+                            pending_line += ev.text
+                            while "\n" in pending_line:
+                                line, pending_line = pending_line.split("\n", 1)
+                                piece = self._render_line(line)
+                                if piece is None:
+                                    holding = True
+                                    break
+                                streamed = True
+                                yield "answer_delta", {"text": piece + "\n"}
+                        elif ev.kind == "tool_use":
+                            calls.append(ev)
+                            if streamed:
+                                yield "answer_reset", {"reason": "tools"}
+                                streamed = False
+                            holding = True
+                        elif ev.kind == "stop":
+                            stop = ev
+                except Silent as exc:
+                    failure = ("silent", exc)
+                except OutOfTime as exc:
+                    failure = ("cap", exc)
+                except ModelError as exc:
+                    failure = ("transient" if retryable_model_error(exc) else "error", exc)
+                if failure is None:
+                    log.info("ask model call %d returned in %.1f s with %d tool call(s): %s",
+                             turns, time.time() - timing.started, len(calls), timing.summary())
+                    break
+                kind, exc = failure
+                log.warning("ask model call %d failed (%s): %s; %s", turns, kind, exc, timing.summary())
+                if streamed:          # half an answer from a call that did not finish is not the answer
+                    yield "answer_reset", {"reason": "retry"}
+                    streamed = False
+                left = cap_at - time.time() if cap_at else None
+                if kind in ("silent", "transient") and attempt <= self.limits.model_retries \
+                        and (left is None or left >= RETRY_MIN_LEFT_S):
+                    yield "status", {"phase": "retry", "attempt": attempt + 1, "reason": "silent" if kind == "silent" else "error"}
+                    if kind == "transient":
+                        time.sleep(RETRY_PAUSE_S)
+                    continue
+                yield "error", call_failure_payload(kind, exc, attempt)
                 break
-            log.info("ask model call %d returned in %.1f s with %d tool call(s)", turns, time.time() - call_started, len(calls))
+            if failure is not None:
+                break
             if stop is None:
                 stop = ModelEvent("stop", stop_reason="tool_use" if calls else "end_turn")
             self._spend(stop.usage)

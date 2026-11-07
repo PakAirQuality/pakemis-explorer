@@ -11,8 +11,12 @@ import type { AnswerEvent, AskEvent, DoneEvent, ErrorEvent, MapActionEvent, Refu
  * true after the server took a draft back (`answer_reset` for a correction) and before the next
  * line arrives. A reset for "tools" - text the model wrote before it decided to call a tool - just
  * drops the draft: it was never the answer.
+ *
+ * `retrying` is true after the server cut a model call that went silent or failed with a passing
+ * server error (`status` phase "retry") and before the retried call shows progress: a line of the
+ * answer, a lookup, the answer itself or an error. A reset for "retry" drops the half-answer.
  */
-export type Timeline = { items: TimelineItem[]; status: StatusEvent | null; done: DoneEvent | null; answer: AnswerEvent | null; draft: string; checking: boolean };
+export type Timeline = { items: TimelineItem[]; status: StatusEvent | null; done: DoneEvent | null; answer: AnswerEvent | null; draft: string; checking: boolean; retrying: boolean };
 
 function toolItem(items: TimelineItem[], k: number) {
   for (let i = items.length - 1; i >= 0; i--) {
@@ -29,11 +33,13 @@ export function timelineOf(events: AskEvent[]): Timeline {
   let answer: AnswerEvent | null = null;
   let draft = "";
   let checking = false;
+  let retrying = false;
   for (const { name, data } of events) {
     switch (name) {
       case "answer_delta": {
         draft += (data as { text?: string }).text ?? "";
         checking = false;
+        retrying = false;
         break;
       }
       case "answer_reset": {
@@ -44,6 +50,7 @@ export function timelineOf(events: AskEvent[]): Timeline {
       case "status": {
         const s = data as StatusEvent;
         status = s;
+        if (s.phase === "retry") retrying = true;
         if (s.phase === "correction") items.push({ kind: "correction", reason: s.reason ?? "" });
         if (s.phase === "tool_limit" && typeof s.k === "number") {
           const t = toolItem(items, s.k);
@@ -60,6 +67,7 @@ export function timelineOf(events: AskEvent[]): Timeline {
       }
       case "tool_call": {
         const c = data as ToolCallEvent;
+        retrying = false;
         items.push({ kind: "tool", k: c.k, id: c.id, name: c.name, input: c.input ?? {} });
         break;
       }
@@ -82,6 +90,7 @@ export function timelineOf(events: AskEvent[]): Timeline {
         break;
       case "answer":
         answer = data as AnswerEvent;
+        retrying = false;
         items.push({ kind: "answer", answer });
         draft = "";
         checking = false;
@@ -90,6 +99,7 @@ export function timelineOf(events: AskEvent[]): Timeline {
         // an answer withheld is withheld whole: no half-streamed draft stays on screen
         draft = "";
         checking = false;
+        retrying = false;
         const e = data as ErrorEvent;
         items.push({ kind: "error", code: e.code, message: e.message ?? "", scope: e.scope });
         break;
@@ -101,7 +111,7 @@ export function timelineOf(events: AskEvent[]): Timeline {
         break;
     }
   }
-  return { items, status, done, answer, draft, checking };
+  return { items, status, done, answer, draft, checking, retrying };
 }
 
 /** The streaming events: what builds a draft, and nothing a finished turn needs. */

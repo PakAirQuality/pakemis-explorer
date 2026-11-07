@@ -14,7 +14,8 @@ import type { ReleaseInfo } from "@/lib/envelope";
 import { RELEASE } from "@/__tests__/fixtures";
 import { AskDock } from "./AskDock";
 import { settledDraft } from "./answerText";
-import { CHECKING_TEXT } from "./ReasoningTimeline";
+import { CHECKING_TEXT, RETRY_TEXT } from "./ReasoningTimeline";
+import { SHOW_ELAPSED_AFTER_S, WORKING_TEXT, workingText } from "./Provenance";
 import { loadConversation, saveConversation } from "./store";
 import { timelineOf } from "./timeline";
 import type { AskEvent } from "./types";
@@ -49,6 +50,26 @@ describe("the draft, from the events", () => {
     const tl = timelineOf([ev("answer_delta", { text: "A line.\n" }), ev("error", { code: "bare_numbers", message: "x" })]);
     expect(tl.draft).toBe("");
     expect(tl.items.map((i) => i.kind)).toEqual(["error"]);
+  });
+
+  it("says it is retrying after a cut model call, until the retry shows progress", () => {
+    const cut = timelineOf([ev("answer_delta", { text: "Half.\n" }), ev("answer_reset", { reason: "retry" }), ev("status", { phase: "retry", attempt: 2, reason: "silent" })]);
+    expect(cut.draft).toBe("");
+    expect(cut.checking).toBe(false);
+    expect(cut.retrying).toBe(true);
+    // the model thinking again is not yet progress the reader can see
+    expect(timelineOf([ev("status", { phase: "retry", attempt: 2 }), ev("thinking", { text: "..." })]).retrying).toBe(true);
+    for (const next of [ev("answer_delta", { text: "A.\n" }), ev("tool_call", { k: 1, id: "a", name: "query_emissions", input: {} }),
+      ev("error", { code: "turn_timeout", message: "x" })]) {
+      expect(timelineOf([ev("status", { phase: "retry", attempt: 2 }), next]).retrying).toBe(false);
+    }
+  });
+
+  it("counts the seconds on the working line only once a question has run a while", () => {
+    expect(workingText(3)).toBe(WORKING_TEXT);
+    expect(workingText(SHOW_ELAPSED_AFTER_S - 0.1)).toBe(WORKING_TEXT);
+    expect(workingText(47.6)).toBe(`${WORKING_TEXT} 47 s`);
+    expect(workingText(20, RETRY_TEXT)).toBe(`${RETRY_TEXT} 20 s`);
   });
 
   it("holds a table's header line back until its separator arrives", () => {
@@ -150,5 +171,40 @@ describe("the panel while an answer streams", () => {
     expect(screen.getByTestId("answer-draft")).toHaveTextContent("The corrected line.");
     expect(screen.getByTestId("provenance")).not.toHaveTextContent(CHECKING_TEXT);
     await stream.close();
+  });
+
+  it("says the model is being asked again after a cut call, and drops the half-answer", async () => {
+    const stream = controlledStream();
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => (String(url).endsWith("/ask") ? stream.response : ({ ok: false, status: 404, statusText: "x", json: async () => ({}) } as Response))));
+    mount();
+    await ask("How many vehicles are there in Punjab?");
+    await stream.send("answer_delta", { text: "Half an answer.\n" });
+    expect(await screen.findByTestId("answer-draft")).toHaveTextContent("Half an answer.");
+    await stream.send("answer_reset", { reason: "retry" });
+    await stream.send("status", { phase: "retry", attempt: 2, reason: "silent" });
+    expect(screen.queryByTestId("answer-draft")).toBeNull();
+    expect(screen.getByTestId("provenance")).toHaveTextContent(RETRY_TEXT);
+    await stream.send("answer_delta", { text: "The whole answer.\n" });
+    expect(screen.getByTestId("answer-draft")).toHaveTextContent("The whole answer.");
+    expect(screen.getByTestId("provenance")).not.toHaveTextContent(RETRY_TEXT);
+    await stream.close();
+  });
+
+  it("counts the seconds while a long question is still working", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const stream = controlledStream();
+      vi.stubGlobal("fetch", vi.fn(async (url: string) => (String(url).endsWith("/ask") ? stream.response : ({ ok: false, status: 404, statusText: "x", json: async () => ({}) } as Response))));
+      mount();
+      await ask("A long question?");
+      await stream.send("status", { phase: "model", turn: 1 });
+      expect(screen.getByTestId("provenance")).toHaveTextContent(WORKING_TEXT);
+      expect(screen.getByTestId("provenance").textContent).not.toMatch(/\d+ s$/);
+      await act(async () => { vi.advanceTimersByTime(21_000); });
+      expect(screen.getByTestId("provenance").textContent).toMatch(/ 2[0-9] s$/);
+      await stream.close();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
