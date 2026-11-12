@@ -23,9 +23,15 @@ different views of the same verified release. The rule this repository enforces 
 - Map tiles and rasters carry geometry and identifiers only; values are painted through Mapbox GL
   `feature-state` from `/api/v1/emissions/query/emissions` envelopes; the grid raster is visual shading and
   every grid value shown comes from `get_grid_cell`.
-- The agent calls only the release's eleven typed functions (plus `set_map_view`, which runs no
-  query). Numbers reach its prose only as `{{result_k_cell_n}}` placeholders the server fills
-  from the envelope; a draft with a bare decimal is corrected once and then withheld.
+- The agent calls only the release's typed functions, plus tools that run no query:
+  `set_map_view`, `list_activity_files`, and the arithmetic tools `add_up` (exact sums over the
+  rows of a result already fetched) and `calculate` (exact arithmetic on a few numbers).
+  **Since November 2026 the agent writes its own figures** in its answers: the ones its results
+  hold, and the sums, shares and changes `add_up` and `calculate` returned (`ask/arith.py`). The
+  `{{result_k_cell_n}}` placeholders still work. The bare-number gate that used to withhold a
+  typed decimal is off by default and returns with `PAKEMIS_ASK_TYPED_NUMBERS=0`. This is the
+  agent's chat only: the explorer's pages still compute nothing, and the API's query routes still
+  return the envelope unchanged.
 - The API refuses to start unless the pinned release verifies byte-for-byte.
 - The Mapbox token and `ANTHROPIC_API_KEY` are read from the environment, never printed,
   hard-coded or committed.
@@ -479,12 +485,19 @@ download, and no receipt moves.
 | `done` | `{conversation_id, usage, cost_estimate_usd}` |
 
 The tools are the eleven `query_contract.functions` with schemas from the generated request
-models (field descriptions and allowed values from the dims) plus `set_map_view`. The model
-sees a compact result (the first 60 cells: `display`, `unit`, identifying strings), never the
-envelope and never the release version string. It writes `{{result_k_cell_n}}` (or `.unit`,
-`.exact`); `render.py` delegates each to `pakemis_query.placeholders.render` on that call's
-envelope and then runs `reject_bare_numbers` over the rest. Conversations are in-process
-(24 h TTL); the browser keeps its own copy and re-seeds an unknown id with `client_history`.
+models (field descriptions and allowed values from the dims), plus `list_activity_files`,
+`add_up`, `calculate` and `set_map_view`. The model sees a compact result (the first 60 cells:
+`display`, `unit`, identifying strings), never the envelope and never the release version
+string. An activity result (`query_activity`) is shown instead as a table (`ask/records.py`):
+the columns that vary row by row, everything shared said once, and the use notes and the
+release's rules for adding rows each said once. A selection too large to read (over
+`PAKEMIS_ASK_ACTIVITY_VIEW_CHARS`, 60,000 characters) stays on the server, and the model adds it
+up with `add_up`. The model writes figures itself or as `{{result_k_cell_n}}` (or `.unit`,
+`.exact`); `render.py` fills each placeholder through `pakemis_query.placeholders.render` on that
+call's envelope. It also checks the model's ```` ```chart ```` blocks (bar, line, area or pie) and
+turns them into `<pchart>` tags, which the web app draws (`AnswerChart.tsx`). Conversations are
+in-process (24 h TTL); the browser keeps its own copy and re-seeds an unknown id with
+`client_history`.
 
 The web dock (`web/src/components/ask/`): `useAskStream` POSTs and parses the SSE body with a
 ReadableStream reader; `ReasoningTimeline` shows, in arrival order, the thinking (collapsed),

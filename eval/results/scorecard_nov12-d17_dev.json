@@ -1,0 +1,109 @@
+{
+ "meta": {
+  "release_version": "1.0.0rc59",
+  "agent": {
+   "enabled": true,
+   "model": "gemini-3.1-pro-preview",
+   "provider": "gemini",
+   "reason": null,
+   "library": "02a469aef44acb87"
+  },
+  "run_at": "2026-11-12T17:21:11+00:00",
+  "split": "dev",
+  "label": "nov12-d17",
+  "allow_holdout": false
+ },
+ "reference_release": "1.0.0rc59",
+ "reference_manifest": "7e7fed3f559f0c13",
+ "summary": {
+  "n_cases": 1,
+  "all_axes_pass": 0,
+  "all_axes_pass_rate": 0.0,
+  "axes": {
+   "numeric": {
+    "n": 0,
+    "pass": 0,
+    "rate": null
+   },
+   "boundary": {
+    "n": 1,
+    "pass": 0,
+    "rate": 0.0
+   },
+   "source": {
+    "n": 1,
+    "pass": 1,
+    "rate": 1.0
+   },
+   "uncertainty": {
+    "n": 0,
+    "pass": 0,
+    "rate": null
+   },
+   "refusal": {
+    "n": 0,
+    "pass": 0,
+    "rate": null
+   },
+   "format": {
+    "n": 0,
+    "pass": 0,
+    "rate": null
+   }
+  },
+  "by_path": {
+   "loop": 1
+  },
+  "no_answer": [
+   "D17"
+  ],
+  "turn_limit": []
+ },
+ "cases": [
+  {
+   "id": "D17",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=0 citations=0 tool_results=6 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: ['turn_timeout']"
+    },
+    {
+     "name": "phrase_all:industry",
+     "axis": "boundary",
+     "ok": false,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": false,
+     "detail": "matched [] of ['1.a.2', 'captive', 'self-generation']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "fail",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 7,
+   "n_refusals": 1,
+   "errors": [
+    "turn_timeout"
+   ],
+   "answer_text": ""
+  }
+ ]
+}

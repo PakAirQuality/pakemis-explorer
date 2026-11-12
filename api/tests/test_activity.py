@@ -57,6 +57,11 @@ def lahore(settings):
             "rows": {r["Vehicle class"]: r for r in rows if r["Period"] == newest}}
 
 
+def seen(fake):
+    """The activity table the model was handed for the first tool call (ask/records.py)."""
+    return json.loads(fake.calls[1]["messages"][-1]["content"][0]["content"])
+
+
 def grouped(value):
     return "{:,}".format(int(Decimal(value)))
 
@@ -157,13 +162,17 @@ def test_how_many_cars_are_in_lahore(ask_client, fake, lahore):
     assert not only(events, "error") and not only(events, "refusal")
     result = only(events, "tool_result")[0]
     assert result["request_type"] == "query_activity" and result["n_values"] == 1
-    # what the model was handed: the count, its date, its source and the qualification, as strings
-    cell = json.loads(fake.calls[1]["messages"][-1]["content"][0]["content"])["cells"][0]
-    attrs = cell["attrs"]
-    assert (attrs["location"], attrs["category"], attrs["measure"]) == ("Lahore", CARS, REGISTERED)
-    assert attrs["period"] == lahore["period"] and attrs["period_label"] and attrs["period_type"] == "Snapshot date"
-    assert attrs["source_series"] and attrs["source_reference"] and "not traffic" in attrs["use_note"]
-    assert "record_id" not in attrs and "source_table" not in attrs       # ids are for the receipt, not for prose
+    # what the model was handed (ask/records.py): the count, and its date, source and qualification said once
+    table = seen(fake)
+    shared = table["shared"]
+    assert (shared["Location"], shared["Vehicle class"], shared["Measure"]) == ("Lahore", CARS, REGISTERED)
+    assert shared["Period"] == lahore["period"] and shared["Period type"] == "Snapshot date"
+    assert shared["Source series"] and "not traffic" in table["notes"]["all rows"]
+    assert table["columns"] == ["i", "Value"]
+    assert Decimal(table["rows"][0][1]) == Decimal(lahore["rows"][CARS]["Value"])
+    # ids and references are for the receipt and the reader's details, not for prose
+    for key in ("Record ID", "record_id", "Source reference", "source_reference", "source_table", "source_row"):
+        assert '"%s"' % key not in json.dumps(table)
     # what the reader got: the register's own figure, cited to its receipt
     answer = only(events, "answer")[0]
     cites = CITE.findall(answer["text"])
@@ -180,10 +189,11 @@ def test_does_that_include_motorcycles(ask_client, fake, lahore):
     fake.load([tool_use("query_activity", lahore_call(categories=[CARS, MOTORCYCLES])), stop("tool_use")],
               [text("No. Motorcycles are their own class: {{result_1_cell_1.short}} against {{result_1_cell_0.short}} cars."), stop()])
     events = ask(ask_client, "Does that include motorcycles?", ui_state=ELSEWHERE)
-    cells = json.loads(fake.calls[1]["messages"][-1]["content"][0]["content"])["cells"]
-    assert [c["attrs"]["category"] for c in cells] == [CARS, MOTORCYCLES]     # two rows, never one
-    assert len({c["attrs"]["period"] for c in cells}) == 1
-    assert [c["display"] for c in cells] == [grouped(lahore["rows"][k]["Value"]) for k in (CARS, MOTORCYCLES)]
+    table = seen(fake)
+    assert table["columns"] == ["i", "Vehicle class", "Value"]
+    assert [r[1] for r in table["rows"]] == [CARS, MOTORCYCLES]               # two rows, never one
+    assert table["shared"]["Period"] == lahore["period"]                      # one date, said once
+    assert [Decimal(r[2]) for r in table["rows"]] == [Decimal(lahore["rows"][k]["Value"]) for k in (CARS, MOTORCYCLES)]
     assert only(events, "answer")[0]["text"].startswith("No.")
 
 
@@ -192,15 +202,16 @@ def test_how_many_vehicles_altogether(ask_client, fake, lahore):
     fake.load([tool_use("query_activity", lahore_call(total=True)), stop("tool_use")],
               [text("Altogether the classes held sum to {{result_1_cell_%d}} {{result_1_cell_%d.unit}}." % (n, n)), stop()])
     events = ask(ask_client, "How many vehicles altogether?", ui_state=ELSEWHERE)
-    cells = json.loads(fake.calls[1]["messages"][-1]["content"][0]["content"])["cells"]
-    assert len(cells) == n + 1
-    total = cells[-1]
+    table = seen(fake)
+    assert len(table["rows"]) == n
     expected = sum(Decimal(r["Value"]) for r in lahore["rows"].values())
-    assert total["display"] == grouped(expected)
-    assert total["attrs"]["derived"] == "sum" and total["attrs"]["period"] == lahore["period"]
-    assert set(total["attrs"]["classes_summed"].split("; ")) == set(lahore["rows"])
-    assert "not a figure the source printed" in total["interpretation"]
-    assert all("derived" not in c["attrs"] for c in cells[:-1])
+    total = table["server_total"]
+    assert Decimal(total["value"]) == expected and total["i"] == n
+    assert "not a figure the source printed" in total["what"]
+    # the reader's cells still carry the total's own record of what it summed
+    cell = only(events, "tool_result")[0]["cells"][-1]
+    assert cell["attrs"]["derived"] == "sum" and cell["attrs"]["period"] == lahore["period"]
+    assert set(cell["attrs"]["classes_summed"].split("; ")) == set(lahore["rows"])
     assert CITE.findall(only(events, "answer")[0]["text"])[0][3] == grouped(expected)
 
 
@@ -217,10 +228,8 @@ def test_how_many_are_driving_today(ask_client, fake, lahore):
     fake.load([tool_use("query_activity", lahore_call(total=True)), stop("tool_use")],
               [text("That is not recorded. The register counts registrations, not traffic."), stop()])
     events = ask(ask_client, "How many are driving today?", ui_state=ELSEWHERE)
-    cells = json.loads(fake.calls[1]["messages"][-1]["content"][0]["content"])["cells"]
-    for cell in cells:                      # the qualification travels with every figure, the total included
-        note = cell["attrs"]["use_note"]
-        assert "not traffic" in note and "not an active fleet" in note
+    note = seen(fake)["notes"]["all rows"]       # the qualification, said once for every row
+    assert "not traffic" in note and "not an active fleet" in note
     assert only(events, "answer")
 
 
@@ -238,8 +247,10 @@ def test_what_is_the_2026_count(ask_client, fake, lahore):
     assert not only(events, "tool_result") and only(events, "answer")
 
 
-def test_how_much_pollution_do_those_cars_produce(ask_client, fake):
-    """The server cannot stop a model reasoning badly, but it can refuse to print a figure it did not compute."""
+def test_how_much_pollution_do_those_cars_produce(ask_client, fake, gate):
+    """The server cannot stop a model reasoning badly, but with the bare-number gate on it can refuse to print
+    a figure it did not compute. Since November 2026 the gate is off by default (the model writes its own
+    figures) and the prompt is what keeps an emission from being inferred from a count."""
     fake.load([tool_use("query_activity", lahore_call(categories=[CARS])), stop("tool_use")],
               [text("Those cars emit about 3.4 Mt of CO2 a year."), stop()],
               [text("Those cars emit roughly 3.4 Mt."), stop()])

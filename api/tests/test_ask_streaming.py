@@ -83,7 +83,7 @@ def test_text_before_a_tool_call_is_taken_back_and_not_the_answer(ask_client, fa
     assert "It was" in deltas[-1]["text"] and only(events, "answer")
 
 
-def test_a_line_with_a_typed_number_is_held_and_the_draft_is_taken_back_for_the_correction(ask_client, fake):
+def test_a_line_with_a_typed_number_is_held_and_the_draft_is_taken_back_for_the_correction(ask_client, fake, gate):
     fake.load([tool_use("query_emissions", QUERY), stop("tool_use")],
               [text("The total is {{result_1_cell_0.short}} {{result_1_cell_0.unit}}.\n"),
                text("That is about 12.3 Mt.\n"), text("More text.\n"), stop()],
@@ -103,7 +103,7 @@ def test_a_line_with_a_typed_number_is_held_and_the_draft_is_taken_back_for_the_
     assert "12.3" not in only(events, "answer")[0]["text"]
 
 
-def test_a_withheld_answer_leaves_no_draft_behind(ask_client, fake):
+def test_a_withheld_answer_leaves_no_draft_behind(ask_client, fake, gate):
     fake.load([tool_use("query_emissions", QUERY), stop("tool_use")],
               [text("Fine line {{result_1_cell_0.short}}.\nBad 1.5 Mt.\n"), stop()],
               [text("Still 1.5 Mt.\n"), stop()])

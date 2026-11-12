@@ -333,7 +333,15 @@ def get_grid_cell(engine, req, cube_paths):
 ACTIVITY_STANDARD = ("Period", "Location", "Province", "Locality", "Measure", "Value", "Unit",
                      "Period type", "Reporting interval", "Location level", "Evidence",
                      "Source status", "Source series", "Use note", "Source reference", "Record ID")
-ACTIVITY_ROW_CAP = 400
+# THE ROW CAP IS A SAFETY NET, NOT A SIZE FOR A READER (explorer 0002, 2026-11). It was 400, which
+# cut "every district's vehicles" (948 rows) at the districts from A to K and refused its total.
+# A caller that hands the rows on decides how much of them to show (the assistant adds a large
+# selection up on the server rather than reading it); the cap only stops a request for a whole
+# table (fuel sales by area holds 43,770 rows) from being read in one call. 20,000 holds every
+# district's register for every year (12,670) and a plant-month table whole (15,564).
+ACTIVITY_ROW_CAP = 20000
+# periods=["all"]: every period held, not the newest of each place
+ACTIVITY_ALL_PERIODS = "all"
 _MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August",
            "September", "October", "November", "December")
 
@@ -349,6 +357,22 @@ def _activity_columns(engine, table):
     cols = [d[0] for d in engine.con.execute("SELECT * FROM %s LIMIT 0" % table).description]
     i, j = cols.index("Measure"), cols.index("Value")
     return cols, cols[i + 1:j]
+
+
+def _fiscal_year(period):
+    """'FY 2023-24' / 'FY2023-24' / 'fy 2023-2024' -> ('FY 2023-24', ['2023-07', ..., '2024-06']):
+    the activity tables' own label and the twelve months of Pakistan's fiscal year, July to June.
+    None for anything that is not a fiscal year, and for a year pair that does not follow on."""
+    import re
+    m = re.fullmatch(r"\s*FY\s*(\d{4})\s*[-/]\s*(\d{2}|\d{4})\s*", str(period), re.IGNORECASE)
+    if not m:
+        return None
+    start = int(m.group(1))
+    end = m.group(2)
+    if (int(end) if len(end) == 4 else int(str(start + 1)[:2] + end)) != start + 1:
+        return None
+    months = ["%d-%02d" % (start, n) for n in range(7, 13)] + ["%d-%02d" % (start + 1, n) for n in range(1, 7)]
+    return "FY %d-%s" % (start, str(start + 1)[2:]), months
 
 
 def _period_label(period, period_type):
@@ -428,9 +452,21 @@ def query_activity(engine, req):
     if req.categories:
         if not classes:
             raise E.UnknownDimensionValue("%s has no class column to filter on" % req.table)
-        clause = 'lower(t."%s") IN (%s)' % (classes[0], ",".join("?" * len(req.categories)))
-        base.append(clause); base_params += [c.lower() for c in req.categories]
-        unlevelled.append(clause); unlevelled_params += [c.lower() for c in req.categories]
+        # ANY CLASS COLUMN (explorer 0002). A category used to filter the first class column only,
+        # so fuel sold to "Road transport" (the second, Customer group) or the vehicle shares of
+        # "Diesel" (the second, Fuel) could not be asked for: the value matched nothing. Each value
+        # now filters the class column that holds it - the first that does, so a value held by two
+        # columns reads as the first's - and values of different columns narrow together (petrol
+        # AND road transport); a value no column holds stays on the first, and is refused there.
+        by_column = {}
+        for c in req.categories:
+            column = next((col for col in classes
+                           if c.lower() in {v.lower() for v in _activity_held(engine, req.table, [], [], col)}), classes[0])
+            by_column.setdefault(column, []).append(c.lower())
+        for column, values in by_column.items():
+            clause = 'lower(t."%s") IN (%s)' % (column, ",".join("?" * len(values)))
+            base.append(clause); base_params += values
+            unlevelled.append(clause); unlevelled_params += values
     # A PROVINCE NAMES ITS DISTRICTS (rc71). A district register - the vehicle registers are held by
     # district only, each row carrying its province - has no row whose Location is "Punjab", so a
     # province asked for by name matched nothing and the refusal gave no way in (the Explorer turn of
@@ -438,6 +474,7 @@ def query_activity(engine, req):
     # of the selection but is one of its Province values selects that province's rows.
     provinces = ()
     place, place_params = [], []
+    named_places = []
     if req.locations:
         named_places = list(req.locations)
         if "Province" in cols:
@@ -454,12 +491,25 @@ def query_activity(engine, req):
             either.append('lower(t."Province") IN (%s)' % ",".join("?" * len(provinces)))
             place_params += [p.lower() for p in provinces]
         place.append("(" + " OR ".join(either) + ")")
+    # "all" is every period held (a series, a change over time); otherwise the periods named, and
+    # with none named the newest of each place (below)
+    every_period = any(str(p).strip().lower() == ACTIVITY_ALL_PERIODS for p in req.periods)
+    periods = [p for p in req.periods if str(p).strip().lower() != ACTIVITY_ALL_PERIODS]
     when, when_params = [], []
-    if req.periods:
-        # a period as printed, or the year of a printed date: "2023" finds the register of 2023-06-30
-        when.append("(" + " OR ".join(['t."Period" = ? OR t."Period" LIKE ?'] * len(req.periods)) + ")")
-        for period in req.periods:
-            when_params += [period, period + "-__-__"]
+    if periods:
+        # a period as printed, or a year: "2023" finds the register of 2023-06-30 and the months
+        # 2023-01 to 2023-12 of a monthly table. A fiscal year, spelt "FY 2023-24" or "FY2023-24"
+        # (the emissions tables' spelling), finds its printed row and its months July to June.
+        either = []
+        for period in periods:
+            either.append('t."Period" = ? OR t."Period" LIKE ? OR t."Period" LIKE ?')
+            when_params += [period, period + "-__-__", period + "-__"]
+            fiscal = _fiscal_year(period)
+            if fiscal:
+                label, months = fiscal
+                either.append('t."Period" = ? OR t."Period" IN (%s)' % ",".join("?" * len(months)))
+                when_params += [label] + months
+        when.append("(" + " OR ".join(either) + ")")
     where, params = base + place + when, base_params + place_params + when_params
     detailed = "fact_activity_source_details" in release.tables
     sql = "SELECT t.*%s FROM %s t" % (
@@ -470,19 +520,31 @@ def query_activity(engine, req):
     if where:
         sql += " WHERE " + " AND ".join(where)
     applied = []
-    if not req.periods:
+    qualify_params = []
+    newest = not periods and not every_period
+    if newest:
         # the latest period of each (place, measure, classes): a register's newest stock, a
-        # series' last year - never a sum across periods. For a province asked for by name the
-        # place is the PROVINCE, so its districts are all read at the province register's latest
-        # date rather than each at its own (Balochistan's newest year holds two more districts).
-        place_key = 't."Location"'
-        if provinces:
-            # the names come from the table itself (held_provinces above), so they are safe to quote here
-            quoted = ",".join("'%s'" % p.lower().replace("'", "''") for p in provinces)
-            place_key = ('CASE WHEN lower(t."Province") IN (%s) THEN \'province:\' || t."Province" '
-                         'ELSE t."Location" END' % quoted)
+        # series' last year - never a sum across periods. A place NAMED in the request is read at
+        # its own latest. Every other place is read at the latest of its province and level - the
+        # districts of a province at the province register's date (Balochistan's newest year holds
+        # two more districts), airports at their province's newest year, plants and sales areas at
+        # the newest period of their level.
+        # NOT EACH PLACE AT ITS OWN (explorer 0002). That was the rule for a request naming no place,
+        # and it added the dead to the living: Khyber Pakhtunkhwa's register of 2024 lists Upper and
+        # Lower Chitral, and "every district" also read Chitral's own last row (2019), counting the
+        # same vehicles twice; Bannu's airport, last reported in 2007-08, joined 2023-24's traffic.
+        # Such a place is still named in the result's `older_only`, with its own newest period.
+        level_key = '\'level:\' || coalesce(t."Location level", \'\')'
+        if "Province" in cols:
+            level_key += ' || \'|\' || coalesce(t."Province", \'\')'
+        place_key = level_key
+        if named_places:
+            # the names are the caller's: bound as parameters, ahead of the WHERE clause's own
+            place_key = ('CASE WHEN lower(t."Location") IN (%s) THEN \'place:\' || t."Location" ELSE %s END'
+                         % (",".join("?" * len(named_places)), level_key))
         keys = ", ".join([place_key] + ['t."%s"' % c for c in ["Measure"] + classes])
         sql += ' QUALIFY t."Period" = MAX(t."Period") OVER (PARTITION BY %s)' % keys
+        qualify_params = [l.lower() for l in named_places]
         applied.append("periods")
     if req.order_by:
         sql += ' ORDER BY TRY_CAST(t."Value" AS DOUBLE) %s NULLS LAST, t."Location", t."Period"' % req.order_by.split()[1].upper()
@@ -490,7 +552,7 @@ def query_activity(engine, req):
         sql += ' ORDER BY t."Location", t."Period"' + "".join(', t."%s"' % c for c in classes)
     cap = req.limit if req.limit and req.limit > 0 else ACTIVITY_ROW_CAP
     sql += " LIMIT %d" % (cap + 1)
-    cur = engine.con.execute(sql, params)
+    cur = engine.con.execute(sql, params + qualify_params)
     names = [d[0] for d in cur.description]
     rows = [dict(zip(names, r)) for r in cur.fetchall()]
     if not rows:
@@ -498,14 +560,14 @@ def query_activity(engine, req):
         # worded for a reader: the refusal is shown as written, so it names the subject and never a table id
         target = " ".join(x for x in (req.measure or "anything", "/".join(req.categories),
                                       "in " + ", ".join(req.locations) if req.locations else "") if x)
-        if req.periods:
+        if periods:
             held = _activity_held(engine, req.table, base + place, base_params + place_params, "Period")
             if held:
                 span = ("%s to %s (%d periods)" % (_period_label(held[0], ""), _period_label(held[-1], ""), len(held))
                         if len(held) > 1 else _period_label(held[0], ""))
                 raise E.UnknownDimensionValue(
                     "no record of %s is held for %s; the records held run %s, and nothing later is held"
-                    % (target, ", ".join(req.periods), span),
+                    % (target, ", ".join(periods), span),
                     dimension="periods", first_period=held[0], last_period=held[-1])
         # WHERE THE MEASURE IS HELD, so the refusal says the way in: "122 places" told the 19 October
         # turn nothing it could act on, and it guessed four times before its deadline
@@ -540,6 +602,19 @@ def query_activity(engine, req):
         raise E.UnknownDimensionValue("no record of %s is held" % target)
     truncated = len(rows) > cap
     rows = rows[:cap]
+    # the places of the selection read at no period because their own records stop earlier than
+    # their province's or level's newest (a retired district name, an airport that closed): named,
+    # with their own newest period, so a reader of "every district" is told who is not in it
+    older_only = []
+    if newest and not truncated:
+        seen = {r["Location"] for r in rows}
+        old_sql = 'SELECT t."Location" AS location, MAX(t."Period") AS latest FROM %s t' % req.table
+        if where:
+            old_sql += " WHERE " + " AND ".join(where)
+        old_sql += ' GROUP BY t."Location" ORDER BY t."Location"'
+        older_only = [{"location": r[0], "latest_period": r[1]}
+                      for r in engine.con.execute(old_sql, params).fetchall()
+                      if r[0] not in seen]
     values = []
     for r in rows:
         exact = str(r["Value"] if r["Value"] not in (None, "") else "")
@@ -568,6 +643,8 @@ def query_activity(engine, req):
                      "provinces": list(provinces),
                      "districts": sorted({r["Location"] for r in rows
                                           if provinces and r.get("Province") in provinces}),
+                     # read at the newest of their province or level, these places held only older records
+                     "older_only": older_only,
                      "note": "each row's value is the source's own figure in the source's unit, never converted "
                              "or inferred, and its use note states what the figure is not; a `total` value is "
                              "the one sum this function computes, over one place (or one province's districts), "
@@ -588,6 +665,9 @@ def _activity_extra(r, classes):
              "evidence": r["Evidence"], "source_status": r.get("Source status") or "",
              "source_series": r["Source series"], "use_note": r["Use note"],
              "source_reference": r["Source reference"], "record_id": r["Record ID"]}
+    if r.get("Reporting interval"):
+        # a cumulative report overlaps the single-month reports of its year (fuel sales by area)
+        extra["reporting_interval"] = r["Reporting interval"]
     if r.get("_combinable"):
         extra["combinable"] = r["_combinable"]
     if r.get("_source_table"):

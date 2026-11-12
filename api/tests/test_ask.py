@@ -159,7 +159,7 @@ def test_golden_through_agent(ask_client, fake, name, golden):
 
 # --- the rendering gate ----------------------------------------------------------------------
 
-def test_bare_decimal_is_corrected_once_then_withheld(ask_client, fake):
+def test_bare_decimal_is_corrected_once_then_withheld(ask_client, fake, gate):
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
               [text("Pakistan emitted 452.35 Mt CO2e in FY2023-24."), stop()],
               [text("Pakistan emitted about 452.3 Mt."), stop()])
@@ -175,6 +175,16 @@ def test_bare_decimal_is_corrected_once_then_withheld(ask_client, fake):
     last = fake.calls[2]["messages"][-1]
     assert last["role"] == "user" and last["content"].startswith("Rejected:")
     assert only(events, "done")
+
+
+def test_a_typed_figure_reaches_the_reader_by_default(ask_client, fake):
+    """THE MODEL WRITES ITS OWN FIGURES (November 2026): the gate above is off unless switched on."""
+    fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
+              [text("Pakistan emitted about 452.3 Mt CO2e in 2023-24."), stop()])
+    events = ask(ask_client, "national total?")
+    assert not only(events, "error")
+    assert "452.3 Mt" in only(events, "answer")[0]["text"]
+    assert not [d for n, d in events if n == "status" and d["phase"] == "correction"]
 
 
 def test_empty_final_text_is_asked_for_once_then_named(ask_client, fake):
@@ -195,7 +205,7 @@ def test_empty_final_text_is_asked_for_once_then_named(ask_client, fake):
     assert not only(events, "answer") and only(events, "done")
 
 
-def test_correction_turn_can_succeed(ask_client, fake):
+def test_correction_turn_can_succeed(ask_client, fake, gate):
     fake.load([tool_use("query_emissions", {"periods": ["FY2023-24"]}), stop("tool_use")],
               [text("It is 452.35 Mt."), stop()],
               [text("It is {{result_1_cell_0}} {{result_1_cell_0.unit}}."), stop()])
@@ -234,7 +244,7 @@ def test_invented_placeholder_never_reaches_a_reader(ask_client, fake):
     assert not only(events, "error")
 
 
-def test_a_bare_decimal_is_still_withheld_after_the_drop_path_exists(ask_client, fake):
+def test_a_bare_decimal_is_still_withheld_after_the_drop_path_exists(ask_client, fake, gate):
     """The leniency above must not have leaked into the correctness guard.
 
     An invented decimal is a wrong number, not an unwritable phrase, and it is still worth the whole
@@ -369,15 +379,18 @@ def test_tools_are_the_contract_functions_plus_set_map_view(ask_client):
     contract = ask_client.get("/api/v1/emissions/release").json()["query_contract"]["functions"]
     from pakemis_api.ask.tools import BACKFILLED
     # the contract's functions in the contract's order; then a function the core answers on a
-    # contract written before it existed (none once the contract names it); then the map tool
+    # contract written before it existed (none once the contract names it); then the catalogue of
+    # activity files (no query); then the map tool
     backfilled = [name for name in BACKFILLED if name not in contract]
-    assert [t["name"] for t in runtime.tools] == contract + backfilled + ["set_map_view"]
+    assert [t["name"] for t in runtime.tools] == contract + backfilled + ["list_activity_files", "add_up", "calculate",
+                                                                        "set_map_view"]
     assert "query_activity" in [t["name"] for t in runtime.tools]
-    assert len(runtime.tools) == 14  # 12 + query_air (the air beta) + query_activity
+    # 12 + query_air (the air beta) + query_activity + list_activity_files + add_up + calculate
+    assert len(runtime.tools) == 17
     for tool in runtime.tools:
         assert tool["description"] and tool["input_schema"]["type"] == "object"
         assert "$defs" not in json.dumps(tool) and '"title"' not in json.dumps(tool)
-        if tool["name"] == "set_map_view":
+        if tool["name"] in ("set_map_view", "list_activity_files", "add_up", "calculate"):
             continue
         model = G.MODELS[FUNCTION_MODEL[tool["name"]]]
         plain = inline_schema(model.model_json_schema())

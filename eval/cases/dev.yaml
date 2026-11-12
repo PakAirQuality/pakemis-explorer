@@ -231,16 +231,19 @@ cases:
   assumes: {period: FY2023-24, comparison: AR5 vs AR6}
   reference: >
     The comparison tool refuses to cross warming-potential bases, so the difference is not a cell
-    the release will mint. Both totals can be reported, each on its own basis, and the reader can
-    see the gap; the agent may not subtract them itself.
+    the release will mint. Both totals are reported, each on its own basis, and - since November
+    2026, when the agent may write figures it computed on the server (`calculate`) - the gap
+    between them, about 6.9 Mt CO2e lower on AR6, said as the effect of the switch.
   truth:
     refusal: {request: {type: CompareRequest, left: {type: QueryEmissions, periods: [FY2023-24]}, right: {type: QueryEmissions, periods: [FY2023-24], gwp_basis: AR6}}, error: MixedGwpError}
     values:
       ar5: {request: {type: QueryEmissions, periods: [FY2023-24]}, cell: 0}
       ar6: {request: {type: QueryEmissions, periods: [FY2023-24], gwp_basis: AR6}, cell: 0}
   checks:
-    forbid: [{literal: 6.905374, why: "the AR5 minus AR6 difference is arithmetic the agent is forbidden to do"}]
-    axes: [refusal, boundary, source]
+    # until November 2026 the difference was forbidden (the agent could not do arithmetic)
+    must: [ar5, ar6]
+    must_phrases_any: ["6.9"]
+    axes: [numeric, boundary, source]
 
 - id: D15
   topic: gwp_vintage
@@ -605,15 +608,24 @@ cases:
   ui_state: {level: adm1, geo: Khyber Pakhtunkhwa, period: FY2023-24, metric: greenhouse_gases}
   assumes: {scope: the release as a whole}
   reference: >
-    Yes: the activity records the estimates are calculated from (vehicle registrations, livestock,
-    crop areas, fuel sales, power generation and the rest) are downloadable as CSV files, with
-    their sources and definitions, from the "The activity behind the estimates" section of the
-    Downloads page - linked, not described. The assistant can also fetch a single figure. The
-    answer is not about Khyber Pakhtunkhwa.
+    Yes: the activity records the estimates are calculated from are downloadable as CSV files, with
+    their sources and definitions. The answer lists every file of the "The activity behind the
+    estimates" section of the Downloads page, in the page's order, each as its whole entry (title
+    linking to it, description, coverage - drawn from the page, never retyped), the source details
+    and the column guide among them, and links the section. The assistant can also fetch a single
+    figure. The answer is not about Khyber Pakhtunkhwa.
   truth:
     pointer: "web/src/components/downloads/catalogue.ts: collection 'activity', 'The activity behind the estimates'"
   checks:
     must_links: ["downloads:activity"]
+    # every activity file, in the page's order (api/pakemis_api/ask/tools.py ACTIVITY_FILE_ORDER)
+    must_downloads: [fact_activity_fuel_sales_national, fact_activity_fuel_sales_area, fact_activity_livestock,
+                     fact_activity_crops, fact_activity_fertiliser, fact_activity_power_plants,
+                     fact_activity_power_monthly, fact_activity_household_fuel, fact_activity_industry_fuel,
+                     fact_activity_industry_production, fact_activity_gas_supply, fact_activity_gas_network,
+                     fact_activity_waste_services, fact_activity_waste_flows, fact_activity_railways,
+                     fact_activity_aviation, fact_activity_source_details, dim_activity_columns,
+                     fact_activity_vehicles]
     must_phrases_any: ["the activity behind the estimates"]
     forbid_phrases: [khyber]
     axes: [format]
@@ -654,3 +666,289 @@ cases:
     must_phrases_all: [sindh]
     scope: {geography_level: adm1, geography_ids: [Sindh]}
     axes: [numeric, boundary, source]
+
+- id: D38
+  topic: data_access
+  question: Where can I download the livestock data?
+  # a narrow question about getting one subject's records: only that subject's file, plus the two
+  # guides to every activity file (the library's agriculture card used to answer this with no file)
+  assumes: {scope: the release as a whole}
+  reference: >
+    The livestock populations file, as its whole Downloads entry (title linking to it, description,
+    coverage), then the source details and the column guide; no other activity file.
+  truth:
+    pointer: "web/src/components/downloads/catalogue.ts: collection 'activity', download 'livestock'"
+  checks:
+    must_downloads: [fact_activity_livestock, fact_activity_source_details, dim_activity_columns]
+    axes: [format]
+
+# --------------------------------------- sums, breakdowns and changes (2026-11, the agent adds up)
+# The agent writes its own figures and adds rows up on the server (add_up, calculate). Each truth is
+# the query core's own sum: query_activity with `total` true, its last cell (derived: sum).
+- id: D39
+  topic: activity_sums
+  question: How many vehicles are registered in Punjab, broken down by class?
+  assumes: {table: fact_activity_vehicles, location: Punjab (its districts), measure: Registered vehicles, period: Punjab's newest register}
+  reference: >
+    The sum over Punjab's districts at its newest register date, with one figure per vehicle class
+    (two-wheelers by far the largest), as a table or a chart, the date and the qualification that a
+    register counts a registered stock named once. The figures are sums of the district rows.
+  truth:
+    values:
+      total: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Punjab], total: true}, where: {derived: sum}}
+      two_wheelers: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Punjab], categories: ["Two-wheelers (2W)"], total: true}, where: {derived: sum}}
+      cars: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Punjab], categories: ["Small cars (4W1)"], total: true}, where: {derived: sum}}
+  checks:
+    must: [total, two_wheelers, cars]
+    axes: [numeric, source]
+
+- id: D40
+  topic: activity_sums
+  question: Which province has the most registered vehicles, and how many does each province have?
+  assumes: {table: fact_activity_vehicles, scope: every province, each at its own newest register}
+  reference: >
+    Punjab, by far; then each province's sum of its districts, each figure beside its own register
+    date (the dates differ). A combined figure is optional; if given, it is labelled as adding
+    registers of different dates.
+  truth:
+    values:
+      punjab: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Punjab], total: true}, where: {derived: sum}}
+      kp: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Khyber Pakhtunkhwa], total: true}, where: {derived: sum}}
+      sindh: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Sindh], total: true}, where: {derived: sum}}
+  checks:
+    must: [punjab, kp, sindh]
+    must_phrases_all: [punjab]
+    axes: [numeric, source]
+
+- id: D41
+  topic: activity_sums
+  question: How has the number of two-wheelers registered in Punjab changed between 2015 and 2023?
+  assumes: {table: fact_activity_vehicles, location: Punjab (its districts), class: Two-wheelers (2W), periods: the 2015 and 2023 registers}
+  reference: >
+    Punjab's two-wheeler register at 30 June 2015 and at 30 June 2023, each the sum of its
+    districts, and the change between them (computed, not guessed), possibly as a line chart.
+  truth:
+    values:
+      y2015: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Punjab], categories: ["Two-wheelers (2W)"], periods: ["2015"], total: true}, where: {derived: sum}}
+      y2023: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Punjab], categories: ["Two-wheelers (2W)"], periods: ["2023"], total: true}, where: {derived: sum}}
+  checks:
+    must: [y2015, y2023]
+    axes: [numeric, source]
+
+- id: D42
+  topic: activity_sums
+  question: Which five districts have the most cattle?
+  assumes: {table: fact_activity_livestock, level: District, class: Cattle, period: the newest district count}
+  reference: >
+    The five districts with the largest cattle counts at the district series' date, largest first,
+    as a list, table or bar chart.
+  truth:
+    values:
+      top: {request: {type: QueryActivity, table: fact_activity_livestock, location_level: District, categories: [Cattle], order_by: value desc, limit: 1}, cell: 0}
+  checks:
+    must: [top]
+    axes: [numeric, source]
+
+- id: D43
+  topic: activity_sums
+  question: How many vehicles are there in Pakistan?
+  assumes: {table: fact_activity_vehicles, scope: every province's newest register}
+  reference: >
+    No single national register is held: the registers are provincial and dated differently. The
+    answer gives the combined figure (the sum of every province's districts, each province at its
+    own newest register), saying plainly that it adds registers of different dates, and the
+    per-province breakdown with each figure's own date (Punjab 2023, Sindh 2022, Khyber
+    Pakhtunkhwa 2024, ...) in whatever shape it uses.
+  truth:
+    values:
+      national: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, location_level: District}, sum: true}
+      punjab: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Punjab], total: true}, where: {derived: sum}}
+      sindh: {request: {type: QueryActivity, table: fact_activity_vehicles, measure: Registered vehicles, locations: [Sindh], total: true}, where: {derived: sum}}
+  checks:
+    must: [national, punjab, sindh]
+    # each province's own date is said: the breakdown's years
+    must_phrases_all: ["2022", "2023", "2024"]
+    must_phrases_any: ["different dates", "dated differently", "different date", "differ"]
+    must_visual: true
+    axes: [numeric, source, format]
+
+# ------------------------------------------------- every other record table (2026-11-12, ten more)
+# Each case puts the agent in front of a trap the activity tables actually hold: printed totals
+# beside their parts, an annual row beside its months, several series of one quantity, a figure
+# held in "thousand" units, places that need adding. Every truth is a typed request; where the
+# core will not total many places itself, `sum: true` adds the request's cells exactly (truth.py).
+- id: D44
+  topic: activity_sums
+  question: How many cattle, buffaloes, goats and sheep are there in Sindh?
+  assumes: {table: fact_activity_livestock, location: Sindh, level: Province, period: FY 2023-24}
+  reference: >
+    Sindh's provincial counts for FY 2023-24 (the livestock census), one per animal type, as a
+    table, list or chart: goats the largest, then buffalo, cattle and sheep.
+  truth:
+    values:
+      cattle: {request: {type: QueryActivity, table: fact_activity_livestock, locations: [Sindh], location_level: Province, categories: [Cattle]}, cell: 0}
+      buffalo: {request: {type: QueryActivity, table: fact_activity_livestock, locations: [Sindh], location_level: Province, categories: [Buffalo]}, cell: 0}
+      goats: {request: {type: QueryActivity, table: fact_activity_livestock, locations: [Sindh], location_level: Province, categories: [Goats]}, cell: 0}
+      sheep: {request: {type: QueryActivity, table: fact_activity_livestock, locations: [Sindh], location_level: Province, categories: [Sheep]}, cell: 0}
+  checks:
+    must: [cattle, buffalo, goats, sheep]
+    must_visual: true
+    axes: [numeric, source, format]
+
+- id: D45
+  topic: activity_trend
+  question: How has Pakistan's goat population changed over the last ten years? Show it as a chart.
+  assumes: {table: fact_activity_livestock, level: National, class: Goats, series: the annual calendar-year series 2014-2024}
+  reference: >
+    A line (or bar) chart of one consistent annual national series ending 2024 (87.0 million), from
+    2014 (66.6 million) or 2015 (68.4 million) - either reading of "the last ten years" - with the
+    change stated. The FY 2023-24 census figure (95.8 million) and the
+    FY 2024-25 figure belong to other series; if mentioned they are not plotted as the same line.
+  truth:
+    values:
+      y2014: {request: {type: QueryActivity, table: fact_activity_livestock, location_level: National, categories: [Goats], periods: ["2014"]}, cell: 0}
+      y2015: {request: {type: QueryActivity, table: fact_activity_livestock, location_level: National, categories: [Goats], periods: ["2015"]}, cell: 0}
+      y2024: {request: {type: QueryActivity, table: fact_activity_livestock, location_level: National, categories: [Goats], periods: ["2024"]}, cell: 0}
+  checks:
+    must: [y2024]
+    must_any_of: [y2014, y2015]
+    must_chart: true
+    axes: [numeric, source, format]
+
+- id: D46
+  topic: activity_totals
+  question: How much petrol was sold in Pakistan in 2023-24?
+  assumes: {table: fact_activity_fuel_sales_national, product: Petrol / motor spirit (MS), period: FY 2023-24}
+  reference: >
+    7.15 million tonnes of petrol sold domestically in FY 2023-24 - the printed all-domestic total,
+    almost all of it road transport (7.10 million tonnes). The printed totals ("Transport total",
+    "Road transport", "All domestic sales total") are not added to each other or to their parts.
+  truth:
+    values:
+      total: {request: {type: QueryActivity, table: fact_activity_fuel_sales_national, categories: ["Petrol / motor spirit (MS)", "All domestic sales total"], periods: ["FY 2023-24"]}, cell: 0}
+  checks:
+    must: [total]
+    forbid: [{literal: 14249488, why: "the all-domestic total added to the transport total"},
+             {literal: 21353972, why: "three printed totals added together"}]
+    axes: [numeric, boundary, source]
+
+- id: D47
+  topic: activity_sums
+  question: How much electricity did coal power plants generate in FY 2023-24?
+  assumes: {table: fact_activity_power_monthly, fuel: Coal, periods: the twelve months July 2023 to June 2024}
+  reference: >
+    Either record answers it: the annual plant table's national coal generation for FY 2023-24
+    (20,542 GWh, CPPA-G and K-Electric systems together), or the sum of the coal plants' monthly
+    net generation over July 2023 - June 2024 (20,233 GWh; a flow, so the months add). Possibly
+    broken down by plant or system; the two records are not added to each other.
+  truth:
+    values:
+      coal: {request: {type: QueryActivity, table: fact_activity_power_monthly, measure: Net electricity generation, categories: [Coal], periods: ["2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"]}, sum: true}
+      coal_annual: {request: {type: QueryActivity, table: fact_activity_power_plants, measure: Net electricity generation, locations: [Pakistan], categories: [Coal], periods: ["FY 2023-24"]}, sum: true}
+  checks:
+    must_any_of: [coal, coal_annual]
+    scales: {coal: [0.001], coal_annual: [0.001]}
+    axes: [numeric, source]
+
+- id: D48
+  topic: activity_ranking
+  question: Which five airports handled the most passengers in 2023-24?
+  assumes: {table: fact_activity_aviation, measure: Passengers, level: Airport, period: FY 2023-24}
+  reference: >
+    Karachi Jinnah, Islamabad International, Lahore Allama Iqbal, Multan, Peshawar Bacha Khan, each
+    the sum of its domestic and international passengers, largest first, as a table, list or bar
+    chart.
+  truth:
+    values:
+      karachi: {request: {type: QueryActivity, table: fact_activity_aviation, measure: Passengers, locations: ["Karachi Jinnah"], periods: ["FY 2023-24"], total: true}, where: {derived: sum}}
+      peshawar: {request: {type: QueryActivity, table: fact_activity_aviation, measure: Passengers, locations: ["Peshawar Bacha Khan"], periods: ["FY 2023-24"], total: true}, where: {derived: sum}}
+  checks:
+    must: [karachi, peshawar]
+    must_phrases_all: [karachi, islamabad, lahore, multan, peshawar]
+    must_visual: true
+    axes: [numeric, source, format]
+
+- id: D49
+  topic: activity_change
+  question: How many passengers did Pakistan Railways carry in 2023-24 and 2024-25, and by what percentage did that change?
+  assumes: {table: fact_activity_railways, measure: Railway traffic, class: Passengers carried, periods: [FY 2023-24, FY 2024-25]}
+  reference: >
+    42.13 million passengers in FY 2023-24 and 39.17 million in FY 2024-25 (held in thousand
+    passengers), a fall of about 7.0 per cent - computed, not guessed.
+  truth:
+    values:
+      fy24: {request: {type: QueryActivity, table: fact_activity_railways, categories: [Passengers carried], periods: ["FY 2023-24"]}, cell: 0}
+      fy25: {request: {type: QueryActivity, table: fact_activity_railways, categories: [Passengers carried], periods: ["FY 2024-25"]}, cell: 0}
+  checks:
+    must: [fy24, fy25]
+    scales: {fy24: [1000], fy25: [1000]}
+    must_phrases_any: ["7.0", "7%", "7 per", "7.02"]
+    axes: [numeric, source]
+
+- id: D50
+  topic: activity_compare
+  question: How many households in Pakistan use firewood, LPG and natural gas, and how has that changed between the last two surveys?
+  assumes: {table: fact_activity_household_fuel, measure: Households using this item (survey-weighted), level: National, periods: [HIES 2018-19, HIES 2024-25]}
+  reference: >
+    From HIES 2018-19 to HIES 2024-25: firewood 13.0 to 14.0 million households, LPG 5.2 to 8.0
+    million, natural gas 13.4 to 15.4 million - survey-weighted counts of households using each,
+    which overlap (a household can use several), so they are not added.
+  truth:
+    values:
+      wood24: {request: {type: QueryActivity, table: fact_activity_household_fuel, measure: "Households using this item (survey-weighted)", location_level: National, categories: [Firewood], periods: ["HIES 2024-25"]}, cell: 0}
+      lpg24: {request: {type: QueryActivity, table: fact_activity_household_fuel, measure: "Households using this item (survey-weighted)", location_level: National, categories: ["Liquefied petroleum gas (LPG)"], periods: ["HIES 2024-25"]}, cell: 0}
+      lpg19: {request: {type: QueryActivity, table: fact_activity_household_fuel, measure: "Households using this item (survey-weighted)", location_level: National, categories: ["Liquefied petroleum gas (LPG)"], periods: ["HIES 2018-19"]}, cell: 0}
+  checks:
+    must: [wood24, lpg24, lpg19]
+    must_visual: true
+    axes: [numeric, source, format]
+
+- id: D51
+  topic: activity_sums
+  question: How much wheat did Punjab produce in 2023-24?
+  assumes: {table: fact_activity_crops, measure: Crop production, class: Wheat, location: Punjab (its districts), period: FY 2023-24}
+  reference: >
+    About 24.19 million tonnes: the sum of Punjab's district wheat production for FY 2023-24 (held
+    in thousand tonnes), said as a sum of districts. Two of the 37 (Jhang, Chiniot) are halves of one
+    pooled report, so the sum is whole even though those two are allocated, not observed.
+  truth:
+    values:
+      punjab: {request: {type: QueryActivity, table: fact_activity_crops, measure: Crop production, locations: [Punjab], categories: [Wheat], periods: ["FY 2023-24"]}, sum: true}
+  checks:
+    must: [punjab]
+    scales: {punjab: [1000]}
+    axes: [numeric, source]
+
+- id: D52
+  topic: activity_totals
+  question: How much urea was used in Pakistan in FY 2023-24, and which producers supplied it?
+  assumes: {table: fact_activity_fertiliser, product: Urea, period: FY 2023-24 (its annual row, and the producers' monthly rows)}
+  reference: >
+    About 6.58 million tonnes of urea offtake in FY 2023-24 (the annual row 6,579,000; the
+    producers' monthly rows add to 6,578,841), with FFC and Engro (EFERT) the largest suppliers.
+    The annual row and the monthly rows are never added together.
+  truth:
+    values:
+      annual: {request: {type: QueryActivity, table: fact_activity_fertiliser, categories: [Urea], periods: ["FY 2023-24"]}, where: {period: FY 2023-24}}
+  checks:
+    must: [annual]
+    forbid: [{literal: 13157841, why: "the annual row added to the monthly rows it summarises"}]
+    must_phrases_any: [ffc]
+    axes: [numeric, boundary, source]
+
+- id: D53
+  topic: activity_trend
+  question: How have petrol and diesel sales in Pakistan changed since 2015-16? A chart would help.
+  assumes: {table: fact_activity_fuel_sales_national, products: [Petrol / motor spirit (MS), High-speed diesel (HSD)], customer group: All domestic sales total, periods: every fiscal year}
+  reference: >
+    A line or bar chart of the two products' all-domestic sales, FY 2015-16 to the newest year, one
+    series each, with the change stated. A printed total is the year's figure, never added to its
+    parts.
+  truth:
+    values:
+      petrol16: {request: {type: QueryActivity, table: fact_activity_fuel_sales_national, categories: ["Petrol / motor spirit (MS)", "All domestic sales total"], periods: ["FY 2015-16"]}, cell: 0}
+      diesel16: {request: {type: QueryActivity, table: fact_activity_fuel_sales_national, categories: ["High-speed diesel (HSD)", "All domestic sales total"], periods: ["FY 2015-16"]}, cell: 0}
+  checks:
+    must: [petrol16, diesel16]
+    must_chart: true
+    axes: [numeric, source, format]

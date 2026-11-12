@@ -36,6 +36,37 @@ FUNCTION_MODEL = {
 BACKFILLED = {"query_activity": ("fact_activity_vehicles", "dim_activity_columns")}
 MAP_TOOL = "set_map_view"
 DOWNLOAD_TOOL = "download_query_result"
+# THE ACTIVITY FILES, AS THE DOWNLOADS PAGE LISTS THEM (2026-11-09). Asked "can I get the activity
+# data?", the model copied the prompt's five-bullet example, because nothing told it which files the
+# page offers. This tool does, and executes no query. It hands the model each file's TABLE and what
+# that table measures - never the page's title or description: the model writes
+# {{download:<table>}} per file and the web app draws the title, description and coverage from the
+# page's own catalogue, so the text is the page's by construction rather than a paraphrase of it.
+CATALOG_TOOL = "list_activity_files"
+# THE ARITHMETIC, DONE ON THE SERVER (2026-11; ask/arith.py): add_up sums the rows of a result this
+# message already fetched, grouped as the model asks; calculate combines a few numbers exactly.
+ADD_UP_TOOL = "add_up"
+CALC_TOOL = "calculate"
+# The two files that explain the others rather than hold activity. They go with every answer.
+ACTIVITY_HELPERS = {
+    "fact_activity_source_details": "the technical source fields behind every activity row (source file, row, "
+                                    "column, transformation, evidence, whether rows may be combined), joined to "
+                                    "the tables on Record ID",
+    "dim_activity_columns": "the column guide: what every column of every activity table means, one line per column",
+}
+# The order of "The activity behind the estimates" on the Downloads page for a release that ships no
+# download_catalog of its own (web/src/components/downloads/catalogue.ts, COLLECTIONS, collection
+# "activity"); api/tests/test_ask_activity_files.py holds the two in step. A release that ships the
+# catalogue is listed in its order instead (activity_file_order).
+ACTIVITY_FILE_ORDER = (
+    "fact_activity_fuel_sales_national", "fact_activity_fuel_sales_area", "fact_activity_livestock",
+    "fact_activity_crops", "fact_activity_fertiliser", "fact_activity_power_plants",
+    "fact_activity_power_monthly", "fact_activity_household_fuel", "fact_activity_industry_fuel",
+    "fact_activity_industry_production", "fact_activity_gas_supply", "fact_activity_gas_network",
+    "fact_activity_waste_services", "fact_activity_waste_flows", "fact_activity_railways",
+    "fact_activity_aviation", "fact_activity_source_details", "dim_activity_columns",
+    "fact_activity_vehicles",
+)
 ENGINE_TOOLS = tuple(n for n in FUNCTION_MODEL if n != DOWNLOAD_TOOL)
 
 WHEN_TO_CALL = {
@@ -43,19 +74,22 @@ WHEN_TO_CALL = {
                       "what class, how many animals of a species, how much fuel was sold to a customer group, "
                       "how much electricity a plant generated, what area a crop covered. Call this for any "
                       "question about a COUNT, a STOCK, a QUANTITY SOLD or PRODUCED, or an AREA - never "
-                      "query_emissions, which would answer with an emission. Name the `table` and the `measure`; "
-                      "leave `periods` empty for the newest figure of each place and class; filter `locations` "
-                      "by the place named in the question. Every value comes back with its measure, class, "
-                      "place, period, unit, evidence, source series and use note: report those with the figure, "
-                      "and report the use note's qualification (a register is a stock, not traffic). For "
-                      "\"altogether\" or \"in total\" set `total` true with ONE place, ONE measure and periods "
-                      "empty or one period: the LAST cell is then the sum of the classes held, computed by the "
-                      "server and marked so - say it is the sum of the classes listed, not a figure the source "
-                      "printed. A refusal that names the span of periods held is the answer to a question about "
-                      "a year outside it: give the newest figure and say nothing later is held. "
-                      "{{result_k_cell_n}} prints the figure as the source printed it and "
-                      "{{result_k_cell_n.short}} the same figure as a reader says it. Never add rows yourself, "
-                      "never convert a count into an emission, and never answer a count from memory.",
+                      "query_emissions, which would answer with an emission. Name the `table` and the `measure`. "
+                      "`locations`: the place named in the question; a province name selects its districts. "
+                      "`categories`: values of ANY class column - several from different columns narrow together "
+                      "(\"Petrol / motor spirit (MS)\" and \"Road transport\"). `periods`: empty for the newest of "
+                      "each place (a province's districts at the province register's date); a period or a year "
+                      "(\"2023\" is its dates and months; a fiscal year \"FY 2023-24\" is its row and its months "
+                      "July to June); [\"all\"] for every period held - a series or a change "
+                      "over time. The result comes back as a TABLE: `shared` (what every row has in common), "
+                      "`columns` and `rows` (the first column `i` is the row's cell number), the use notes and the "
+                      "release's rules for adding rows (`notes`, `rules`), and `older_only` (places whose records "
+                      "stop earlier and are not in the rows). A large selection comes back as `rows_not_sent` with "
+                      "each column's values: add it up with add_up rather than narrowing it to fit. Report the use "
+                      "note's qualification with a figure (a register is a stock, not traffic). A refusal that names "
+                      "the span of periods held is the answer to a question about a year outside it: give the newest "
+                      "figure and say nothing later is held. To add rows up, call add_up - never add many numbers "
+                      "yourself; never convert a count into an emission, and never answer a count from memory.",
     "query_air": "AIR POLLUTANT EMISSIONS (NOx, SO2, CO, NMVOC, PM2.5, BC, NH3) in native kilotonnes for a fiscal "
                  "period - never CO2e, never a concentration or a measure of air quality, never summed across "
                  "pollutants. ALWAYS give `periods` (the fiscal year in question): that selects the covered-sources "
@@ -86,6 +120,14 @@ WHEN_TO_CALL = {
     "get_grid_cell": "Call this for the value of one 0.05-degree grid cell at a latitude/longitude, for a month "
                      "(YYYYMM) or 'annual' and one gas; the grid is a visual product and its cells are native "
                      "gas mass in Gg, not CO2e.",
+    CATALOG_TOOL: "ACTIVITY FILES ON THE DOWNLOADS PAGE, not figures: call this whenever a question asks what "
+                  "activity data there is, or how to get, download, find, check or reuse it (vehicles, livestock, "
+                  "crops, fertiliser, fuel sales, gas, power plants, household and industry fuel, waste, railways, "
+                  "aviation - the records the estimates are calculated from). It runs no query and takes no input. "
+                  "It returns every activity file the Downloads section \"The activity behind the estimates\" offers, "
+                  "in the page's order, each with what it measures so you can tell which ones the question is about. "
+                  "Write each file you list as {{download:<table>}} on a bullet line of its own; never write its title "
+                  "or description yourself.",
     "download_query_result": "Call this when the user asks to download or export a result you already obtained "
                              "in this conversation: it returns the CSV and RECEIPT.json links for that receipt. "
                              "It runs no query.",
@@ -178,6 +220,7 @@ class Dims:
                                       if n.startswith("fact_activity_") and n != "fact_activity_source_details")
         self.activity_catalog = activity_catalog(service.engine, self.activity_tables)
         self.activity_levels = sorted({level for entry in self.activity_catalog.values() for level in entry["levels"]})
+        self.activity_file_order = activity_file_order(getattr(getattr(service, "products", None), "download_catalog", None))
         self.functions = list(rel.contract["query_contract"]["functions"])
         self.backfilled = [name for name, tables in BACKFILLED.items()
                            if name not in self.functions and all(t in rel.tables for t in tables)]
@@ -224,6 +267,45 @@ def activity_catalog_text(catalog):
             line += " | %s = %s" % (entry["class_columns"][0], "; ".join(entry["classes"]))
         lines.append(line)
     return "\n".join(lines)
+
+
+def activity_file_order(download_catalog=None):
+    """The tables of the Downloads page's activity section, in the page's order: the release's own
+    catalogue when it ships one (the page then reads the same), else ACTIVITY_FILE_ORDER."""
+    for collection in (download_catalog or {}).get("collections") or ():
+        if collection.get("id") == "activity":
+            tables = [f.rsplit(".", 1)[0] for item in collection.get("downloads") or ()
+                      if not item.get("pending") for f in (item.get("files") or ())[:1]]
+            if tables:
+                return tuple(dict.fromkeys(tables))
+    return ACTIVITY_FILE_ORDER
+
+
+def activity_files(dims, served):
+    """What list_activity_files hands the model: one entry per activity file the release serves as a
+    CSV, in the page's order, each saying what it holds (from the release's own tables, never the
+    page's wording). An activity table the page does not list yet follows the listed ones, so nothing
+    the release serves is hidden; a listed table the release does not serve is left out."""
+    def entry(table):
+        if table in ACTIVITY_HELPERS:
+            return {"table": table, "kind": "guide to the other files", "holds": ACTIVITY_HELPERS[table]}
+        info = dims.activity_catalog.get(table) or {}
+        out = {"table": table, "kind": "activity records",
+               "measures": info.get("measures") or [], "classed_by": info.get("class_columns") or [],
+               "location_levels": info.get("levels") or []}
+        if info.get("classes"):
+            out["classes"] = info["classes"]
+        return out
+    known = set(dims.activity_tables) | set(ACTIVITY_HELPERS)
+    order = list(dims.activity_file_order) + sorted(known - set(dims.activity_file_order))
+    return [entry(t) for t in order if t in served]
+
+
+def catalog_tool(dims):
+    """list_activity_files: no input. For Gemini the declaration leaves an empty parameter object
+    out altogether (gemini.function_declaration), the documented form of a function with no input."""
+    return {"name": CATALOG_TOOL, "description": WHEN_TO_CALL[CATALOG_TOOL],
+            "input_schema": {"type": "object", "properties": {}}}
 
 
 def _field_values(dims, model_name=None):
@@ -275,7 +357,7 @@ def _field_values(dims, model_name=None):
         values["locations"] = (["Pakistan"] + dims.adm1_names + ["district names as printed (e.g. Lahore)"],
                                "place names as the source prints them; empty -> every place")
         values["location_level"] = (dims.activity_levels, "empty -> any level")
-        values["periods"] = (["as printed: a date (2023-06-30), FY2023-24, 2023, or a survey round"],
+        values["periods"] = (["as printed: a date (2023-06-30), a fiscal year FY 2023-24 (with its months), a year 2023 (with its dates and months), or a survey round (HIES 2024-25)"],
                              "empty -> the latest period of each place and class, which is what a 'how many' "
                              "question wants")
         values["measure"] = (["a measure of the chosen table, exactly as the tool description lists it "
@@ -406,7 +488,69 @@ def validate_map_view(payload, dims):
     return action
 
 
+def add_up_tool():
+    return {
+        "name": ADD_UP_TOOL,
+        "description": (
+            "ADD UP THE ROWS OF A RESULT, EXACTLY, ON THE SERVER. Call this for every total, breakdown, share or "
+            "ranking that needs more than two or three numbers added: vehicles in a province by class "
+            "(group_by [\"Vehicle class\"]), every province's total (group_by [\"Province\"]), the largest districts "
+            "(group_by [\"Location\"]), a series by year (group_by [\"Period\"]), fuel sold in a year (the months "
+            "added). `result` is the number of an earlier tool call of this message (1-based, counted like "
+            "{{result_k_...}}); you may call add_up in the SAME message right after the query_activity it adds up, "
+            "naming that call's number. `group_by` and `where` take the result's column names (Location, Province, "
+            "Period, Location level, Measure, Evidence, Unit and the table's class columns, such as \"Vehicle class\"). "
+            "`where` keeps only rows whose column holds one of the values. It never adds different units or measures "
+            "together (they come back apart), skips rows with no value, and returns each group's sum, row count and "
+            "share of the total (and its own date, when the groups' dates differ), the totals, what the sums "
+            "cover, and `check_before_reporting`: the release's rules "
+            "for adding these rows and any overlap (stocks added across dates, printed totals with their parts, "
+            "national rows with district rows). Read those before you report a sum, and redo the call with `where` "
+            "or `group_by` when one says the sum is not meaningful."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "result": {"type": "integer", "description": "the tool call number whose rows to add up"},
+                "group_by": {"type": "array", "items": {"type": "string"},
+                             "description": "column names to group by; empty -> one sum (per measure and unit)"},
+                "where": {"type": "array", "description": "keep only the rows matching every entry",
+                          "items": {"type": "object",
+                                    "properties": {"column": {"type": "string"},
+                                                   "values": {"type": "array", "items": {"type": "string"}}},
+                                    "required": ["column", "values"]}},
+            },
+            "required": ["result"],
+        },
+    }
+
+
+def calculate_tool():
+    return {
+        "name": CALC_TOOL,
+        "description": (
+            "EXACT ARITHMETIC ON A FEW NUMBERS: a difference, a ratio, a percentage, a growth rate. Call this "
+            "instead of working a figure out yourself, whenever you report a number no result printed (a change "
+            "from 2015 to 2023, a share, an average annual growth). Each expression uses numbers, + - * / ** and "
+            "parentheses, and may use the name of an earlier expression in the same call: "
+            "[{name: \"change\", expression: \"18434072 - 9563120\"}, {name: \"pct\", expression: \"change / 9563120 * 100\"}]. "
+            "Results come back rounded to six decimals; round them as a reader would when you write them."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "expressions": {"type": "array", "items": {"type": "object",
+                                                           "properties": {"name": {"type": "string"},
+                                                                          "expression": {"type": "string"}},
+                                                           "required": ["name", "expression"]}},
+            },
+            "required": ["expressions"],
+        },
+    }
+
+
 def build_tools(dims):
     """The tool list in contract order: query_contract.functions, any BACKFILLED function the release's
-    tables can answer, then set_map_view."""
-    return [function_tool(name, dims) for name in dims.functions] + [map_view_tool(dims)]
+    tables can answer, list_activity_files when the release holds activity tables, then add_up,
+    calculate and set_map_view."""
+    catalog = [catalog_tool(dims)] if dims.activity_tables else []
+    return ([function_tool(name, dims) for name in dims.functions] + catalog
+            + [add_up_tool(), calculate_tool(), map_view_tool(dims)])

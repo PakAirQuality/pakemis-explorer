@@ -59,3 +59,17 @@ def client(settings):
     from pakemis_api.app import create_app
     with TestClient(create_app(settings)) as c:
         yield c
+
+
+@pytest.fixture
+def gate(ask_client):
+    """The bare-number gate switched back on for one test (PAKEMIS_ASK_TYPED_NUMBERS=0).
+
+    Since November 2026 the model writes its own figures and the gate is off by default
+    (Limits.typed_numbers); the gate itself is still there, and these tests still hold it."""
+    import dataclasses
+    runtime = ask_client.app.state.ask
+    before = runtime.limits
+    runtime.limits = dataclasses.replace(before, typed_numbers=False)
+    yield runtime
+    runtime.limits = before

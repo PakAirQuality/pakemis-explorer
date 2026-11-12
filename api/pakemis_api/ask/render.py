@@ -16,6 +16,7 @@ of the answer is plain text (Markdown allowed). `render_multi` also returns the 
 list so a consumer that strips tags still knows what was cited.
 """
 import html
+import json
 import re
 
 from pakemis_query import placeholders as P
@@ -58,18 +59,45 @@ LINK_LABEL = "Downloads"
 # The Downloads page's sections (web/src/components/downloads/catalogue.ts, COLLECTION_IDS);
 # tests/test_ask_links.py holds the two lists together.
 DOWNLOAD_SECTIONS = ("emissions", "activity", "air", "methods", "maps")
+# ONE DOWNLOADS ENTRY, WHOLE (2026-11-09): {{download:<table>}} is drawn by the web app as the entry's
+# title (a link to it, as {{link:file:<table>}} is), its description and its coverage, all three from
+# the Downloads page's own catalogue - so a listed file reads exactly as the page reads, and the model
+# never retypes a description (or the "101,808 records" in a coverage line, which the bare-number
+# gate would rightly reject). Rendered as <pdownload to="file:<table>"><table></pdownload>; the same
+# check as a file link: only a table the release serves.
+DOWNLOAD_ENTRY = re.compile(r"\{\{download:(?P<table>[a-z0-9_]+)\}\}")
 # A link tag in the model's own text would be drawn as a link without having been checked: strip it.
-FORGED_LINK = re.compile(r"</?plink\b[^>]*>", re.I)
+FORGED_LINK = re.compile(r"</?(?:plink|pdownload|pchart)\b[^>]*>", re.I)
+
+# CHARTS (2026-11). The model draws a chart by writing its data, never markup:
+#     ```chart
+#     {"type": "bar", "title": "...", "unit": "vehicles", "labels": ["Lahore", "Multan"],
+#      "series": [{"name": "Registered vehicles", "values": [6100000, 1200000]}]}
+#     ```
+# checked here (chart_spec) and rendered as <pchart>{escaped JSON}</pchart>, a paragraph of its own,
+# which the web app draws with ECharts. Types: bar (options horizontal, stacked), line, area
+# (option stacked) and pie (option donut, one series). A block that does not check is the
+# unknown-placeholder path: one redraft, then struck.
+CHART_BLOCK = re.compile(r"```chart[ \t]*\n(.*?)\n[ \t]*```", re.S)
+CHART_OPEN = re.compile(r"```chart\b")
+CHART_TYPES = ("bar", "line", "area", "pie")
+CHART_MAX_LABELS = 60
+CHART_MAX_SERIES = 8
+CHART_TAG = re.compile(r"<pchart>[^<]*</pchart>")
 
 
 def link_tag(to, label):
     return '<plink to="%s">%s</plink>' % (html.escape(to, quote=True), html.escape(label, quote=False))
 
 
+def download_tag(table):
+    return '<pdownload to="file:%s">%s</pdownload>' % (html.escape(table, quote=True), html.escape(table, quote=False))
+
+
 def render_links(text, tables=frozenset()):
-    """Replace every recognised link placeholder with its tag. `tables` is the set of table names
-    the release serves as files; a file link to anything else, or a section the page does not
-    have, is left in place for the unknown-placeholder check to catch."""
+    """Replace every recognised link and download placeholder with its tag. `tables` is the set of
+    table names the release serves as files; a file link or entry for anything else, or a section the
+    page does not have, is left in place for the unknown-placeholder check to catch."""
     def sub(match):
         section, table = match.group("section"), match.group("table")
         if table is not None:
@@ -77,7 +105,11 @@ def render_links(text, tables=frozenset()):
         if section is None:
             return link_tag("downloads", LINK_LABEL)
         return link_tag("downloads:" + section, LINK_LABEL) if section in DOWNLOAD_SECTIONS else match.group(0)
-    return LINK.sub(sub, text)
+
+    def entry(match):
+        table = match.group("table")
+        return download_tag(table) if table in tables else match.group(0)
+    return DOWNLOAD_ENTRY.sub(entry, LINK.sub(sub, text))
 
 
 class BareNumberError(P.PlaceholderError):
@@ -92,6 +124,91 @@ class UnknownPlaceholderError(P.PlaceholderError):
     correct answer over a missing share phrase serves nobody. The loop asks for one redraft and then
     ships without the phrase. What must never happen either way is template syntax on screen.
     """
+
+
+class ChartError(UnknownPlaceholderError):
+    """A chart block whose data does not check: redrafted once, then struck, like an invented field."""
+
+
+def _chart_number(x, where):
+    if x is None:
+        return None
+    if isinstance(x, bool):
+        raise ChartError("%s: %r is not a number" % (where, x))
+    if isinstance(x, (int, float)):
+        if x != x or x in (float("inf"), float("-inf")):
+            raise ChartError("%s: %r is not a finite number" % (where, x))
+        return x
+    if isinstance(x, str):
+        try:
+            v = float(x.replace(",", "").strip())
+        except ValueError:
+            raise ChartError("%s: %r is not a number (write the figure alone, no unit)" % (where, x)) from None
+        return int(v) if v == int(v) and "." not in x else v
+    raise ChartError("%s: %r is not a number" % (where, x))
+
+
+def chart_spec(text):
+    """The JSON of one chart block, checked -> the spec the web app draws. Raises ChartError."""
+    try:
+        raw = json.loads(text)
+    except ValueError as exc:
+        raise ChartError("the chart block is not valid JSON (%s)" % exc) from None
+    if not isinstance(raw, dict):
+        raise ChartError("the chart block is a JSON object")
+    kind = str(raw.get("type") or "").strip().lower()
+    if kind not in CHART_TYPES:
+        raise ChartError("chart type %r is not one of %s" % (raw.get("type"), ", ".join(CHART_TYPES)))
+    labels = raw.get("labels")
+    if not isinstance(labels, list) or not labels or len(labels) > CHART_MAX_LABELS:
+        raise ChartError("a chart has 1 to %d labels (the categories or periods along its axis)" % CHART_MAX_LABELS)
+    labels = [str(label)[:80] for label in labels]
+    series = raw.get("series")
+    if not isinstance(series, list) or not series or len(series) > CHART_MAX_SERIES:
+        raise ChartError("a chart has 1 to %d series, each {name, values}" % CHART_MAX_SERIES)
+    if kind == "pie" and len(series) != 1:
+        raise ChartError("a pie chart has exactly one series")
+    out_series = []
+    for si, s in enumerate(series):
+        if not isinstance(s, dict) or not isinstance(s.get("values"), list):
+            raise ChartError("series %d is {name, values}" % (si + 1))
+        values = [_chart_number(v, "series %d value %d" % (si + 1, vi + 1)) for vi, v in enumerate(s["values"])]
+        if len(values) != len(labels):
+            raise ChartError("series %d has %d values for %d labels" % (si + 1, len(values), len(labels)))
+        if kind == "pie" and any(v is not None and v < 0 for v in values):
+            raise ChartError("a pie chart's values are not negative")
+        out_series.append({"name": str(s.get("name") or "")[:80], "values": values})
+    spec = {"type": kind, "title": str(raw.get("title") or "")[:140], "unit": str(raw.get("unit") or "")[:40],
+            "labels": labels, "series": out_series}
+    words = [spec["title"], spec["unit"]] + labels + [s["name"] for s in out_series]
+    if any("{{" in w or "}}" in w or "<" in w for w in words):
+        raise ChartError("a chart's title, unit, labels and series names are plain words: no placeholder, no markup")
+    for flag, kinds in (("stacked", ("bar", "area")), ("horizontal", ("bar",)), ("donut", ("pie",))):
+        if raw.get(flag) is True and kind in kinds:
+            spec[flag] = True
+    return spec
+
+
+def chart_tag(spec):
+    return "<pchart>%s</pchart>" % html.escape(json.dumps(spec, ensure_ascii=False, separators=(",", ":")), quote=True)
+
+
+def render_charts(text, drop_invalid=False):
+    """Every ```chart block -> its tag, as a paragraph of its own. An invalid block raises ChartError,
+    or is removed when `drop_invalid` (the loop's second pass); an unclosed one likewise."""
+    def sub(match):
+        try:
+            return "\n\n" + chart_tag(chart_spec(match.group(1))) + "\n\n"
+        except ChartError:
+            if drop_invalid:
+                return "\n\n"
+            raise
+    out = CHART_BLOCK.sub(sub, text)
+    if CHART_OPEN.search(out):
+        if not drop_invalid:
+            raise ChartError("a ```chart block is not closed with ``` on a line of its own")
+        out = re.sub(r"```chart\b.*", "", out, flags=re.S)
+    return re.sub(r"\n{3,}", "\n\n", out)
 
 
 def strip_unknown(text):
@@ -109,7 +226,7 @@ def strip_unknown(text):
 
 def check_bare_numbers(template, allowlist=()):
     """Raise BareNumberError if the template carries a decimal outside a placeholder."""
-    stripped = LINK.sub("", MULTI.sub("", template))
+    stripped = CHART_TAG.sub("", DOWNLOAD_ENTRY.sub("", LINK.sub("", MULTI.sub("", template))))
     for word in allowlist:
         if word:
             stripped = stripped.replace(word, "")
@@ -119,18 +236,29 @@ def check_bare_numbers(template, allowlist=()):
         raise BareNumberError(str(exc)) from exc
 
 
-def render_multi(template, results, allowlist=(), drop_unknown=False, tables=frozenset()):
+# AN INSTRUCTION ECHOED AS THE ANSWER'S FIRST WORDS (12 November 2026, eval D20). Told to answer
+# before the deadline, the model opened its answer with its own paraphrase of prompt rule 10 -
+# " Write your answer in full, as its own message.In 2023-24, ..." - and the reader saw it. Only a
+# sentence at the very start that tells someone to write an answer as a message is removed.
+INSTRUCTION_ECHO = re.compile(
+    r"\A\s*(?:now\s+)?(?:write|give|answer|restate)\b[^.\n]{0,80}?\b(?:answer|message)\b[^.\n]{0,80}?"
+    r"\b(?:own message|in full)\b[^.\n]*\.\s*", re.IGNORECASE)
+
+
+def render_multi(template, results, allowlist=(), drop_unknown=False, tables=frozenset(), check_numbers=True):
     """-> (text, citations). results[k-1] is the envelope of tool call k (None for a call that
     returned no envelope). Raises PlaceholderError (BareNumberError for a bare decimal,
-    UnknownPlaceholderError for brace syntax this renderer does not know).
+    UnknownPlaceholderError for brace syntax this renderer does not know, ChartError for a chart
+    block that does not check).
 
     `drop_unknown` is the loop's second pass: the model has already been asked to redraft once, so
-    the unknown phrase is removed rather than the answer withheld. `tables` is the set of table
-    names a `{{link:file:<table>}}` may name (the release's served files); empty, no file link is
-    recognised.
+    the unknown phrase (or the chart) is removed rather than the answer withheld. `tables` is the set
+    of table names a `{{link:file:<table>}}` may name (the release's served files); empty, no file
+    link is recognised. `check_numbers` False lets the model's own figures stand (Limits.typed_numbers).
     """
-    template = FORGED_LINK.sub("", template)
-    check_bare_numbers(template, allowlist)
+    template = render_charts(FORGED_LINK.sub("", INSTRUCTION_ECHO.sub("", template, count=1)), drop_invalid=drop_unknown)
+    if check_numbers:
+        check_bare_numbers(template, allowlist)
     citations = []
 
     def sub(match):
@@ -175,9 +303,10 @@ def render_multi(template, results, allowlist=(), drop_unknown=False, tables=fro
         if not drop_unknown:
             raise UnknownPlaceholderError(
                 "template uses %s, which is not a placeholder; the only forms are {{result_k_cell_n}} "
-                "and its .short/.exact/.unit/.value/.share/.pct variants, and the links {{link:downloads}}, "
-                "{{link:downloads:<section>}} (sections: %s) and {{link:file:<table>}} for a table the "
-                "release serves" % (", ".join(sorted(set(left))[:3]), ", ".join(DOWNLOAD_SECTIONS)))
+                "and its .short/.exact/.unit/.value/.share/.pct variants, the links {{link:downloads}}, "
+                "{{link:downloads:<section>}} (sections: %s) and {{link:file:<table>}}, and the entry "
+                "{{download:<table>}}, both for a table the release serves"
+                % (", ".join(sorted(set(left))[:3]), ", ".join(DOWNLOAD_SECTIONS)))
         out = strip_unknown(out)
     return out, citations
 

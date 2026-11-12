@@ -68,7 +68,21 @@ def _pick(env, sel):
     if "n_cells" in sel:
         return {"display": str(len(values)), "exact": str(len(values)), "unit": "cells",
                 "value": float(len(values))}
-    raise ValueError("a value spec needs cell, group, where or n_cells")
+    if sel.get("sum"):
+        # THE EXACT SUM OF EVERY RETURNED CELL, for a total the core will not take itself (it totals
+        # one place; "every coal plant" or "every province" is many). One unit only, and never over
+        # a truncated result or the core's own derived total row.
+        from decimal import Decimal
+        if (env.get("calculation") or {}).get("truncated"):
+            raise ValueError("sum over a truncated result")
+        cells = [v for v in values if not v.get("derived") and (v.get("exact") or v.get("value")) not in (None, "")]
+        units = {v.get("unit") for v in cells}
+        if len(units) != 1:
+            raise ValueError("sum over cells in %d units: %s" % (len(units), sorted(map(str, units))))
+        total = sum(Decimal(str(v.get("exact") if v.get("exact") not in (None, "") else v["value"])) for v in cells)
+        text = format(total.normalize(), "f")
+        return {"display": text, "exact": text, "unit": units.pop(), "value": float(total)}
+    raise ValueError("a value spec needs cell, group, where, n_cells or sum")
 
 
 def resolve_case(service, case):

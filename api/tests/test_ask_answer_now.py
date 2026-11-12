@@ -101,12 +101,13 @@ def test_punjab_is_one_call_and_its_total_is_its_districts_at_one_date(ask_clien
     events = ask(ask_client, "how many cars are there in punjab?")
     assert not only(events, "refusal") and not only(events, "error")
     assert len(fake.calls) == 2                       # one lookup, one answer
-    cells = json.loads(fake.calls[1]["messages"][-1]["content"][0]["content"])["cells"]
-    assert len(cells) == n + 1
-    total = cells[-1]
-    assert total["display"] == "{:,}".format(int(sum(Decimal(r["Value"]) for r in punjab["rows"])))
-    assert total["attrs"]["period"] == punjab["period"]
-    assert "district rows of Punjab's register" in total["interpretation"]
+    # the model reads the result as a table (ask/records.py): one row per district, the date said once,
+    # and the server's total beside the rows
+    table = json.loads(fake.calls[1]["messages"][-1]["content"][0]["content"])
+    assert len(table["rows"]) == n and table["shared"]["Period"] == punjab["period"]
+    total = table["server_total"]
+    assert Decimal(total["value"]) == sum(Decimal(r["Value"]) for r in punjab["rows"])
+    assert total["i"] == n and "district rows of Punjab's register" in total["what"]
     assert only(events, "answer")
 
 

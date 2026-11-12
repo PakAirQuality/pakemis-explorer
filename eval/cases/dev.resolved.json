@@ -829,6 +829,590 @@
     "unit": "Mt CO2e AR5",
     "value": 137.833349765496
    }
+  },
+  "D38": {},
+  "D39": {
+   "cars": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "2,068,471",
+    "exact": "2068471",
+    "unit": "vehicles",
+    "value": 2068471.0
+   },
+   "total": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "22,202,972",
+    "exact": "22202972",
+    "unit": "vehicles",
+    "value": 22202972.0
+   },
+   "two_wheelers": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "18,434,072",
+    "exact": "18434072",
+    "unit": "vehicles",
+    "value": 18434072.0
+   }
+  },
+  "D40": {
+   "kp": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2024-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "2,388,182",
+    "exact": "2388182",
+    "unit": "vehicles",
+    "value": 2388182.0
+   },
+   "punjab": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "22,202,972",
+    "exact": "22202972",
+    "unit": "vehicles",
+    "value": 22202972.0
+   },
+   "sindh": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2022-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "1,155,057",
+    "exact": "1155057",
+    "unit": "vehicles",
+    "value": 1155057.0
+   }
+  },
+  "D41": {
+   "y2015": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2015-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "11,218,816",
+    "exact": "11218816",
+    "unit": "vehicles",
+    "value": 11218816.0
+   },
+   "y2023": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "18,434,072",
+    "exact": "18434072",
+    "unit": "vehicles",
+    "value": 18434072.0
+   }
+  },
+  "D42": {
+   "top": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "District",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "1,923,757",
+    "exact": "1923757",
+    "unit": "animals",
+    "value": 1923757.0
+   }
+  },
+  "D43": {
+   "national": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "District",
+     "gwp_basis": "",
+     "periods": [
+      "2022-06-30",
+      "2023-06-30",
+      "2024-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "26403101",
+    "exact": "26403101",
+    "unit": "vehicles",
+    "value": 26403101.0
+   },
+   "punjab": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "22,202,972",
+    "exact": "22202972",
+    "unit": "vehicles",
+    "value": 22202972.0
+   },
+   "sindh": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2022-06-30"
+     ],
+     "spatial_view": ""
+    },
+    "display": "1,155,057",
+    "exact": "1155057",
+    "unit": "vehicles",
+    "value": 1155057.0
+   }
+  },
+  "D44": {
+   "buffalo": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "Province",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "13,458,277",
+    "exact": "13458277",
+    "unit": "animals",
+    "value": 13458277.0
+   },
+   "cattle": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "Province",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "11,205,793",
+    "exact": "11205793",
+    "unit": "animals",
+    "value": 11205793.0
+   },
+   "goats": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "Province",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "19,013,124",
+    "exact": "19013124",
+    "unit": "animals",
+    "value": 19013124.0
+   },
+   "sheep": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "Province",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "4,741,778",
+    "exact": "4741778",
+    "unit": "animals",
+    "value": 4741778.0
+   }
+  },
+  "D45": {
+   "y2014": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "National",
+     "gwp_basis": "",
+     "periods": [
+      "2014"
+     ],
+     "spatial_view": ""
+    },
+    "display": "66,615,000",
+    "exact": "66615000",
+    "unit": "animals",
+    "value": 66615000.0
+   },
+   "y2015": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "National",
+     "gwp_basis": "",
+     "periods": [
+      "2015"
+     ],
+     "spatial_view": ""
+    },
+    "display": "68,420,000",
+    "exact": "68420000",
+    "unit": "animals",
+    "value": 68420000.0
+   },
+   "y2024": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "National",
+     "gwp_basis": "",
+     "periods": [
+      "2024"
+     ],
+     "spatial_view": ""
+    },
+    "display": "87,035,000",
+    "exact": "87035000",
+    "unit": "animals",
+    "value": 87035000.0
+   }
+  },
+  "D46": {
+   "total": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "7,145,004",
+    "exact": "7145004.0",
+    "unit": "tonnes",
+    "value": 7145004.0
+   }
+  },
+  "D47": {
+   "coal": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06"
+     ],
+     "spatial_view": ""
+    },
+    "display": "20232.58",
+    "exact": "20232.58",
+    "unit": "gigawatt-hours",
+    "value": 20232.58
+   },
+   "coal_annual": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "20542.45",
+    "exact": "20542.45",
+    "unit": "gigawatt-hours",
+    "value": 20542.45
+   }
+  },
+  "D48": {
+   "karachi": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "6,460,547",
+    "exact": "6460547",
+    "unit": "passengers",
+    "value": 6460547.0
+   },
+   "peshawar": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "1,269,120",
+    "exact": "1269120",
+    "unit": "passengers",
+    "value": 1269120.0
+   }
+  },
+  "D49": {
+   "fy24": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "42,130",
+    "exact": "42130",
+    "unit": "thousand passengers",
+    "value": 42130.0
+   },
+   "fy25": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2024-25"
+     ],
+     "spatial_view": ""
+    },
+    "display": "39,173",
+    "exact": "39173",
+    "unit": "thousand passengers",
+    "value": 39173.0
+   }
+  },
+  "D50": {
+   "lpg19": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "National",
+     "gwp_basis": "",
+     "periods": [
+      "HIES 2018-19"
+     ],
+     "spatial_view": ""
+    },
+    "display": "5,168,065",
+    "exact": "5168065",
+    "unit": "households",
+    "value": 5168065.0
+   },
+   "lpg24": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "National",
+     "gwp_basis": "",
+     "periods": [
+      "HIES 2024-25"
+     ],
+     "spatial_view": ""
+    },
+    "display": "8,005,421",
+    "exact": "8005421",
+    "unit": "households",
+    "value": 8005421.0
+   },
+   "wood24": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "National",
+     "gwp_basis": "",
+     "periods": [
+      "HIES 2024-25"
+     ],
+     "spatial_view": ""
+    },
+    "display": "14,022,211",
+    "exact": "14022211",
+    "unit": "households",
+    "value": 14022211.0
+   }
+  },
+  "D51": {
+   "punjab": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "24194.82",
+    "exact": "24194.82",
+    "unit": "thousand tonnes",
+    "value": 24194.82
+   }
+  },
+  "D52": {
+   "annual": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "FY 2023-24"
+     ],
+     "spatial_view": ""
+    },
+    "display": "6,579,000",
+    "exact": "6579000",
+    "unit": "tonnes of fertiliser product",
+    "value": 6579000.0
+   }
+  },
+  "D53": {
+   "diesel16": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2015-16"
+     ],
+     "spatial_view": ""
+    },
+    "display": "7,745,864",
+    "exact": "7745864.0",
+    "unit": "tonnes",
+    "value": 7745864.0
+   },
+   "petrol16": {
+    "context": {
+     "basis": "as printed",
+     "configuration_id": "",
+     "geography_level": "",
+     "gwp_basis": "",
+     "periods": [
+      "FY 2015-16"
+     ],
+     "spatial_view": ""
+    },
+    "display": "5,759,763",
+    "exact": "5759763.0",
+    "unit": "tonnes",
+    "value": 5759763.0
+   }
   }
  },
  "manifest_sha256_16": "7e7fed3f559f0c13",

@@ -83,8 +83,8 @@ class QueryActivity:
     measure: str = ""                   # the table's Measure as printed ("Registered vehicles"); empty -> every measure
     locations: tuple = ()               # Location names as printed ("Lahore", "Pakistan"), or a Province of a district table ("Punjab": its districts); empty -> every location
     location_level: str = ""            # national | province | district | sales area | airport | plant; empty -> any level
-    categories: tuple = ()              # the table's first class column ("Small cars (4W1)", "buffalo"); empty -> every class
-    periods: tuple = ()                 # Period strings as printed ("2023-06-30", "FY2023-24") or a date's year ("2023"); empty -> the latest period of each place and class
+    categories: tuple = ()              # values of any class column ("Small cars (4W1)", "buffalo", "Road transport"); values of different columns narrow together; empty -> every class
+    periods: tuple = ()                 # Period strings as printed ("2023-06-30", "FY 2023-24", "2023-07") or a year ("2023": its dates and months) or a fiscal year ("FY 2023-24" or "FY2023-24": its row and its months July-June); ["all"] -> every period held; empty -> the latest period of each named place, and of each province and level for the rest
     total: bool = False                 # true -> one more value after the rows: their sum, for one measure, place (or one province's districts) and period only
     order_by: str = ""                  # "value desc" | "value asc" | ""
     limit: int = 0                      # 0 -> the contract's row cap

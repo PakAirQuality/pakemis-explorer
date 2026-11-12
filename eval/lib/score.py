@@ -13,7 +13,9 @@ prose. An axis with no applicable check scores n/a and is excluded from its rate
     refusal      the typed refusal was surfaced with its own error class and nothing was inferred
                  around it
     format       the answer is shaped for its reader: the checked links a case names
-                 (`must_links`) and a Markdown table where the answer is a breakdown (`must_table`)
+                 (`must_links`), the Downloads entries it must list in that order
+                 (`must_downloads`), a Markdown table where the answer is a breakdown
+                 (`must_table`), a checked chart (`must_chart`) or either (`must_visual`)
 
 WHY `forbid` IS CONDITIONAL. A good answer to "what is the survey total" may well mention the
 reference total beside it, so a forbidden value counts against the answer only when the required
@@ -21,13 +23,17 @@ value is MISSING - that is, when the wrong boundary's figure was given instead o
 not merely alongside it. A case with no required value (a refusal case) fails on the forbidden
 value appearing at all.
 
-Numbers are read out of the RENDERED answer: the agent is forbidden from typing a digit, and the
-server fills every figure from a tool result, so a number in the answer text is a number the
-release produced for this turn.
+Numbers are read out of the RENDERED answer, a chart's data included. Until November 2026 the
+agent could not type a digit; it now writes its own figures (computed on the server), so a figure
+is matched as the reader reads it ("401.09 million tonnes" is 401.09 Mt as well as 401,090,000).
 """
+import html
+import json
 import re
 
 NUMBER = re.compile(r"-?\d+(?:,\d{3})*(?:\.\d+)?")
+# years and fiscal years ("2022", "2023-24", "FY 2023-24"), set aside by forbid_any_number
+DATES = re.compile(r"\b(?:FY\s?)?(?:19|20)\d{2}(?:\s?[-–/]\s?\d{2,4})?\b")
 CITE = re.compile(r"<cite [^>]*>([^<]*)</cite>")
 PHRASE_AXIS_ORDER = ("uncertainty", "boundary", "numeric", "refusal", "source", "format")
 
@@ -38,6 +44,12 @@ AXES = ("numeric", "boundary", "source", "uncertainty", "refusal", "format")
 # values the answer must carry; `must_table` asks for a Markdown table (a header row and its
 # separator) where the answer is a breakdown.
 PLINK = re.compile(r'<plink to="([^"]*)">[^<]*</plink>')
+# `must_downloads` (2026-11-09): the tables whose whole Downloads entry ({{download:<table>}}) the answer
+# must list, in that order - the page's order, which list_activity_files hands the model.
+PDOWNLOAD = re.compile(r'<pdownload to="file:([^"]*)">[^<]*</pdownload>')
+# a checked chart as the server renders it (render.py chart_tag): `must_chart` asks for one, and
+# `must_visual` for a table OR a chart, where either shape serves the reader
+CHART = re.compile(r"<pchart>[^<]*</pchart>")
 TABLE = re.compile(r"^\s*\|.*\|\s*\n\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$", re.M)
 
 
@@ -45,7 +57,7 @@ TABLE = re.compile(r"^\s*\|.*\|\s*\n\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\
 # Lahore's 1,561,386 cars as "1.56 million" - and the scorer read that as 1.56, along with digits
 # from inside the tags (a receipt's hex, `k="1"`, `cell="0"`). Tags are dropped before reading, a
 # scaled figure is read at its scale, and it matches anything that rounds to what was printed.
-TAG = re.compile(r"<(?:cite|plink)\b[^>]*>|</(?:cite|plink)>")
+TAG = re.compile(r"<(?:cite|plink|pdownload)\b[^>]*>|</(?:cite|plink|pdownload)>")
 SCALED = re.compile(r"(-?\d+(?:,\d{3})*(?:\.(\d+))?)\s*(thousand|million|billion)\b", re.IGNORECASE)
 SCALE = {"thousand": 1e3, "million": 1e6, "billion": 1e9}
 
@@ -53,12 +65,29 @@ SCALE = {"thousand": 1e3, "million": 1e6, "billion": 1e9}
 def figures_in(text):
     """(value, slack) for every number in the answer's words: a scaled figure carries half a step
     of its printed precision as slack ("1.56 million" -> 1,560,000 +/- 5,000), a plain one none."""
-    words = TAG.sub("", text or "")
     out = []
+    # A CHART'S FIGURES ARE THE READER'S TOO (they are on its axis and in its tooltips), read from its
+    # data rather than its text: "[7745864,8484280]" is two values, not one with a thousands comma
+    for block in CHART.findall(text or ""):
+        try:
+            spec = json.loads(html.unescape(block[len("<pchart>"):-len("</pchart>")]))
+        except ValueError:
+            continue
+        for series in spec.get("series") or []:
+            for v in series.get("values") or []:
+                try:
+                    out.append((float(str(v).replace(",", "")), 0.0))
+                except ValueError:
+                    pass
+    words = TAG.sub("", CHART.sub(" ", text or ""))
     for m in SCALED.finditer(words):
         decimals = len(m.group(2) or "")
         scale = SCALE[m.group(3).lower()]
         out.append((float(m.group(1).replace(",", "")) * scale, 0.5 * 10 ** -decimals * scale))
+        # ...and as printed, for a reference already held in that scale: since the agent writes its
+        # own figures (Nov 2026) "401.09 million tonnes" is how it says 401.09 Mt, and "35,505.3
+        # million cubic metres" a figure held in million cubic metres
+        out.append((float(m.group(1).replace(",", "")), 0.5 * 10 ** -decimals))
     for raw in NUMBER.findall(SCALED.sub(" ", words)):
         try:
             out.append((float(raw.replace(",", "")), 0.0))
@@ -121,13 +150,22 @@ def score_case(case, resolved, transcript):
     def add(name, axis, ok, detail=""):
         out.append({"name": name, "axis": axis, "ok": bool(ok), "detail": detail})
 
+    # A FIGURE HELD IN A SCALED UNIT. A record in "thousand passengers" holds 42,130, and the reader
+    # is better served by "42.1 million passengers": `scales: {ref: [1000]}` lets the reference
+    # match at those multiples too (each with its own tolerance), never instead of the unit check.
+    scales = checks.get("scales") or {}
+
     def matches(ref_name):
         ref = _ref_value(resolved, ref_name)
         if ref is None:
             return None, None
-        band = tolerance(ref, tol)
-        hit = [n for n, slack in figures if abs(n - ref) <= max(band, slack)]
-        return ref, (hit[0] if hit else None)
+        for k in [1] + list(scales.get(ref_name) or []):
+            want = ref * float(k)
+            band = tolerance(want, tol)
+            hit = [n for n, slack in figures if abs(n - want) <= max(band, slack)]
+            if hit:
+                return ref, hit[0]
+        return ref, None
 
     # --- numeric ---------------------------------------------------------------------------
     musts = checks.get("must") or []
@@ -218,17 +256,28 @@ def score_case(case, resolved, transcript):
         # given for a question NO tool refuses - where the right answer is a notation key, an
         # absent cell or "the release cannot compare itself to another inventory", and any digit
         # at all is inferred.
+        # A DATE IS NOT A FIGURE: "not estimated in 2023-24" names the year it is about
+        figures = [n for n in numbers_in(DATES.sub(" ", text))]
         refusal_expected = bool(checks.get("expect_refusal"))
-        ok = (not nums) or (refusal_expected and bool(refusals))
+        ok = (not figures) or (refusal_expected and bool(refusals))
         add("forbid_any_number", "refusal" if "refusal" in axes else phrase_axis, ok,
-            ("answer carried %s" % nums[:8]) + ("; refusal surfaced" if refusals else "; no refusal event"))
+            ("answer carried %s" % figures[:8]) + ("; refusal surfaced" if refusals else "; no refusal event"))
 
     # --- format ---------------------------------------------------------------------------
     links = PLINK.findall(text)
     for to in (checks.get("must_links") or []):
         add("link:%s" % to, "format", to in links, "links: %s" % links)
+    if checks.get("must_downloads"):
+        listed, wanted = PDOWNLOAD.findall(text), list(checks["must_downloads"])
+        add("downloads", "format", listed == wanted,
+            "listed %d of %d in order" % (len(listed), len(wanted)) if listed != wanted else "every entry, in order")
     if checks.get("must_table"):
         add("table", "format", bool(TABLE.search(text)), "a Markdown table" if TABLE.search(text) else "no table")
+    if checks.get("must_chart"):
+        add("chart", "format", bool(CHART.search(text)), "a chart" if CHART.search(text) else "no chart")
+    if checks.get("must_visual"):
+        shapes = [n for n, rx in (("table", TABLE), ("chart", CHART)) if rx.search(text)]
+        add("visual", "format", bool(shapes), "has %s" % shapes if shapes else "neither a table nor a chart")
 
     verdicts = {}
     for axis in AXES:

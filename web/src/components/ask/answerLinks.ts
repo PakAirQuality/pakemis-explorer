@@ -14,7 +14,11 @@ import { COLLECTION_IDS, collectionsFor, type Collection, type Download } from "
 import { useProducts } from "@/lib/products";
 import type { TimelineItem } from "./types";
 
-export type ResolvedLink = { href: string; label: string };
+/**
+ * `dek` and `coverage` come with a file the page lists: the entry's own description and coverage line,
+ * which a `<pdownload>` (the answer's whole-entry form, `{{download:<table>}}`) prints under its title.
+ */
+export type ResolvedLink = { href: string; label: string; dek?: string; coverage?: string };
 
 const SECTIONS: readonly string[] = COLLECTION_IDS;
 const DOWNLOADS_LABEL = "Downloads";
@@ -42,7 +46,9 @@ export function resolveLink(to: string, label: string, collections: Collection[]
   if (to.startsWith("file:")) {
     const d = downloadForTable(collections, to.slice("file:".length));
     // a table the release serves but the page does not list: the page itself, by its own name
-    return d ? { href: `/downloads?item=${encodeURIComponent(d.id)}`, label: d.title } : { href: "/downloads", label: DOWNLOADS_LABEL };
+    return d
+      ? { href: `/downloads?item=${encodeURIComponent(d.id)}`, label: d.title, dek: d.dek, coverage: d.coverage }
+      : { href: "/downloads", label: DOWNLOADS_LABEL };
   }
   return null;
 }

@@ -1,7 +1,7 @@
 # Evaluating Ask PakEmis against the inventory's real confusions
 
-Fifty-seven cases built from the failure modes the inventory actually has - not paraphrases of one
-another, and not only traps. Thirty-seven are the development split, twenty are held out and
+Seventy-three cases built from the failure modes the inventory actually has - not paraphrases of
+one another, and not only traps. Fifty-three are the development split, twenty are held out and
 frozen (`holdout/HOLDOUT.md` states exactly what that isolation is and what it is not).
 
 ## What a case is
@@ -44,7 +44,7 @@ Scoring is fixed checks over the event stream. No model judges another model's p
 | source | the answer carries a receipt from a tool call of this turn, and no figure was struck as a bare number |
 | uncertainty | an interval, or a stated absence, is reported as such rather than as a point |
 | refusal | the typed refusal reached the reader with its own class, and nothing was inferred around it |
-| format | the answer is shaped for its reader: the checked links the case names (`must_links`, the `to` of a `<plink>`) and a Markdown table where the answer is a breakdown (`must_table`) |
+| format | the answer is shaped for its reader: the checked links the case names (`must_links`, the `to` of a `<plink>`), the Downloads entries it must list in order (`must_downloads`, the tables of its `<pdownload>` tags) a Markdown table where the answer is a breakdown (`must_table`), and a checked chart (`must_chart`) or either shape (`must_visual`) |
 
 Two deliberate pieces of fairness, both in `lib/score.py`:
 
@@ -66,6 +66,13 @@ not an extra structural allowance; observed timing versus modelled seasonality; 
 district boundaries, borrowed geography and unallocated mass; NE, IE, NO and NA as four distinct
 statements rather than four spellings of zero; questions the evidence cannot answer, and
 agreement between two inventories that share an input.
+
+The activity records have their own cases (D39-D53, November 2026), one or more per record table:
+sums over a province's districts, a combined national figure from registers of different dates,
+rankings, changes and trends, printed totals beside their parts, an annual row beside its months,
+several series of one quantity, figures held in "thousand" units (`scales`). Where the query core
+will not total many places itself, the truth spec's `sum: true` adds the request's cells exactly
+(`lib/truth.py`), so these references are still executed rather than typed.
 
 Alongside those, ordinary questions a reader would actually ask: the national total, the largest
 sector, the top province, the nine-year trend, one month, one district.

@@ -18,6 +18,7 @@ cannot tell which path served it, and no front-end change is needed.
 """
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -58,6 +59,16 @@ def _context(ui_state):
 # keyword blocklist: the router already knows which cards are placeholders.
 DEFER_WHEN_SPECIFIC = {"uncertainty", "patterns", "not_estimated", "live_required",
                        "source_chain", "coverage", "industry_mapping"}
+
+
+# A QUESTION ABOUT GETTING THE DATA IS THE LOOP'S (2026-11-09). "Where can I download the livestock
+# data?" matched the agriculture_data card, which says what the agriculture note's sources are and
+# lists no file - when the answer is the files themselves, which list_activity_files names and the
+# web app draws from the Downloads page. Asking to download, get, access or obtain data, or naming a
+# file or a CSV, declines here. "What sources does agriculture use?" still reaches its card.
+# ("dataset" is not here: "what is this dataset?" is the project card's question.)
+GETTING_DATA = re.compile(r"\b(download\w*|csvs?|files?|spreadsheets?)\b"
+                          r"|\b(get|access|obtain|reuse)\b.*\bdata\b", re.I)
 
 
 class Library:
@@ -124,6 +135,8 @@ class Library:
 
     def answer(self, message, ui_state, last_card_id=None):
         """A rendered local answer, or None when this question belongs to the tool loop."""
+        if GETTING_DATA.search(message or ""):
+            return None
         plan = self.plan(message, ui_state, last_card_id)
         if plan is None or not plan.card_ids:
             return None

@@ -131,6 +131,42 @@ describe("links", () => {
   });
 });
 
+describe("download entries", () => {
+  const entry = (table: string) => `<pdownload to="file:${table}">${table}</pdownload>`;
+  const activity = COLLECTIONS.find((c) => c.id === "activity")!;
+  const stem = (f: string) => f.replace(/\.[^.]+$/, "");
+
+  it("draws each entry as the page does: its title linking to it, its description and its coverage", () => {
+    const tables = activity.downloads.map((d) => stem(d.files[0]));
+    show(`The records can be downloaded:\n${tables.map((t) => `- ${entry(t)}`).join("\n")}`);
+    const items = within(screen.getByTestId("answer-list")).getAllByRole("listitem");
+    expect(items).toHaveLength(activity.downloads.length);
+    activity.downloads.forEach((d, i) => {
+      // every string is the page's own, read from the same catalogue the Downloads page draws
+      const link = within(items[i]).getByTestId("answer-link");
+      expect(link).toHaveTextContent(d.title);
+      expect(link.getAttribute("href")).toBe(`/downloads?item=${d.id}`);
+      expect(items[i]).toHaveTextContent(`${d.title} — ${d.dek}`);
+      expect(within(items[i]).getByTestId("answer-download-coverage")).toHaveTextContent(d.coverage);
+    });
+    expect(screen.getByTestId("answer")).not.toHaveTextContent("fact_activity_");
+  });
+
+  it("prints a table the page does not list as its name, linking to the page", () => {
+    show(`See ${entry("fact_unlisted")}.`);
+    const link = screen.getByTestId("answer-link");
+    expect(link).toHaveTextContent("fact_unlisted");
+    expect(link.getAttribute("href")).toBe("/downloads");
+    expect(screen.queryByTestId("answer-download-coverage")).toBeNull();
+  });
+
+  it("prints the name as text where no resolver is given", () => {
+    show(`See ${entry("fact_activity_livestock")}.`, handlers());
+    expect(screen.queryByTestId("answer-link")).toBeNull();
+    expect(screen.getByTestId("answer")).toHaveTextContent("See fact_activity_livestock.");
+  });
+});
+
 describe("where links go", () => {
   it("knows the page, its five sections, and every table the page offers", () => {
     expect(linkTo("downloads", "Downloads")).toEqual({ href: "/downloads", label: "Downloads" });

@@ -15,9 +15,14 @@ reference; this file holds the rules that have bitten.
 
 ## Invariants
 
-- **The web app computes no number.** Every figure is a string from an API envelope; a `value` may
-  only size a bar or shade a polygon. The API adds no number either. Tests enforce both
-  (`__tests__/naming.test.tsx`, the decimal walks in the component tests, the agent's bare-number gate).
+- **The web app's pages compute no number.** Every figure is a string from an API envelope; a `value` may
+  only size a bar or shade a polygon. The API's query routes add no number either. Tests enforce both
+  (`__tests__/naming.test.tsx`, the decimal walks in the component tests).
+- **Ask PakEmis is the exception, and deliberately so (November 2026, decided by the project owner).**
+  The agent writes its own figures. Its arithmetic is done exactly on the server by `add_up` and
+  `calculate` (`api/pakemis_api/ask/arith.py`), never in the model's head. The bare-number gate is off
+  by default (`Limits.typed_numbers`; `PAKEMIS_ASK_TYPED_NUMBERS=0` restores it). An activity result
+  reaches the model as a table (`ask/records.py`), and answers may carry checked charts (`<pchart>`).
 - **One release is pinned** (`RELEASES.md`, `pinned:`). The API refuses to start unless that payload
   verifies byte for byte (`make verify`). To move the pin: `make fetch REF=<commit>`, `make verify`,
   edit `RELEASES.md`, `make tiles raster library`, then `make facts`, `make test`.

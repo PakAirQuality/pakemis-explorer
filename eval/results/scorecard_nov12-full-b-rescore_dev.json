@@ -1,0 +1,1324 @@
+{
+ "meta": {
+  "release_version": "1.0.0rc59",
+  "agent": {
+   "enabled": true,
+   "model": "gemini-3.1-pro-preview",
+   "provider": "gemini",
+   "reason": null,
+   "library": "02a469aef44acb87"
+  },
+  "run_at": "2026-11-12T17:08:34+00:00",
+  "split": "dev",
+  "label": "nov12-full-b",
+  "allow_holdout": false
+ },
+ "reference_release": "1.0.0rc59",
+ "reference_manifest": "7e7fed3f559f0c13",
+ "summary": {
+  "n_cases": 26,
+  "all_axes_pass": 24,
+  "all_axes_pass_rate": 0.923,
+  "axes": {
+   "numeric": {
+    "n": 18,
+    "pass": 17,
+    "rate": 0.944
+   },
+   "boundary": {
+    "n": 4,
+    "pass": 4,
+    "rate": 1.0
+   },
+   "source": {
+    "n": 24,
+    "pass": 24,
+    "rate": 1.0
+   },
+   "uncertainty": {
+    "n": 6,
+    "pass": 6,
+    "rate": 1.0
+   },
+   "refusal": {
+    "n": 1,
+    "pass": 1,
+    "rate": 1.0
+   },
+   "format": {
+    "n": 9,
+    "pass": 8,
+    "rate": 0.889
+   }
+  },
+  "by_path": {
+   "loop": 26
+  },
+  "no_answer": [],
+  "turn_limit": []
+ },
+ "cases": [
+  {
+   "id": "D28",
+   "topic": "uncertainty",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=6 citations=0 tool_results=7 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['national', 'not', 'district'] of ['national', 'not', 'district']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 7,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": " If you have no figures, state that.The release does not calculate uncertainty intervals for individual district figures. A district figure in this inventory is almost always a modelled share of a national total, distributed downward onto the map using a proxy like population, road density, or cropland area. Because they are allocated rather than independently measured, they do not carry their own statistical bounds.\n\nUncertainty is instead calculated at the national level. You can ask me for the uncertainty bounds of Pakistan's overall national total, its trend across years, or a specific national sector or category."
+  },
+  {
+   "id": "D29",
+   "topic": "timing_evidence",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=10 citations=0 tool_results=10 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['no ', 'not'] of ['none', 'no ', 'not']"
+    },
+    {
+     "name": "phrase_forbid:t1",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 10,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Several sectors in the inventory are backed by genuine monthly observations (Temporal Class T2), driven primarily by national fuel sales registries, fertiliser offtake, and manufacturing indices. The remaining sectors rely entirely on proxy models\u2014such as temperature curves\u2014or are assumed to be flat across the year (Classes T3 and T4).\n\n**Sectors with actual observed monthly data**\n*   **Transport, Aviation, and Railways:** Almost all liquid fuels (petrol, high-speed diesel, jet fuel, and furnace oil) use the actual monthly sales volumes recorded by the Oil Companies Advisory Council (OCAC).\n*   **Power Generation:** Grid plants running on coal, diesel, furnace oil, and bagasse use plant-level reporting from NEPRA and monthly sugar-crushing data from the Pakistan Bureau of Statistics (PBS). \n*   **Agriculture (Fertilisers):** Emissions from urea application and synthetic fertilisers directly follow the monthly offtake records from the National Fertilizer Development Centre (NFDC).\n*   **Industrial Processes (IPPU) and Industry:** Clinker (cement) and steel production track the PBS Quantum Index of Manufacturing (QIM) monthly data. Industrial consumption of liquid fuels is also tracked using OCAC monthly sales.\n*   **Fugitives (Upstream):** Oil and gas production, gathering, and processing rely on genuine PBS monthly extraction volumes.\n\n**Sectors using modelled seasonal shapes or flat assumptions**\n*   **Residential:** Household fuel consumption is not measured monthly. Firewood, natural gas, LPG, and generator fuels are reconstructed using synthetic temporal profiles based on Heating and Cooling Degree Days (temperature proxies).\n*   **Waste:** Landfill emissions follow a continuous modelled First-Order Decay curve rather than monthly observations. Domestic wastewater and open waste burning are simply distributed flatly across the year.\n*   **Agriculture (Livestock and Crops):** Livestock numbers (and their enteric and manure emissions) are held completely flat across the year. Rice cultivation and crop-residue burning use seasonal shapes modelled from crop calendars and satellite fire detections.\n*   **Other unobserved segments:** Downstream gas distribution, captive power generation, brick-kiln coal, and transport CNG have no monthly reporting and are held flat. Grid power generated from natural gas is allocated using a general manufacturing proxy."
+  },
+  {
+   "id": "D30",
+   "topic": "timing_evidence",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['flat', 'assumption', 'not measured', 'declared', 'projected'] of ['flat', 'assumption', 'not measured', 'declared', 'projected']"
+    },
+    {
+     "name": "phrase_forbid:measured monthly",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:we measure",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "No, the monthly pattern of livestock methane emissions is not measured. The monthly profile is a flat, declared assumption (classed as T4 temporal evidence) that distributes the emissions evenly across the year. \n\nThe underlying data rests on an annual livestock census enumeration for the reference year\u2014which is then projected for the other years\u2014rather than on any month-by-month observation of the herds or their emissions."
+  },
+  {
+   "id": "D31",
+   "topic": "spatial_closure",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['unallocated', 'other', 'unplaced'] of ['unallocated', 'other', 'no polygon', 'unplaced', 'close']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "The provinces do sum up to the entire national total, with no emissions left completely unplaced at the provincial level. However, this relies on a fifth grouping called \"Other.\" \n\nIn 2023-24, the national total was distributed across the four main provinces and the \"Other\" category, which captures emissions for regions that do not receive map polygons in this dataset (Gilgit-Baltistan, Azad Jammu and Kashmir, and Islamabad). \n\nHere is the provincial breakdown for 2023-24:\n\n| Province | Emissions (Mt CO2e AR5) |\n|---|---:|\n| Punjab | 238.10 |\n| Sindh | 137.83 |\n| Khyber Pakhtunkhwa | 59.79 |\n| Balochistan | 31.79 |\n| Other (GB, AJK, Islamabad) | 2.13 |\n\nWhile every emission is placed at the provincial level, **a tiny fraction is not placed at the district level**. When the provincial totals are distributed down to their districts, a small amount (0.25 million tonnes in 2023-24) is left unallocated because it cannot be mapped finer than the province."
+  },
+  {
+   "id": "D32",
+   "topic": "spatial_closure",
+   "checks": [
+    {
+     "name": "must:punjab_2015",
+     "axis": "numeric",
+     "ok": false,
+     "detail": "want 220.11457361157667 +/- 0.1101, answer had [2015.0, -16.0, 2023.0, -24.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'adm1', 'periods': ['FY2015-16']}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "fail",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Yes, provincial annual figures are available for all nine fiscal years in the dataset, including 2015-16. District totals are also available annually for the entire series. \n\nHowever, there are two important limits to how these historical years are represented:\n- **Spatial patterns are reconstructed:** An earlier year's provincial or district geography is usually a projection of the reference year's spatial pattern. It is rescaled to match that earlier year's national total\u2014a reconstruction of where the mass most likely sat\u2014rather than a direct observation of that specific year's local geography.\n- **Months are limited to the reference year:** While national totals are available by month across all nine years, provincial and district figures are strictly annual prior to 2023-24. Monthly breakdowns at the provincial and district levels exist for the reference year only."
+  },
+  {
+   "id": "D33",
+   "topic": "notation_keys",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=0 tool_results=2 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['not estimated'] of ['not estimated', 'does not estimate', 'no estimate']"
+    },
+    {
+     "name": "phrase_forbid:is zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:are zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:no emissions",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:none occur",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "forbid_any_number",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "answer carried []; no refusal event"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "pass",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan's emissions from lime production are not estimated. \n\nWhile the inventory holds the necessary IPCC calculation methods, an independent activity series for marketed and captive lime production has not yet been compiled. The Pakistan Bureau of Statistics does not list a lime item in its Quantum Index of Manufacturing, and although the government's 2022 Common Reporting Format (CRT) contained lime activity and emissions, that data has not been integrated into this release as an annual series. \n\nConsequently, both the greenhouse gas emissions (CO\u2082) and the related air pollutants (such as particulate matter and black carbon) from lime kilns remain unestimated."
+  },
+  {
+   "id": "D34",
+   "topic": "notation_keys",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=5 citations=0 tool_results=5 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_all:differ",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['not occurring', 'not estimated'] of ['not occurring', 'not estimated']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 5,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "No, the inventory reports \"nothing\" for them for entirely different reasons. One does not produce direct emissions, while the other does but lacks the data needed to estimate them. \n\n* **Electric road vehicles** are marked as **NO (Not Occurring)**. By definition, electric vehicles produce zero direct combustion emissions at the tailpipe. Furthermore, the registered electric fleet was negligible in the 2022 registration data, and the emissions from generating the electricity they consume are already counted at the power station under the energy sector. \n* **Nitric acid production** is marked as **NE (Not Estimated)**. This activity *does* occur in Pakistan\u2014the inventory identifies at least one plant (Fatima Sadiqabad) that produced 563,701 tonnes in calendar year 2022. However, it is not estimated because the project does not yet have the matched-year fiscal production series and operating abatement evidence required to calculate its greenhouse gas and air pollutant (NOx) emissions for the specific years covered by the release."
+  },
+  {
+   "id": "D35",
+   "topic": "data_access",
+   "checks": [
+    {
+     "name": "phrase_any",
+     "axis": "format",
+     "ok": true,
+     "detail": "matched ['the activity behind the estimates'] of ['the activity behind the estimates']"
+    },
+    {
+     "name": "phrase_forbid:khyber",
+     "axis": "format",
+     "ok": false,
+     "detail": ""
+    },
+    {
+     "name": "link:downloads:activity",
+     "axis": "format",
+     "ok": true,
+     "detail": "links: ['downloads:activity']"
+    },
+    {
+     "name": "downloads",
+     "axis": "format",
+     "ok": true,
+     "detail": "every entry, in order"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "n/a",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "fail"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Yes. The records the estimates are calculated from can be downloaded as CSV files, with their sources and definitions:\n\n- <pdownload to=\"file:fact_activity_fuel_sales_national\">fact_activity_fuel_sales_national</pdownload>\n- <pdownload to=\"file:fact_activity_fuel_sales_area\">fact_activity_fuel_sales_area</pdownload>\n- <pdownload to=\"file:fact_activity_livestock\">fact_activity_livestock</pdownload>\n- <pdownload to=\"file:fact_activity_crops\">fact_activity_crops</pdownload>\n- <pdownload to=\"file:fact_activity_fertiliser\">fact_activity_fertiliser</pdownload>\n- <pdownload to=\"file:fact_activity_power_plants\">fact_activity_power_plants</pdownload>\n- <pdownload to=\"file:fact_activity_power_monthly\">fact_activity_power_monthly</pdownload>\n- <pdownload to=\"file:fact_activity_household_fuel\">fact_activity_household_fuel</pdownload>\n- <pdownload to=\"file:fact_activity_industry_fuel\">fact_activity_industry_fuel</pdownload>\n- <pdownload to=\"file:fact_activity_industry_production\">fact_activity_industry_production</pdownload>\n- <pdownload to=\"file:fact_activity_gas_supply\">fact_activity_gas_supply</pdownload>\n- <pdownload to=\"file:fact_activity_gas_network\">fact_activity_gas_network</pdownload>\n- <pdownload to=\"file:fact_activity_waste_services\">fact_activity_waste_services</pdownload>\n- <pdownload to=\"file:fact_activity_waste_flows\">fact_activity_waste_flows</pdownload>\n- <pdownload to=\"file:fact_activity_railways\">fact_activity_railways</pdownload>\n- <pdownload to=\"file:fact_activity_aviation\">fact_activity_aviation</pdownload>\n- <pdownload to=\"file:fact_activity_source_details\">fact_activity_source_details</pdownload>\n- <pdownload to=\"file:dim_activity_columns\">dim_activity_columns</pdownload>\n- <pdownload to=\"file:fact_activity_vehicles\">fact_activity_vehicles</pdownload>\n\nThey are all in the \"The activity behind the estimates\" section on the <plink to=\"downloads:activity\">Downloads</plink> page. You can also ask me for a single figure, such as how many registered vehicles there are in Khyber Pakhtunkhwa or how much diesel was sold."
+  },
+  {
+   "id": "D36",
+   "topic": "data_access",
+   "checks": [
+    {
+     "name": "must:cars",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 1561386.0 +/- 780.7, answer had [6940000.0, 6.94, 30.0, 2023.0, 70.0, 4822762.0, 1561386.0, 3.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "table",
+     "axis": "format",
+     "ok": true,
+     "detail": "a Markdown table"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Lahore's district registers held 6.94 million vehicles at 30 June 2023, with motorcycles and scooters making up nearly 70% of the total. \n\n| Class | Registered vehicles |\n|---|---:|\n| Motorcycles and scooters | 4,822,762 |\n| Motor cars, jeeps and station wagons | 1,561,386 |\n| Three-wheelers (3W) | 223,711 |\n| Light-duty vehicles (LDV) | 127,310 |\n| Mixed off-road vehicles (NRV) | 68,084 |\n| Buses (BUS) | 66,047 |\n| Heavy-duty vehicles (HDV) | 44,383 |\n| Taxis (4WT) | 27,745 |\n| All classes (total) | 6,941,428 |\n\n- **Source and scope:** These figures are the latest available from the provincial vehicle registrations. A register counts cumulative stock, meaning a scrapped vehicle stays in the total until it is formally deregistered; it is not a count of active traffic on the road today.\n- The full underlying data table is <plink to=\"file:fact_activity_vehicles\">fact_activity_vehicles</plink>."
+  },
+  {
+   "id": "D37",
+   "topic": "question_over_map",
+   "checks": [
+    {
+     "name": "must:sindh",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 137.833349765496 +/- 0.06892, answer had [137830000.0, 137.83, 2023.0, -24.0, 2.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'adm1', 'geography_ids': ['Sindh']}"
+    },
+    {
+     "name": "forbid:kp",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "59.793794643216 absent - the map's province answered instead of the question's"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=1 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_all:sindh",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Sindh's total greenhouse-gas emissions were <cite k=\"1\" cell=\"0\" receipt=\"56cbd0f1415261b245e218c79ebdcc0a\">137.83</cite> million tonnes of CO2e."
+  },
+  {
+   "id": "D38",
+   "topic": "data_access",
+   "checks": [
+    {
+     "name": "downloads",
+     "axis": "format",
+     "ok": true,
+     "detail": "every entry, in order"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "n/a",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The livestock data is available in the \"The activity behind the estimates\" section on the <plink to=\"downloads:activity\">Downloads</plink> page. You can download the records the estimates are calculated from, along with their sources and definitions, as CSV files:\n\n- <pdownload to=\"file:fact_activity_livestock\">fact_activity_livestock</pdownload>\n- <pdownload to=\"file:fact_activity_source_details\">fact_activity_source_details</pdownload>\n- <pdownload to=\"file:dim_activity_columns\">dim_activity_columns</pdownload>\n\nYou can also ask me directly for a specific figure, such as how many buffalo or cattle are registered in a province or district."
+  },
+  {
+   "id": "D39",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must:total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 22202972.0 +/- 1.11e+04, answer had [22200000.0, 22.2, 30.0, 2023.0, 18434072.0, 2068471.0, 602503.0, 540092.0]"
+    },
+    {
+     "name": "must:two_wheelers",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 18434072.0 +/- 9217, answer had [22200000.0, 22.2, 30.0, 2023.0, 18434072.0, 2068471.0, 602503.0, 540092.0]"
+    },
+    {
+     "name": "must:cars",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 2068471.0 +/- 1034, answer had [22200000.0, 22.2, 30.0, 2023.0, 18434072.0, 2068471.0, 602503.0, 540092.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Punjab's district registers held 22.2 million vehicles at 30 June 2023. These figures from the provincial vehicle registrations series represent a cumulative stock rather than the active fleet on the road today, as scrapped vehicles remain in the total until deregistered.\n\nHere is the breakdown by class across the province:\n\n| Class | Registered vehicles |\n|---|---:|\n| Motorcycles and scooters | 18,434,072 |\n| Motor cars, jeeps and station wagons | 2,068,471 |\n| Three-wheelers | 602,503 |\n| Mixed off-road vehicles | 540,092 |\n| Light-duty vehicles | 293,751 |\n| Buses | 110,132 |\n| Heavy-duty vehicles | 83,573 |\n| Taxis | 70,378 |\n| All classes (sum of 36 districts) | 22,202,972 |"
+  },
+  {
+   "id": "D40",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must:punjab",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 22202972.0 +/- 1.11e+04, answer had [22202972.0, 2388182.0, 1155057.0, 656890.0, 22200000.0, 22.2, 26400000.0, 26.4]"
+    },
+    {
+     "name": "must:kp",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 2388182.0 +/- 1194, answer had [22202972.0, 2388182.0, 1155057.0, 656890.0, 22200000.0, 22.2, 26400000.0, 26.4]"
+    },
+    {
+     "name": "must:sindh",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 1155057.0 +/- 577.5, answer had [22202972.0, 2388182.0, 1155057.0, 656890.0, 22200000.0, 22.2, 26400000.0, 26.4]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_all:punjab",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Punjab has the most registered vehicles, with 22.2 million recorded across its districts at 30 June 2023 (84% of the national total). Across all four provinces, the district registers hold a combined 26.4 million vehicles, though this sum adds provincial registers dated differently between June 2022 and June 2024 rather than a single count taken on one date. \n\nThese figures come from provincial vehicle registrations, which track a cumulative registered stock (where a scrapped vehicle remains in the total until formally deregistered) and do not represent the active fleet or traffic on the road today.\n\n| Province | Registered vehicles | Register date |\n|---|---:|---|\n| Punjab | 22,202,972 | 30 June 2023 |\n| Khyber Pakhtunkhwa | 2,388,182 | 30 June 2024 |\n| Sindh | 1,155,057 | 30 June 2022 |\n| Balochistan | 656,890 | 30 June 2023 |\n| All 118 districts | 26,403,101 | 2022 to 2024 |\n\n<pchart>{&quot;type&quot;:&quot;pie&quot;,&quot;title&quot;:&quot;Registered vehicles by province&quot;,&quot;unit&quot;:&quot;vehicles&quot;,&quot;labels&quot;:[&quot;Punjab&quot;,&quot;Khyber Pakhtunkhwa&quot;,&quot;Sindh&quot;,&quot;Balochistan&quot;],&quot;series&quot;:[{&quot;name&quot;:&quot;Registered vehicles&quot;,&quot;values&quot;:[22202972,2388182,1155057,656890]}],&quot;donut&quot;:true}</pchart>\n\nThe full activity table with its sources and definitions is <plink to=\"file:fact_activity_vehicles\">fact_activity_vehicles</plink>."
+  },
+  {
+   "id": "D41",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must:y2015",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 11218816.0 +/- 5609, answer had [11218816.0, 13144241.0, 13424092.0, 13424062.0, 15269445.0, 16208682.0, 17499553.0, 17499553.0]"
+    },
+    {
+     "name": "must:y2023",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 18434072.0 +/- 9217, answer had [11218816.0, 13144241.0, 13424092.0, 13424062.0, 15269445.0, 16208682.0, 17499553.0, 17499553.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Between 30 June 2015 and 30 June 2023, the number of two-wheelers registered across Punjab's 36 districts increased by 7.2 million (about 64.3%). \n\nIn 2015, provincial registers held a total of 11,218,816 two-wheelers. By 2023, this total had grown to 18,434,072. \n\n<pchart>{&quot;type&quot;:&quot;line&quot;,&quot;title&quot;:&quot;Two-wheelers registered in Punjab, 2015 to 2023&quot;,&quot;unit&quot;:&quot;vehicles&quot;,&quot;labels&quot;:[&quot;2015&quot;,&quot;2016&quot;,&quot;2017&quot;,&quot;2018&quot;,&quot;2019&quot;,&quot;2020&quot;,&quot;2021&quot;,&quot;2022&quot;,&quot;2023&quot;],&quot;series&quot;:[{&quot;name&quot;:&quot;Two-wheelers&quot;,&quot;values&quot;:[11218816,13144241,13424092,13424062,15269445,16208682,17499553,17499553,18434072]}]}</pchart>\n\nAs with all such records, these figures represent the cumulative registered stock at the end of each fiscal year rather than the active fleet driving on the road today. A scrapped or idle vehicle stays in the total until it is explicitly deregistered. You can find the full table of provincial vehicle registrations at <plink to=\"file:fact_activity_vehicles\">fact_activity_vehicles</plink>."
+  },
+  {
+   "id": "D42",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must:top",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 1923757.0 +/- 961.9, answer had [55800000.0, 55.8, 2023.0, -24.0, 1923757.0, 1523405.0, 1365937.0, 1276225.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, the five districts with the largest number of cattle were:\n\n| District | Number of cattle |\n|---|---:|\n| Muzaffargarh | 1,923,757 |\n| Dera Ghazi Khan | 1,523,405 |\n| Faisalabad | 1,365,937 |\n| Bhakkar | 1,276,225 |\n| Kolai Palas Kohistan | 1,223,422 |\n\nThese figures are from the projected district livestock census, which estimates the total number of cattle across all 137 reporting districts at 55.8 million head."
+  },
+  {
+   "id": "D43",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must:national",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 26403101.0 +/- 1.32e+04, answer had [26403101.0, 30.0, 2022.0, 30.0, 2024.0, 30.0, 2023.0, 22202972.0]"
+    },
+    {
+     "name": "must:punjab",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 22202972.0 +/- 1.11e+04, answer had [26403101.0, 30.0, 2022.0, 30.0, 2024.0, 30.0, 2023.0, 22202972.0]"
+    },
+    {
+     "name": "must:sindh",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 1155057.0 +/- 577.5, answer had [26403101.0, 30.0, 2022.0, 30.0, 2024.0, 30.0, 2023.0, 22202972.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_all:2022",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_all:2023",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_all:2024",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['differ'] of ['different dates', 'dated differently', 'different date', 'differ']"
+    },
+    {
+     "name": "visual",
+     "axis": "format",
+     "ok": true,
+     "detail": "has ['table']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 4,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Pakistan's district registers held a combined 26,403,101 vehicles, adding up provincial registers dated between 30 June 2022 and 30 June 2024. A register counts cumulative registrations rather than the active fleet on the road today; a scrapped vehicle stays in the total until it is deregistered.\n\nBecause the registers are printed at different times, the national sum combines these provincial totals at their respective latest dates:\n\n| Province | Date | Registered vehicles |\n|---|---|---:|\n| Punjab | 30 June 2023 | 22,202,972 |\n| Khyber Pakhtunkhwa | 30 June 2024 | 2,388,182 |\n| Sindh | 30 June 2022 | 1,155,057 |\n| Balochistan | 30 June 2023 | 656,890 |\n\nTwo-wheelers account for nearly 79% of the registered stock, followed by small motor cars:\n\n| Vehicle class | Registered vehicles | Share |\n|---|---:|---:|\n| Two-wheelers (2W) | 20,745,227 | 78.6% |\n| Small cars (4W1) | 2,853,021 | 10.8% |\n| Mixed off-road vehicles (NRV) | 966,549 | 3.7% |\n| Three-wheelers (3W) | 734,114 | 2.8% |\n| Light-duty vehicles (LDV) | 562,780 | 2.1% |\n| Heavy-duty vehicles (HDV) | 281,544 | 1.1% |\n| Buses (BUS) | 174,617 | 0.7% |\n| Taxis (4WT) | 72,992 | 0.3% |\n| Large cars / SUVs (4W2) | 12,257 | < 0.1% |"
+  },
+  {
+   "id": "D44",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must:cattle",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 11205793.0 +/- 5603, answer had [2023.0, -24.0, 19013124.0, 13458277.0, 11205793.0, 4741778.0]"
+    },
+    {
+     "name": "must:buffalo",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 13458277.0 +/- 6729, answer had [2023.0, -24.0, 19013124.0, 13458277.0, 11205793.0, 4741778.0]"
+    },
+    {
+     "name": "must:goats",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 19013124.0 +/- 9507, answer had [2023.0, -24.0, 19013124.0, 13458277.0, 11205793.0, 4741778.0]"
+    },
+    {
+     "name": "must:sheep",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 4741778.0 +/- 2371, answer had [2023.0, -24.0, 19013124.0, 13458277.0, 11205793.0, 4741778.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=4 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "visual",
+     "axis": "format",
+     "ok": true,
+     "detail": "has ['table']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Sindh's provincial livestock census recorded the following stock of animals across these four categories:\n\n| Animal type | Number of animals |\n|---|---:|\n| Goats | <cite k=\"1\" cell=\"2\" receipt=\"69fa88878f53641a8f835f98844c5a75\">19,013,124</cite> |\n| Buffalo | <cite k=\"1\" cell=\"0\" receipt=\"69fa88878f53641a8f835f98844c5a75\">13,458,277</cite> |\n| Cattle | <cite k=\"1\" cell=\"1\" receipt=\"69fa88878f53641a8f835f98844c5a75\">11,205,793</cite> |\n| Sheep | <cite k=\"1\" cell=\"3\" receipt=\"69fa88878f53641a8f835f98844c5a75\">4,741,778</cite> |\n\nThe full dataset is available in <plink to=\"file:fact_activity_livestock\">fact_activity_livestock</plink>."
+  },
+  {
+   "id": "D45",
+   "topic": "activity_trend",
+   "checks": [
+    {
+     "name": "must:y2024",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 87035000.0 +/- 4.352e+04, answer had [68420000.0, 70274000.0, 72179000.0, 74134000.0, 76143000.0, 78207000.0, 80326000.0, 82503000.0]"
+    },
+    {
+     "name": "must_any_of:y2014,y2015",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['y2015']; answer had [68420000.0, 70274000.0, 72179000.0, 74134000.0, 76143000.0, 78207000.0, 80326000.0, 82503000.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "chart",
+     "axis": "format",
+     "ok": true,
+     "detail": "a chart"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Over the past decade, Pakistan's historical reported goat population grew steadily, rising from 68.4 million animals in 2015 to 87.0 million in 2024. Additionally, a separate recent national census count recorded 95.8 million goats for the 2023-24 fiscal year.\n\n<pchart>{&quot;type&quot;:&quot;line&quot;,&quot;title&quot;:&quot;Goat population in Pakistan, 2015 to 2024&quot;,&quot;unit&quot;:&quot;animals&quot;,&quot;labels&quot;:[&quot;2015&quot;,&quot;2016&quot;,&quot;2017&quot;,&quot;2018&quot;,&quot;2019&quot;,&quot;2020&quot;,&quot;2021&quot;,&quot;2022&quot;,&quot;2023&quot;,&quot;2024&quot;],&quot;series&quot;:[{&quot;name&quot;:&quot;Goats&quot;,&quot;values&quot;:[68420000,70274000,72179000,74134000,76143000,78207000,80326000,82503000,84738000,87035000]}]}</pchart>\n\n"
+  },
+  {
+   "id": "D46",
+   "topic": "activity_totals",
+   "checks": [
+    {
+     "name": "must:total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 7145004.0 +/- 3573, answer had [7150000.0, 7.15, 2023.0, -24.0, 7104484.0, 24697.0, 15823.0, 7145004.0]"
+    },
+    {
+     "name": "forbid:14249488",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "14249488.0 absent - the all-domestic total added to the transport total"
+    },
+    {
+     "name": "forbid:21353972",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "21353972.0 absent - three printed totals added together"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, 7.15 million tonnes of petrol (motor spirit) was sold in Pakistan. According to the OCAC annual customer-group sales records, this figure counts fuel sold into a customer class, not necessarily the fuel burned by it within the year.\n\nThe vast majority of this petrol was sold to the road transport sector, with small amounts going to industry and government:\n\n| Customer group | Petrol sales (tonnes) |\n|---|---:|\n| Road transport | 7,104,484 |\n| Industry total | 24,697 |\n| Government total | 15,823 |\n| **All domestic sales total** | **7,145,004** |"
+  },
+  {
+   "id": "D47",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must_any_of:coal,coal_annual",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['coal_annual']; answer had [2023.0, -24.0, 20542.45, 20217.91, 324.54]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, coal power plants in Pakistan generated 20,542.45 gigawatt-hours of electricity. \n\nThis net generation was supplied across two network systems:\n- CPPA-G: 20,217.91 gigawatt-hours\n- K-Electric: 324.54 gigawatt-hours"
+  },
+  {
+   "id": "D48",
+   "topic": "activity_ranking",
+   "checks": [
+    {
+     "name": "must:karachi",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 6460547.0 +/- 3230, answer had [6500000.0, 6.5, 2023.0, -24.0, 79.0, 6460547.0, 6173421.0, 5420213.0]"
+    },
+    {
+     "name": "must:peshawar",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 1269120.0 +/- 634.6, answer had [6500000.0, 6.5, 2023.0, -24.0, 79.0, 6460547.0, 6173421.0, 5420213.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_all:karachi",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_all:islamabad",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_all:lahore",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_all:multan",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_all:peshawar",
+     "axis": "numeric",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "visual",
+     "axis": "format",
+     "ok": true,
+     "detail": "has ['table']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Karachi's Jinnah International was the busiest airport in the country, handling nearly 6.5 million passengers. Together with Islamabad and Lahore, the three largest airports accounted for 79% of all passenger traffic. \n\nThe top five airports by passengers handled (summing domestic and international flights) were:\n\n| Airport | Passengers |\n|---|---:|\n| Karachi Jinnah | 6,460,547 |\n| Islamabad International | 6,173,421 |\n| Lahore Allama Iqbal | 5,420,213 |\n| Multan | 1,452,176 |\n| Peshawar Bacha Khan | 1,269,120 |\n\n*(These are the five largest of the 37 airports listed in the Civil Aviation Authority's traffic records for the year.)*"
+  },
+  {
+   "id": "D49",
+   "topic": "activity_change",
+   "checks": [
+    {
+     "name": "must:fy24",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 42130.0 +/- 21.07, answer had [42130000.0, 42.13, 42130000.0, 42130.0, 39170000.0, 39.17, 39173000.0, 39173.0]"
+    },
+    {
+     "name": "must:fy25",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 39173.0 +/- 19.59, answer had [42130000.0, 42.13, 42130000.0, 42130.0, 39170000.0, 39.17, 39173000.0, 39173.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['7.0', '7.02'] of ['7.0', '7%', '7 per', '7.02']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan Railways carried 42.13 million passengers (42,130 thousand) nationwide. In 2024-25, the number fell to 39.17 million (39,173 thousand). \n\nThis represents a decrease of 7.02% in passengers carried between the two years."
+  },
+  {
+   "id": "D50",
+   "topic": "activity_compare",
+   "checks": [
+    {
+     "name": "must:wood24",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 14022211.0 +/- 7011, answer had [2800000.0, 2.8, 54.9, 14.9, 7.7, 2018.0, -19.0, 2024.0]"
+    },
+    {
+     "name": "must:lpg24",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 8005421.0 +/- 4003, answer had [2800000.0, 2.8, 54.9, 14.9, 7.7, 2018.0, -19.0, 2024.0]"
+    },
+    {
+     "name": "must:lpg19",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 5168065.0 +/- 2584, answer had [2800000.0, 2.8, 54.9, 14.9, 7.7, 2018.0, -19.0, 2024.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "visual",
+     "axis": "format",
+     "ok": true,
+     "detail": "has ['table']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Based on the design-weighted survey estimates from the HIES national fuel series, the number of households using LPG in Pakistan saw the sharpest rise between the last two surveys, growing by 54.9% (about 2.8 million households). Natural gas and firewood usage also grew over the same period, by 14.9% and 7.7% respectively. \n\nHere is the exact household count for each fuel during the 2018-19 and 2024-25 survey rounds:\n\n| Fuel | Households (HIES 2018-19) | Households (HIES 2024-25) | Change |\n|---|---:|---:|---:|\n| Natural gas | 13,373,912 | 15,367,221 | +14.9% |\n| Firewood | 13,018,387 | 14,022,211 | +7.7% |\n| Liquefied petroleum gas (LPG) | 5,168,065 | 8,005,421 | +54.9% |\n\n*(These figures are national survey-weighted estimates; the full records are available in the <plink to=\"file:fact_activity_household_fuel\">fact_activity_household_fuel</plink> table.)*"
+  },
+  {
+   "id": "D51",
+   "topic": "activity_sums",
+   "checks": [
+    {
+     "name": "must:punjab",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 24194.82 +/- 12.1, answer had [24190000.0, 24.19, 24194820.0, 24194.82, 2023.0, -24.0, 36.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "In 2023-24, Punjab produced 24.19 million tonnes (24,194.82 thousand tonnes) of wheat. This figure is the sum of the crop production recorded across its 36 districts in the district crop series."
+  },
+  {
+   "id": "D52",
+   "topic": "activity_totals",
+   "checks": [
+    {
+     "name": "must:annual",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 6579000.0 +/- 3290, answer had [6580000.0, 6.58, 2023.0, -24.0, 3.4, 2909230.0, 2148211.0, 519728.0]"
+    },
+    {
+     "name": "forbid:13157841",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "13157841.0 absent - the annual row added to the monthly rows it summarises"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['ffc'] of ['ffc']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan recorded 6.58 million tonnes of urea product in national fertiliser offtake (which measures distribution rather than exact field application). \n\nThe vast majority of this was supplied by domestic producers, led by FFC and EFERT, with imports making up only about 3.4% of the total. Adding up the monthly records gives the following breakdown by supplier:\n\n| Producer or origin | Urea offtake (tonnes of fertiliser product) |\n|---|---:|\n| FFC | 2,909,230 |\n| EFERT | 2,148,211 |\n| Fatima Fertilizer Company | 519,728 |\n| DHCL | 416,412 |\n| Agri Tech Limited (PAFL) | 357,901 |\n| Imported | 220,633 |\n| PAK-ARAB | 6,726 |\n| **All sources combined** | **6,578,841** |\n\n*(The annual source total for 2023-24 prints slightly differently as 6,579,000 tonnes, while the exact sum of the monthly reporting is 6,578,841 tonnes.)* \n\nYou can find the underlying records in the <plink to=\"file:fact_activity_fertiliser\">fact_activity_fertiliser</plink> table in the <plink to=\"downloads:activity\">Downloads</plink> section."
+  },
+  {
+   "id": "D53",
+   "topic": "activity_trend",
+   "checks": [
+    {
+     "name": "must:petrol16",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 5759763.0 +/- 2880, answer had [7745864.0, 8484280.0, 9038298.0, 7354409.0, 6626725.0, 7791066.0, 8915873.0, 6363390.0]"
+    },
+    {
+     "name": "must:diesel16",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 7745864.0 +/- 3873, answer had [7745864.0, 8484280.0, 9038298.0, 7354409.0, 6626725.0, 7791066.0, 8915873.0, 6363390.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "chart",
+     "axis": "format",
+     "ok": true,
+     "detail": "a chart"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "pass"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In Pakistan, reported domestic sales of petrol and high-speed diesel have followed different paths since 2015-16. Diesel sales peaked at 9.0 million tonnes in 2017-18 before generally declining over the following years, landing at 6.9 million tonnes in 2024-25. Petrol sales, however, grew steadily from 5.8 million tonnes to a peak of 9.0 million tonnes in 2021-22, and have exceeded diesel sales every year since 2018-19.\n\n<pchart>{&quot;type&quot;:&quot;line&quot;,&quot;title&quot;:&quot;Petrol and diesel domestic sales in Pakistan&quot;,&quot;unit&quot;:&quot;tonnes&quot;,&quot;labels&quot;:[&quot;FY 2015-16&quot;,&quot;FY 2016-17&quot;,&quot;FY 2017-18&quot;,&quot;FY 2018-19&quot;,&quot;FY 2019-20&quot;,&quot;FY 2020-21&quot;,&quot;FY 2021-22&quot;,&quot;FY 2022-23&quot;,&quot;FY 2023-24&quot;,&quot;FY 2024-25&quot;],&quot;series&quot;:[{&quot;name&quot;:&quot;High-speed diesel (HSD)&quot;,&quot;values&quot;:[7745864,8484280,9038298,7354409,6626725,7791066,8915873,6363390,6234221,6858461]},{&quot;name&quot;:&quot;Petrol / motor spirit (MS)&quot;,&quot;values&quot;:[5759763,6646965,7386362,7599364,7454021,8351259,9006833,7477152,7145004,7603246]}]}</pchart>\n\nThe underlying activity records for these figures are in <plink to=\"file:fact_activity_fuel_sales_national\">fact_activity_fuel_sales_national</plink>."
+  }
+ ]
+}

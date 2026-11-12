@@ -1,0 +1,1328 @@
+{
+ "meta": {
+  "release_version": "1.0.0rc59",
+  "agent": {
+   "enabled": true,
+   "model": "gemini-3.1-pro-preview",
+   "provider": "gemini",
+   "reason": null,
+   "library": "02a469aef44acb87"
+  },
+  "run_at": "2026-11-12T16:57:26+00:00",
+  "split": "dev",
+  "label": "nov12-full",
+  "allow_holdout": false
+ },
+ "reference_release": "1.0.0rc59",
+ "reference_manifest": "7e7fed3f559f0c13",
+ "summary": {
+  "n_cases": 27,
+  "all_axes_pass": 22,
+  "all_axes_pass_rate": 0.815,
+  "axes": {
+   "numeric": {
+    "n": 18,
+    "pass": 17,
+    "rate": 0.944
+   },
+   "boundary": {
+    "n": 21,
+    "pass": 19,
+    "rate": 0.905
+   },
+   "source": {
+    "n": 24,
+    "pass": 24,
+    "rate": 1.0
+   },
+   "uncertainty": {
+    "n": 4,
+    "pass": 3,
+    "rate": 0.75
+   },
+   "refusal": {
+    "n": 4,
+    "pass": 2,
+    "rate": 0.5
+   },
+   "format": {
+    "n": 0,
+    "pass": 0,
+    "rate": null
+   }
+  },
+  "by_path": {
+   "loop": 25,
+   "prompt_only": 2
+  },
+  "no_answer": [
+   "D17",
+   "D21",
+   "D22"
+  ],
+  "turn_limit": [
+   "D17",
+   "D21",
+   "D22"
+  ]
+ },
+ "cases": [
+  {
+   "id": "D01",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 469.63822389 +/- 0.2348, answer had [2023.0, -24.0, 469.64]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'configuration_id': 'REF_2023_24', 'gwp_basis': 'AR5', 'geography_level': 'national', 'periods': ['FY2023-24']}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan's total greenhouse-gas emissions were <cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">469.64</cite> <cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">Mt CO\u2082e</cite> (excluding land use and forestry)."
+  },
+  {
+   "id": "D02",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:agriculture",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 223.45447146 +/- 0.1117, answer had [2023.0, -24.0, 223.45, 2.0, 2.0, 5.0, 223.45, 63.37]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'configuration_id': 'REF_2023_24', 'gwp_basis': 'AR5', 'geography_level': 'national'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['agricultur'] of ['agricultur']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan's largest emitting sector was agriculture, which emitted 223.45 Mt CO2e (nearly half of the national total). \n\nHere is the full breakdown of national emissions by sector for the year:\n\n| Sector | Emissions (Mt CO2e AR5) |\n|---|---:|\n| Agriculture | 223.45 |\n| Power | 63.37 |\n| Transport | 41.93 |\n| Waste | 37.91 |\n| Residential | 29.47 |\n| IPPU | 25.54 |\n| Fugitives | 24.69 |\n| Industry | 22.58 |\n| Railways | 0.39 |\n| Aviation | 0.30 |"
+  },
+  {
+   "id": "D03",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:punjab",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 238.097183876792 +/- 0.119, answer had [2023.0, -24.0, 238.1, 238.0972, 137.8333, 59.7938, 31.787, 2.1269]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'adm1', 'configuration_id': 'REF_2023_24'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=8 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['punjab'] of ['punjab']"
+    },
+    {
+     "name": "phrase_forbid:measured in punjab",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:punjab measures",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Punjab had the highest emissions at <cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">238.10</cite> <cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">Mt CO\u2082e</cite>, making up <cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">nearly half</cite> of Pakistan's estimated total. \n\n| Province | Emissions |\n|---|---:|\n| Punjab | <cite k=\"1\" cell=\"0\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">238.0972</cite> |\n| Sindh | <cite k=\"1\" cell=\"1\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">137.8333</cite> |\n| Khyber Pakhtunkhwa | <cite k=\"1\" cell=\"2\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">59.7938</cite> |\n| Balochistan | <cite k=\"1\" cell=\"3\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">31.7870</cite> |\n| Other | <cite k=\"1\" cell=\"4\" receipt=\"a68f51eb868478e07839b6e37cc4add4\">2.1269</cite> |"
+  },
+  {
+   "id": "D04",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:first",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 401.08963258 +/- 0.2005, answer had [401090000.0, 401.09, 2015.0, -16.0, 2023.0, -24.0, 17.1, 2015.0]"
+    },
+    {
+     "name": "must:last",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 469.63822389 +/- 0.2348, answer had [401090000.0, 401.09, 2015.0, -16.0, 2023.0, -24.0, 17.1, 2015.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national', 'configuration_id': 'REF_2023_24'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Between 2015-16 and 2023-24, Pakistan's national greenhouse-gas emissions increased by 17.1%.\n\nIn 2015-16, the national total stood at 401.09 million tonnes of CO2 equivalent (Mt CO2e). By 2023-24, under the reference estimate, emissions had grown to 469.64 Mt CO2e, representing an absolute increase of 68.55 Mt CO2e over the nine-year period. These figures use the IPCC 2013 (AR5) warming potentials."
+  },
+  {
+   "id": "D05",
+   "topic": "native_vs_co2e",
+   "checks": [
+    {
+     "name": "must:ch4",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 248.79023268 +/- 0.1244, answer had [2023.0, -24.0, 4.0, 53.0, 469.64, 2.0, 248.79, 2.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'gwp_basis': 'AR5', 'geography_level': 'national'}"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'Mt CO2e AR5', tool cells carried ['Mt CO2e AR5']"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, methane (CH4) accounted for 53% of Pakistan's total estimated emissions. Out of the national total of 469.64 Mt CO2e, methane contributed 248.79 Mt CO2e. \n\nHere is the breakdown of the total by gas:\n\n| Gas | Emissions (Mt CO2e AR5) |\n|---|---:|\n| Methane (CH4) | 248.79 |\n| Carbon dioxide (CO2) | 178.65 |\n| Nitrous oxide (N2O) | 42.20 |"
+  },
+  {
+   "id": "D06",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "must:energy",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 158.03998117 +/- 0.07902, answer had [2023.0, -24.0, 1.0, 158.04]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national', 'configuration_id': 'REF_2023_24'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, fuel combustion activities (IPCC category 1.A) in Pakistan emitted <cite k=\"1\" cell=\"0\" receipt=\"0903238875e970398c054dc1bd57e97d\">158.04</cite> <cite k=\"1\" cell=\"0\" receipt=\"0903238875e970398c054dc1bd57e97d\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D07",
+   "topic": "timing",
+   "checks": [
+    {
+     "name": "must:jul",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 42.886929239024 +/- 0.02144, answer had [2023.0, 42.89, 2.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In July 2023, Pakistan's national greenhouse gas emissions were 42.89 Mt CO2e."
+  },
+  {
+   "id": "D08",
+   "topic": "ordinary",
+   "checks": [
+    {
+     "name": "must:lahore",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 11.472441865664 +/- 0.011, answer had [11470000.0, 11.47, 2023.0, -24.0, 2.0, 5.0, 2.0, 3.05]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'adm2'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=0 tool_results=1 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_forbid:measured in lahore",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 4,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "In 2023-24, Lahore district's estimated emissions were 11.47 million tonnes of CO2 equivalent (AR5). Like all district figures in this release, this is not directly measured locally, but is Lahore's modeled share of national and provincial totals, allocated downward using geographic proxies like livestock distributions, road density, and built-up area.\n\n| Sector | Emissions (Mt CO2e) |\n|---|---:|\n| Agriculture | 3.05 |\n| Residential | 2.32 |\n| Waste | 2.23 |\n| Transport | 1.48 |\n| Fugitives | 0.86 |\n| Industry | 0.64 |\n| Power | 0.60 |\n| IPPU | 0.25 |\n| Railways | 0.01 |\n| Aviation | 0.01 |\n| **All sectors** | 11.47 |"
+  },
+  {
+   "id": "D09",
+   "topic": "fiscal_vs_calendar",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=0 tool_results=2 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "refusal events: []"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "want NotEstimated, got []"
+    },
+    {
+     "name": "forbid_any_number",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "answer carried [446.73, 2.0, 5.0, 479.51, 2.0, 193.35, 2.0]; no refusal event"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "fail",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The dataset does not estimate total emissions across all sectors for calendar years; national totals are calculated only for Pakistan's fiscal years (July to June). \n\nIn 2019-20, Pakistan's total emissions were 446.73 Mt CO2e (using IPCC 2013 AR5 global warming potentials). In the following fiscal year, 2020-21, the national total was 479.51 Mt CO2e. \n\nThe one exception is the agriculture sector, which is also calculated on a calendar-year basis. In 2020, Pakistan's agricultural emissions alone were 193.35 Mt CO2e."
+  },
+  {
+   "id": "D10",
+   "topic": "fiscal_vs_calendar",
+   "checks": [
+    {
+     "name": "phrase_all:july",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['june'] of ['june', '30 june']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "n/a",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "prompt_only",
+   "n_tool_calls": 0,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The 2023-24 fiscal year starts on July 1, 2023, and ends on June 30, 2024."
+  },
+  {
+   "id": "D11",
+   "topic": "release_vs_version",
+   "checks": [
+    {
+     "name": "phrase_forbid:1.0.0rc",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:v1.0.0",
+     "axis": "boundary",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "n/a",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "prompt_only",
+   "n_tool_calls": 0,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The exact version string and commit of the release you are looking at are shown directly in the explorer's interface (I don't read them out since they are already printed on your screen). \n\nIn PakEmis, the data version and the API version are one and the same. The project is built and distributed as a single package\u2014meaning the underlying activity records, the calculation methods, the final emission estimates, and the query tools (the API) used to fetch them are all versioned, tied together, and published as one unified release. Every number shown here carries a traceable receipt linked directly to the specific code and data of this release."
+  },
+  {
+   "id": "D12",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "must:ar6",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 462.73284967 +/- 0.2314, answer had [2023.0, -24.0, 462.73, 2021.0, 6.0]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'gwp_basis': 'AR6', 'geography_level': 'national'}"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'Mt CO2e AR6', tool cells carried ['Mt CO2e AR6']"
+    },
+    {
+     "name": "forbid:ar5",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "469.63822389 absent - reporting the AR5 total for an AR6 question is the vintage error"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan's national total emissions were <cite k=\"1\" cell=\"0\" receipt=\"da8448b97c8e7a428659adbfad324b7d\">462.73</cite> <cite k=\"1\" cell=\"0\" receipt=\"da8448b97c8e7a428659adbfad324b7d\">Mt CO\u2082e</cite> using the IPCC 2021 (AR6) warming potentials."
+  },
+  {
+   "id": "D13",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=0 tool_results=2 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "refusal events: ['NotEstimated']"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "want NotEstimated, got ['NotEstimated']"
+    },
+    {
+     "name": "forbid_any_number",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "answer carried [11470000.0, 11.47, 6.0, 5.0, 2.0, 2.0, 6.0, 234.39]; refusal surfaced"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "pass",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 4,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "This release does not calculate emissions using IPCC 2021 (AR6) warming potentials at the district level. \n\nHowever, using the standard IPCC 2013 (AR5) warming potentials, Lahore's total emissions in 2023-24 were 11.47 million tonnes of CO2 equivalent (Mt CO2e). \n\nIf you need AR6 figures, they are available at the provincial and national levels. For comparison, Punjab's total emissions in 2023-24 were 234.39 Mt CO2e on an AR6 basis."
+  },
+  {
+   "id": "D14",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "must:ar5",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 469.63822389 +/- 0.2348, answer had [6910000.0, 6.91, 469640000.0, 469.64, 462730000.0, 462.73, 2023.0, -24.0]"
+    },
+    {
+     "name": "must:ar6",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 462.73284967 +/- 0.2314, answer had [6910000.0, 6.91, 469640000.0, 469.64, 462730000.0, 462.73, 2023.0, -24.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=0 tool_results=2 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['6.9'] of ['6.9']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 4,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, switching from the IPCC 2013 (AR5) global warming potentials to IPCC 2021 (AR6) decreases Pakistan's total national emissions by 6.91 million tonnes, a drop of 1.47%.\n\nUnder AR5, the national total was 469.64 million tonnes of CO2e. Under the newer AR6 basis, this figure falls to 462.73 million tonnes."
+  },
+  {
+   "id": "D15",
+   "topic": "gwp_vintage",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matched ['ar5'] of ['ar5', '2013']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "The reported emissions total uses the global warming potentials from the IPCC Fifth Assessment Report (AR5). For example, Pakistan's national methane emissions in 2023-24 were <cite k=\"1\" cell=\"0\" receipt=\"d9fee31454f6dcd0524936f126c18fc2\">248.79</cite> <cite k=\"1\" cell=\"0\" receipt=\"d9fee31454f6dcd0524936f126c18fc2\">Mt CO\u2082e</cite>.\n\nThe dataset also carries the IPCC Sixth Assessment Report (AR6) values as a secondary option, which you can ask for instead, though AR6 is only available for national and provincial totals, not for district-level breakdowns."
+  },
+  {
+   "id": "D16",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "must_any_of:module,reporting",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['module']; answer had [2023.0, -24.0, 63.37]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'geography_level': 'national'}"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": false,
+     "detail": "matched [] of ['captive', 'module', 'reported as', 'boundary']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "fail",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 1,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan's power sector emitted <cite k=\"1\" cell=\"0\" receipt=\"59e464e6c53a8220910eb2baaf283617\">63.37</cite> <cite k=\"1\" cell=\"0\" receipt=\"59e464e6c53a8220910eb2baaf283617\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D17",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=0 citations=0 tool_results=7 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: ['turn_limit']"
+    },
+    {
+     "name": "phrase_all:industry",
+     "axis": "boundary",
+     "ok": false,
+     "detail": ""
+    },
+    {
+     "name": "phrase_any",
+     "axis": "boundary",
+     "ok": false,
+     "detail": "matched [] of ['1.a.2', 'captive', 'self-generation']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "fail",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 8,
+   "n_refusals": 1,
+   "errors": [
+    "turn_limit"
+   ],
+   "answer_text": ""
+  },
+  {
+   "id": "D18",
+   "topic": "row_kind",
+   "checks": [
+    {
+     "name": "must:total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 469.63822389 +/- 0.2348, answer had [2023.0, -24.0, 469.64, 223.45, 63.37, 41.93, 37.91, 29.47]"
+    },
+    {
+     "name": "forbid:939.276448",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "939.276448 absent - double counting the partition and the total"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=14 tool_results=2 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Yes. In 2023-24, the sum of the ten estimated sectors exactly matches the national total of <cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">469.64</cite> <cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">Mt CO\u2082e</cite>. \n\n| Sector | Emissions (<cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">Mt CO\u2082e</cite>) |\n|---|---:|\n| Agriculture | <cite k=\"2\" cell=\"0\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">223.45</cite> |\n| Power | <cite k=\"2\" cell=\"5\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">63.37</cite> |\n| Transport | <cite k=\"2\" cell=\"8\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">41.93</cite> |\n| Waste | <cite k=\"2\" cell=\"9\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">37.91</cite> |\n| Residential | <cite k=\"2\" cell=\"7\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">29.47</cite> |\n| IPPU | <cite k=\"2\" cell=\"4\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">25.54</cite> |\n| Fugitives | <cite k=\"2\" cell=\"2\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">24.69</cite> |\n| Industry | <cite k=\"2\" cell=\"3\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">22.58</cite> |\n| Railways | <cite k=\"2\" cell=\"6\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">0.39</cite> |\n| Aviation | <cite k=\"2\" cell=\"1\" receipt=\"65d28c1cbaf7255082b1dca9bd491333\">0.30</cite> |\n| **National Total** | **<cite k=\"1\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">469.64</cite>** |"
+  },
+  {
+   "id": "D19",
+   "topic": "module_vs_category",
+   "checks": [
+    {
+     "name": "must:reporting",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 28.13113307 +/- 0.01407, answer had [28130000.0, 28.13, 2.0, 2023.0, -24.0, 22.58, 5.55, 25.54]"
+    },
+    {
+     "name": "forbid:module",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "22.5816456 present - the module total answers a different question than the reporting sector"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=6 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Under IPCC reporting rules, Pakistan's industry fuel combustion emitted 28.13 million tonnes of CO2e in 2023-24.\n\nThe IPCC reporting view regroups emissions by where they are burned rather than by economic purpose. This figure combines:\n* The general industry sector's fuel combustion (<cite k=\"1\" cell=\"3\" receipt=\"b7b2d2c251888bc971c269d58e16a82b\">22.58</cite> <cite k=\"1\" cell=\"3\" receipt=\"b7b2d2c251888bc971c269d58e16a82b\">Mt CO\u2082e</cite>).\n* Captive power generation by industrial plants (<cite k=\"1\" cell=\"5\" receipt=\"b7b2d2c251888bc971c269d58e16a82b\">5.55</cite> <cite k=\"1\" cell=\"5\" receipt=\"b7b2d2c251888bc971c269d58e16a82b\">Mt CO\u2082e</cite>), which this inventory models as part of the power sector but the IPCC assigns to industry.\n\nNote that Industrial Processes and Product Use (IPPU) \u2014 which covers non-combustion chemical releases like cement calcination \u2014 is reported as a separate IPCC sector. It added a further <cite k=\"1\" cell=\"4\" receipt=\"b7b2d2c251888bc971c269d58e16a82b\">25.54</cite> <cite k=\"1\" cell=\"4\" receipt=\"b7b2d2c251888bc971c269d58e16a82b\">Mt CO\u2082e</cite> in 2023-24."
+  },
+  {
+   "id": "D20",
+   "topic": "gas_transfer",
+   "checks": [
+    {
+     "name": "must_any_of:control,residential",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "matched ['control', 'residential']; answer had [35505300000.0, 35505.3, 8485600000.0, 8485.6, 10700000.0, 10.7, 10957100000.0, 10957.1]"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'million m3', tool cells carried ['Pakistani rupees', 'count', 'households', 'million cubic feet per day', 'million m3', 'million m3 (feedstock)', 'million m3 delivered gas']"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=5 citations=0 tool_results=5 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 7,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": " Write your answer in full, as its own message.In 2023-24, 35,505.3 million cubic meters of natural gas was delivered to consumers across Pakistan. Of this total, 8,485.6 million cubic meters went to residential households, which is 24% of all the gas delivered.\n\nThe country's gas network serves these households through 10.7 million domestic customer connections. Households are the second-largest destination for natural gas; the largest is grid power generation (10,957.1 million cubic meters), with fertilizer feedstock (7,813.8 million cubic meters) making up the third largest share."
+  },
+  {
+   "id": "D21",
+   "topic": "gas_transfer",
+   "checks": [
+    {
+     "name": "must:feedstock",
+     "axis": "numeric",
+     "ok": false,
+     "detail": "want 7813.8 +/- 3.907, answer had []"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=0 citations=0 tool_results=7 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: ['turn_limit']"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": false,
+     "detail": "matched [] of ['unresolved', 'feedstock', 'not applied', 'no pathway']"
+    },
+    {
+     "name": "phrase_forbid:is zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:counted as zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "fail",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "fail",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 8,
+   "n_refusals": 1,
+   "errors": [
+    "turn_limit"
+   ],
+   "answer_text": ""
+  },
+  {
+   "id": "D22",
+   "topic": "structural_alternative",
+   "checks": [
+    {
+     "name": "forbid:469.92589",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "469.92589 absent - a structural alternative's priced total is not a queryable result"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=0 citations=0 tool_results=3 refusals=4"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: ['turn_limit']"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "refusal events: ['GrainUnavailable', 'GrainUnavailable', 'ToolInputError', 'ToolInputError']"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": false,
+     "detail": "want UnknownDimensionValue, got ['GrainUnavailable', 'GrainUnavailable', 'ToolInputError', 'ToolInputError']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "fail",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 8,
+   "n_refusals": 4,
+   "errors": [
+    "turn_limit"
+   ],
+   "answer_text": ""
+  },
+  {
+   "id": "D23",
+   "topic": "dung_configuration",
+   "checks": [
+    {
+     "name": "must:s_total",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 464.50542601 +/- 0.2323, answer had [2023.0, -24.0, 464.51]"
+    },
+    {
+     "name": "scope",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "matches {'configuration_id': 'S_2023_24', 'geography_level': 'national'}"
+    },
+    {
+     "name": "forbid:ref_total",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "469.63822389 absent - the reference total answers the wrong configuration"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=1 citations=2 tool_results=1 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 2,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "In 2023-24, Pakistan's total greenhouse-gas emissions under the survey-based household configuration were <cite k=\"1\" cell=\"0\" receipt=\"c7dd5d0f54de282a36be821822881ec6\">464.51</cite> <cite k=\"1\" cell=\"0\" receipt=\"c7dd5d0f54de282a36be821822881ec6\">Mt CO\u2082e</cite>."
+  },
+  {
+   "id": "D24",
+   "topic": "dung_configuration",
+   "checks": [
+    {
+     "name": "must:unresolved",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "want 46.7741 +/- 0.02339, answer had [58740000.0, 58.74, 58740000.0, 58.74, 11970000.0, 11.97, 46770000.0, 46.77]"
+    },
+    {
+     "name": "unit_expect",
+     "axis": "boundary",
+     "ok": true,
+     "detail": "want 'Mt air-dry dung cake', tool cells carried ['Mt CO2e AR5', 'Mt N', 'Mt air-dry dung cake', 'evidence', 'notation_key']"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=7 citations=0 tool_results=7 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['unresolved', 'no destination'] of ['unresolved', 'no destination', 'no pathway', 'not resolved']"
+    },
+    {
+     "name": "phrase_forbid:is zero",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:co2e",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "pass",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 7,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "Under the survey configuration (`S_2023_24`), the dung that is no longer burned by households is simply left without a fate in the inventory model. \n\nThe cross-sector transfer ledger for dung tracks exactly 58.74 million tonnes of air-dry dung cake available from agriculture in 2023-24. Under the reference estimate, all 58.74 million tonnes are transferred to the residential sector. Under the survey configuration, only 11.97 million tonnes are transferred to households, and the remaining 46.77 million tonnes are logged in the ledger as \"unresolved\" with no destination. \n\nBecause the survey configuration is built to recalculate the residential sector alone, it does not re-allocate that excess dung back into agriculture (such as adding it to manure management or agricultural soils). The unburned portion is simply unaccounted for in this configuration."
+  },
+  {
+   "id": "D25",
+   "topic": "dung_configuration",
+   "checks": [
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=2 citations=6 tool_results=2 refusals=1"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "refusal_surfaced",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "refusal events: ['GrainUnavailable']"
+    },
+    {
+     "name": "refusal_class",
+     "axis": "refusal",
+     "ok": true,
+     "detail": "want GrainUnavailable, got ['GrainUnavailable']"
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "n/a",
+    "refusal": "pass",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 4,
+   "n_refusals": 1,
+   "errors": [],
+   "answer_text": "The release cannot show the survey-based estimate across all nine years because that configuration exists for 2023-24 only. In 2023-24, Pakistan's total emissions under the survey-based estimate were <cite k=\"2\" cell=\"0\" receipt=\"c7dd5d0f54de282a36be821822881ec6\">464.51</cite> <cite k=\"2\" cell=\"0\" receipt=\"c7dd5d0f54de282a36be821822881ec6\">Mt CO\u2082e</cite>.\n\nIf you would like to see how emissions have changed over time, a nine-year trend is available for the reference estimate. Under the reference estimate, national emissions grew from <cite k=\"3\" cell=\"0\" receipt=\"d7f8b0ab6ff56edd7dfd28376793abc1\">401.09</cite> <cite k=\"3\" cell=\"0\" receipt=\"d7f8b0ab6ff56edd7dfd28376793abc1\">Mt CO\u2082e</cite> in 2015-16 to <cite k=\"3\" cell=\"8\" receipt=\"d7f8b0ab6ff56edd7dfd28376793abc1\">469.64</cite> <cite k=\"3\" cell=\"8\" receipt=\"d7f8b0ab6ff56edd7dfd28376793abc1\">Mt CO\u2082e</cite> in 2023-24:\n\n<pchart>{&quot;type&quot;:&quot;line&quot;,&quot;title&quot;:&quot;National emissions (reference estimate)&quot;,&quot;unit&quot;:&quot;Mt CO2e AR5&quot;,&quot;labels&quot;:[&quot;2015-16&quot;,&quot;2016-17&quot;,&quot;2017-18&quot;,&quot;2018-19&quot;,&quot;2019-20&quot;,&quot;2020-21&quot;,&quot;2021-22&quot;,&quot;2022-23&quot;,&quot;2023-24&quot;],&quot;series&quot;:[{&quot;name&quot;:&quot;Emissions&quot;,&quot;values&quot;:[401.09,427.07,450.74,446.85,446.73,479.51,497.77,456.62,469.64]}]}</pchart>\n\n"
+  },
+  {
+   "id": "D26",
+   "topic": "uncertainty",
+   "checks": [
+    {
+     "name": "require_two_numbers",
+     "axis": "numeric",
+     "ok": true,
+     "detail": "distinct numbers: [-24.0, 469.63822, 474.198, 474.202, 2023.0]"
+    },
+    {
+     "name": "supported",
+     "axis": "source",
+     "ok": true,
+     "detail": "receipts=6 citations=3 tool_results=6 refusals=0"
+    },
+    {
+     "name": "no_bare_numbers",
+     "axis": "source",
+     "ok": true,
+     "detail": "errors: []"
+    },
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['percent', 'interval'] of ['per cent', 'percent', '%', 'interval', 'range']"
+    }
+   ],
+   "axes": {
+    "numeric": "pass",
+    "boundary": "n/a",
+    "source": "pass",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 6,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": " \n\n(Your thought process is cut short so you can answer within the time limit. Do not apologize, do not explain the interruption. Continue your answer normally.)The reference estimate for Pakistan's national total in 2023-24 is <cite k=\"2\" cell=\"0\" receipt=\"51f8dcb6e255c6b499d0134dc6e0359d\">469.63822</cite> (excluding land use and forestry). \n\nWhen evaluating the uncertainty of this total, the release's parametric reference models estimate it at <cite k=\"1\" cell=\"0\" receipt=\"a2511c4533094fe5bd0ff63a3e2668de\">474.198</cite> when factors are shared across modules, and <cite k=\"1\" cell=\"1\" receipt=\"a2511c4533094fe5bd0ff63a3e2668de\">474.202</cite> when factors are shared only within a module. The dataset does not currently return a direct confidence interval (upper and lower bounds) or a percentage variance for this total."
+  },
+  {
+   "id": "D27",
+   "topic": "uncertainty",
+   "checks": [
+    {
+     "name": "phrase_any",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": "matched ['not', 'cannot', 'different', 'separate'] of ['not', 'cannot', 'different', 'separate']"
+    },
+    {
+     "name": "phrase_forbid:worst case is",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:add them",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "name": "phrase_forbid:combined total",
+     "axis": "uncertainty",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "axes": {
+    "numeric": "n/a",
+    "boundary": "n/a",
+    "source": "n/a",
+    "uncertainty": "pass",
+    "refusal": "n/a",
+    "format": "n/a"
+   },
+   "path": "loop",
+   "n_tool_calls": 3,
+   "n_refusals": 0,
+   "errors": [],
+   "answer_text": "No, that would not be statistically valid, and this dataset does not carry a \"fugitive structural alternative\". \n\nYou cannot simply add the impact of an alternative method to the top of an uncertainty range. An uncertainty range represents a 95% confidence interval for one specific calculation method, based on the statistical uncertainty of its inputs (parametric uncertainty). A different methodological choice (structural uncertainty) would produce its own point estimate and its own entirely separate probability distribution. Adding an alternative scenario to the upper bound of a reference estimate mixes these two concepts and does not represent a valid or measurable \"worst case.\" \n\nAdditionally, the only alternative configuration included in this release is the survey-based estimate for household demand (`S_2023_24`), which exists for the 2023-24 year. There are no structural alternatives provided for the fugitives sector.\n\nFor context, the national reference estimate in 2023-24 is 469.64 million tonnes CO2e. If you would like, I can fetch the uncertainty interval for a specific category, or compare the national reference estimate against the household survey alternative."
+  }
+ ]
+}

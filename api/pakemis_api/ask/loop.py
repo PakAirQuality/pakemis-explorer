@@ -21,8 +21,11 @@ from pydantic import ValidationError
 from pakemis_api import models_gen as G
 from pakemis_api.ask import prompt as PROMPT
 from pakemis_api.ask.limits import Limits, cost_estimate_usd, usage_total
-from pakemis_api.ask.render import BareNumberError, UnknownPlaceholderError, render_multi
-from pakemis_api.ask.tools import DOWNLOAD_TOOL, FUNCTION_MODEL, MAP_TOOL, ToolInputError, validate_map_view
+from pakemis_api.ask.arith import ArithError, add_up, calculate
+from pakemis_api.ask.records import activity_view
+from pakemis_api.ask.render import CHART_OPEN, BareNumberError, UnknownPlaceholderError, render_multi
+from pakemis_api.ask.tools import (ADD_UP_TOOL, CALC_TOOL, CATALOG_TOOL, DOWNLOAD_TOOL, FUNCTION_MODEL, MAP_TOOL,
+                                   ToolInputError, activity_files, validate_map_view)
 from pakemis_api.ask.watch import CallTiming, OutOfTime, Silent, watched
 from pakemis_api.settings import API_PREFIX
 from pakemis_query import errors as E
@@ -40,7 +43,9 @@ ANSWER_AFTER_REFUSALS = ("%d calls to %s have now been refused for this question
                          "tool again: answer now from the results you have, and say what the release "
                          "holds and where, as the refusals state it.")
 ANSWER_BEFORE_DEADLINE = ("Time for this question is nearly up. Do not call a tool again: answer now "
-                          "from the results already obtained, and say plainly what is not covered.")
+                          "from the results already obtained, and say plainly what is not covered. "
+                          "Your next words go to the reader exactly as written: begin with the answer "
+                          "itself, never with a note about these instructions.")
 
 # A RETRY NEEDS ROOM, AND A BUSY SERVICE A MOMENT. No retry starts with less than this much of the
 # turn left (it could not finish), and a retry after a server error waits this long first.
@@ -347,6 +352,17 @@ def tool_result_payload(k, call_id, name, env, cap):
     return payload
 
 
+def model_payload(result, env, limits):
+    """What the model is handed for a tool result: the payload as built, or for an activity result
+    the same header with the rows as a table instead of cells (ask/records.py)."""
+    if env.get("request_type") != "query_activity":
+        return result
+    out = {key: result[key] for key in ("k", "id", "name", "receipt", "request_type", "context", "source_tables",
+                                        "limitations_hit") if key in result}
+    out.update(activity_view(env, limits.activity_view_chars))
+    return out
+
+
 def served_tables(service):
     """The table names the release serves as CSV files (products.ProductCatalog.files), or none
     for a service without a catalogue - a test double - so no file link is recognised there."""
@@ -409,15 +425,20 @@ class Turn:
     # -- streaming ---------------------------------------------------------------------------
 
     def _render_line(self, line):
-        """One completed line of the answer, rendered for the reader, or None when it fails a
-        check - a typed number, a cell that does not exist, an unknown placeholder - and must not
-        be sent. The whole answer is checked again when the model finishes."""
+        """One completed line of the answer (or one whole chart block), rendered for the reader, or
+        None when it fails a check - a typed number while the gate is on, a cell that does not exist,
+        an unknown placeholder, a chart that does not check - and must not be sent. The whole answer
+        is checked again when the model finishes."""
         try:
-            rendered, _ = render_multi(line, self.results, allowlist=(self.dims.version, self.dims.release_id),
-                                       tables=self.link_tables)
+            rendered, _ = self._render(line)
         except PlaceholderError:
             return None
         return rendered
+
+    def _render(self, text, drop_unknown=False):
+        return render_multi(text, self.results, allowlist=(self.dims.version, self.dims.release_id),
+                            drop_unknown=drop_unknown, tables=self.link_tables,
+                            check_numbers=not self.limits.typed_numbers)
 
     # -- repeated calls ---------------------------------------------------------------------
 
@@ -479,6 +500,21 @@ class Turn:
                 return "error: %s" % exc, True, [("refusal", refusal_payload(k, call.id, name, exc, self.service))]
             self.results.append(None)
             return json.dumps({"map_action": action}), False, [("map_action", action)]
+        if name == CATALOG_TOOL:
+            # NO EVENT BUT THE CALL ITSELF. A tool_result would make this the answer's principal
+            # result in the web app - a "data" answer with no cells, no scope and no receipt. What the
+            # reader sees of it is the files the answer lists, drawn from the page's catalogue.
+            self.results.append(None)
+            return json.dumps(self._activity_files(), sort_keys=True), False, []
+        if name in (ADD_UP_TOOL, CALC_TOOL):
+            # ARITHMETIC, DONE HERE (ask/arith.py). No envelope and no event but the call: like the
+            # file list, it is not a result the web app could show as the answer's data.
+            self.results.append(None)
+            try:
+                out = self._arith(name, payload if isinstance(payload, dict) else {})
+            except (ArithError, ToolInputError) as exc:
+                return "error: %s" % exc, True, [("refusal", refusal_payload(k, call.id, name, ToolInputError(str(exc)), self.service))]
+            return json.dumps(out, sort_keys=True), False, []
         if name not in FUNCTION_MODEL:
             self.results.append(None)
             return "error: unknown tool %r" % name, True, [("refusal", refusal_payload(k, call.id, name, ToolInputError("unknown tool %r" % name)))]
@@ -502,7 +538,36 @@ class Turn:
         self.conv.receipts.add(env["receipt"])
         result = tool_result_payload(k, call.id, name, env, self.limits.max_cells_for_model)
         self.scope = dict(result["context"], k=k, request_type=env.get("request_type"), receipt=env.get("receipt"), name=name, **_metric_of(env))
-        return json.dumps(result, sort_keys=True), False, [("tool_result", event_payload(result, env, self.limits.max_cells_for_model, getattr(self.service, "claims", None)))]
+        # the reader's event keeps the cells (the answer card reads their attributes); the model reads
+        # an activity result as a table (ask/records.py)
+        body = model_payload(result, env, self.limits)
+        return json.dumps(body, sort_keys=True), False, [("tool_result", event_payload(result, env, self.limits.max_cells_for_model, getattr(self.service, "claims", None)))]
+
+    def _arith(self, name, payload):
+        if name == CALC_TOOL:
+            return calculate(payload.get("expressions") or [])
+        k = payload.get("result")
+        if isinstance(k, float) and k == int(k):
+            k = int(k)
+        if not isinstance(k, int) or k < 1 or k > len(self.results):
+            raise ArithError("`result` is the number of an earlier tool call of this message that returned data "
+                             "(1 to %d)" % len(self.results))
+        env = self.results[k - 1]
+        if env is None:
+            raise ArithError("tool call %d returned no rows to add up; name a query_activity (or other data) call" % k)
+        return dict(add_up(env, payload.get("group_by") or [], payload.get("where") or []), result=k)
+
+    def _activity_files(self):
+        files = activity_files(self.dims, self.link_tables)
+        if not files:
+            return {"files": [], "note": "this release serves no activity files; say so and link {{link:downloads}}"}
+        return {"files": files,
+                "write": "One bullet line per file you list, the placeholder alone on it: - {{download:<table>}}. "
+                         "It prints the file's title as a link to its entry, its description and its coverage, "
+                         "as the Downloads page words them, so write none of those yourself. A question about "
+                         "activity data in general lists every file; a question about one subject lists only "
+                         "the activity records about it. Either way list the two guides to the other files as "
+                         "well. Keep exactly this order - the page's - guides included where they fall."}
 
     def _download(self, k, call, body):
         self.results.append(None)
@@ -623,7 +688,9 @@ class Turn:
                 # what happens (a correction takes the draft back first). Text before a tool call was
                 # never the answer, so a tool call takes back what streamed and stops this call's
                 # streaming.
-                pending_line, streamed, holding = "", False, False
+                # A CHART STREAMS WHOLE: its lines are held from ```chart to the closing ``` and the
+                # block is checked and sent as one piece (`fence`), never as JSON a line at a time.
+                pending_line, streamed, holding, fence = "", False, False, None
                 try:
                     stream = self.model.stream(self.system, messages, tools, **stream_kwargs)
                     # a little past the cap, so a provider honouring its own deadline reports it first
@@ -637,6 +704,14 @@ class Turn:
                             pending_line += ev.text
                             while "\n" in pending_line:
                                 line, pending_line = pending_line.split("\n", 1)
+                                if fence is None and CHART_OPEN.match(line.strip()):
+                                    fence = [line]
+                                    continue
+                                if fence is not None:
+                                    fence.append(line)
+                                    if line.strip() != "```":
+                                        continue
+                                    line, fence = "\n".join(fence), None
                                 piece = self._render_line(line)
                                 if piece is None:
                                     holding = True
@@ -736,8 +811,7 @@ class Turn:
                 break
             # a final text: render or correct once
             try:
-                rendered, citations = render_multi(text, self.results, allowlist=(self.dims.version, self.dims.release_id),
-                                                   tables=self.link_tables)
+                rendered, citations = self._render(text)
             except PlaceholderError as exc:
                 code = "bare_numbers" if isinstance(exc, BareNumberError) else "placeholder_error"
                 self.rejected_drafts.append(text)
@@ -757,11 +831,9 @@ class Turn:
                     # on a reader's screen is unacceptable, but so is withholding a correct answer
                     # over one unwritable aside - every figure in it is real and cited. A
                     # BareNumberError never reaches here: an invented decimal is a correctness
-                    # failure and stays withheld.
-                    log.warning("answer shipped with an unknown placeholder dropped: %s", exc)
-                    rendered, citations = render_multi(text, self.results,
-                                                       allowlist=(self.dims.version, self.dims.release_id),
-                                                       drop_unknown=True, tables=self.link_tables)
+                    # failure and stays withheld. A chart that fails twice is struck the same way.
+                    log.warning("answer shipped with an unknown placeholder or chart dropped: %s", exc)
+                    rendered, citations = self._render(text, drop_unknown=True)
                 else:
                     yield "error", {"code": code, "message": str(exc)}
                     break

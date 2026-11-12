@@ -3,15 +3,19 @@
  * The answer text rendered (the AnswerCard's first part). `<cite k cell receipt>display</cite>`
  * tags become underlined number spans; hovering one highlights its tool card and cell, clicking
  * scrolls to it. `<plink to>label</plink>` tags - links the server checked - become links to this
- * site's own pages, through `CiteHandlers.link`. The text between tags is the model's prose:
+ * site's own pages, through `CiteHandlers.link`; `<pdownload to="file:<table>">` - one Downloads entry,
+ * whole - becomes the entry's title (linked), description and coverage, the page's own words, through
+ * the same resolver. The text between tags is the model's prose:
  * paragraphs, line breaks, **bold**, `code`, bulleted and numbered lists (with or without an intro
- * line above them) and Markdown tables. Every figure in it arrived inside a cite, and the server
- * withheld any answer that typed one bare.
+ * line above them) and Markdown tables. `<pchart>{json}</pchart>`, a paragraph of its own, is a chart
+ * the server checked (AnswerChart). Since November 2026 the model writes figures itself as well as
+ * through cites: its sums and shares come from the server's add_up and calculate tools.
  */
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Highlight } from "./ToolCard";
 import type { ResolvedLink } from "./answerLinks";
+import { AnswerChart, parseChartSpec } from "./AnswerChart";
 
 /**
  * The cite's behaviours, the test that decides whether a figure is labelled `modelled`, and the
@@ -29,8 +33,12 @@ const NUMERIC_TEXT = /\d/;
 
 const CITE = /<cite k="(\d+)" cell="(\d+)" receipt="([0-9a-f]*)">([^<]*)<\/cite>/g;
 const PLINK = /<plink to="([^"]*)">([^<]*)<\/plink>/g;
-/** A cite or a link, whichever comes first: groups 1-4 are a cite's, 5-6 a link's. */
-const TAG = new RegExp(`${CITE.source}|${PLINK.source}`, "g");
+/** One Downloads entry, whole: `{{download:<table>}}` as the server checked it. */
+const PDOWNLOAD = /<pdownload to="([^"]*)">([^<]*)<\/pdownload>/g;
+/** A chart the server checked (`<pchart>{json}</pchart>`), alone in its paragraph. */
+const CHART = /^<pchart>([^<]*)<\/pchart>$/;
+/** A cite, a link or an entry, whichever comes first: groups 1-4 are a cite's, 5-6 a link's, 7-8 an entry's. */
+const TAG = new RegExp(`${CITE.source}|${PLINK.source}|${PDOWNLOAD.source}`, "g");
 const INLINE = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`)/g;
 
 function unescape(s: string): string {
@@ -190,6 +198,14 @@ export function renderAnswer(raw: string, onCite: CiteHandlers): ReactNode[] {
     .split(/\n{2,}/)
     .filter((p) => p.trim().length > 0)
     .forEach((para, pi) => {
+      // A CHART, a paragraph of its own: the server checked the model's ```chart block and sent its
+      // data as one tag. A tag that does not parse draws nothing rather than JSON on screen.
+      const chart = CHART.exec(para.trim());
+      if (chart) {
+        const json = unescape(chart[1]);
+        if (parseChartSpec(json)) out.push(<AnswerChart key={`chart${pi}`} json={json} />);
+        return;
+      }
       // THE MODEL WRITES LISTS AND THIS PRINTED THE MARKERS. Asked for a nine-year series it
       // answers with nine "* 2016-17: …" lines, which arrived as literal asterisks joined by <br>.
       // That was survivable when the prose sat inside a card of its own; it is the whole answer now.
@@ -258,6 +274,35 @@ function renderInlineWithCites(para: string, onCite: CiteHandlers, pi: string): 
   let n = 0;
   while ((m = re.exec(para)) !== null) {
     if (m.index > last) nodes.push(...inline(para.slice(last, m.index), `p${pi}t${n}`));
+    if (m[7] !== undefined) {
+      // ONE DOWNLOADS ENTRY, AS THE PAGE WORDS IT: the title (a link that opens the page at the
+      // entry), the description and the coverage line, all from the page's own catalogue - the model
+      // names the table and never writes any of the three. A table the page does not list prints its
+      // name as a link to the page.
+      const to = unescape(m[7]);
+      const label = unescape(m[8]);
+      const target = onCite.link?.(to, label) ?? null;
+      const known = !!target?.dek;
+      nodes.push(
+        <span key={`p${pi}d${n}`} data-testid="answer-download" data-to={to}>
+          {target ? (
+            <Link href={target.href} className="font-semibold text-accent underline underline-offset-2 hover:text-accent-bright"
+                  data-testid="answer-link" data-to={to}>
+              {known ? target.label : label}
+            </Link>
+          ) : (
+            <span className="font-semibold">{label}</span>
+          )}
+          {known && <> — {target.dek}</>}
+          {known && target.coverage && (
+            <span className="block text-xs text-muted" data-testid="answer-download-coverage">{target.coverage}</span>
+          )}
+        </span>,
+      );
+      last = m.index + m[0].length;
+      n += 1;
+      continue;
+    }
     if (m[1] === undefined) {
       // A CHECKED LINK, drawn only where this site knows the destination. An unknown `to` prints
       // its label as text: a link to nowhere is worse than no link.

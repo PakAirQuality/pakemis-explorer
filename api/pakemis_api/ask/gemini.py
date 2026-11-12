@@ -105,6 +105,10 @@ def clean_schema(node):
 def function_declaration(tool):
     from google.genai import types
     params = clean_schema(tool["input_schema"])
+    if not params.get("properties"):
+        # a function with no input (list_activity_files): declared without a parameter object
+        # rather than with an empty one
+        return types.FunctionDeclaration(name=tool["name"], description=tool.get("description") or "")
     return types.FunctionDeclaration(name=tool["name"], description=tool.get("description") or "",
                                      parameters=types.Schema.model_validate(params))
 

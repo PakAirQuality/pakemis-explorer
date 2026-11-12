@@ -101,6 +101,17 @@ class Limits:
     # the turn is left and a tool has run, the next model call may not call a tool: it answers
     # from what it has. 0 switches it off.
     final_answer_seconds: int = 15
+    # AN ACTIVITY RESULT IS READ AS A TABLE (2026-11; ask/records.py). Up to this many characters of
+    # rows (about 15,000-20,000 tokens: Punjab's 288 vehicle rows are 16,000) the model reads every
+    # row; past it, the rows stay on the server and the model gets each column's values and adds the
+    # rows up with add_up. It replaces max_cells_for_model for activity results only.
+    activity_view_chars: int = 60_000
+    # THE MODEL WRITES ITS OWN NUMBERS (2026-11). Every figure used to be a placeholder the server
+    # filled from a result, and a typed decimal withheld the answer (render.check_bare_numbers). The
+    # questions asked of the activity records are sums, shares and changes no result cell holds, and
+    # the arithmetic is now done exactly on the server (ask/arith.py) and written by the model.
+    # PAKEMIS_ASK_TYPED_NUMBERS=0 restores the gate.
+    typed_numbers: bool = True
 
     @classmethod
     def from_env(cls):
@@ -116,6 +127,8 @@ class Limits:
             model_stall_seconds=_int("PAKEMIS_ASK_MODEL_STALL_SECONDS", cls.model_stall_seconds),
             model_retries=_int("PAKEMIS_ASK_MODEL_RETRIES", cls.model_retries),
             final_answer_seconds=_int("PAKEMIS_ASK_FINAL_ANSWER_SECONDS", cls.final_answer_seconds),
+            activity_view_chars=_int("PAKEMIS_ASK_ACTIVITY_VIEW_CHARS", cls.activity_view_chars),
+            typed_numbers=(os.environ.get("PAKEMIS_ASK_TYPED_NUMBERS") or "1").strip().lower() not in ("0", "false", "no", "off"),
             trusted_proxies=parse_networks(os.environ.get("PAKEMIS_TRUSTED_PROXIES")),
         )
 

@@ -96,7 +96,7 @@ def tools(client):
 # --- schema translation ---------------------------------------------------------------------------
 
 def test_every_tool_schema_translates(tools):
-    assert len(tools) == 14  # + query_air, + query_activity
+    assert len(tools) == 17  # + query_air, + query_activity, + list_activity_files, + add_up, + calculate
     for tool in tools:
         cleaned = clean_schema(tool["input_schema"])
         keys = walk(cleaned, set())
@@ -104,6 +104,10 @@ def test_every_tool_schema_translates(tools):
         assert "anyOf" not in keys and "$defs" not in keys and "$ref" not in keys
         decl = function_declaration(tool)                      # constructs without error
         assert decl.name == tool["name"] and decl.description == tool["description"]
+        if not tool["input_schema"]["properties"]:
+            # a function with no input (list_activity_files) is declared without a parameter object
+            assert decl.parameters is None
+            continue
         assert decl.parameters.type == types.Type.OBJECT
         assert set(decl.parameters.properties) == set(tool["input_schema"]["properties"])
         # enums (string fields only) and required survive the translation
@@ -114,7 +118,7 @@ def test_every_tool_schema_translates(tools):
                 assert "" not in got.enum and got.default != ""
         assert (decl.parameters.required or []) == tool["input_schema"].get("required", [])
     assert "additionalProperties" in json.dumps(tools[-1]["input_schema"])     # set_map_view carries it in the loop's shape
-    assert len(gemini_tools(tools)) == 1 and len(gemini_tools(tools)[0].function_declarations) == 14
+    assert len(gemini_tools(tools)) == 1 and len(gemini_tools(tools)[0].function_declarations) == 17
 
 
 def test_clean_schema_rules():
@@ -211,7 +215,7 @@ def test_scripted_chunks_give_the_loop_events(monkeypatch, tools):
     assert call["model"] == CHAIN[0] and call["contents"][0].role == "user" and call["contents"][0].parts[0].text == "q"
     cfg = call["config"]
     assert cfg.system_instruction == "SYSTEM" and cfg.max_output_tokens == 1234
-    assert len(cfg.tools) == 1 and len(cfg.tools[0].function_declarations) == 14
+    assert len(cfg.tools) == 1 and len(cfg.tools[0].function_declarations) == 17
     assert cfg.tool_config.function_calling_config.mode == types.FunctionCallingConfigMode.AUTO
     assert cfg.thinking_config.include_thoughts is True
     assert m.model_id == CHAIN[0]
